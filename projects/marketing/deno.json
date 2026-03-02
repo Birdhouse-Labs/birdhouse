@@ -1,0 +1,50 @@
+{
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.95.3",
+    "daisyui": "npm:daisyui@^5.5.18",
+    "gsap": "npm:gsap@^3.14.2",
+    "lenis": "npm:lenis@^1.3.17",
+    "lume/": "https://cdn.jsdelivr.net/gh/lumeland/lume@3.1.4/",
+    "lume/jsx-runtime": "https://cdn.jsdelivr.net/gh/oscarotero/ssx@0.1.14/jsx-runtime.ts",
+    "lucide": "https://unpkg.com/lucide@0.563.0",
+    "posthog-js": "npm:posthog-js@^1.347.0",
+    "theme-change": "npm:theme-change@^2.5.0"
+  },
+  "tasks": {
+    "lume": {
+      "description": "Run Lume command",
+      "command": "deno run -A lume/cli.ts"
+    },
+    "build": {
+      "description": "Build the site for production",
+      "command": "deno task lume"
+    },
+    "serve": {
+      "description": "Run and serve the site for development",
+      "command": "deno task lume -s"
+    }
+  },
+  "compilerOptions": {
+    "types": [
+      "lume/types.ts"
+    ],
+    "jsx": "react-jsx",
+    "jsxImportSource": "lume"
+  },
+  "unstable": [
+    "temporal",
+    "fmt-component"
+  ],
+  "lint": {
+    "plugins": [
+      "https://cdn.jsdelivr.net/gh/lumeland/lume@3.1.4/lint.ts"
+    ],
+    "rules": {
+      "exclude": [
+        "no-import-prefix"
+      ]
+    }
+  },
+  "lock": false,
+  "nodeModulesDir": "auto"
+}

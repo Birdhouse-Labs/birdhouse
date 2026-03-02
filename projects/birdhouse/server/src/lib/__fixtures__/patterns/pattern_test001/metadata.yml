@@ -1,0 +1,15 @@
+id: pattern_test001
+title: Test Pattern with All Fields
+category: Testing
+subcategory: Fixtures
+tags:
+  - test
+  - example
+  - complete
+trigger_phrases:
+  - "test pattern"
+  - "example pattern"
+slug: test-pattern-one
+created_at: "2026-01-19T10:00:00Z"
+updated_at: "2026-01-19T10:00:00Z"
+author: Test Author

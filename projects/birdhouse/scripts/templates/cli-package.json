@@ -1,0 +1,44 @@
+{
+  "name": "@birdhouse/cli",
+  "version": "0.1.0-beta.1",
+  "description": "Multi-agent orchestration platform for agentic software development",
+  "main": "bin/birdhouse.js",
+  "bin": {
+    "birdhouse": "./bin/birdhouse.js"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "README.md",
+    "version.json"
+  ],
+  "keywords": [
+    "ai",
+    "agents",
+    "orchestration",
+    "development",
+    "automation",
+    "opencode",
+    "multi-agent"
+  ],
+  "author": "Birdhouse Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/birdhouse/birdhouse.git"
+  },
+  "bugs": {
+    "url": "https://github.com/birdhouse/birdhouse/issues"
+  },
+  "homepage": "https://birdhouselabs.ai",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64",
+    "x64"
+  ]
+}

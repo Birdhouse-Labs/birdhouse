@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ideas and feature discussions
+    url: https://github.com/Birdhouse-Labs/birdhouse/discussions/categories/ideas
+    about: Suggest a feature or upvote existing ideas
+  - name: Q&A and help
+    url: https://github.com/Birdhouse-Labs/birdhouse/discussions/categories/q-a
+    about: Ask a question or get help with setup

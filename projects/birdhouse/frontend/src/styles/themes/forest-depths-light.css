@@ -1,0 +1,72 @@
+/* ABOUTME: forest-depths-light theme definition for the theming system */
+/* ABOUTME: Defines all --theme-* CSS variables for this theme variant */
+
+/* --------------------------------------------------------------------------
+   FOREST DEPTHS - Light variant
+   -------------------------------------------------------------------------- */
+[data-theme="forest-depths-light"] {
+  /* Gradient colors */
+  --theme-gradient-from: oklch(66.6% 0.157 58.3deg); /* amber-600 */
+  --theme-gradient-to: oklch(62.7% 0.17 149.2deg);   /* green-600 */
+  --theme-gradient-via: oklch(64.8% 0.175 131.7deg);  /* lime-600 */
+  
+  /* Accent colors */
+  --theme-accent: oklch(66.6% 0.157 58.3deg);          /* amber-600 */
+  --theme-accent-secondary: oklch(59.6% 0.127 163.2deg); /* emerald-600 */
+  --theme-accent-muted: oklch(83.7% 0.164 84.4deg);     /* amber-400 */
+  
+  /* Surface colors */
+  --theme-surface: oklch(98.5% 0.001 106.4deg);         /* stone-50 */
+  --theme-surface-raised: #ffffff;   /* white */
+  --theme-surface-overlay: oklch(97% 0.001 106.4deg);  /* stone-100 */
+  --theme-surface-inset: oklch(92.3% 0.003 48.7deg);    /* stone-200 */
+  
+  /* Text colors */
+  --theme-text-primary: oklch(21.6% 0.006 56deg);    /* stone-900 */
+  --theme-text-secondary: oklch(44.4% 0.01 73.6deg);  /* stone-600 */
+  --theme-text-muted: oklch(71.6% 0.009 56.3deg);      /* stone-400 */
+  --theme-text-on-accent: #ffffff;  /* white */
+  
+  /* UI heading color - for section labels and app chrome */
+  --theme-heading: oklch(21.6% 0.006 56deg);         /* stone-900 - matches old prose-heading */
+  
+  /* Border colors */
+  --theme-border: oklch(92.3% 0.003 48.7deg);          /* stone-200 */
+  --theme-border-muted: oklch(86.9% 0.004 56.4deg);    /* stone-300 */
+  
+  /* Status colors */
+  --theme-success: oklch(69.6% 0.149 162.5deg);         /* emerald-500 */
+  --theme-danger: oklch(63.7% 0.208 25.3deg);          /* red-500 */
+  
+  /* Glow/shadow color */
+  --theme-glow: oklch(66.6% 0.157 58.3deg / 0.35); /* amber-600/25 */
+  
+  /* Background gradient */
+  --theme-bg-from: oklch(98.5% 0.001 106.4deg);         /* stone-50 */
+  --theme-bg-via: oklch(96.2% 0.058 95.6deg);          /* amber-100 */
+  --theme-bg-to: oklch(98.5% 0.001 106.4deg);           /* stone-50 */
+  
+  /* Prose/typography - legacy tokens */
+  --theme-prose-link: oklch(55.5% 0.146 49deg);      /* amber-700 */
+  --theme-prose-code: oklch(50.8% 0.105 165.6deg);      /* emerald-700 */
+  --theme-prose-code-bg: oklch(59.6% 0.127 163.2deg); /* emerald-600/10 */
+  --theme-prose-blockquote-border: oklch(66.6% 0.157 58.3deg); /* amber-600 */
+  
+  /* Prose text hierarchy */
+  --theme-prose-body: oklch(26.8% 0.006 34.3deg);      /* stone-800 - main prose text */
+  --theme-prose-secondary: oklch(44.4% 0.01 73.6deg); /* stone-600 - metadata */
+  --theme-prose-muted: oklch(71.6% 0.009 56.3deg);     /* stone-400 - hints */
+  --theme-prose-heading: oklch(21.6% 0.006 56deg);   /* stone-900 - neutral black for content */
+  
+  /* Inline code */
+  --theme-prose-code-inline-text: oklch(43.2% 0.086 166.9deg);  /* emerald-800 - darker for better contrast */
+  --theme-prose-code-inline-bg: oklch(59.6% 0.127 163.2deg / 0.15); /* emerald-600/15 - more visible background */
+  
+  /* Interactive */
+  --theme-prose-link-hover: oklch(47.3% 0.125 46.2deg); /* amber-800 - darker on hover */
+  
+  /* Scrollbar */
+  --theme-scrollbar-track: oklch(92.3% 0.003 48.7deg); /* stone-200 */
+  --theme-scrollbar-thumb: oklch(71.6% 0.009 56.3deg); /* stone-400 */
+  --theme-scrollbar-thumb-hover: oklch(55.3% 0.012 58.1deg); /* stone-500 */
+}

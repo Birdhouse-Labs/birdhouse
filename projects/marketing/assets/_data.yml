@@ -1,0 +1,3 @@
+transformImages:
+  - matches: .png
+    format: webp

@@ -1,0 +1,660 @@
+// ABOUTME: Live chat messages for real agents with streaming
+// ABOUTME: Resource + Store hybrid for initial fetch + real-time updates
+
+import { AlertCircle } from "lucide-solid";
+import { type Component, createEffect, createMemo, createResource, createSignal, onCleanup, Show } from "solid-js";
+import { createStore, produce, reconcile } from "solid-js/store";
+import type { EventType } from "../../../server/src/types/agent-events";
+import { API_ENDPOINT_BASE } from "../config/api";
+import { type SessionStatus, useStreaming } from "../contexts/StreamingContext";
+import { useWorkspace } from "../contexts/WorkspaceContext";
+import { handlePartUpdate } from "../domain/message-updates";
+
+import { log } from "../lib/logger";
+import {
+  cloneAgent,
+  fetchAgent,
+  fetchMessages,
+  revertAgent,
+  SendMessageError,
+  sendMessage,
+  stopAgent,
+  unrevertAgent,
+} from "../services/messages-api";
+import type { Message } from "../types/messages";
+import { prepareMessageForSending } from "../utils/messageEnrichment";
+import AgentHeader from "./AgentHeader";
+import Button from "./ui/Button";
+import ChatContainer from "./ui/ChatContainer";
+import ContentDialog from "./ui/ContentDialog";
+
+interface LiveMessagesProps {
+  agentId: string;
+  onAgentHeaderClick?: (agentId: string) => void;
+  onOpenAgentModal?: (agentId: string) => void;
+  showCloseButton?: boolean;
+  onClose?: () => void;
+}
+
+const LoadingState = () => (
+  <div class="flex items-center justify-center h-full">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
+  </div>
+);
+
+const ErrorState: Component<{ error: Error; onRetry: () => void }> = (props) => (
+  <div class="flex items-center justify-center h-full">
+    <div class="text-center">
+      <div class="text-lg text-danger mb-4">Failed to load messages</div>
+      <div class="text-sm text-muted mb-4">{props.error.message}</div>
+      <Button variant="tertiary" onClick={props.onRetry} data-ph-capture-attribute-button-type="retry-load-messages">
+        Retry
+      </Button>
+    </div>
+  </div>
+);
+
+/**
+ * Helper: Update agent titles in event blocks when an agent is renamed
+ */
+function updateAgentTitlesInEvents(messages: Message[], updatedAgentId: string, newTitle: string) {
+  for (const message of messages) {
+    if (message.role !== "system" || !message.blocks) continue;
+
+    for (const block of message.blocks) {
+      if (block.type === "agent_event") {
+        if (block.actor_agent_id === updatedAgentId) {
+          block.actor_agent_title = newTitle;
+        }
+        if (block.source_agent_id === updatedAgentId) {
+          block.source_agent_title = newTitle;
+        }
+        if (block.target_agent_id === updatedAgentId) {
+          block.target_agent_title = newTitle;
+        }
+      }
+    }
+  }
+}
+
+const LiveMessages: Component<LiveMessagesProps> = (props) => {
+  // Get workspace context
+  const { workspaceId } = useWorkspace();
+
+  // Store for messages (holds both fetched and streamed data)
+  const [messagesStore, setMessages] = createStore<Message[]>([]);
+  const [selectedAgent, setSelectedAgent] = createSignal("build");
+  const [cloneMode, setCloneMode] = createSignal(false);
+
+  // Resource handles fetch lifecycle (with workspace ID)
+  const [messagesResource, { refetch }] = createResource(
+    () => props.agentId,
+    (agentId) => fetchMessages(workspaceId, agentId),
+  );
+
+  // Fetch agent metadata for header (with workspace ID)
+  const [agentMetadata, { refetch: refetchMetadata }] = createResource(
+    () => props.agentId,
+    (agentId) => fetchAgent(workspaceId, agentId),
+  );
+
+  // Filter messages based on revert state
+  const filteredMessages = createMemo(() => {
+    const metadata = agentMetadata();
+    if (!metadata?.revert?.messageID) {
+      return messagesStore;
+    }
+
+    // Filter out messages where id >= revert.messageID
+    const revertMessageId = metadata.revert.messageID;
+    return messagesStore.filter((msg) => msg.id < revertMessageId);
+  });
+
+  // Sync resource data to store when it arrives
+  createEffect(() => {
+    const data = messagesResource();
+    if (data) {
+      setMessages(reconcile(data));
+    }
+  });
+
+  // Streaming context
+  const streaming = useStreaming();
+
+  // Session status - single source of truth for agent working state
+  // Initial fetch from API to handle page refresh while agent is working
+  const [sessionStatus, { refetch: refetchSessionStatus }] = createResource(
+    () => ({ agentId: props.agentId, workspaceId }),
+    async ({ agentId, workspaceId }) => {
+      try {
+        const response = await fetch(`${API_ENDPOINT_BASE}/workspace/${workspaceId}/agents/${agentId}/status`);
+        if (!response.ok) return { type: "idle" as const };
+        const data = await response.json();
+        return data.status as SessionStatus;
+      } catch {
+        return { type: "idle" as const };
+      }
+    },
+  );
+
+  // Use a signal to track session status, initialized from resource
+  const [agentStatus, setAgentStatus] = createSignal<SessionStatus>({ type: "idle" });
+
+  // Sync initial resource value to signal when it loads
+  createEffect(() => {
+    const status = sessionStatus();
+    if (status) {
+      setAgentStatus(status);
+    }
+  });
+
+  // Derive isAgentWorking from sessionStatus
+  const isAgentWorking = () => {
+    const status = agentStatus();
+    return status.type === "busy" || status.type === "retry";
+  };
+
+  // Subscribe to session.status SSE events to keep status updated
+  createEffect(() => {
+    const unsubscribe = streaming.subscribeToSessionStatus(props.agentId, (status) => {
+      setAgentStatus(status);
+    });
+    onCleanup(unsubscribe);
+  });
+
+  // Refetch status when SSE reconnects to prevent stale state
+  createEffect(() => {
+    const unsubscribe = streaming.subscribeToConnectionEstablished(() => {
+      refetchSessionStatus();
+    });
+    onCleanup(unsubscribe);
+  });
+
+  // Input state management
+  const [inputValue, setInputValue] = createSignal("");
+  const [isSending, setIsSending] = createSignal(false);
+  const [sendError, setSendError] = createSignal<string | null>(null);
+  const [sendErrorDetails, setSendErrorDetails] = createSignal<SendMessageError | null>(null);
+  const [errorDialogOpen, setErrorDialogOpen] = createSignal(false);
+
+  // Input ref for focusing (reactive signal so effects can track it)
+  const [inputRef, setInputRef] = createSignal<HTMLTextAreaElement | undefined>();
+
+  // localStorage key for draft persistence
+  const draftKey = () => `birdhouse:draft:${props.agentId}`;
+
+  // Load draft from localStorage on mount
+  createEffect(() => {
+    // Track agent changes by reading props.agentId
+    props.agentId;
+    const draft = localStorage.getItem(draftKey());
+
+    if (draft) {
+      setInputValue(draft);
+    }
+  });
+
+  // Focus input when both draft and inputRef exist
+  createEffect(() => {
+    const currentValue = inputValue();
+    const currentRef = inputRef();
+
+    if (currentValue && currentRef) {
+      // Focus input when draft exists (e.g., after cloning or returning to work)
+      currentRef.focus();
+    }
+  });
+
+  // Save draft to localStorage when input changes (only if non-empty)
+  createEffect(() => {
+    const value = inputValue().trim();
+    if (value) {
+      localStorage.setItem(draftKey(), inputValue());
+    } else {
+      localStorage.removeItem(draftKey());
+    }
+  });
+
+  // Subscribe to connection established events to refresh stale data
+  createEffect(() => {
+    const unsubscribe = streaming.subscribeToConnectionEstablished(() => {
+      // Tab became visible and SSE reconnected - refetch messages
+      log.api.info(`Connection re-established for agent ${props.agentId}, refreshing messages`);
+      refetch();
+    });
+
+    onCleanup(unsubscribe);
+  });
+
+  // Subscribe to streaming updates after initial load completes
+  createEffect(() => {
+    // Wait for initial load to complete
+    if (!messagesResource() || messagesResource.loading) return;
+
+    // Subscribe to message updates (user and assistant messages)
+    const unsubscribeMessages = streaming.subscribeToMessageUpdates(props.agentId, (messageData) => {
+      // aborts also send a message update
+      const { info } = messageData;
+
+      // Check if message already exists
+      const existingIndex = messagesStore.findIndex((m) => m.id === info.id);
+
+      if (existingIndex === -1) {
+        // New message - add to top (newest-at-top architecture)
+        // Type-cast info as the proper OpenCode message type
+        const newMessage: Message = {
+          id: info.id,
+          opencodeMessage: info,
+          role: info.role,
+          content: "", // Parts will fill this in
+          blocks: [],
+          timestamp: new Date(),
+          isStreaming: info.role === "assistant",
+        };
+        setMessages([newMessage, ...messagesStore]);
+      } else {
+        // Message exists - update opencodeMessage to capture error field, completion time, etc.
+        // This happens when OpenCode sends a second message.updated with error details
+        setMessages(existingIndex, { opencodeMessage: info });
+      }
+    });
+
+    // Subscribe to part updates
+    const unsubscribeParts = streaming.subscribeToPartUpdates(props.agentId, (part) => {
+      handlePartUpdate(part, messagesStore, setMessages);
+    });
+
+    // Subscribe to agent idle (streaming complete)
+    // Note: We no longer track isAssistantStreaming here - sessionStatus from SSE is the source of truth
+
+    // Subscribe to agent errors
+    const unsubscribeError = streaming.subscribeToAgentError(props.agentId, (errorData) => {
+      const { error } = errorData;
+
+      if (error.name === "MessageAbortedError") {
+        setMessages(0, { isStreaming: false });
+        refetch();
+        return;
+      }
+
+      // Extract error message from the event
+      const message = errorData.error?.data?.message || errorData.error?.name || "An error occurred";
+
+      // Show error in banner
+      setSendError(message);
+
+      // Log for debugging
+      log.api.error("Async message error", {
+        agentId: props.agentId,
+        errorData,
+      });
+    });
+
+    // Subscribe to event created (system events like clones)
+    const unsubscribeEvents = streaming.subscribeToEventCreated((agentId, systemEvent) => {
+      // Only process if it's for the current agent
+      if (agentId !== props.agentId) return;
+
+      // Map system event to UI Message
+      const eventMessage: Message = {
+        id: systemEvent.id,
+        role: "system",
+        opencodeMessage: undefined,
+        content: "",
+        blocks: [
+          {
+            id: systemEvent.id,
+            type: "agent_event" as const,
+            event_type: systemEvent.event_type as EventType,
+            timestamp: systemEvent.timestamp,
+            actor_agent_id: systemEvent.actor_agent_id,
+            actor_agent_title: systemEvent.actor_agent_title,
+            source_agent_id: systemEvent.source_agent_id,
+            source_agent_title: systemEvent.source_agent_title,
+            target_agent_id: systemEvent.target_agent_id,
+            target_agent_title: systemEvent.target_agent_title,
+            metadata: systemEvent.metadata,
+          },
+        ],
+        timestamp: new Date(systemEvent.timestamp),
+      };
+
+      // Insert event message at top (newest-at-top)
+      setMessages([eventMessage, ...messagesStore]);
+    });
+
+    // Subscribe to agent updated events
+    const unsubscribeAgentUpdates = streaming.subscribeToAgentUpdated((updatedAgentId, agent) => {
+      // Agent title updated - find and update any event blocks referencing this agent
+      const newTitle = agent["title"];
+      if (typeof newTitle !== "string") return;
+
+      // Update all AgentEventBlock instances that reference this agent
+      setMessages(produce((draft) => updateAgentTitlesInEvents(draft, updatedAgentId, newTitle)));
+    });
+
+    // Subscribe to session updates (e.g., revert state cleared)
+    const unsubscribeSessionUpdates = streaming.subscribeToSessionUpdates(props.agentId, () => {
+      // Session metadata changed - refetch agent metadata to get updated revert state
+      refetchMetadata();
+    });
+
+    // Subscribe to message removed events (e.g., messages deleted when revert is committed)
+    const unsubscribeMessageRemoved = streaming.subscribeToMessageRemoved(props.agentId, (messageId) => {
+      // Remove message from store when OpenCode confirms deletion
+      setMessages(messagesStore.filter((msg) => msg.id !== messageId));
+    });
+
+    // Cleanup all subscriptions
+    onCleanup(() => {
+      unsubscribeMessages();
+      unsubscribeParts();
+      unsubscribeError();
+      unsubscribeEvents();
+      unsubscribeAgentUpdates();
+      unsubscribeSessionUpdates();
+      unsubscribeMessageRemoved();
+    });
+  });
+
+  // Refetch agent metadata when this agent is archived
+  createEffect(() => {
+    const unsubscribe = streaming.subscribeToAgentArchived((payload) => {
+      if (payload.archivedIds.includes(props.agentId)) {
+        refetchMetadata();
+      }
+    });
+    onCleanup(unsubscribe);
+  });
+
+  // Refetch agent metadata when this agent is unarchived
+  createEffect(() => {
+    const unsubscribe = streaming.subscribeToAgentUnarchived((payload) => {
+      if (payload.unarchivedIds.includes(props.agentId)) {
+        refetchMetadata();
+      }
+    });
+    onCleanup(unsubscribe);
+  });
+
+  const handleSendMessage = async (message: string) => {
+    const content = message.trim();
+    if (!content || isSending()) return;
+
+    setIsSending(true);
+    setSendError(null);
+
+    try {
+      // Enrich message with pattern XML blocks
+      const enrichedContent = await prepareMessageForSending(content, workspaceId);
+
+      // Send enriched message to API (with wait=false for async operation)
+      await sendMessage(workspaceId, props.agentId, enrichedContent, {
+        agent: selectedAgent(),
+        cloneAndSend: cloneMode(),
+      });
+
+      // Clear input and localStorage only on success
+      setInputValue("");
+      localStorage.removeItem(draftKey());
+
+      // Reset clone mode after successful send
+      setCloneMode(false);
+
+      // Streaming will update the UI with user message + assistant response
+    } catch (error) {
+      // Keep message in input for retry
+      // Show error to user
+      const errorMessage = error instanceof Error ? error.message : "Unknown error sending message";
+      setSendError(errorMessage);
+
+      // Store full error details for dialog
+      if (error instanceof SendMessageError) {
+        setSendErrorDetails(error);
+      } else {
+        setSendErrorDetails(null);
+      }
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleStop = async () => {
+    setSendError(null);
+
+    try {
+      // Send to API (with wait=false for async operation)
+      await stopAgent(workspaceId, props.agentId);
+
+      // Streaming will update the UI with user message + assistant response
+    } catch (error) {
+      // Keep message in input for retry
+      // Show error to user
+      const errorMessage = error instanceof Error ? error.message : "Unknown error sending message";
+      setSendError(errorMessage);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleCloneFromMessage = async (messageId: string, messageContent: string, event: MouseEvent) => {
+    setSendError(null);
+
+    const isModifierClick = event.metaKey || event.ctrlKey || event.shiftKey;
+
+    try {
+      const newAgent = await cloneAgent(workspaceId, props.agentId, messageId);
+
+      // Pre-populate the cloned agent's input with the message content
+      localStorage.setItem(`birdhouse:draft:${newAgent.id}`, messageContent);
+
+      // Navigate based on modifier key
+      if (isModifierClick) {
+        // Cmd/Ctrl+Click: open in new tab
+        const url = `${window.location.origin}/#/workspace/${workspaceId}/agent/${newAgent.id}`;
+        window.open(url, "_blank");
+      } else {
+        // Normal click: open in modal dialog
+        props.onOpenAgentModal?.(newAgent.id);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error cloning agent";
+      setSendError(errorMessage);
+
+      // Store full error details for dialog
+      if (error instanceof Error) {
+        const errorDetails = new SendMessageError(errorMessage, 0, "", "");
+        setSendErrorDetails(errorDetails);
+      }
+    }
+  };
+
+  const handleResetToMessage = async (messageId: string) => {
+    setSendError(null);
+
+    try {
+      const result = await revertAgent(workspaceId, props.agentId, messageId);
+
+      if (result.success) {
+        // Pre-populate input with returned message text
+        setInputValue(result.messageText);
+
+        // Refetch agent metadata to get updated revert state
+        refetchMetadata();
+
+        // Focus input to draw attention to the pre-populated message
+        const ref = inputRef();
+        if (ref) {
+          queueMicrotask(() => ref.focus());
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error resetting agent";
+      setSendError(errorMessage);
+
+      // Store full error details for dialog
+      if (error instanceof Error) {
+        const errorDetails = new SendMessageError(errorMessage, 0, "", "");
+        setSendErrorDetails(errorDetails);
+      }
+    }
+  };
+
+  const handleCancelRevert = async () => {
+    setSendError(null);
+
+    try {
+      const result = await unrevertAgent(workspaceId, props.agentId);
+
+      if (result.success) {
+        // Clear input field (it was pre-populated with reverted message)
+        setInputValue("");
+
+        // Refetch agent metadata to clear revert state
+        refetchMetadata();
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error canceling revert";
+      setSendError(errorMessage);
+
+      // Store full error details for dialog
+      if (error instanceof Error) {
+        const errorDetails = new SendMessageError(errorMessage, 0, "", "");
+        setSendErrorDetails(errorDetails);
+      }
+    }
+  };
+
+  return (
+    <div class="flex flex-col h-full bg-surface">
+      <Show
+        when={messagesStore.length > 0 && !messagesResource.error}
+        fallback={
+          messagesResource.error ? (
+            <ErrorState error={messagesResource.error as Error} onRetry={refetch} />
+          ) : (
+            <LoadingState />
+          )
+        }
+      >
+        <div class="flex flex-col h-full">
+          {/* Agent Header - only show when metadata is loaded */}
+          <Show when={agentMetadata()}>
+            {(metadata) =>
+              props.showCloseButton && props.onClose ? (
+                <AgentHeader
+                  agentId={props.agentId}
+                  workspaceId={workspaceId}
+                  title={metadata().title}
+                  modelName={metadata().model}
+                  messages={messagesStore}
+                  mode={selectedAgent()}
+                  onModeChange={setSelectedAgent}
+                  onHeaderClick={() => props.onAgentHeaderClick?.(props.agentId)}
+                  archivedAt={metadata().archived_at}
+                  showCloseButton={true}
+                  onClose={props.onClose}
+                />
+              ) : (
+                <AgentHeader
+                  agentId={props.agentId}
+                  workspaceId={workspaceId}
+                  title={metadata().title}
+                  modelName={metadata().model}
+                  messages={messagesStore}
+                  mode={selectedAgent()}
+                  onModeChange={setSelectedAgent}
+                  onHeaderClick={() => props.onAgentHeaderClick?.(props.agentId)}
+                  archivedAt={metadata().archived_at}
+                />
+              )
+            }
+          </Show>
+
+          <Show when={sendError()}>
+            <div class="bg-surface-raised border-b border-danger px-3 py-2 flex-shrink-0">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <Show when={sendErrorDetails()} fallback={<span class="text-danger text-sm flex-shrink-0">⚠</span>}>
+                    <button
+                      type="button"
+                      onClick={() => setErrorDialogOpen(true)}
+                      class="w-7 h-7 rounded-lg bg-danger/5 hover:bg-danger/10 text-danger transition-all flex items-center justify-center flex-shrink-0"
+                      aria-label="View error details"
+                      title="View full error details"
+                      data-ph-capture-attribute-button-type="view-send-error-details"
+                      data-ph-capture-attribute-agent-id={props.agentId}
+                    >
+                      <AlertCircle size={16} />
+                    </button>
+                  </Show>
+                  <p class="text-sm text-text-secondary truncate">{sendError()}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSendError(null)}
+                  class="text-text-muted hover:text-text-primary text-sm flex-shrink-0"
+                  title="Dismiss"
+                  data-ph-capture-attribute-button-type="dismiss-send-error"
+                  data-ph-capture-attribute-agent-id={props.agentId}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          </Show>
+          <Show when={agentMetadata()?.revert}>
+            <div class="bg-surface-raised border-b border-accent px-3 py-2 flex-shrink-0">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <span class="text-accent text-sm flex-shrink-0">ℹ</span>
+                  <p class="text-sm text-text-secondary truncate">
+                    Reset pending: {messagesStore.length - filteredMessages().length}{" "}
+                    {messagesStore.length - filteredMessages().length === 1 ? "message" : "messages"} hidden
+                  </p>
+                </div>
+                <Button
+                  variant="tertiary"
+                  onClick={handleCancelRevert}
+                  data-ph-capture-attribute-button-type="cancel-agent-revert"
+                  data-ph-capture-attribute-agent-id={props.agentId}
+                >
+                  Cancel Reset
+                </Button>
+              </div>
+            </div>
+          </Show>
+          <ChatContainer
+            messages={filteredMessages()}
+            agentId={props.agentId}
+            inputValue={inputValue()}
+            isStreaming={isAgentWorking()}
+            onInputChange={setInputValue}
+            onSend={() => handleSendMessage(inputValue())}
+            onStop={handleStop}
+            isSendDisabled={isSending()}
+            cloneMode={cloneMode()}
+            onCloneModeChange={setCloneMode}
+            onOpenAgentModal={props.onOpenAgentModal}
+            onCloneFromMessage={handleCloneFromMessage}
+            onResetToMessage={handleResetToMessage}
+            inputRef={(el) => {
+              setInputRef(el);
+            }}
+          />
+        </div>
+      </Show>
+
+      {/* Error details dialog */}
+      <ContentDialog
+        open={errorDialogOpen()}
+        onOpenChange={setErrorDialogOpen}
+        title="Send Message Error Details"
+        content={sendErrorDetails() ? JSON.stringify(sendErrorDetails()?.toJSON(), null, 2) : ""}
+        language="json"
+      />
+    </div>
+  );
+};
+
+export default LiveMessages;

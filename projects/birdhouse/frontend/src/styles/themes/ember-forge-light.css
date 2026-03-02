@@ -1,0 +1,72 @@
+/* ABOUTME: ember-forge-light theme definition for the theming system */
+/* ABOUTME: Defines all --theme-* CSS variables for this theme variant */
+
+/* --------------------------------------------------------------------------
+   EMBER FORGE - Light variant
+   -------------------------------------------------------------------------- */
+[data-theme="ember-forge-light"] {
+  /* Gradient colors */
+  --theme-gradient-from: oklch(70.5% 0.187 47.6deg); /* orange-500 */
+  --theme-gradient-to: oklch(79.5% 0.162 86deg);   /* yellow-500 */
+  --theme-gradient-via: oklch(76.9% 0.165 70.1deg);  /* amber-500 */
+  
+  /* Accent colors */
+  --theme-accent: oklch(70.5% 0.187 47.6deg);          /* orange-500 */
+  --theme-accent-secondary: oklch(79.5% 0.162 86deg); /* yellow-500 */
+  --theme-accent-muted: oklch(75.8% 0.159 55.9deg);     /* orange-400 */
+  
+  /* Surface colors */
+  --theme-surface: oklch(98.5% 0.001 106.4deg);         /* stone-50 */
+  --theme-surface-raised: #ffffff;   /* white */
+  --theme-surface-overlay: oklch(97% 0.001 106.4deg);  /* stone-100 */
+  --theme-surface-inset: oklch(92.3% 0.003 48.7deg);    /* stone-200 */
+  
+  /* Text colors */
+  --theme-text-primary: oklch(21.6% 0.006 56deg);    /* stone-900 */
+  --theme-text-secondary: oklch(44.4% 0.01 73.6deg);  /* stone-600 */
+  --theme-text-muted: oklch(71.6% 0.009 56.3deg);      /* stone-400 */
+  --theme-text-on-accent: #ffffff;  /* white */
+  
+  /* UI heading color - for section labels and app chrome */
+  --theme-heading: oklch(55.3% 0.174 38.4deg);         /* orange-700 - warm orange headings */
+  
+  /* Border colors */
+  --theme-border: oklch(92.3% 0.003 48.7deg);          /* stone-200 */
+  --theme-border-muted: oklch(86.9% 0.004 56.4deg);    /* stone-300 */
+  
+  /* Status colors */
+  --theme-success: oklch(69.6% 0.149 162.5deg);         /* emerald-500 */
+  --theme-danger: oklch(63.7% 0.208 25.3deg);          /* red-500 */
+  
+  /* Glow/shadow color */
+  --theme-glow: oklch(70.5% 0.187 47.6deg / 0.35); /* orange-500/25 */
+  
+  /* Background gradient */
+  --theme-bg-from: oklch(98.5% 0.001 106.4deg);         /* stone-50 */
+  --theme-bg-via: oklch(95.4% 0.037 75.2deg);          /* orange-100 */
+  --theme-bg-to: oklch(98.5% 0.001 106.4deg);           /* stone-50 */
+  
+  /* Prose/typography - legacy tokens */
+  --theme-prose-link: oklch(55.3% 0.174 38.4deg);      /* orange-700 */
+  --theme-prose-code: oklch(55.4% 0.121 66.4deg);      /* yellow-700 */
+  --theme-prose-code-bg: oklch(79.5% 0.162 86deg); /* yellow-500/10 */
+  --theme-prose-blockquote-border: oklch(70.5% 0.187 47.6deg); /* orange-500 */
+  
+  /* Prose text hierarchy */
+  --theme-prose-body: oklch(26.8% 0.006 34.3deg);      /* stone-800 - main prose text */
+  --theme-prose-secondary: oklch(44.4% 0.01 73.6deg); /* stone-600 - metadata */
+  --theme-prose-muted: oklch(71.6% 0.009 56.3deg);     /* stone-400 - hints */
+  --theme-prose-heading: oklch(21.6% 0.006 56deg);   /* stone-900 - neutral black for content */
+  
+  /* Inline code */
+  --theme-prose-code-inline-text: oklch(47.6% 0.103 61.9deg);  /* yellow-800 - darker for better contrast */
+  --theme-prose-code-inline-bg: oklch(66.6% 0.157 58.3deg / 0.15); /* amber-600/15 - more visible background */
+  
+  /* Interactive */
+  --theme-prose-link-hover: oklch(47% 0.143 37.3deg); /* orange-800 - darker on hover */
+  
+  /* Scrollbar */
+  --theme-scrollbar-track: oklch(92.3% 0.003 48.7deg); /* stone-200 */
+  --theme-scrollbar-thumb: oklch(71.6% 0.009 56.3deg); /* stone-400 */
+  --theme-scrollbar-thumb-hover: oklch(55.3% 0.012 58.1deg); /* stone-500 */
+}

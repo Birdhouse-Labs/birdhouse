@@ -1,0 +1,417 @@
+// ABOUTME: Central database for workspace configuration and application data
+// ABOUTME: SQLite database wrapper with workspace CRUD operations and future extensibility
+
+import { Database } from "bun:sqlite";
+import { existsSync, mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { nanoid } from "nanoid";
+import { log } from "./logger";
+import { runMigrations } from "./migrations/run-migrations";
+import {
+  decryptSecrets,
+  encryptSecrets,
+  type McpServers,
+  type ProviderCredentials,
+  validateSecrets,
+  type WorkspaceSecretsDecrypted,
+} from "./secrets";
+
+/**
+ * Get platform-appropriate data directory for Birdhouse
+ * - macOS: ~/Library/Application Support/Birdhouse
+ * - Linux: ~/.local/share/birdhouse
+ * - Windows: %APPDATA%/Birdhouse (via homedir)
+ */
+function getDataDir(): string {
+  const platform = process.platform;
+  if (platform === "darwin") {
+    return join(homedir(), "Library/Application Support/Birdhouse");
+  }
+  if (platform === "win32") {
+    return join(homedir(), "AppData/Roaming/Birdhouse");
+  }
+  // Linux and others: use XDG_DATA_HOME or default
+  const xdgDataHome = process.env.XDG_DATA_HOME || join(homedir(), ".local/share");
+  return join(xdgDataHome, "birdhouse");
+}
+
+const DATA_DIR = getDataDir();
+const DB_PATH = join(DATA_DIR, "data.db");
+
+export interface Workspace {
+  workspace_id: string;
+  directory: string;
+  title?: string | null;
+  opencode_port: number | null;
+  opencode_pid: number | null;
+  created_at: string;
+  last_used: string;
+}
+
+export interface WorkspaceSecrets {
+  workspace_id: string;
+  secrets_encrypted: Buffer;
+  config_updated_at?: number | null;
+}
+
+export interface UserProfile {
+  id: 1;
+  name: string;
+  created_at: string;
+}
+
+/**
+ * Central data database for Birdhouse
+ * Manages workspaces, secrets, and future application data
+ */
+export class DataDB {
+  private db: Database;
+
+  constructor(dbPath: string = DB_PATH) {
+    // Ensure directory exists
+    const dir = join(dbPath, "..");
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+
+    this.db = new Database(dbPath);
+    this.db.exec("PRAGMA journal_mode = WAL;");
+
+    this.initSchema();
+
+    log.server.info({ dbPath }, "Data database initialized");
+  }
+
+  private initSchema(): void {
+    // NOTE: Schema creation is now handled by Kysely migrations
+    // This method is kept for backwards compatibility but does nothing
+    // All schema changes should go through migrations in migrations/migrations/
+    // We still ensure WAL mode and other pragmas are set
+    // (already done in constructor)
+  }
+
+  // ==================== Workspace Operations ====================
+
+  getWorkspaceById(workspaceId: string): Workspace | null {
+    const stmt = this.db.query<Workspace, [string]>("SELECT * FROM workspaces WHERE workspace_id = ?");
+    return stmt.get(workspaceId) || null;
+  }
+
+  getWorkspaceByDirectory(directory: string): Workspace | null {
+    const stmt = this.db.query<Workspace, [string]>("SELECT * FROM workspaces WHERE directory = ?");
+    return stmt.get(directory) || null;
+  }
+
+  getAllWorkspaces(): Workspace[] {
+    const stmt = this.db.query<Workspace, []>("SELECT * FROM workspaces ORDER BY last_used DESC");
+    return stmt.all();
+  }
+
+  insertWorkspace(workspace: Workspace): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO workspaces (
+        workspace_id, directory, title, opencode_port, opencode_pid,
+        created_at, last_used
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      workspace.workspace_id,
+      workspace.directory,
+      workspace.title ?? null,
+      workspace.opencode_port,
+      workspace.opencode_pid,
+      workspace.created_at,
+      workspace.last_used,
+    );
+
+    log.server.info({ workspaceId: workspace.workspace_id, directory: workspace.directory }, "Workspace inserted");
+  }
+
+  updateWorkspace(workspaceId: string, updates: Partial<Omit<Workspace, "workspace_id" | "created_at">>): void {
+    const fields = Object.keys(updates);
+    if (fields.length === 0) return;
+
+    const setClause = fields.map((field) => `${field} = ?`).join(", ");
+    const values: (string | number | null)[] = fields.map((field) => {
+      const value = updates[field as keyof typeof updates];
+      return value === undefined ? null : value;
+    });
+
+    const stmt = this.db.prepare(`UPDATE workspaces SET ${setClause} WHERE workspace_id = ?`);
+
+    stmt.run(...values, workspaceId);
+
+    log.server.debug({ workspaceId, updates }, "Workspace updated");
+  }
+
+  deleteWorkspace(workspaceId: string): void {
+    const stmt = this.db.prepare("DELETE FROM workspaces WHERE workspace_id = ?");
+    stmt.run(workspaceId);
+
+    log.server.info({ workspaceId }, "Workspace deleted");
+  }
+
+  // ==================== Workspace Secrets Operations ====================
+
+  getWorkspaceSecrets(workspaceId: string): Buffer | null {
+    const stmt = this.db.query<{ secrets_encrypted: Buffer }, [string]>(
+      "SELECT secrets_encrypted FROM workspace_secrets WHERE workspace_id = ?",
+    );
+    const row = stmt.get(workspaceId);
+    return row ? row.secrets_encrypted : null;
+  }
+
+  setWorkspaceSecrets(workspaceId: string, secretsEncrypted: Buffer): void {
+    log.server.debug(
+      { workspaceId, bufferSize: secretsEncrypted.length, bufferType: typeof secretsEncrypted },
+      "setWorkspaceSecrets called",
+    );
+
+    const stmt = this.db.prepare(
+      "INSERT OR REPLACE INTO workspace_secrets (workspace_id, secrets_encrypted, config_updated_at) VALUES (?, ?, ?)",
+    );
+
+    const result = stmt.run(workspaceId, secretsEncrypted, Date.now());
+
+    log.server.debug(
+      { workspaceId, changes: result.changes, lastInsertRowid: result.lastInsertRowid },
+      "Workspace secrets INSERT OR REPLACE result",
+    );
+
+    // DIAGNOSTIC: Verify it was actually written
+    const verify = this.db
+      .query<{ secrets_encrypted: Buffer }, [string]>(
+        "SELECT secrets_encrypted FROM workspace_secrets WHERE workspace_id = ?",
+      )
+      .get(workspaceId);
+
+    log.server.debug(
+      { workspaceId, verified: !!verify, verifiedSize: verify?.secrets_encrypted.length },
+      "Verified secrets in database",
+    );
+  }
+
+  deleteWorkspaceSecrets(workspaceId: string): void {
+    const stmt = this.db.prepare("DELETE FROM workspace_secrets WHERE workspace_id = ?");
+    stmt.run(workspaceId);
+
+    log.server.debug({ workspaceId }, "Workspace secrets deleted");
+  }
+
+  // ==================== High-Level Secrets API ====================
+
+  /**
+   * Get decrypted workspace configuration (providers + MCP)
+   * Returns null if no secrets exist or decryption fails
+   */
+  getWorkspaceConfig(workspaceId: string): WorkspaceSecretsDecrypted | null {
+    const encrypted = this.getWorkspaceSecrets(workspaceId);
+    if (!encrypted) {
+      return null;
+    }
+
+    const decrypted = decryptSecrets(encrypted);
+    if (!decrypted || !validateSecrets(decrypted)) {
+      log.server.warn({ workspaceId }, "Failed to decrypt or validate workspace secrets");
+      return null;
+    }
+
+    return decrypted;
+  }
+
+  /**
+   * Update workspace configuration (partial update)
+   * Merges with existing config, encrypts, and stores
+   */
+  updateWorkspaceConfig(workspaceId: string, updates: Partial<WorkspaceSecretsDecrypted>): void {
+    // DIAGNOSTIC: Log what we received
+    log.server.debug(
+      {
+        workspaceId,
+        updateKeys: Object.keys(updates),
+        hasProviders: !!updates.providers,
+        providerKeys: updates.providers ? Object.keys(updates.providers) : [],
+        hasMcp: "mcp" in updates,
+      },
+      "updateWorkspaceConfig called",
+    );
+
+    // Load existing config or start fresh
+    const existing = this.getWorkspaceConfig(workspaceId) || {};
+
+    // Merge updates
+    const merged: WorkspaceSecretsDecrypted = {
+      ...existing,
+    };
+
+    // Handle providers merge (deep merge for providers object)
+    if (updates.providers !== undefined) {
+      merged.providers = {
+        ...existing.providers,
+        ...updates.providers,
+      };
+      log.server.debug({ workspaceId, mergedProviders: Object.keys(merged.providers) }, "Merged providers");
+    }
+
+    // Handle MCP merge (replace entire MCP config if provided)
+    // Note: undefined in updates means "don't change", but we need to handle explicit removal
+    if ("mcp" in updates) {
+      merged.mcp = updates.mcp;
+    }
+
+    // Remove undefined or empty top-level keys
+    if (merged.providers !== undefined && Object.keys(merged.providers).length === 0) {
+      delete merged.providers;
+    }
+    if (merged.mcp === undefined) {
+      delete merged.mcp;
+    }
+
+    // DIAGNOSTIC: Log what we're about to encrypt
+    log.server.debug(
+      {
+        workspaceId,
+        finalProviders: merged.providers ? Object.keys(merged.providers) : [],
+        finalHasMcp: !!merged.mcp,
+      },
+      "About to encrypt and store",
+    );
+
+    // Encrypt and store
+    const encrypted = encryptSecrets(merged);
+
+    log.server.debug({ workspaceId, encryptedSize: encrypted.length }, "Encrypted secrets");
+
+    this.setWorkspaceSecrets(workspaceId, encrypted);
+
+    log.server.info({ workspaceId }, "Workspace config updated");
+  }
+
+  /**
+   * Get just the provider credentials for a workspace
+   */
+  getWorkspaceProviders(workspaceId: string): ProviderCredentials | null {
+    const config = this.getWorkspaceConfig(workspaceId);
+    return config?.providers || null;
+  }
+
+  /**
+   * Update just the provider credentials (partial update - merges providers)
+   */
+  updateWorkspaceProviders(workspaceId: string, providers: Partial<ProviderCredentials>): void {
+    this.updateWorkspaceConfig(workspaceId, { providers });
+  }
+
+  /**
+   * Get just the MCP config for a workspace
+   */
+  getWorkspaceMcpConfig(workspaceId: string): McpServers | null {
+    const config = this.getWorkspaceConfig(workspaceId);
+    return config?.mcp || null;
+  }
+
+  /**
+   * Update just the MCP config for a workspace (replaces entire config)
+   */
+  updateWorkspaceMcpConfig(workspaceId: string, mcp: McpServers | null): void {
+    this.updateWorkspaceConfig(workspaceId, {
+      mcp: mcp === null ? undefined : mcp,
+    });
+  }
+
+  // ==================== User Profile Operations ====================
+
+  getUserProfile(): UserProfile | null {
+    const stmt = this.db.query<UserProfile, []>("SELECT * FROM user_profile WHERE id = 1");
+    return stmt.get() || null;
+  }
+
+  getUserName(): string | null {
+    const profile = this.getUserProfile();
+    return profile?.name ?? null;
+  }
+
+  setUserName(name: string): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO user_profile (id, name, created_at)
+      VALUES (1, ?, ?)
+    `);
+    stmt.run(name, new Date().toISOString());
+    log.server.info({ name }, "User profile name set");
+  }
+
+  // ==================== Installation ID ====================
+
+  /**
+   * Returns the stable install_id for this Birdhouse installation.
+   * Generates and persists a new nanoid if none exists yet.
+   */
+  getOrCreateInstallId(): string {
+    const row = this.db.query<{ install_id: string }, []>("SELECT install_id FROM installation WHERE id = 1").get();
+
+    if (row) {
+      return row.install_id;
+    }
+
+    const installId = nanoid();
+    this.db
+      .prepare("INSERT INTO installation (id, install_id, created_at) VALUES (1, ?, ?)")
+      .run(installId, new Date().toISOString());
+
+    log.server.info("Installation ID created");
+    return installId;
+  }
+
+  // ==================== Utility ====================
+
+  close(): void {
+    this.db.close();
+    log.server.info("Data database closed");
+  }
+}
+
+// Singleton instance
+let dataDb: DataDB | null = null;
+let migrationsRun = false;
+
+/**
+ * Initialize the database with migrations
+ * Must be called once before getDataDB()
+ */
+export async function initDataDB(): Promise<void> {
+  if (migrationsRun) return;
+
+  const dbPath = process.env.BIRDHOUSE_DATA_DB_PATH || DB_PATH;
+
+  // Ensure directory exists
+  const dir = join(dbPath, "..");
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+
+  // Run migrations first
+  await runMigrations(dbPath);
+  migrationsRun = true;
+
+  log.server.info("Database migrations completed");
+}
+
+export function getDataDB(): DataDB {
+  if (!migrationsRun) {
+    throw new Error("Database not initialized. Call await initDataDB() before getDataDB()");
+  }
+
+  if (!dataDb) {
+    // Allow overriding database path via environment variable
+    // Default: ~/Library/Application Support/Birdhouse/data.db
+    // Dev:     Set BIRDHOUSE_DATA_DB_PATH to data-dev.db for isolation
+    const dbPath = process.env.BIRDHOUSE_DATA_DB_PATH || DB_PATH;
+    dataDb = new DataDB(dbPath);
+  }
+  return dataDb;
+}
+
+export { DATA_DIR, DB_PATH as DATA_DB_PATH };
+export type { McpServerConfig, McpServers, ProviderCredentials, WorkspaceSecretsDecrypted } from "./secrets";

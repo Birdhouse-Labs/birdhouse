@@ -1,0 +1,247 @@
+// ABOUTME: Tests for send-message endpoint with clone_and_send event insertion
+// ABOUTME: Verifies that clone_and_send creates timeline events in both parent and child agents
+
+import { beforeEach, describe, expect, test } from "bun:test";
+import { Hono } from "hono";
+import { createTestDeps, withDeps } from "../../dependencies";
+import { createAgentsDB } from "../../lib/agents-db";
+import type { Message } from "../../lib/opencode-client";
+import { captureStreamEvents, createRootAgent, withWorkspaceContext } from "../../test-utils";
+import { sendMessage } from "./send-message";
+
+describe("API send-message with clone_and_send", () => {
+  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let mockForkSession: (
+    sessionId: string,
+    messageId?: string,
+  ) => Promise<{
+    id: string;
+    title: string;
+    projectID: string;
+    directory: string;
+    version: string;
+    time: { created: number; updated: number };
+  }>;
+
+  beforeEach(() => {
+    agentsDB = createAgentsDB(":memory:");
+
+    // Create mock fork function
+    mockForkSession = async (_sessionId: string) => ({
+      id: `ses_fork_${Date.now()}`,
+      title: "Fork",
+      projectID: "test-project",
+      directory: "/test",
+      version: "1.0.0",
+      time: { created: Date.now(), updated: Date.now() },
+    });
+  });
+
+  describe("clone_and_send events", () => {
+    test("inserts timeline events and emits SSE when clone_and_send is true", async () => {
+      // Create source agent
+      const sourceAgent = createRootAgent(agentsDB, {
+        id: "agent_source",
+        session_id: "ses_source",
+        title: "Source Agent",
+      });
+
+      const mockMessage: Message = {
+        info: {
+          id: "msg_response",
+          sessionID: "ses_fork_123",
+          role: "assistant",
+          time: { created: Date.now(), completed: Date.now() },
+          parentID: "msg_user",
+          modelID: "claude-sonnet-4",
+          providerID: "anthropic",
+          mode: "build",
+          cost: 0,
+          tokens: {
+            input: 100,
+            output: 50,
+            reasoning: 0,
+            cache: { read: 0, write: 0 },
+          },
+          path: { cwd: "/test", root: "/" },
+        },
+        parts: [
+          {
+            type: "text",
+            text: "Response",
+            id: "part_1",
+            sessionID: "ses_fork_123",
+            messageID: "msg_1",
+          },
+        ],
+      };
+
+      const mockClient = {
+        session: {
+          prompt: async () => {
+            return { data: mockMessage };
+          },
+        },
+      };
+
+      const deps = createTestDeps({ forkSession: mockForkSession });
+      deps.agentsDB = agentsDB;
+      deps.opencode.client = mockClient as never;
+
+      await withDeps(deps, async () => {
+        const { events, cleanup } = await captureStreamEvents();
+
+        const app = withWorkspaceContext(
+          () => {
+            const hono = new Hono();
+            hono.post("/:id/messages", (c) => sendMessage(c, deps));
+            return hono;
+          },
+          { agentsDb: agentsDB },
+        );
+
+        const response = await app.request(`/${sourceAgent.id}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: "Test message",
+            clone_and_send: true,
+          }),
+        });
+
+        expect(response.status).toBe(200);
+        const result = (await response.json()) as { cloned_agent: { id: string; title: string } };
+        expect(result.cloned_agent).toBeDefined();
+
+        const clonedAgentId = result.cloned_agent.id;
+
+        // Verify parent event (source agent timeline)
+        const sourceEvents = agentsDB.getEventsByAgentId(sourceAgent.id);
+        expect(sourceEvents).toHaveLength(1);
+        expect(sourceEvents[0].event_type).toBe("clone_created");
+        expect(sourceEvents[0].actor_agent_id).toBeNull(); // Human-initiated
+        expect(sourceEvents[0].source_agent_id).toBe(sourceAgent.id);
+        expect(sourceEvents[0].target_agent_id).toBe(clonedAgentId);
+        // Title generation completes synchronously in tests, so event has generated title
+        expect(sourceEvents[0].target_agent_title).toBe("Mock Generated Title");
+
+        // Verify child event (cloned agent timeline)
+        const clonedEvents = agentsDB.getEventsByAgentId(clonedAgentId);
+        expect(clonedEvents).toHaveLength(1);
+        expect(clonedEvents[0].event_type).toBe("clone_created");
+        expect(clonedEvents[0].actor_agent_id).toBeNull(); // Human-initiated
+        expect(clonedEvents[0].source_agent_id).toBe(sourceAgent.id);
+        expect(clonedEvents[0].source_agent_title).toBe("Source Agent");
+        expect(clonedEvents[0].target_agent_id).toBe(clonedAgentId);
+
+        // Verify SSE events were emitted
+        const eventCreatedEvents = events.filter((e) => e.type === "birdhouse.event.created");
+        expect(eventCreatedEvents).toHaveLength(2); // Parent + child events
+
+        // Verify parent SSE event
+        const parentSSE = eventCreatedEvents.find((e) => e.properties.agentId === sourceAgent.id);
+        expect(parentSSE).toBeDefined();
+        expect(parentSSE?.properties.event).toMatchObject({
+          event_type: "clone_created",
+          actor_agent_id: null,
+          source_agent_id: sourceAgent.id,
+          target_agent_id: clonedAgentId,
+          target_agent_title: result.cloned_agent.title,
+        });
+
+        // Verify child SSE event
+        const childSSE = eventCreatedEvents.find((e) => e.properties.agentId === clonedAgentId);
+        expect(childSSE).toBeDefined();
+        expect(childSSE?.properties.event).toMatchObject({
+          event_type: "clone_created",
+          actor_agent_id: null,
+          source_agent_id: sourceAgent.id,
+          source_agent_title: "Source Agent",
+          target_agent_id: clonedAgentId,
+        });
+
+        cleanup();
+      });
+    });
+
+    test("does NOT insert events when clone_and_send is false", async () => {
+      const sourceAgent = createRootAgent(agentsDB, {
+        id: "agent_no_clone",
+        session_id: "ses_no_clone",
+        title: "No Clone Agent",
+      });
+
+      const mockMessage: Message = {
+        info: {
+          id: "msg_response",
+          sessionID: "ses_no_clone",
+          role: "assistant",
+          time: { created: Date.now(), completed: Date.now() },
+          parentID: "msg_user",
+          modelID: "claude-sonnet-4",
+          providerID: "anthropic",
+          mode: "build",
+          cost: 0,
+          tokens: {
+            input: 100,
+            output: 50,
+            reasoning: 0,
+            cache: { read: 0, write: 0 },
+          },
+          path: { cwd: "/test", root: "/" },
+        },
+        parts: [
+          {
+            type: "text",
+            text: "Response",
+            id: "part_1",
+            sessionID: "ses_no_clone",
+            messageID: "msg_1",
+          },
+        ],
+      };
+
+      const mockClient = {
+        session: {
+          prompt: async () => {
+            return { data: mockMessage };
+          },
+        },
+      };
+
+      const deps = createTestDeps();
+      deps.agentsDB = agentsDB;
+      deps.opencode.client = mockClient as never;
+
+      await withDeps(deps, async () => {
+        const app = withWorkspaceContext(
+          () => {
+            const hono = new Hono();
+            hono.post("/:id/messages", (c) => sendMessage(c, deps));
+            return hono;
+          },
+          { agentsDb: agentsDB },
+        );
+
+        const response = await app.request(`/${sourceAgent.id}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: "Test message",
+            clone_and_send: false,
+          }),
+        });
+
+        expect(response.status).toBe(200);
+
+        // Verify NO events were inserted
+        const sourceEvents = agentsDB.getEventsByAgentId(sourceAgent.id);
+        expect(sourceEvents).toHaveLength(0);
+      });
+    });
+  });
+});

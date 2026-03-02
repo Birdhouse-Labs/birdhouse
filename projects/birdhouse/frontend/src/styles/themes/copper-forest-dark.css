@@ -1,0 +1,72 @@
+/* ABOUTME: copper-forest-dark theme definition for the theming system */
+/* ABOUTME: Defines all --theme-* CSS variables for this theme variant */
+
+/* --------------------------------------------------------------------------
+   COPPER FOREST - Dark variant
+   -------------------------------------------------------------------------- */
+[data-theme="copper-forest-dark"] {
+  /* Gradient colors */
+  --theme-gradient-from: oklch(64.6% 0.194 41.1deg); /* orange-600 */
+  --theme-gradient-to: oklch(55.5% 0.146 49deg);   /* amber-700 */
+  --theme-gradient-via: oklch(55.3% 0.174 38.4deg);  /* orange-700 */
+  
+  /* Accent colors */
+  --theme-accent: oklch(70.5% 0.187 47.6deg);          /* orange-500 */
+  --theme-accent-secondary: oklch(66.6% 0.157 58.3deg); /* amber-600 */
+  --theme-accent-muted: oklch(64.6% 0.194 41.1deg);     /* orange-600 */
+  
+  /* Surface colors */
+  --theme-surface: oklch(21.6% 0.006 56deg);         /* stone-900 */
+  --theme-surface-raised: oklch(26.8% 0.006 34.3deg);  /* stone-800 */
+  --theme-surface-overlay: oklch(37.4% 0.009 67.6deg); /* stone-700 */
+  --theme-surface-inset: oklch(14.7% 0.004 49.2deg);   /* stone-950 */
+  
+  /* Text colors */
+  --theme-text-primary: #ffffff;    /* white */
+  --theme-text-secondary: oklch(71.6% 0.009 56.3deg);  /* stone-400 */
+  --theme-text-muted: oklch(55.3% 0.012 58.1deg);      /* stone-500 */
+  --theme-text-on-accent: #ffffff;  /* white */
+  
+  /* UI heading color - for section labels and app chrome */
+  --theme-heading: oklch(96.2% 0.058 95.6deg);         /* amber-100 - warm headings */
+  
+  /* Border colors */
+  --theme-border: oklch(37.4% 0.009 67.6deg);          /* stone-700 */
+  --theme-border-muted: oklch(44.4% 0.01 73.6deg);    /* stone-600 */
+  
+  /* Status colors */
+  --theme-success: oklch(69.6% 0.149 162.5deg);         /* emerald-500 */
+  --theme-danger: oklch(63.7% 0.208 25.3deg);          /* red-500 */
+  
+  /* Glow/shadow color */
+  --theme-glow: oklch(64.6% 0.194 41.1deg / 0.35); /* orange-600/25 */
+  
+  /* Background gradient */
+  --theme-bg-from: oklch(21.6% 0.006 56deg);         /* stone-900 */
+  --theme-bg-via: oklch(26.2% 0.049 172.6deg);          /* emerald-950 */
+  --theme-bg-to: oklch(21.6% 0.006 56deg);           /* stone-900 */
+  
+  /* Prose/typography - legacy tokens */
+  --theme-prose-link: oklch(75.8% 0.159 55.9deg);      /* orange-400 */
+  --theme-prose-code: oklch(83.7% 0.164 84.4deg);      /* amber-400 */
+  --theme-prose-code-bg: oklch(66.6% 0.157 58.3deg); /* amber-600/20 */
+  --theme-prose-blockquote-border: oklch(70.5% 0.187 47.6deg); /* orange-500 */
+  
+  /* Prose text hierarchy */
+  --theme-prose-body: oklch(92.3% 0.003 48.7deg);      /* stone-200 - main prose text */
+  --theme-prose-secondary: oklch(71.6% 0.009 56.3deg); /* stone-400 - metadata */
+  --theme-prose-muted: oklch(55.3% 0.012 58.1deg);     /* stone-500 - hints */
+  --theme-prose-heading: #ffffff;   /* white - neutral for content */
+  
+  /* Inline code */
+  --theme-prose-code-inline-text: oklch(87.9% 0.153 91.6deg);  /* amber-300 - brighter for better contrast */
+  --theme-prose-code-inline-bg: oklch(66.6% 0.157 58.3deg / 0.25); /* amber-600/25 - more visible background */
+  
+  /* Interactive */
+  --theme-prose-link-hover: oklch(83.7% 0.117 66.3deg); /* orange-300 - brighter on hover */
+  
+  /* Scrollbar */
+  --theme-scrollbar-track: oklch(26.8% 0.006 34.3deg); /* stone-800 */
+  --theme-scrollbar-thumb: oklch(44.4% 0.01 73.6deg); /* stone-600 */
+  --theme-scrollbar-thumb-hover: oklch(55.3% 0.012 58.1deg); /* stone-500 */
+}

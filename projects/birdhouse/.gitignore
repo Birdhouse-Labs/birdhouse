@@ -1,0 +1,22 @@
+.env
+node_modules
+dist
+tmp
+# TypeScript build info
+*.tsbuildinfo
+# SQLite database files (created at runtime in ~/Library/Application Support)
+*.db
+*.db-shm
+*.db-wal
+server/data/
+# Migration planning docs (not for commit)
+docs/sessions-to-agents-migration-plan.md
+.worktrees/
+
+# Build artifacts
+cli-dist/
+birdhouse-darwin-*.tar.gz
+checksums.txt
+
+# Backup files
+*.env.backup

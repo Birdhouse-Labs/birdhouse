@@ -1,0 +1,5 @@
+title: Fibonacci Recursive Agent Test
+trigger_phrases:
+  - run a fibonacci test
+  - recursive fibonacci test
+  - fibonacci test

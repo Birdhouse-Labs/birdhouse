@@ -1,0 +1,76 @@
+/* ABOUTME: purple-dream-light theme definition for the theming system */
+/* ABOUTME: Defines all --theme-* CSS variables for this theme variant */
+
+/* --------------------------------------------------------------------------
+   PURPLE DREAM - Light variant
+   -------------------------------------------------------------------------- */
+[data-theme="purple-dream-light"] {
+  /* Gradient colors */
+  --theme-gradient-from: oklch(62.7% 0.233 303.9deg); /* purple-500 */
+  --theme-gradient-to: oklch(65.6% 0.212 354.3deg);   /* pink-500 */
+  --theme-gradient-via: oklch(66.7% 0.259 322.1deg);  /* fuchsia-500 */
+  
+  /* Accent colors */
+  --theme-accent: oklch(62.7% 0.233 303.9deg);          /* purple-500 */
+  --theme-accent-secondary: oklch(65.6% 0.212 354.3deg); /* pink-500 */
+  --theme-accent-muted: oklch(72.2% 0.177 305.5deg);     /* purple-400 */
+  
+  /* Surface colors */
+  --theme-surface: oklch(96.8% 0.007 247.9deg);         /* slate-100 */
+  --theme-surface-raised: #ffffff;   /* white */
+  --theme-surface-overlay: oklch(98.4% 0.003 247.9deg);  /* slate-50 */
+  --theme-surface-inset: oklch(92.9% 0.013 255.5deg);    /* slate-200 */
+  
+  /* Text colors */
+  --theme-text-primary: oklch(20.8% 0.04 265.8deg);    /* slate-900 */
+  --theme-text-secondary: oklch(44.6% 0.037 257.3deg);  /* slate-600 */
+  --theme-text-muted: oklch(71.1% 0.035 256.8deg);      /* slate-400 */
+  --theme-text-on-accent: #ffffff;  /* white */
+  
+  /* UI heading color - for section labels and app chrome */
+  --theme-heading: oklch(43.8% 0.198 303.7deg);         /* purple-800 - rich purple headings */
+  
+  /* Border colors */
+  --theme-border: oklch(92.9% 0.013 255.5deg);          /* slate-200 */
+  --theme-border-muted: oklch(86.9% 0.02 252.9deg);    /* slate-300 */
+  
+  /* Status colors */
+  --theme-success: oklch(69.6% 0.149 162.5deg);         /* emerald-500 */
+  --theme-danger: oklch(63.7% 0.208 25.3deg);          /* red-500 */
+  
+  /* Glow/shadow color */
+  --theme-glow: oklch(62.7% 0.233 303.9deg / 0.35); /* purple-500/25 */
+  
+  /* Background gradient */
+  --theme-bg-from: oklch(96.8% 0.007 247.9deg);         /* slate-100 */
+  --theme-bg-via: oklch(94.6% 0.033 307.2deg);          /* purple-100 */
+  --theme-bg-to: oklch(96.8% 0.007 247.9deg);           /* slate-100 */
+  
+  /* Prose/typography - legacy tokens */
+  --theme-prose-link: oklch(54.1% 0.247 293deg);      /* violet-600 */
+  --theme-prose-code: oklch(52.5% 0.199 4deg);      /* pink-700 */
+  --theme-prose-code-bg: oklch(65.6% 0.212 354.3deg); /* pink-500/10 */
+  --theme-prose-blockquote-border: oklch(62.7% 0.233 303.9deg); /* purple-500 */
+  
+  /* Prose text hierarchy */
+  --theme-prose-body: oklch(27.9% 0.037 260deg);      /* slate-800 - main prose text */
+  --theme-prose-secondary: oklch(44.6% 0.037 257.3deg); /* slate-600 - metadata, timestamps */
+  --theme-prose-muted: oklch(71.1% 0.035 256.8deg);     /* slate-400 - hints, placeholders */
+  --theme-prose-heading: oklch(20.8% 0.04 265.8deg);   /* slate-900 - neutral black for content */
+  
+  /* Inline code (blocks use code theme) */
+  --theme-prose-code-inline-text: oklch(45.5% 0.171 13.7deg);  /* rose-800 - darker for better contrast */
+  --theme-prose-code-inline-bg: oklch(65.6% 0.212 354.3deg / 0.15); /* pink-500/15 - more visible background */
+  
+  /* Interactive */
+  --theme-prose-link-hover: oklch(49.1% 0.241 292.6deg); /* violet-700 */
+  
+  /* Fonts (optional - will fallback to defaults if not specified) */
+  /* --theme-font-prose-body: ...; */
+  /* --theme-font-prose-code: ...; */
+  
+  /* Scrollbar */
+  --theme-scrollbar-track: oklch(92.9% 0.013 255.5deg); /* slate-200 */
+  --theme-scrollbar-thumb: oklch(71.1% 0.035 256.8deg); /* slate-400 */
+  --theme-scrollbar-thumb-hover: oklch(55.4% 0.041 257.4deg); /* slate-500 */
+}
