@@ -1,0 +1,4 @@
+_site
+_cache
+.env
+.DS_Store

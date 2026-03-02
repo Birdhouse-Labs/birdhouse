@@ -1,0 +1,34 @@
+# Birdhouse Labs
+
+> AI Agent Orchestration Platform
+
+## Description
+
+Birdhouse is an AI agent orchestration platform where agents actively communicate and collaborate as a team. Code with multi-agent teams that can communicate, coordinate, and complete complex software development tasks together.
+
+## Key Features
+
+- **Real Agent Teams**: Agents work together as a team, not just in parallel. Team members actively communicate and collaborate, with each agent being a full-fledged team member you can message directly.
+- **Agent-First Architecture**: Agents are provided a complete shell environment with full system access. They don't need your approval - they just get things done.
+- **Visual Agent Tree**: Browse agent sessions and navigate directly to any agent. Agents are organized by team structure with highlighting to show which agents are working.
+- **Saved Patterns**: Save successful workflows as reusable patterns that can be triggered with natural language. Turn favorite phrases into curated prompts.
+- **Direct Agent Messaging**: Each agent is a full-fledged team member that developers can message directly for steering and collaboration.
+
+## Use Cases
+
+- Orchestrate teams of AI agents for complex software development tasks
+- Delegate work across multiple agents while maintaining oversight
+- Build software with agents that have full system access and can act autonomously
+- Save and reuse successful multi-agent workflows as patterns
+- Navigate agent trees to check progress and provide guidance
+
+## Product Details
+
+- **Status**: Limited beta starting March 2026
+- **Join Waitlist**: https://birdhouselabs.ai (email signup form on site)
+- **Twitter**: @BirdhouseLabs
+
+## Contact
+
+- Email: hello@birdhouselabs.ai
+- Website: https://birdhouselabs.ai

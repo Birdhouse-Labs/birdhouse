@@ -1,0 +1,9 @@
+node_modules
+/tmp
+.DS_Store
+worktrees/
+.worktrees/
+opencode.json
+.env
+/.birdhouse
+/projects/_*

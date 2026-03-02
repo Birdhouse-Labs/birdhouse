@@ -1,0 +1,75 @@
+/* ABOUTME: sketch-graphite-dark theme definition for the theming system */
+/* ABOUTME: Defines all --theme-* CSS variables for this theme variant */
+
+  /* --------------------------------------------------------------------------
+     SKETCH GRAPHITE - Dark variant (white pencil on dark paper)
+     -------------------------------------------------------------------------- */
+  [data-theme="sketch-graphite-dark"] {
+    /* Gradient colors - chalk/white pencil highlights */
+    --theme-gradient-from: oklch(75.4% 0.085 67.1deg); /* warm tan - white charcoal */
+    --theme-gradient-to: oklch(79.8% 0.036 166.6deg);   /* soft sage - colored highlight */
+    --theme-gradient-via: oklch(77.8% 0.033 79.9deg);  /* blend */
+    
+    /* Accent colors */
+    --theme-accent: oklch(75.4% 0.085 67.1deg);          /* warm tan */
+    --theme-accent-secondary: oklch(79.8% 0.036 166.6deg); /* soft sage */
+    --theme-accent-muted: oklch(64.5% 0.045 78.7deg);     /* muted tan */
+    
+    /* Surface colors - dark charcoal/kraft paper */
+    --theme-surface: oklch(27.2% 0.009 67.4deg);         /* dark charcoal base */
+    --theme-surface-raised: oklch(33.6% 0.009 67.5deg);   /* charcoal paper */
+    --theme-surface-overlay: oklch(39.3% 0.012 72.5deg);  /* lighter charcoal */
+    --theme-surface-inset: oklch(21.1% 0.005 67.6deg);    /* very dark shadow */
+    
+    /* Text colors - soft whites and light grays like chalk */
+    --theme-text-primary: oklch(96.5% 0.005 78.3deg);    /* soft white pencil */
+    --theme-text-secondary: oklch(76.9% 0.01 72.6deg);  /* light graphite */
+    --theme-text-muted: oklch(61.9% 0.011 72.6deg);      /* muted gray */
+    --theme-text-on-accent: oklch(27.2% 0.009 67.4deg);  /* dark on light accent */
+    
+    /* UI heading color - for section labels and app chrome */
+    --theme-heading: oklch(96.5% 0.005 78.3deg);         /* bright white - matches old prose-heading */
+    
+    /* Border colors - like white pencil lines */
+    --theme-border: oklch(45.2% 0.012 72.5deg);          /* medium sketch line */
+    --theme-border-muted: oklch(39.3% 0.012 72.5deg);    /* subtle line */
+    
+    /* Status colors */
+    --theme-success: oklch(79.8% 0.036 166.6deg);         /* soft sage (reuse accent) */
+    --theme-danger: oklch(74.5% 0.076 31.4deg);          /* muted salmon */
+    
+    /* Glow/shadow color */
+    --theme-glow: oklch(75.4% 0.085 67.1deg / 0.35); /* soft tan glow */
+    
+    /* Background gradient - charcoal paper with warmth */
+    --theme-bg-from: oklch(27.2% 0.009 67.4deg);         /* charcoal */
+    --theme-bg-via: oklch(33.6% 0.014 54.1deg);          /* warm dark brown */
+    --theme-bg-to: oklch(27.2% 0.009 67.4deg);           /* charcoal */
+    
+    /* Prose/typography - legacy tokens */
+    --theme-prose-link: oklch(75.4% 0.085 67.1deg);      /* tan for links */
+    --theme-prose-code: oklch(77.8% 0.033 79.9deg);      /* warm beige */
+    --theme-prose-code-bg: oklch(75.4% 0.085 67.1deg); /* subtle highlight */
+    --theme-prose-blockquote-border: oklch(75.4% 0.085 67.1deg); /* tan border */
+    
+    /* Prose text hierarchy */
+    --theme-prose-body: oklch(87.4% 0.009 78.3deg);      /* light warm gray - readable */
+    --theme-prose-secondary: oklch(76.9% 0.01 72.6deg); /* lighter strokes */
+    --theme-prose-muted: oklch(61.9% 0.011 72.6deg);     /* very light */
+    --theme-prose-heading: #ffffff;   /* white - neutral for content */
+    
+    /* Inline code */
+    --theme-prose-code-inline-text: oklch(94.9% 0.019 80.1deg);  /* lighter warm beige - better contrast */
+    --theme-prose-code-inline-bg: oklch(75.4% 0.085 67.1deg / 0.12); /* subtle highlight - more visible */
+    
+    /* Interactive */
+    --theme-prose-link-hover: oklch(88% 0.041 74.4deg); /* lighter on hover */
+    
+    /* Fonts - considering handwritten/analog feel */
+    /* --theme-font-prose-body: 'Courier New', monospace; */ /* Optional: typewriter */
+    
+    /* Scrollbar */
+    --theme-scrollbar-track: oklch(33.6% 0.009 67.5deg); /* dark paper */
+    --theme-scrollbar-thumb: oklch(51.1% 0.011 62.4deg); /* graphite */
+    --theme-scrollbar-thumb-hover: oklch(61.9% 0.011 72.6deg); /* lighter */
+  }

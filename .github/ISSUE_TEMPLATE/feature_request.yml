@@ -1,0 +1,42 @@
+name: Feature Request
+description: Suggest a specific, well-scoped addition to Birdhouse
+labels: ["type: feature", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For broad ideas or things you'd like to discuss before they become a formal request, please use [GitHub Discussions → Ideas](https://github.com/Birdhouse-Labs/birdhouse/discussions/categories/ideas) instead. Issues are for well-scoped requests that are ready to be worked on.
+
+        Please also check the [ROADMAP.md](https://github.com/Birdhouse-Labs/birdhouse/blob/main/ROADMAP.md) to see if this is already planned.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the problem or gap you're running into. Focus on the problem, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like to see built?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Any other approaches you've thought about?
+
+  - type: checkboxes
+    id: alignment
+    attributes:
+      label: Checklist
+      options:
+        - label: I've read the [VISION.md](https://github.com/Birdhouse-Labs/birdhouse/blob/main/VISION.md) and this aligns with the project direction
+          required: true
+        - label: I've checked the roadmap and this isn't already planned
+          required: true

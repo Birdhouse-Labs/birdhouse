@@ -1,0 +1,117 @@
+name: Release CLI
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 0.1.0-beta.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write  # needed to push tags and create releases
+
+jobs:
+  build-cli:
+    name: Build and Release CLI
+    runs-on: macos-latest  # Apple Silicon (arm64) runner - can cross-compile to x64
+    defaults:
+      run:
+        working-directory: projects/birdhouse
+
+    steps:
+      - name: Checkout Birdhouse
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Clone OpenCode
+        run: |
+          git clone --depth 1 https://github.com/Birdhouse-Labs/opencode.git $RUNNER_TEMP/opencode
+
+      - name: Install OpenCode dependencies (all platforms)
+        run: |
+          cd $RUNNER_TEMP/opencode/packages/opencode
+          bun install --os="*" --cpu="*"
+
+      - name: Install Birdhouse dependencies
+        run: |
+          bun install --frozen-lockfile
+          cd frontend && bun install --frozen-lockfile
+          cd ../server && bun install --frozen-lockfile
+
+      - name: Install Plugin dependencies
+        run: |
+          cd ../birdhouse-oc-plugin && bun install --frozen-lockfile
+
+      - name: Debug git status
+        run: git status --short
+
+      - name: Build CLI
+        env:
+          OPENCODE_PATH: ${{ runner.temp }}/opencode
+          BIRDHOUSE_VERSION: ${{ inputs.version }}
+        run: |
+          bun run scripts/build-cli.ts
+
+      - name: Package tarballs
+        run: |
+          cd cli-dist
+          tar -czf ../birdhouse-darwin-arm64.tar.gz \
+            bin/birdhouse \
+            dist/birdhouse-darwin-arm64 \
+            dist/server-darwin-arm64 \
+            dist/opencode/darwin-arm64 \
+            dist/frontend \
+            dist/pattern-bundles \
+            version.json
+          tar -czf ../birdhouse-darwin-x64.tar.gz \
+            bin/birdhouse \
+            dist/birdhouse-darwin-x64 \
+            dist/server-darwin-x64 \
+            dist/opencode/darwin-x64 \
+            dist/frontend \
+            dist/pattern-bundles \
+            version.json
+
+      - name: Generate checksums
+        run: |
+          shasum -a 256 birdhouse-darwin-arm64.tar.gz birdhouse-darwin-x64.tar.gz > checksums.txt
+
+      - name: Tag release commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: Birdhouse v${{ inputs.version }}
+          body: |
+            ## Install
+
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/birdhouselabs/birdhouse/main/install.sh | bash
+            ```
+
+            ## Assets
+            - `birdhouse-darwin-arm64.tar.gz` — macOS Apple Silicon
+            - `birdhouse-darwin-x64.tar.gz` — macOS Intel
+            - `checksums.txt` — SHA256 checksums
+
+            ## Supported Platforms
+            - macOS Apple Silicon (arm64)
+            - macOS Intel (x64)
+          files: |
+            projects/birdhouse/birdhouse-darwin-arm64.tar.gz
+            projects/birdhouse/birdhouse-darwin-x64.tar.gz
+            projects/birdhouse/checksums.txt
+            install.sh
+          draft: false
+          prerelease: false

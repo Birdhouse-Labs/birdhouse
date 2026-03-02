@@ -1,0 +1,30 @@
+on: [push]
+env:
+  HOST: https://birdhouselabs.ai/
+  SUPABASE_URL: https://hzqxwcbohrtxyvmmamsn.supabase.co
+  SUPABASE_ANON_KEY: sb_publishable_qNuDf5Rh9PIh1hUvWT2GWA_PHi8V_QF
+  POSTHOG_PUBLIC_KEY: phc_LwyUqyfUjlP28aI98eE2K7jA6mdTboPZYRuKotWsoYI
+
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    name: Deploy to Cloudflare Pages
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version-file: ./projects/marketing/.tool-versions
+      - name: Build
+        run: cd projects/marketing && deno install --allow-scripts --allow-import && deno task lume
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy ./projects/marketing/_site --project-name=birdhouselabs
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

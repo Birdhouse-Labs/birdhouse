@@ -1,0 +1,91 @@
+@import "tailwindcss";
+@import "npm:lenis/dist/lenis.css";
+@plugin "@tailwindcss/typography";
+@plugin "daisyui" {
+  themes: birdhouse --default;
+}
+
+@plugin "daisyui/theme/index.js" {
+  name: "birdhouse";
+  default: true; /* set as default */
+  prefersdark: true; /* set as default dark mode (prefers-color-scheme:dark) */
+  color-scheme: dark; /* color of browser-provided UI */
+
+  --color-base-100: oklch(15% 0.1 150); /* Converted from #252d27 */
+  --color-base-200: oklch(20% 0.1 150);
+  --color-base-300: oklch(25% 0.1 150);
+  --color-base-content: #e5e2d6;
+  --color-primary: #a68f65; /* Converted from #a68f65 */
+  --color-primary-content: oklch(15% 0.1 150);
+  --color-secondary: oklch(70% 0.25 200);
+  --color-secondary-content: oklch(98% 0.01 200);
+  --color-accent: oklch(65% 0.25 160);
+  --color-accent-content: oklch(98% 0.01 160);
+  --color-neutral: #e5e2d6; /* Converted from #e6e3d7 */
+  --color-neutral-content: #e5e2d6;
+  --color-info: oklch(70% 0.2 220);
+  --color-info-content: oklch(98% 0.01 220);
+  --color-success: oklch(65% 0.25 140);
+  --color-success-content: oklch(98% 0.01 140);
+  --color-warning: oklch(80% 0.25 80);
+  --color-warning-content: oklch(20% 0.05 80);
+  --color-error: oklch(65% 0.3 30);
+  --color-error-content: oklch(98% 0.01 30);
+
+  /* border radius */
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+
+  /* base sizes */
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+
+  /* border size */
+  --border: 1px;
+
+  /* effects */
+  --depth: 1;
+  --noise: 0;
+  --glass-border-opacity: 0;
+}
+
+* {
+  font-family: Rockwell;
+}
+
+.btn {
+  font-family: sans-serif;
+}
+
+/* Diagonal color split background */
+@layer components {
+  .clip-path-diagonal {
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+
+  /* Alternative: Full diagonal split from top-left to bottom-right */
+  .bg-diagonal-split {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bg-diagonal-split::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(6, 182, 212, 0.15) 0%,
+      rgba(59, 130, 246, 0.15) 100%
+    );
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+    z-index: 1;
+  }
+
+  /* Hero background image styling per theme */
+  .hero-bg {
+    background-size: cover;
+    background-position: center;
+  }
+}

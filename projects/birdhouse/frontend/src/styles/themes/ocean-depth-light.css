@@ -1,0 +1,72 @@
+/* ABOUTME: ocean-depth-light theme definition for the theming system */
+/* ABOUTME: Defines all --theme-* CSS variables for this theme variant */
+
+  /* --------------------------------------------------------------------------
+     OCEAN DEPTH - Light variant
+     -------------------------------------------------------------------------- */
+  [data-theme="ocean-depth-light"] {
+    /* Gradient colors */
+    --theme-gradient-from: oklch(79.7% 0.134 211.5deg); /* cyan-400 */
+    --theme-gradient-to: oklch(68.5% 0.148 237.3deg);   /* sky-500 */
+    --theme-gradient-via: oklch(71.5% 0.126 215.2deg);  /* cyan-500 */
+    
+    /* Accent colors */
+    --theme-accent: oklch(79.7% 0.134 211.5deg);          /* cyan-400 */
+    --theme-accent-secondary: oklch(68.5% 0.148 237.3deg); /* sky-500 */
+    --theme-accent-muted: oklch(86.5% 0.115 207.1deg);     /* cyan-300 */
+    
+    /* Surface colors */
+    --theme-surface: oklch(98.4% 0.003 247.9deg);         /* slate-50 */
+    --theme-surface-raised: #ffffff;   /* white */
+    --theme-surface-overlay: oklch(96.8% 0.007 247.9deg);  /* slate-100 */
+    --theme-surface-inset: oklch(92.9% 0.013 255.5deg);    /* slate-200 */
+    
+    /* Text colors */
+    --theme-text-primary: oklch(20.8% 0.04 265.8deg);    /* slate-900 */
+    --theme-text-secondary: oklch(44.6% 0.037 257.3deg);  /* slate-600 */
+    --theme-text-muted: oklch(71.1% 0.035 256.8deg);      /* slate-400 */
+    --theme-text-on-accent: #ffffff;  /* white */
+    
+    /* UI heading color - for section labels and app chrome */
+    --theme-heading: oklch(20.8% 0.04 265.8deg);         /* slate-900 - matches old prose-heading */
+    
+    /* Border colors */
+    --theme-border: oklch(92.9% 0.013 255.5deg);          /* slate-200 */
+    --theme-border-muted: oklch(86.9% 0.02 252.9deg);    /* slate-300 */
+    
+    /* Status colors */
+    --theme-success: oklch(69.6% 0.149 162.5deg);         /* emerald-500 */
+    --theme-danger: oklch(63.7% 0.208 25.3deg);          /* red-500 */
+    
+    /* Glow/shadow color */
+    --theme-glow: oklch(79.7% 0.134 211.5deg / 0.35); /* cyan-400/25 */
+    
+    /* Background gradient */
+    --theme-bg-from: oklch(98.4% 0.003 247.9deg);         /* slate-50 */
+    --theme-bg-via: oklch(95.1% 0.025 236.8deg);          /* sky-100 */
+    --theme-bg-to: oklch(98.4% 0.003 247.9deg);           /* slate-50 */
+    
+    /* Prose/typography - legacy tokens */
+    --theme-prose-link: oklch(58.8% 0.139 242deg);      /* sky-600 */
+    --theme-prose-code: oklch(60.9% 0.111 221.7deg);      /* cyan-600 */
+    --theme-prose-code-bg: oklch(71.5% 0.126 215.2deg); /* cyan-500/10 */
+    --theme-prose-blockquote-border: oklch(79.7% 0.134 211.5deg); /* cyan-400 */
+    
+    /* Prose text hierarchy */
+    --theme-prose-body: oklch(27.9% 0.037 260deg);      /* slate-800 - main prose text */
+    --theme-prose-secondary: oklch(44.6% 0.037 257.3deg); /* slate-600 - metadata */
+    --theme-prose-muted: oklch(71.1% 0.035 256.8deg);     /* slate-400 - hints */
+    --theme-prose-heading: oklch(20.8% 0.04 265.8deg);   /* slate-900 - neutral black for content */
+    
+    /* Inline code */
+    --theme-prose-code-inline-text: oklch(45% 0.077 224.3deg);  /* cyan-800 - darker for better contrast */
+    --theme-prose-code-inline-bg: oklch(71.5% 0.126 215.2deg / 0.15); /* cyan-500/15 - more visible background */
+    
+    /* Interactive */
+    --theme-prose-link-hover: oklch(50% 0.119 242.7deg); /* sky-700 - darker on hover */
+    
+    /* Scrollbar */
+    --theme-scrollbar-track: oklch(92.9% 0.013 255.5deg); /* slate-200 */
+    --theme-scrollbar-thumb: oklch(71.1% 0.035 256.8deg); /* slate-400 */
+    --theme-scrollbar-thumb-hover: oklch(55.4% 0.041 257.4deg); /* slate-500 */
+  }

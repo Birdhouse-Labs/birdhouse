@@ -1,0 +1,75 @@
+/* ABOUTME: sketch-graphite-light theme definition for the theming system */
+/* ABOUTME: Defines all --theme-* CSS variables for this theme variant */
+
+  /* --------------------------------------------------------------------------
+     SKETCH GRAPHITE - Light variant (graphite on white sketch paper)
+     -------------------------------------------------------------------------- */
+  [data-theme="sketch-graphite-light"] {
+    /* Gradient colors - muted earth tones like colored pencils */
+    --theme-gradient-from: oklch(57.1% 0.053 72.7deg); /* warm brown - sepia ink */
+    --theme-gradient-to: oklch(61.6% 0.045 166.7deg);   /* muted teal - colored pencil */
+    --theme-gradient-via: oklch(67.1% 0.037 55.7deg);  /* blend of browns */
+    
+    /* Accent colors */
+    --theme-accent: oklch(57.1% 0.053 72.7deg);          /* warm brown */
+    --theme-accent-secondary: oklch(61.6% 0.045 166.7deg); /* muted teal */
+    --theme-accent-muted: oklch(67.1% 0.037 55.7deg);     /* lighter brown */
+    
+    /* Surface colors - warm off-whites like sketch paper */
+    --theme-surface: oklch(96.5% 0.005 78.3deg);         /* light cream paper */
+    --theme-surface-raised: oklch(98% 0.005 78.3deg);   /* bright sketch paper */
+    --theme-surface-overlay: oklch(94.5% 0.004 56.4deg);  /* slightly darker cream */
+    --theme-surface-inset: oklch(92.1% 0.008 73.7deg);    /* subtle shadow */
+    
+    /* Text colors - soft graphite, not harsh black */
+    --theme-text-primary: oklch(33.6% 0.009 67.5deg);    /* soft charcoal */
+    --theme-text-secondary: oklch(51.1% 0.011 62.4deg);  /* light graphite strokes */
+    --theme-text-muted: oklch(67.2% 0.011 72.6deg);      /* very light sketching */
+    --theme-text-on-accent: oklch(98% 0.005 78.3deg);  /* paper white */
+    
+    /* UI heading color - for section labels and app chrome */
+    --theme-heading: oklch(27.2% 0.009 67.4deg);         /* dark charcoal - matches old prose-heading */
+    
+    /* Border colors - like pencil underlines */
+    --theme-border: oklch(85.7% 0.011 76.6deg);          /* light sketch line */
+    --theme-border-muted: oklch(92.1% 0.008 73.7deg);    /* very light line */
+    
+    /* Status colors - muted naturals */
+    --theme-success: oklch(61.6% 0.045 166.7deg);         /* muted teal (reuse accent) */
+    --theme-danger: oklch(55.7% 0.104 27deg);          /* muted red-brown */
+    
+    /* Glow/shadow color - subtle like pencil shadow */
+    --theme-glow: oklch(57.1% 0.053 72.7deg / 0.35); /* soft brown glow */
+    
+    /* Background gradient - warm paper tones */
+    --theme-bg-from: oklch(98% 0.005 78.3deg);         /* white paper */
+    --theme-bg-via: oklch(95.9% 0.013 86.8deg);          /* warm cream */
+    --theme-bg-to: oklch(98% 0.005 78.3deg);           /* white paper */
+    
+    /* Prose/typography - legacy tokens */
+    --theme-prose-link: oklch(48.8% 0.028 67.1deg);      /* darker brown for links */
+    --theme-prose-code: oklch(57.1% 0.053 72.7deg);      /* warm brown for code */
+    --theme-prose-code-bg: oklch(57.1% 0.053 72.7deg); /* subtle brown tint */
+    --theme-prose-blockquote-border: oklch(57.1% 0.053 72.7deg); /* warm brown border */
+    
+    /* Prose text hierarchy */
+    --theme-prose-body: oklch(39.3% 0.012 72.5deg);      /* readable graphite */
+    --theme-prose-secondary: oklch(51.1% 0.011 62.4deg); /* lighter strokes */
+    --theme-prose-muted: oklch(67.2% 0.011 72.6deg);     /* very light */
+    --theme-prose-heading: oklch(20.8% 0.04 265.8deg);   /* slate-900 - neutral black for content */
+    
+    /* Inline code */
+    --theme-prose-code-inline-text: oklch(41.6% 0.027 62.6deg);  /* darker brown - better contrast */
+    --theme-prose-code-inline-bg: oklch(57.1% 0.053 72.7deg / 0.12); /* subtle tint - more visible */
+    
+    /* Interactive */
+    --theme-prose-link-hover: oklch(42.9% 0.027 67deg); /* darker on hover */
+    
+    /* Fonts - considering handwritten feel */
+    /* --theme-font-prose-body: 'Courier New', monospace; */ /* Optional: typewriter feel */
+    
+    /* Scrollbar - subtle like pencil marks */
+    --theme-scrollbar-track: oklch(94.5% 0.004 56.4deg); /* light paper */
+    --theme-scrollbar-thumb: oklch(76.9% 0.01 72.6deg); /* graphite */
+    --theme-scrollbar-thumb-hover: oklch(67.2% 0.011 72.6deg); /* darker graphite */
+  }

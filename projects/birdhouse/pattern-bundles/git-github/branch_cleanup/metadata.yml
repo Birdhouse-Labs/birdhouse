@@ -1,0 +1,12 @@
+title: Clean Up Branches with Deleted Remotes
+trigger_phrases:
+  - clean up branches
+  - cleanup branches
+  - delete gone branches
+  - remove stale branches
+  - prune branches
+  - branch cleanup
+  - git fp
+  - fetch and prune
+  - cleanup worktrees
+  - remove worktrees

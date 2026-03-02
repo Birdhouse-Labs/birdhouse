@@ -1,0 +1,7 @@
+title: "Generate Release Notes from Git Branch"
+trigger_phrases:
+  - "generate release notes"
+  - "prepare release notes"
+  - "prep for a PR"
+  - "what changed in this branch"
+  - "branch change summary"

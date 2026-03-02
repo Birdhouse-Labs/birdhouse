@@ -1,0 +1,8 @@
+id: pattern_test002
+title: Minimal Test Pattern
+category: Testing
+trigger_phrases:
+  - "minimal pattern"
+slug: test-pattern-two
+created_at: "2026-01-19T10:00:00Z"
+updated_at: "2026-01-19T10:00:00Z"

@@ -1,0 +1,162 @@
+// ABOUTME: Chat container with input at top and message list below (newest-at-top architecture)
+// ABOUTME: Orchestrates message rendering and input handling
+
+import { LibraryBig, Split, X } from "lucide-solid";
+import { type Component, createMemo, createSignal, For, Show } from "solid-js";
+import { findPendingAssistantId, isMessageQueued } from "../../domain/message-queue";
+import { uiSize } from "../../theme";
+import type { Message } from "../../types/messages";
+import { countPatternReferences, extractPatternReferences } from "../../utils/patternReferences";
+import AutoGrowTextarea from "./AutoGrowTextarea";
+import Button from "./Button";
+import MessageBubble from "./MessageBubble";
+import PatternReferencesDialog from "./PatternReferencesDialog";
+
+export interface ChatContainerProps {
+  messages: Message[];
+  agentId: string; // Agent whose messages are being displayed
+  inputValue: string;
+  isStreaming: boolean;
+  onInputChange: (value: string) => void;
+  onSend: () => void;
+  onStop: () => void;
+  isSendDisabled?: boolean;
+  cloneMode?: boolean;
+  onCloneModeChange?: (enabled: boolean) => void;
+  onOpenAgentModal?: ((agentId: string) => void) | undefined;
+  onCloneFromMessage?: ((messageId: string, messageContent: string, event: MouseEvent) => void) | undefined;
+  onResetToMessage?: ((messageId: string) => void) | undefined;
+  inputRef?: (el: HTMLTextAreaElement) => void;
+}
+
+export const ChatContainer: Component<ChatContainerProps> = (props) => {
+  const sizeClasses = createMemo(() => {
+    const size = uiSize();
+    return {
+      text: size === "sm" ? "text-sm" : size === "md" ? "text-base" : "text-lg",
+      gap: size === "sm" ? "gap-3" : size === "md" ? "gap-4" : "gap-5",
+    };
+  });
+
+  const patternCount = createMemo(() => countPatternReferences(props.inputValue));
+  const patternIds = createMemo(() => extractPatternReferences(props.inputValue));
+  const [dialogOpen, setDialogOpen] = createSignal(false);
+
+  // Find the pending assistant message ID for queue detection
+  const pendingAssistantId = createMemo(() => findPendingAssistantId(props.messages));
+
+  return (
+    <div class="flex flex-col flex-1 bg-surface overflow-hidden">
+      {/* Input area - at TOP for newest-at-top architecture */}
+      <div class="px-4 pt-3 pb-3 border-b bg-surface-raised border-border flex-shrink-0">
+        <div class="flex items-end gap-3">
+          <AutoGrowTextarea
+            value={props.inputValue}
+            onInput={props.onInputChange}
+            onSend={props.onSend}
+            disabled={props.isSendDisabled ?? false}
+            placeholder="Type a message..."
+            ref={props.inputRef}
+          />
+          <Show when={props.isStreaming && !props.inputValue.trim()}>
+            <button
+              type="button"
+              onClick={props.onStop}
+              class="rounded-lg px-4 py-2 font-medium bg-gradient-to-r from-gradient-from to-gradient-to text-text-on-accent transition-opacity"
+              classList={{
+                [sizeClasses().text]: true,
+              }}
+              data-ph-capture-attribute-button-type="stop-streaming"
+              data-ph-capture-attribute-agent-id={props.agentId}
+            >
+              Stop
+            </button>
+          </Show>
+          <Show when={!props.isStreaming || props.inputValue.trim()}>
+            <div class="flex">
+              <button
+                type="button"
+                onClick={props.onSend}
+                disabled={!props.inputValue.trim() || props.isSendDisabled}
+                class="px-4 py-2 font-medium bg-gradient-to-r from-gradient-from to-gradient-to text-text-on-accent transition-opacity"
+                classList={{
+                  [sizeClasses().text]: true,
+                  "opacity-50 cursor-not-allowed": !props.inputValue.trim() || props.isSendDisabled,
+                  "hover:opacity-90": !!props.inputValue.trim() && !props.isSendDisabled,
+                  "rounded-lg": !props.onCloneModeChange,
+                  "rounded-l-lg": !!props.onCloneModeChange,
+                }}
+                data-ph-capture-attribute-button-type="send-message"
+                data-ph-capture-attribute-agent-id={props.agentId}
+                data-ph-capture-attribute-clone-mode={props.cloneMode ? "true" : "false"}
+                data-ph-capture-attribute-is-streaming={props.isStreaming ? "true" : "false"}
+                data-ph-capture-attribute-action={
+                  props.cloneMode ? "clone-and-send" : props.isStreaming ? "queue" : "send"
+                }
+              >
+                {props.isSendDisabled ? "..." : props.cloneMode ? "Clone & Send" : props.isStreaming ? "Queue" : "Send"}
+              </button>
+              <Show when={props.onCloneModeChange}>
+                <button
+                  type="button"
+                  onClick={() => props.onCloneModeChange?.(!props.cloneMode)}
+                  disabled={props.isSendDisabled}
+                  class="px-3 py-2 font-medium bg-gradient-to-l from-gradient-from to-gradient-to text-text-on-accent transition-opacity border-l border-white/20 rounded-r-lg flex items-center justify-center"
+                  classList={{
+                    "opacity-50 cursor-not-allowed": props.isSendDisabled,
+                    "hover:opacity-90": !props.isSendDisabled,
+                  }}
+                  aria-label={props.cloneMode ? "Disable clone mode" : "Enable clone mode"}
+                  title={props.cloneMode ? "Switch to normal send" : "Switch to clone and send"}
+                  data-ph-capture-attribute-button-type="toggle-clone-mode"
+                  data-ph-capture-attribute-agent-id={props.agentId}
+                  data-ph-capture-attribute-current-state={props.cloneMode ? "enabled" : "disabled"}
+                  data-ph-capture-attribute-action={props.cloneMode ? "disable" : "enable"}
+                >
+                  <Show when={props.cloneMode} fallback={<Split size={18} />}>
+                    <X size={18} />
+                  </Show>
+                </button>
+              </Show>
+            </div>
+          </Show>
+        </div>
+
+        {/* Pattern count button - appears below input in the padding area */}
+        <Show when={patternCount() > 0}>
+          <div class="flex justify-end mt-2 -mb-1">
+            <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setDialogOpen(true)}>
+              {patternCount()} {patternCount() === 1 ? "skill" : "skills"}
+            </Button>
+          </div>
+        </Show>
+      </div>
+
+      {/* Pattern References Dialog */}
+      <PatternReferencesDialog patternIds={patternIds()} open={dialogOpen()} onClose={() => setDialogOpen(false)} />
+
+      {/* Messages area - newest at top (scrollable) */}
+      <div
+        class="flex-1 p-4 space-y-4 overflow-y-auto"
+        classList={{
+          [sizeClasses().gap]: true,
+        }}
+      >
+        <For each={props.messages}>
+          {(message) => (
+            <MessageBubble
+              message={message}
+              agentId={props.agentId}
+              onOpenAgentModal={props.onOpenAgentModal}
+              isQueued={isMessageQueued(message, pendingAssistantId())}
+              onCloneFromMessage={props.onCloneFromMessage}
+              onResetToMessage={props.onResetToMessage}
+            />
+          )}
+        </For>
+      </div>
+    </div>
+  );
+};
+
+export default ChatContainer;

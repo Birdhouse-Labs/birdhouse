@@ -1,0 +1,3 @@
+id: pattern_invalid
+title: Invalid Pattern
+# Missing required fields: category, trigger_phrases, created_at, updated_at

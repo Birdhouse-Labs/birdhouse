@@ -1,0 +1,24 @@
+<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="400" height="200" fill="#6366f1"/>
+  
+  <!-- Decorative elements -->
+  <circle cx="100" cy="100" r="40" fill="#818cf8" opacity="0.5"/>
+  <circle cx="300" cy="100" r="50" fill="#818cf8" opacity="0.3"/>
+  
+  <!-- Grid pattern -->
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#818cf8" stroke-width="0.5" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="400" height="200" fill="url(#grid)"/>
+  
+  <!-- Text -->
+  <text x="200" y="90" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle">
+    Local Sample Image
+  </text>
+  <text x="200" y="120" font-family="Arial, sans-serif" font-size="14" fill="#e0e7ff" text-anchor="middle">
+    Embedded in project
+  </text>
+</svg>

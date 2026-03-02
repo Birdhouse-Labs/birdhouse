@@ -1,0 +1,30 @@
+{
+  "name": "birdhouse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Birdhouse Playground - Theme exploration for LLM chat coding apps",
+  "scripts": {
+    "dev": "bun run dev.ts",
+    "serve": "bun run serve.ts",
+    "dev:frontend": "cd frontend && bun run dev",
+    "dev:server": "cd server && bun run dev",
+    "test": "bun run test:frontend && bun run test:server && bun run test:plugin",
+    "test:frontend": "cd frontend && bun run test",
+    "test:server": "cd server && bun test",
+    "test:plugin": "cd ../birdhouse-oc-plugin && bun test",
+    "check:all": "bun run check:frontend && bun run check:server && bun run check:plugin",
+    "check:frontend": "cd frontend && bun run check",
+    "check:server": "cd server && bun run check",
+    "check:plugin": "cd ../birdhouse-oc-plugin && bun run check",
+    "build": "bun run build:frontend && bun run build:server",
+    "build:frontend": "cd frontend && bun run build",
+    "build:server": "cd server && bun run build",
+    "build:cli": "bun run scripts/build-cli.ts",
+    "install:cli": "bash scripts/install-cli.sh",
+    "build-and-install": "bun run build:cli && bun run install:cli",
+    "generate:experiments": "cd frontend && bun run generate:experiments"
+  },
+  "devDependencies": {
+    "bun-types": "^1.3.5"
+  }
+}

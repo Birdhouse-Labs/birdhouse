@@ -1,0 +1,72 @@
+/* ABOUTME: monochrome-light theme definition - pure black and white minimal design */
+/* ABOUTME: Defines all --theme-* CSS variables for this theme variant */
+
+  /* --------------------------------------------------------------------------
+     MONOCHROME - Light variant (black on white)
+     -------------------------------------------------------------------------- */
+  [data-theme="monochrome-light"] {
+    /* Gradient colors - subtle grays instead of color */
+    --theme-gradient-from: #707070; /* neutral-600 */
+    --theme-gradient-to: #343434;   /* neutral-900 */
+    --theme-gradient-via: #5f5f5f;  /* neutral-700 */
+    
+    /* Accent colors - dark grays for emphasis */
+    --theme-accent: #343434;          /* neutral-900 - nearly black */
+    --theme-accent-secondary: #5f5f5f; /* neutral-700 */
+    --theme-accent-muted: #707070;     /* neutral-600 */
+    
+    /* Surface colors - pure whites and very light grays */
+    --theme-surface: #fbfbfb;         /* neutral-50 */
+    --theme-surface-raised: #ffffff;   /* pure white */
+    --theme-surface-overlay: #f7f7f7;  /* neutral-100 */
+    --theme-surface-inset: #ebebeb;    /* neutral-200 */
+    
+    /* Text colors - black to light gray */
+    --theme-text-primary: #252525;    /* neutral-950 - nearly black */
+    --theme-text-secondary: #707070;  /* neutral-600 */
+    --theme-text-muted: #b6b6b6;      /* neutral-400 */
+    --theme-text-on-accent: #ffffff;  /* white on dark accents */
+    
+    /* UI heading color - slightly lighter than primary for subtle distinction */
+    --theme-heading: #343434;         /* neutral-900 - dark but not pure black */
+    
+    /* Border colors - very subtle grays */
+    --theme-border: #ebebeb;          /* neutral-200 */
+    --theme-border-muted: #dedede;    /* neutral-300 */
+    
+    /* Status colors - muted grays (no color) */
+    --theme-success: #707070;         /* neutral-600 */
+    --theme-danger: #5f5f5f;          /* neutral-700 */
+    
+    /* Glow/shadow color - very subtle */
+    --theme-glow: rgb(0, 0, 0, 0.1); /* minimal shadow */
+    
+    /* Background gradient - pure white */
+    --theme-bg-from: #ffffff;         /* white */
+    --theme-bg-via: #fbfbfb;          /* neutral-50 */
+    --theme-bg-to: #ffffff;           /* white */
+    
+    /* Prose/typography - legacy tokens */
+    --theme-prose-link: #343434;      /* neutral-900 - dark gray */
+    --theme-prose-code: #5f5f5f;      /* neutral-700 */
+    --theme-prose-code-bg: #000000; /* subtle gray */
+    --theme-prose-blockquote-border: #707070; /* neutral-600 */
+    
+    /* Prose text hierarchy */
+    --theme-prose-body: #454545;      /* neutral-800 - readable black */
+    --theme-prose-secondary: #707070; /* neutral-600 - lighter gray */
+    --theme-prose-muted: #b6b6b6;     /* neutral-400 - muted */
+    --theme-prose-heading: #252525;   /* neutral-950 - pure black for content */
+    
+    /* Inline code */
+    --theme-prose-code-inline-text: #343434;  /* neutral-900 - dark gray */
+    --theme-prose-code-inline-bg: rgb(0, 0, 0, 0.08); /* very subtle background */
+    
+    /* Interactive */
+    --theme-prose-link-hover: #252525; /* neutral-950 - darker on hover */
+    
+    /* Scrollbar - minimal gray */
+    --theme-scrollbar-track: #f7f7f7; /* neutral-100 */
+    --theme-scrollbar-thumb: #dedede; /* neutral-300 */
+    --theme-scrollbar-thumb-hover: #b6b6b6; /* neutral-400 */
+  }
