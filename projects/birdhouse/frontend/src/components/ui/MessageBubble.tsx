@@ -24,6 +24,7 @@ import IconButton from "./IconButton";
 import MenuItemButton from "./MenuItemButton";
 import MessageBubbleContent from "./MessageBubbleContent";
 import PatternReferencesDialog from "./PatternReferencesDialog";
+import QuestionToolCard from "./QuestionToolCard";
 import ReasoningBlock from "./ReasoningBlock";
 import ToolCallCard from "./ToolCallCard";
 import AgentManagementCard from "./tools/AgentManagementCard";
@@ -492,6 +493,8 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
                       return <TaskToolCard block={block} />;
                     case "skill":
                       return <AgentManagementCard block={block} />;
+                    case "question":
+                      return <QuestionToolCard block={block} agentId={props.agentId} />;
                     default:
                       // Fallback to generic ToolCallCard for unknown tools
                       return <ToolCallCard block={block} />;
