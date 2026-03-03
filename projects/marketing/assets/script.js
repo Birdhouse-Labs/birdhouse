@@ -206,12 +206,12 @@ window.addEventListener("DOMContentLoaded", async () => {
       const cardBody = form.closest(".card-body");
       cardBody.innerHTML = `
         <div class="text-center space-y-4">
-          <h3 class="text-2xl font-bold text-base-content">🎉 You're on the waitlist!</h3>
+          <h3 class="text-2xl font-bold text-base-content">🎉 You're signed up!</h3>
           <p class="text-base-content/80">
-            We've received your signup for the limited beta starting in March 2026.
+            We'll keep you posted on Birdhouse news and updates.
           </p>
           <p class="text-base-content/60 text-sm">
-            Check your email for updates and exclusive beta access information.
+            Check your email for a confirmation.
           </p>
 
           <div class="divider"></div>
@@ -221,7 +221,7 @@ window.addEventListener("DOMContentLoaded", async () => {
             <a
               href="https://twitter.com/intent/tweet?text=${
         encodeURIComponent(
-          "Just signed up to join the limited beta of @BirdhouseLabsAI, the multi-agent software development tool.\n\nCheck it out:",
+          "Just signed up for updates from @BirdhouseLabsAI, the multi-agent software development tool.\n\nCheck it out:",
         )
       }&url=${encodeURIComponent("https://birdhouselabs.ai")}"
               target="_blank"
