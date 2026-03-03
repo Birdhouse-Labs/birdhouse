@@ -91,6 +91,86 @@ gsap.to(".ticker-items", {
 
 document.getElementById("ticker-container").style.opacity = "1";
 
+function formatMetricNumber(value) {
+  const isTokens = value >= 10000;
+  const options = {
+    notation: isTokens ? "compact" : "standard",
+    maximumFractionDigits: 1,
+  };
+  return new Intl.NumberFormat("en-US", options).format(value);
+}
+
+function initTelemetryMetrics() {
+  const agentsEl = document.getElementById("metric-agents");
+  const tokensEl = document.getElementById("metric-tokens");
+  if (!agentsEl || !tokensEl) return;
+
+  const agentsObj = { value: 0 };
+  const tokensObj = { value: 0 };
+  let activeAgentsTween = null;
+  let activeTokensTween = null;
+
+  // Phase 1: start counting toward conservative placeholders immediately
+  activeAgentsTween = gsap.to(agentsObj, {
+    value: 500,
+    duration: 8,
+    ease: "power1.out",
+    onUpdate: () => {
+      agentsEl.textContent = formatMetricNumber(Math.round(agentsObj.value));
+    },
+  });
+
+  activeTokensTween = gsap.to(tokensObj, {
+    value: 5_000_000,
+    duration: 8,
+    ease: "power1.out",
+    onUpdate: () => {
+      tokensEl.textContent = formatMetricNumber(Math.round(tokensObj.value));
+    },
+  });
+
+  // Phase 2: fetch real data, then tween from current value to actual targets
+  function fetchAndTween() {
+    supabaseClient
+      .rpc("get_telemetry_totals")
+      .then(({ data, error }) => {
+        if (error || !data) throw error || new Error("No data");
+
+        const agents = data.agents_created || 0;
+        const tokens = data.total_tokens || 0;
+
+        activeAgentsTween?.kill();
+        activeTokensTween?.kill();
+
+        activeAgentsTween = gsap.to(agentsObj, {
+          value: agents,
+          duration: 2,
+          ease: "power2.out",
+          onUpdate: () => {
+            agentsEl.textContent = formatMetricNumber(Math.round(agentsObj.value));
+          },
+        });
+
+        activeTokensTween = gsap.to(tokensObj, {
+          value: tokens,
+          duration: 2,
+          ease: "power2.out",
+          onUpdate: () => {
+            tokensEl.textContent = formatMetricNumber(Math.round(tokensObj.value));
+          },
+        });
+      })
+      .catch((err) => {
+        console.warn("Failed to load telemetry metrics:", err.message);
+      });
+  }
+
+  fetchAndTween();
+  setInterval(fetchAndTween, 30000);
+}
+
+initTelemetryMetrics();
+
 // Waitlist Form Handler with Supabase
 window.addEventListener("DOMContentLoaded", async () => {
   const form = document.querySelector("#waitlist form");
