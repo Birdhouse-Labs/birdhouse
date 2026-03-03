@@ -39,6 +39,26 @@ export interface SessionStatusMap {
   [sessionId: string]: SessionStatus;
 }
 
+export interface QuestionOption {
+  label: string;
+  description: string;
+}
+
+export interface QuestionItem {
+  question: string;
+  header: string;
+  options: QuestionOption[];
+  multiple?: boolean;
+  custom?: boolean;
+}
+
+export interface QuestionRequest {
+  id: string;
+  sessionID: string;
+  questions: QuestionItem[];
+  tool?: { messageID: string; callID: string };
+}
+
 export interface Provider {
   id: string;
   name: string;
@@ -82,6 +102,8 @@ export interface OpenCodeClient {
   revertSession(sessionId: string, messageId: string): Promise<void>;
   unrevertSession(sessionId: string): Promise<void>;
   updateSessionTitle(sessionId: string, title: string): Promise<void>;
+  listPendingQuestions(): Promise<QuestionRequest[]>;
+  replyToQuestion(requestID: string, answers: string[][]): Promise<void>;
 }
 
 /**
@@ -277,6 +299,25 @@ export function createLiveOpenCodeClient(baseUrl: string, workspaceRoot: string)
       });
       if (!response.ok) {
         throw new Error(`Failed to update session title: ${response.statusText}`);
+      }
+    },
+
+    async listPendingQuestions(): Promise<QuestionRequest[]> {
+      const response = await fetch(`${baseUrl}/question`);
+      if (!response.ok) {
+        throw new Error(`Failed to list pending questions: ${response.statusText}`);
+      }
+      return response.json() as Promise<QuestionRequest[]>;
+    },
+
+    async replyToQuestion(requestID: string, answers: string[][]): Promise<void> {
+      const response = await fetch(`${baseUrl}/question/${requestID}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to reply to question: ${response.statusText}`);
       }
     },
   };
@@ -532,6 +573,14 @@ export function createTestOpenCodeClient(): OpenCodeClient {
     },
 
     async updateSessionTitle(_sessionId: string, _title: string): Promise<void> {
+      // Mock implementation - no-op
+    },
+
+    async listPendingQuestions(): Promise<QuestionRequest[]> {
+      return [];
+    },
+
+    async replyToQuestion(_requestID: string, _answers: string[][]): Promise<void> {
       // Mock implementation - no-op
     },
   };

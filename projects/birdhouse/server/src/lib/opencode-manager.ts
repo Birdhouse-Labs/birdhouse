@@ -299,6 +299,8 @@ export class OpenCodeManager {
       OPENCODE_XDG_STATE_HOME: join(opencodeDataDir, "state"), // State files
       OPENCODE_XDG_CACHE_HOME: join(opencodeDataDir, "cache"), // Cache files, models.json
       // Birdhouse-specific env vars
+      OPENCODE_CLIENT: "acp",
+      OPENCODE_ENABLE_QUESTION_TOOL: "true",
       OPENCODE_WORKSPACE_ROOT: workspace.directory,
       BIRDHOUSE_SERVER: `http://localhost:${this.serverPort}`,
       BIRDHOUSE_WORKSPACE_ID: workspace.workspace_id, // For plugin to know which workspace it's in

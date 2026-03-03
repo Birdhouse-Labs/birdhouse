@@ -58,6 +58,7 @@ export function createEventRoutes() {
         "todo.updated",
         "permission.asked",
         "permission.replied",
+        "question.asked",
       ]);
 
       // Extract sessionID from event properties - tries all known patterns
