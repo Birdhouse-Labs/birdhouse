@@ -11,6 +11,7 @@ import { useZIndex } from "../../contexts/ZIndexContext";
 import { uiSize } from "../../theme";
 import type { Message } from "../../types/messages";
 import { isAgentEventBlock, isReasoningBlock, isSystemMessage, isToolBlock } from "../../types/messages";
+import type { QuestionRequest } from "../../types/question";
 import { recordAgentView } from "../../utils/agent-navigation";
 import { copyToClipboard } from "../../utils/clipboard";
 import { extractPatternsFromXML, stripPatternXML } from "../../utils/patternParsing";
@@ -41,6 +42,8 @@ export interface MessageBubbleProps {
   isQueued?: boolean; // Whether this message is queued (waiting for assistant to complete)
   onCloneFromMessage?: ((messageId: string, messageContent: string, event: MouseEvent) => void) | undefined;
   onResetToMessage?: ((messageId: string) => void) | undefined;
+  getPendingQuestion?: (callID: string) => QuestionRequest | undefined;
+  onQuestionAnswered?: (questionId: string) => void;
 }
 const formatError = (
   opencodeMessage: OpencodeMessage | undefined,
@@ -494,7 +497,16 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
                     case "skill":
                       return <AgentManagementCard block={block} />;
                     case "question":
-                      return <QuestionToolCard block={block} agentId={props.agentId} />;
+                      return (
+                        <QuestionToolCard
+                          block={block}
+                          agentId={props.agentId}
+                          {...(props.getPendingQuestion !== undefined && {
+                            pendingQuestion: props.getPendingQuestion(block.callID),
+                          })}
+                          {...(props.onQuestionAnswered !== undefined && { onAnswered: props.onQuestionAnswered })}
+                        />
+                      );
                     default:
                       // Fallback to generic ToolCallCard for unknown tools
                       return <ToolCallCard block={block} />;

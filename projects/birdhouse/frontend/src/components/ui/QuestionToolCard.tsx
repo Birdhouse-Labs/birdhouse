@@ -13,6 +13,8 @@ export interface QuestionToolCardProps {
   agentId: string;
   // undefined = not yet known; null = no pending question found; populated = use for interactive form
   pendingQuestion?: QuestionRequest | null | undefined;
+  // Called after a successful reply so the parent can remove it from pendingQuestions
+  onAnswered?: (questionId: string) => void;
 }
 
 // Derive question items from either the pendingQuestion prop or block.input fallback
@@ -215,6 +217,8 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
 
     try {
       await replyToQuestion(workspaceId, props.agentId, requestId, buildAnswers());
+      // Notify parent to remove from pendingQuestions
+      props.onAnswered?.(requestId);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Failed to submit answer");
       setIsSubmitting(false);
