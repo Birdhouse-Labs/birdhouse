@@ -303,7 +303,7 @@ export function createLiveOpenCodeClient(baseUrl: string, workspaceRoot: string)
     },
 
     async listPendingQuestions(): Promise<QuestionRequest[]> {
-      const response = await fetch(`${baseUrl}/question`);
+      const response = await fetch(`${baseUrl}/question?directory=${encodeURIComponent(workspaceRoot)}`);
       if (!response.ok) {
         throw new Error(`Failed to list pending questions: ${response.statusText}`);
       }
