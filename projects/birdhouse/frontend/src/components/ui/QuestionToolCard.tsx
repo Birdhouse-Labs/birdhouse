@@ -61,7 +61,9 @@ interface QuestionFormSectionProps {
   selectedOptions: string[];
   customText: string;
   onOptionToggle: (label: string) => void;
+  // Changing custom text clears radio selections (single-select) so it's unambiguous
   onCustomTextChange: (text: string) => void;
+  onClearOptions: () => void;
 }
 
 const QuestionFormSection: Component<QuestionFormSectionProps> = (props) => {
@@ -120,16 +122,41 @@ const QuestionFormSection: Component<QuestionFormSectionProps> = (props) => {
         </For>
       </div>
 
-      {/* Free-text input — always shown */}
-      <div>
-        <input
-          type="text"
-          placeholder="Type your own answer"
-          value={props.customText}
-          onInput={(e) => props.onCustomTextChange(e.currentTarget.value)}
-          class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
-        />
-      </div>
+      {/* Free-text option — styled like the other options with its own indicator */}
+      {(() => {
+        const isCustomActive = () => props.customText.trim().length > 0;
+        return (
+          <label
+            class="flex items-start gap-3 cursor-text rounded-lg border p-3 transition-colors"
+            classList={{
+              "border-accent bg-accent/5": isCustomActive(),
+              "border-border hover:border-accent/50 hover:bg-surface-overlay/30": !isCustomActive(),
+            }}
+          >
+            <input
+              type={props.question.multiple ? "checkbox" : "radio"}
+              name={`question-${props.index}`}
+              checked={isCustomActive()}
+              readOnly
+              tabIndex={-1}
+              class="mt-0.5 flex-shrink-0 accent-[var(--color-accent)] pointer-events-none"
+            />
+            <input
+              type="text"
+              placeholder="Type your own answer"
+              value={props.customText}
+              onInput={(e) => {
+                // For single-select: typing clears radio selection to avoid ambiguity
+                if (!props.question.multiple && e.currentTarget.value.trim()) {
+                  props.onClearOptions();
+                }
+                props.onCustomTextChange(e.currentTarget.value);
+              }}
+              class="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
+            />
+          </label>
+        );
+      })()}
     </div>
   );
 };
@@ -181,6 +208,11 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
     const question = qs[qIndex];
     if (!question) return;
 
+    // Selecting a radio/checkbox clears the custom text for single-select to avoid ambiguity
+    if (!question.multiple) {
+      handleCustomTextChange(qIndex, "");
+    }
+
     setSelectedOptions((prev) => {
       const next = [...prev];
       const current = next[qIndex] ?? [];
@@ -191,6 +223,14 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
         // Replace radio
         next[qIndex] = [label];
       }
+      return next;
+    });
+  };
+
+  const handleClearOptions = (qIndex: number) => {
+    setSelectedOptions((prev) => {
+      const next = [...prev];
+      next[qIndex] = [];
       return next;
     });
   };
@@ -221,9 +261,9 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
       props.onAnswered?.(requestId);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Failed to submit answer");
+    } finally {
       setIsSubmitting(false);
     }
-    // On success we leave isSubmitting true — the block status will update to "completed" via SSE
   };
 
   // ── Completed state: compact read-only summary ──
@@ -309,6 +349,7 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
               customText={customTexts()[i()] ?? ""}
               onOptionToggle={(label) => handleOptionToggle(i(), label)}
               onCustomTextChange={(text) => handleCustomTextChange(i(), text)}
+              onClearOptions={() => handleClearOptions(i())}
             />
           )}
         </For>

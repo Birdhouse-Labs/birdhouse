@@ -113,7 +113,8 @@ describe("QuestionToolCard - running state with pendingQuestion", () => {
   it("renders radio inputs for single-select questions", () => {
     render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={makePendingQuestion()} />);
     const radios = screen.getAllByRole("radio");
-    expect(radios.length).toBe(2);
+    // 2 option radios + 1 for the custom text row
+    expect(radios.length).toBe(3);
   });
 
   it("renders checkboxes for multi-select questions", () => {

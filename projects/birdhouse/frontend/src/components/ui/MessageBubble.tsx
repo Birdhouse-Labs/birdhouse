@@ -3,7 +3,7 @@
 
 import type { Message as OpencodeMessage } from "@opencode-ai/sdk/client";
 import Popover from "corvu/popover";
-import { Check, Copy, LibraryBig, MoreVertical, RotateCcw, Split } from "lucide-solid";
+import { Braces, Check, Copy, LibraryBig, MoreVertical, RotateCcw, Split } from "lucide-solid";
 import { type Component, createMemo, createSignal, For, Show } from "solid-js";
 import { formatSmartTime } from "../../adapters/utils/time-utils";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
@@ -73,6 +73,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
   const [clickedPatternId, setClickedPatternId] = createSignal<string | undefined>(undefined);
   const [isMenuOpen, setIsMenuOpen] = createSignal(false);
   const [showCopySuccess, setShowCopySuccess] = createSignal(false);
+  const [showCopyJSONSuccess, setShowCopyJSONSuccess] = createSignal(false);
 
   // Extract sender info from first text block's metadata
   const senderInfo = createMemo(() => {
@@ -158,6 +159,17 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
       setShowCopySuccess(true);
       setIsMenuOpen(false);
       setTimeout(() => setShowCopySuccess(false), 2000);
+    }
+  };
+
+  // Handle copy JSON action - copies the full Message object as pretty-printed JSON
+  const handleCopyJSON = async () => {
+    const json = JSON.stringify(props.message, null, 2);
+    const success = await copyToClipboard(json);
+    if (success) {
+      setShowCopyJSONSuccess(true);
+      setIsMenuOpen(false);
+      setTimeout(() => setShowCopyJSONSuccess(false), 2000);
     }
   };
 
@@ -273,6 +285,12 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
                   <MenuItemButton icon={<Copy size={16} />} onClick={handleCopyContent} disabled={!copyableContent()}>
                     Copy Content
                   </MenuItemButton>
+                  <MenuItemButton
+                    icon={showCopyJSONSuccess() ? <Check size={16} /> : <Braces size={16} />}
+                    onClick={handleCopyJSON}
+                  >
+                    Copy JSON
+                  </MenuItemButton>
                   <Show when={props.onCloneFromMessage}>
                     <MenuItemButton
                       icon={<Split size={16} />}
@@ -352,6 +370,12 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
                   <MenuItemButton icon={<Copy size={16} />} onClick={handleCopyContent} disabled={!copyableContent()}>
                     Copy Content
                   </MenuItemButton>
+                  <MenuItemButton
+                    icon={showCopyJSONSuccess() ? <Check size={16} /> : <Braces size={16} />}
+                    onClick={handleCopyJSON}
+                  >
+                    Copy JSON
+                  </MenuItemButton>
                 </Popover.Content>
               </Popover.Portal>
             </Popover>
@@ -409,6 +433,12 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
                 >
                   <MenuItemButton icon={<Copy size={16} />} onClick={handleCopyContent} disabled={!copyableContent()}>
                     Copy Content
+                  </MenuItemButton>
+                  <MenuItemButton
+                    icon={showCopyJSONSuccess() ? <Check size={16} /> : <Braces size={16} />}
+                    onClick={handleCopyJSON}
+                  >
+                    Copy JSON
                   </MenuItemButton>
                   <Show when={props.onCloneFromMessage}>
                     <MenuItemButton
