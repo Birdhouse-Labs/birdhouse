@@ -29,6 +29,7 @@ export interface ChatContainerProps {
   onResetToMessage?: ((messageId: string) => void) | undefined;
   pendingQuestions?: Accessor<QuestionRequest[]>;
   onQuestionAnswered?: (questionId: string) => void;
+  isSessionKnownIdle?: boolean;
   inputRef?: (el: HTMLTextAreaElement) => void;
 }
 
@@ -156,6 +157,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
               onResetToMessage={props.onResetToMessage}
               {...(props.pendingQuestions !== undefined && { pendingQuestions: props.pendingQuestions })}
               {...(props.onQuestionAnswered !== undefined && { onQuestionAnswered: props.onQuestionAnswered })}
+              {...(props.isSessionKnownIdle !== undefined && { isSessionKnownIdle: props.isSessionKnownIdle })}
             />
           )}
         </For>

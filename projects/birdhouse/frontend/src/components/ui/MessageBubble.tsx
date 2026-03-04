@@ -44,6 +44,7 @@ export interface MessageBubbleProps {
   onResetToMessage?: ((messageId: string) => void) | undefined;
   pendingQuestions?: Accessor<QuestionRequest[]>;
   onQuestionAnswered?: (questionId: string) => void;
+  isSessionKnownIdle?: boolean;
 }
 const formatError = (
   opencodeMessage: OpencodeMessage | undefined,
@@ -535,6 +536,9 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
                             pendingQuestions: props.pendingQuestions,
                           })}
                           {...(props.onQuestionAnswered !== undefined && { onAnswered: props.onQuestionAnswered })}
+                          {...(props.isSessionKnownIdle !== undefined && {
+                            isSessionKnownIdle: props.isSessionKnownIdle,
+                          })}
                         />
                       );
                     default:

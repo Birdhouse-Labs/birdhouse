@@ -156,6 +156,11 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     return status.type === "busy" || status.type === "retry";
   };
 
+  // True only once the session status fetch has resolved AND the result is idle.
+  // The loading guard prevents a false-positive flash during the initial fetch window,
+  // where agentStatus() defaults to idle before the real status is known.
+  const isSessionKnownIdle = () => !sessionStatus.loading && agentStatus().type === "idle";
+
   // Subscribe to session.status SSE events to keep status updated
   createEffect(() => {
     const unsubscribe = streaming.subscribeToSessionStatus(props.agentId, (status) => {
@@ -700,6 +705,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
             onResetToMessage={handleResetToMessage}
             pendingQuestions={pendingQuestions}
             onQuestionAnswered={removePendingQuestion}
+            isSessionKnownIdle={isSessionKnownIdle()}
             inputRef={(el) => {
               setInputRef(el);
             }}
