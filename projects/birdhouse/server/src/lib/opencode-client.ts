@@ -311,11 +311,14 @@ export function createLiveOpenCodeClient(baseUrl: string, workspaceRoot: string)
     },
 
     async replyToQuestion(requestID: string, answers: string[][]): Promise<void> {
-      const response = await fetch(`${baseUrl}/question/${requestID}/reply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers }),
-      });
+      const response = await fetch(
+        `${baseUrl}/question/${requestID}/reply?directory=${encodeURIComponent(workspaceRoot)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ answers }),
+        },
+      );
       if (!response.ok) {
         throw new Error(`Failed to reply to question: ${response.statusText}`);
       }
