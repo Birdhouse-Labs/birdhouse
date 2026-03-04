@@ -75,26 +75,12 @@ export async function replyToAgentQuestion(c: Context, deps: Pick<Deps, "agentsD
 
   log.server.info({ agentId, requestId, answerCount: answers.length }, "Forwarding question reply to OpenCode");
 
-  // Resolve a tool call ID (toolu_...) to the actual question ID (que_...) if needed.
-  // The frontend may send block.callID as a fallback when the pending question lookup fails.
-  let resolvedRequestId = requestId;
-  if (!requestId.startsWith("que_")) {
-    const allQuestions = await opencode.listPendingQuestions();
-    const match = allQuestions.find((q) => q.sessionID === agent.session_id && q.tool?.callID === requestId);
-    if (match) {
-      resolvedRequestId = match.id;
-      log.server.info({ agentId, requestId, resolvedRequestId }, "Resolved tool callID to question ID");
-    } else {
-      log.server.warn({ agentId, requestId }, "Could not resolve tool callID to question ID - forwarding as-is");
-    }
-  }
-
   try {
-    await opencode.replyToQuestion(resolvedRequestId, answers as string[][]);
-    log.server.info({ agentId, requestId: resolvedRequestId }, "Question reply forwarded to OpenCode successfully");
+    await opencode.replyToQuestion(requestId, answers as string[][]);
+    log.server.info({ agentId, requestId }, "Question reply forwarded to OpenCode successfully");
     return c.json({ ok: true });
   } catch (error) {
-    log.server.error({ agentId, requestId: resolvedRequestId, error }, "Failed to forward question reply to OpenCode");
+    log.server.error({ agentId, requestId, error }, "Failed to forward question reply to OpenCode");
     return c.json({ error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
 }
