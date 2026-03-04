@@ -10,7 +10,8 @@ export interface ThemeGradient {
 
 export interface ThemeMetadata {
   gradient: ThemeGradient;
-  heading: string;
+  headingLight: string;
+  headingDark: string;
 }
 
 export const THEME_METADATA: Record<string, ThemeMetadata> = {
@@ -20,7 +21,8 @@ export const THEME_METADATA: Record<string, ThemeMetadata> = {
       via: "oklch(55.3% 0.174 38.4deg)",
       to: "oklch(55.5% 0.146 49deg)",
     },
-    heading: "oklch(96.2% 0.058 95.6deg)",
+    headingLight: "oklch(26.8% 0.006 34.3deg)",
+    headingDark: "oklch(96.2% 0.058 95.6deg)",
   },
   "ember-forge": {
     gradient: {
@@ -28,7 +30,8 @@ export const THEME_METADATA: Record<string, ThemeMetadata> = {
       via: "oklch(76.9% 0.165 70.1deg)",
       to: "oklch(63.7% 0.208 25.3deg)",
     },
-    heading: "oklch(90.1% 0.073 70.7deg)",
+    headingLight: "oklch(55.3% 0.174 38.4deg)",
+    headingDark: "oklch(90.1% 0.073 70.7deg)",
   },
   "forest-depths": {
     gradient: {
@@ -36,7 +39,8 @@ export const THEME_METADATA: Record<string, ThemeMetadata> = {
       via: "oklch(76.8% 0.204 130.8deg)",
       to: "oklch(69.6% 0.149 162.5deg)",
     },
-    heading: "oklch(96.2% 0.058 95.6deg)",
+    headingLight: "oklch(21.6% 0.006 56deg)",
+    headingDark: "oklch(96.2% 0.058 95.6deg)",
   },
   monochrome: {
     gradient: {
@@ -44,7 +48,8 @@ export const THEME_METADATA: Record<string, ThemeMetadata> = {
       via: "#dedede",
       to: "#fbfbfb",
     },
-    heading: "#ffffff",
+    headingLight: "#343434",
+    headingDark: "#ffffff",
   },
   "ocean-depth": {
     gradient: {
@@ -52,7 +57,8 @@ export const THEME_METADATA: Record<string, ThemeMetadata> = {
       via: "oklch(70.4% 0.123 182.5deg)",
       to: "oklch(60% 0.104 184.7deg)",
     },
-    heading: "oklch(95.6% 0.044 203.4deg)",
+    headingLight: "oklch(20.8% 0.04 265.8deg)",
+    headingDark: "oklch(95.6% 0.044 203.4deg)",
   },
   "purple-dream": {
     gradient: {
@@ -60,7 +66,8 @@ export const THEME_METADATA: Record<string, ThemeMetadata> = {
       via: "oklch(66.7% 0.259 322.1deg)",
       to: "oklch(65.6% 0.212 354.3deg)",
     },
-    heading: "oklch(83.3% 0.132 321.4deg)",
+    headingLight: "oklch(43.8% 0.198 303.7deg)",
+    headingDark: "oklch(83.3% 0.132 321.4deg)",
   },
   "sketch-graphite": {
     gradient: {
@@ -68,7 +75,8 @@ export const THEME_METADATA: Record<string, ThemeMetadata> = {
       via: "oklch(77.8% 0.033 79.9deg)",
       to: "oklch(79.8% 0.036 166.6deg)",
     },
-    heading: "oklch(96.5% 0.005 78.3deg)",
+    headingLight: "oklch(27.2% 0.009 67.4deg)",
+    headingDark: "oklch(96.5% 0.005 78.3deg)",
   },
 } as const;
 

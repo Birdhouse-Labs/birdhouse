@@ -17,6 +17,7 @@ import {
   type ColorMode,
   codeTheme,
   colorMode,
+  isDark,
   setBaseTheme,
   setCodeThemePreference,
   setColorModePreference,
@@ -34,7 +35,7 @@ interface HeaderProps {
   onMenuClick?: () => void;
 }
 
-// Custom renderer for theme options - shows theme heading color
+// Custom renderer for theme options - shows theme heading color for light or dark mode
 const renderThemeOption = (option: ComboboxOption<BaseThemeName>, _isHighlighted: boolean): JSX.Element => {
   const metadata = THEME_METADATA[option.value];
 
@@ -44,7 +45,7 @@ const renderThemeOption = (option: ComboboxOption<BaseThemeName>, _isHighlighted
   }
 
   return (
-    <span class="font-medium" style={{ color: metadata.heading }}>
+    <span class="font-medium" style={{ color: isDark() ? metadata.headingDark : metadata.headingLight }}>
       {option.label}
     </span>
   );

@@ -3,7 +3,6 @@
 // ABOUTME: Theme generation script - scans individual theme CSS files and generates themes.css + themes.ts
 // ABOUTME: Automatically maintains theme registries and imports for the theming system
 
-import { execSync } from "node:child_process";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,6 +42,13 @@ async function parseThemeMetadata(themeFilePath) {
   if (headingMatch) metadata.heading = headingMatch[1].split("/*")[0].trim();
 
   return metadata;
+}
+
+/**
+ * Determine if a theme file is a dark variant
+ */
+function isDarkVariant(themeName) {
+  return themeName.endsWith("-dark");
 }
 
 /**
@@ -165,7 +171,8 @@ export interface ThemeGradient {
 
 export interface ThemeMetadata {
   gradient: ThemeGradient;
-  heading: string;
+  headingLight: string;
+  headingDark: string;
 }
 
 `;
@@ -174,10 +181,11 @@ export interface ThemeMetadata {
 ${baseThemes
   .map((base) => {
     const metadata = metadataByTheme[base];
-    if (!metadata || !metadata.gradients || !metadata.heading) {
+    if (!metadata || !metadata.gradients || !metadata.headingLight || !metadata.headingDark) {
       return `  "${base}": {
     gradient: { from: "#000000", via: "#000000", to: "#000000" },
-    heading: "#000000",
+    headingLight: "#000000",
+    headingDark: "#ffffff",
   }, // Error: missing data`;
     }
     const g = metadata.gradients;
@@ -187,7 +195,8 @@ ${baseThemes
       via: "${g.via}",
       to: "${g.to}",
     },
-    heading: "${metadata.heading}",
+    headingLight: "${metadata.headingLight}",
+    headingDark: "${metadata.headingDark}",
   },`;
   })
   .join("\n")}
@@ -226,17 +235,20 @@ async function generateThemes() {
       const filePath = join(themesDir, file);
 
       const metadata = await parseThemeMetadata(filePath);
+      const dark = isDarkVariant(themeName);
 
-      // Use the first variant (light or dark) we encounter for each base theme
-      // Both should have the same gradient colors anyway
       if (!metadataByTheme[baseTheme]) {
-        metadataByTheme[baseTheme] = metadata;
-        console.log(`  ${baseTheme}:`);
-        console.log(
-          `    Gradient: ${metadata.gradients.from} → ${metadata.gradients.via} → ${metadata.gradients.to}`,
-        );
-        console.log(`    Heading: ${metadata.heading}`);
+        metadataByTheme[baseTheme] = { gradients: metadata.gradients };
       }
+
+      // Store heading per variant so light and dark can differ
+      if (dark) {
+        metadataByTheme[baseTheme].headingDark = metadata.heading;
+      } else {
+        metadataByTheme[baseTheme].headingLight = metadata.heading;
+      }
+
+      console.log(`  ${themeName}: heading=${metadata.heading}`);
     }
 
     // Generate CSS file
