@@ -2,7 +2,6 @@
 // ABOUTME: Parses tool state and maps to pending/running/completed/error status
 
 import type { ToolPart } from "@opencode-ai/sdk";
-import { generateUUID } from "../../lib/uuid";
 import type { ToolBlock } from "../../types/messages";
 import { extractMetadata } from "../utils/metadata-utils";
 
@@ -27,7 +26,7 @@ export function mapToolPart(part: ToolPart): ToolBlock {
   const state = extractMetadata(part.state) as ToolState;
 
   const block: ToolBlock = {
-    id: generateUUID(),
+    id: part.id,
     type: "tool",
     callID: part.callID,
     name: part.tool,

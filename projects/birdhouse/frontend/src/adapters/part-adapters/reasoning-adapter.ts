@@ -2,7 +2,6 @@
 // ABOUTME: Handles LLM thinking/reasoning content
 
 import type { ReasoningPart } from "@opencode-ai/sdk";
-import { generateUUID } from "../../lib/uuid";
 import type { ReasoningBlock } from "../../types/messages";
 
 /**
@@ -16,7 +15,7 @@ export function mapReasoningPart(part: ReasoningPart): ReasoningBlock | null {
   }
 
   return {
-    id: generateUUID(),
+    id: part.id,
     type: "reasoning",
     content,
     timestamp: new Date(),
