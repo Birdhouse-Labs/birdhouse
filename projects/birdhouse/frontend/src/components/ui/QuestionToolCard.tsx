@@ -59,8 +59,10 @@ interface QuestionFormSectionProps {
   index: number;
   selectedOptions: string[];
   customText: string;
+  customActive: boolean;
   onOptionToggle: (label: string) => void;
   onCustomTextChange: (text: string) => void;
+  onCustomActiveToggle: () => void;
   onClearOptions: () => void;
 }
 
@@ -121,40 +123,34 @@ const QuestionFormSection: Component<QuestionFormSectionProps> = (props) => {
       </div>
 
       {/* Free-text input — always shown, acts as radio/checkbox row */}
-      {(() => {
-        const isCustomActive = () => props.customText.trim().length > 0;
-        return (
-          <label
-            class="flex items-center gap-3 cursor-pointer rounded-lg border p-3 transition-colors"
-            classList={{
-              "border-accent bg-accent/5": isCustomActive(),
-              "border-border hover:border-accent/50 hover:bg-surface-overlay/30": !isCustomActive(),
-            }}
-          >
-            <input
-              type={props.question.multiple ? "checkbox" : "radio"}
-              name={`question-${props.index}`}
-              checked={isCustomActive()}
-              readOnly
-              tabIndex={-1}
-              class="mt-0.5 flex-shrink-0 accent-[var(--color-accent)] pointer-events-none"
-            />
-            <input
-              type="text"
-              placeholder="Type your own answer"
-              value={props.customText}
-              onInput={(e) => {
-                // For single-select: typing clears radio selection to avoid ambiguity
-                if (!props.question.multiple && e.currentTarget.value.trim()) {
-                  props.onClearOptions();
-                }
-                props.onCustomTextChange(e.currentTarget.value);
-              }}
-              class="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
-            />
-          </label>
-        );
-      })()}
+      <label
+        class="flex items-center gap-3 cursor-pointer rounded-lg border p-3 transition-colors"
+        classList={{
+          "border-accent bg-accent/5": props.customActive,
+          "border-border hover:border-accent/50 hover:bg-surface-overlay/30": !props.customActive,
+        }}
+      >
+        <input
+          type={props.question.multiple ? "checkbox" : "radio"}
+          name={`question-${props.index}`}
+          checked={props.customActive}
+          onChange={props.onCustomActiveToggle}
+          class="mt-0.5 flex-shrink-0 accent-[var(--color-accent)]"
+        />
+        <input
+          type="text"
+          placeholder="Type your own answer"
+          value={props.customText}
+          onInput={(e) => {
+            // For single-select: typing deselects other options to avoid ambiguity
+            if (!props.question.multiple && e.currentTarget.value.trim()) {
+              props.onClearOptions();
+            }
+            props.onCustomTextChange(e.currentTarget.value);
+          }}
+          class="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
+        />
+      </label>
     </div>
   );
 };
@@ -189,6 +185,8 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
   const [selectedOptions, setSelectedOptions] = createSignal<string[][]>([]);
   // Per-question free-text state
   const [customTexts, setCustomTexts] = createSignal<string[]>([]);
+  // Per-question custom row active state — drives whether custom text is included in answer
+  const [customActives, setCustomActives] = createSignal<boolean[]>([]);
   const [isSubmitting, setIsSubmitting] = createSignal(false);
   const [submitError, setSubmitError] = createSignal<string | null>(null);
 
@@ -217,10 +215,12 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
     if (qs && selectedOptions().length !== qs.length) {
       setSelectedOptions(qs.map(() => []));
       setCustomTexts(qs.map(() => ""));
+      setCustomActives(qs.map(() => false));
     }
   });
 
-  // Build answers array for submission: per question, combine selected options + custom text
+  // Build answers array for submission: per question, combine selected options + custom text.
+  // Custom text is only included when its row is explicitly active (checkbox checked).
   const buildAnswers = (): string[][] => {
     const qs = questions();
     if (!qs) return [];
@@ -228,7 +228,7 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
       const opts = selectedOptions()[i] ?? [];
       const custom = customTexts()[i] ?? "";
       const allAnswers = [...opts];
-      if (custom.trim()) allAnswers.push(custom.trim());
+      if (customActives()[i] && custom.trim()) allAnswers.push(custom.trim());
       return allAnswers;
     });
   };
@@ -246,9 +246,13 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
     const question = qs[qIndex];
     if (!question) return;
 
-    // Selecting a radio/checkbox clears the custom text for single-select to avoid ambiguity
+    // For single-select: selecting an option deactivates the custom row (but preserves its text)
     if (!question.multiple) {
-      handleCustomTextChange(qIndex, "");
+      setCustomActives((prev) => {
+        const next = [...prev];
+        next[qIndex] = false;
+        return next;
+      });
     }
 
     setSelectedOptions((prev) => {
@@ -271,10 +275,24 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
     });
   };
 
+  const handleCustomActiveToggle = (qIndex: number) => {
+    setCustomActives((prev) => {
+      const next = [...prev];
+      next[qIndex] = !next[qIndex];
+      return next;
+    });
+  };
+
   const handleCustomTextChange = (qIndex: number, text: string) => {
     setCustomTexts((prev) => {
       const next = [...prev];
       next[qIndex] = text;
+      return next;
+    });
+    // Auto-activate the custom row when text is entered, deactivate when cleared
+    setCustomActives((prev) => {
+      const next = [...prev];
+      next[qIndex] = text.trim().length > 0;
       return next;
     });
   };
@@ -370,8 +388,10 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
                             index={i()}
                             selectedOptions={selectedOptions()[i()] ?? []}
                             customText={customTexts()[i()] ?? ""}
+                            customActive={customActives()[i()] ?? false}
                             onOptionToggle={(label) => handleOptionToggle(i(), label)}
                             onCustomTextChange={(text) => handleCustomTextChange(i(), text)}
+                            onCustomActiveToggle={() => handleCustomActiveToggle(i())}
                             onClearOptions={() => handleClearOptions(i())}
                           />
                         )}
