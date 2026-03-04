@@ -1,7 +1,7 @@
 // ABOUTME: Renders the "question" tool call inline in the chat message stream
-// ABOUTME: Shows an interactive form when running, compact summary when completed
+// ABOUTME: Interactive when the question is pending (in pendingQuestions), read-only otherwise
 
-import { AlertCircle, CheckCircle2, HelpCircle } from "lucide-solid";
+import { CheckCircle2, HelpCircle } from "lucide-solid";
 import { type Accessor, type Component, createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { replyToQuestion } from "../../services/questions-api";
@@ -12,49 +12,47 @@ export interface QuestionToolCardProps {
   block: ToolBlock;
   agentId: string;
   // Signal accessor for all pending questions — component looks up by callID internally
-  // so SolidJS can track the read reactively and re-render when questions change
+  // so SolidJS can track the read reactively and re-render when questions change.
+  // When a matching pending question exists → interactive form.
+  // When absent → read-only display of what was asked (question is no longer active).
   pendingQuestions?: Accessor<QuestionRequest[]>;
   // Called after a successful reply so the parent can remove it from pendingQuestions
   onAnswered?: (questionId: string) => void;
-  // True when the message was aborted (MessageAbortedError) — shows interrupted state
-  // instead of the interactive form. Derived from opencodeMessage.error in MessageBubble.
-  isInterrupted?: boolean;
 }
 
-// Derive question items from either the matched pending question or block.input fallback
-function resolveQuestions(pendingQuestion: QuestionRequest | undefined, block: ToolBlock): QuestionItem[] | null {
-  if (pendingQuestion) {
-    return pendingQuestion.questions;
-  }
-  // Fall back to block.input when status is running
-  const inputQuestions = block.input["questions"];
-  if (Array.isArray(inputQuestions)) {
-    return inputQuestions as QuestionItem[];
-  }
-  return null;
+// ─── Sub-component: single question rendered read-only (no inputs) ────────────
+
+interface QuestionReadOnlySectionProps {
+  question: QuestionItem;
 }
 
-// Parse output for the completed summary.
-// Returns array of answer arrays if JSON, otherwise wraps the raw string.
-function parseOutput(output: string | undefined): string[][] | null {
-  if (!output) return null;
-  try {
-    const parsed = JSON.parse(output) as unknown;
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      "answers" in parsed &&
-      Array.isArray((parsed as { answers: unknown }).answers)
-    ) {
-      return (parsed as { answers: string[][] }).answers;
-    }
-  } catch {
-    // Not JSON
-  }
-  return [[output]];
-}
+const QuestionReadOnlySection: Component<QuestionReadOnlySectionProps> = (props) => {
+  return (
+    <div class="space-y-2">
+      <div>
+        <div class="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-1">
+          {props.question.header}
+        </div>
+        <div class="text-sm text-text-primary">{props.question.question}</div>
+      </div>
+      <div class="space-y-1.5">
+        <For each={props.question.options}>
+          {(option) => (
+            <div class="flex items-start gap-3 rounded-lg border border-border px-3 py-2 opacity-60">
+              <div class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 rounded-full border border-border" />
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium text-text-primary">{option.label}</div>
+                <div class="text-xs text-text-secondary mt-0.5">{option.description}</div>
+              </div>
+            </div>
+          )}
+        </For>
+      </div>
+    </div>
+  );
+};
 
-// ─── Sub-component: single question form section ────────────────────────────
+// ─── Sub-component: single question form section (interactive) ────────────────
 
 interface QuestionFormSectionProps {
   question: QuestionItem;
@@ -62,7 +60,6 @@ interface QuestionFormSectionProps {
   selectedOptions: string[];
   customText: string;
   onOptionToggle: (label: string) => void;
-  // Changing custom text clears radio selections (single-select) so it's unambiguous
   onCustomTextChange: (text: string) => void;
   onClearOptions: () => void;
 }
@@ -123,12 +120,12 @@ const QuestionFormSection: Component<QuestionFormSectionProps> = (props) => {
         </For>
       </div>
 
-      {/* Free-text option — styled like the other options with its own indicator */}
+      {/* Free-text input — always shown, acts as radio/checkbox row */}
       {(() => {
         const isCustomActive = () => props.customText.trim().length > 0;
         return (
           <label
-            class="flex items-start gap-3 cursor-text rounded-lg border p-3 transition-colors"
+            class="flex items-center gap-3 cursor-pointer rounded-lg border p-3 transition-colors"
             classList={{
               "border-accent bg-accent/5": isCustomActive(),
               "border-border hover:border-accent/50 hover:bg-surface-overlay/30": !isCustomActive(),
@@ -162,6 +159,27 @@ const QuestionFormSection: Component<QuestionFormSectionProps> = (props) => {
   );
 };
 
+// ─── Parse output string for the completed summary ───────────────────────────
+
+// Returns array of answer arrays if JSON, otherwise wraps the raw string.
+function parseOutput(output: string | undefined): string[][] | null {
+  if (!output) return null;
+  try {
+    const parsed = JSON.parse(output) as unknown;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "answers" in parsed &&
+      Array.isArray((parsed as { answers: unknown }).answers)
+    ) {
+      return (parsed as { answers: string[][] }).answers;
+    }
+  } catch {
+    // Not JSON
+  }
+  return [[output]];
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
@@ -177,14 +195,23 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
   // Look up the pending question for this tool block by callID.
   // Reading pendingQuestions() inside createMemo makes SolidJS track it reactively —
   // when the signal updates, this memo (and anything that reads it) re-computes.
+  // Presence of a pending question = question is still active → show interactive form.
+  // Absence = question is no longer active → show read-only.
   const pendingQuestion = createMemo(() =>
     (props.pendingQuestions?.() ?? []).find((q) => q.tool?.callID === props.block.callID),
   );
 
-  // Determine what questions to show — reactive memo so Show/For below re-evaluate when questions arrive
-  const questions = createMemo(() => resolveQuestions(pendingQuestion(), props.block));
+  // Questions to display — from pendingQuestion when interactive, from block.input otherwise.
+  // block.input.questions is always present when the AI has finished constructing the call.
+  const questions = createMemo((): QuestionItem[] | null => {
+    const pq = pendingQuestion();
+    if (pq) return pq.questions;
+    const inputQuestions = props.block.input["questions"];
+    if (Array.isArray(inputQuestions)) return inputQuestions as QuestionItem[];
+    return null;
+  });
 
-  // Initialize state arrays when questions change (driven reactively via createEffect)
+  // Initialize state arrays when questions change
   createEffect(() => {
     const qs = questions();
     if (qs && selectedOptions().length !== qs.length) {
@@ -228,10 +255,8 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
       const next = [...prev];
       const current = next[qIndex] ?? [];
       if (question.multiple) {
-        // Toggle checkbox
         next[qIndex] = current.includes(label) ? current.filter((l) => l !== label) : [...current, label];
       } else {
-        // Replace radio
         next[qIndex] = [label];
       }
       return next;
@@ -256,7 +281,6 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
 
   const handleSubmit = async () => {
     if (!canSubmit() || isSubmitting()) return;
-
     const qs = questions();
     if (!qs) return;
 
@@ -268,7 +292,6 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
 
     try {
       await replyToQuestion(workspaceId, props.agentId, requestId, buildAnswers());
-      // Notify parent to remove from pendingQuestions
       props.onAnswered?.(requestId);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Failed to submit answer");
@@ -287,94 +310,101 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
         <Show
           when={props.block.status === "pending"}
           fallback={
-            // ── Running state ──
+            // ── Running or error state ──
+            // pendingQuestion() present → interactive form
+            // pendingQuestion() absent  → read-only (question no longer active)
             <Show
-              when={props.isInterrupted}
+              when={questions()}
               fallback={
+                // No question data yet (AI still constructing the tool call parameters)
+                <div class="my-2 px-3 py-1.5">
+                  <div class="flex items-center gap-1.5">
+                    <HelpCircle size={16} class="text-text-primary flex-shrink-0" />
+                    <span class="text-sm text-text-secondary">Waiting for question</span>
+                    <div class="ml-auto">
+                      <div class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
+                    </div>
+                  </div>
+                </div>
+              }
+            >
+              {(qs) => (
                 <Show
-                  when={questions()}
+                  when={pendingQuestion()}
                   fallback={
-                    // No question data yet (pendingQuestion not resolved, block.input has no questions)
-                    <div class="my-2 px-3 py-1.5">
-                      <div class="flex items-center gap-1.5">
-                        <HelpCircle size={16} class="text-text-primary flex-shrink-0" />
-                        <span class="text-sm text-text-secondary">Waiting for question</span>
-                        <div class="ml-auto">
-                          <div class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
-                        </div>
+                    // ── Read-only: question no longer active ──
+                    // Covers: stuck running (aborted without error), status=error (aborted with error)
+                    <div class="my-2 overflow-hidden rounded-lg border border-border opacity-75">
+                      <div class="px-3 py-2 flex items-center gap-2 border-b border-border bg-surface-overlay/30">
+                        <HelpCircle size={16} class="text-text-secondary flex-shrink-0" />
+                        <span class="text-sm font-medium text-text-secondary">
+                          {qs().length === 1 ? "Question" : `${qs().length} Questions`}
+                        </span>
+                        <span class="ml-auto text-xs text-text-muted">not answered</span>
+                      </div>
+                      <div class="px-3 py-3 space-y-5 bg-surface-raised">
+                        <For each={qs()}>{(question) => <QuestionReadOnlySection question={question} />}</For>
                       </div>
                     </div>
                   }
                 >
-                  {(qs) => (
-                    <div class="my-2 overflow-hidden rounded-lg border border-border">
-                      {/* Header */}
-                      <div class="px-3 py-2 flex items-center gap-2 border-b border-border bg-surface-overlay/30">
-                        <HelpCircle size={16} class="text-accent flex-shrink-0" />
-                        <span class="text-sm font-medium text-text-primary">
-                          {qs().length === 1 ? "Question" : `${qs().length} Questions`}
-                        </span>
-                        <Show when={isSubmitting()}>
-                          <div class="ml-auto animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
-                        </Show>
-                      </div>
+                  {/* ── Interactive form: question is still pending ── */}
+                  <div class="my-2 overflow-hidden rounded-lg border border-border">
+                    {/* Header */}
+                    <div class="px-3 py-2 flex items-center gap-2 border-b border-border bg-surface-overlay/30">
+                      <HelpCircle size={16} class="text-accent flex-shrink-0" />
+                      <span class="text-sm font-medium text-text-primary">
+                        {qs().length === 1 ? "Question" : `${qs().length} Questions`}
+                      </span>
+                      <Show when={isSubmitting()}>
+                        <div class="ml-auto animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
+                      </Show>
+                    </div>
 
-                      {/* Question sections */}
-                      <div class="px-3 py-3 space-y-5 bg-surface-raised">
-                        <For each={qs()}>
-                          {(question, i) => (
-                            <QuestionFormSection
-                              question={question}
-                              index={i()}
-                              selectedOptions={selectedOptions()[i()] ?? []}
-                              customText={customTexts()[i()] ?? ""}
-                              onOptionToggle={(label) => handleOptionToggle(i(), label)}
-                              onCustomTextChange={(text) => handleCustomTextChange(i(), text)}
-                              onClearOptions={() => handleClearOptions(i())}
-                            />
-                          )}
-                        </For>
+                    {/* Question sections */}
+                    <div class="px-3 py-3 space-y-5 bg-surface-raised">
+                      <For each={qs()}>
+                        {(question, i) => (
+                          <QuestionFormSection
+                            question={question}
+                            index={i()}
+                            selectedOptions={selectedOptions()[i()] ?? []}
+                            customText={customTexts()[i()] ?? ""}
+                            onOptionToggle={(label) => handleOptionToggle(i(), label)}
+                            onCustomTextChange={(text) => handleCustomTextChange(i(), text)}
+                            onClearOptions={() => handleClearOptions(i())}
+                          />
+                        )}
+                      </For>
 
-                        {/* Error display */}
-                        <Show when={submitError()}>
-                          <div class="text-sm text-red-600 dark:text-red-400">{submitError()}</div>
-                        </Show>
+                      {/* Error display */}
+                      <Show when={submitError()}>
+                        <div class="text-sm text-red-600 dark:text-red-400">{submitError()}</div>
+                      </Show>
 
-                        {/* Submit */}
-                        <div class="flex justify-end">
-                          <button
-                            type="button"
-                            onClick={handleSubmit}
-                            disabled={!canSubmit() || isSubmitting()}
-                            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                            classList={{
-                              "bg-accent text-text-on-accent hover:brightness-110 cursor-pointer":
-                                canSubmit() && !isSubmitting(),
-                              "bg-surface-overlay text-text-muted cursor-not-allowed opacity-50":
-                                !canSubmit() || isSubmitting(),
-                            }}
-                          >
-                            <Show when={isSubmitting()} fallback="Submit">
-                              Submitting...
-                            </Show>
-                          </button>
-                        </div>
+                      {/* Submit */}
+                      <div class="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleSubmit}
+                          disabled={!canSubmit() || isSubmitting()}
+                          class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                          classList={{
+                            "bg-accent text-text-on-accent hover:brightness-110 cursor-pointer":
+                              canSubmit() && !isSubmitting(),
+                            "bg-surface-overlay text-text-muted cursor-not-allowed opacity-50":
+                              !canSubmit() || isSubmitting(),
+                          }}
+                        >
+                          <Show when={isSubmitting()} fallback="Submit">
+                            Submitting...
+                          </Show>
+                        </button>
                       </div>
                     </div>
-                  )}
-                </Show>
-              }
-            >
-              {/* Interrupted state: message was aborted while question was pending */}
-              <div class="my-2 px-3 py-1.5">
-                <div class="flex items-center gap-1.5">
-                  <HelpCircle size={16} class="text-red-500 dark:text-red-400 flex-shrink-0" />
-                  <span class="text-sm text-text-secondary">Question interrupted</span>
-                  <div class="ml-auto">
-                    <AlertCircle size={16} class="text-red-600 dark:text-red-400" />
                   </div>
-                </div>
-              </div>
+                </Show>
+              )}
             </Show>
           }
         >

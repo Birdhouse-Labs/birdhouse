@@ -65,29 +65,21 @@ function makePendingQuestion(overrides: Partial<QuestionRequest> = {}): Question
   };
 }
 
-describe("QuestionToolCard - pending state", () => {
+describe("QuestionToolCard - block.status pending (AI constructing)", () => {
   it("shows spinner when block.status is pending", () => {
     render(() => <QuestionToolCard block={makeBlock({ status: "pending" })} agentId="agent-1" />);
     const spinner = document.querySelector(".animate-spin");
     expect(spinner).not.toBeNull();
   });
 
-  it("shows spinner when block.status is running but block.input has no questions and no pending question found", () => {
-    const blockNoInput = makeBlock({ input: {} });
-    render(() => <QuestionToolCard block={blockNoInput} agentId="agent-1" pendingQuestions={() => []} />);
-    const spinner = document.querySelector(".animate-spin");
-    expect(spinner).not.toBeNull();
-  });
-
-  it("shows spinner when block.status is running but block.input has no questions and pendingQuestions not provided", () => {
-    const blockNoInput = makeBlock({ input: {} });
-    render(() => <QuestionToolCard block={blockNoInput} agentId="agent-1" />);
+  it("shows spinner when block.input has no questions and no pending question", () => {
+    render(() => <QuestionToolCard block={makeBlock({ input: {} })} agentId="agent-1" pendingQuestions={() => []} />);
     const spinner = document.querySelector(".animate-spin");
     expect(spinner).not.toBeNull();
   });
 });
 
-describe("QuestionToolCard - running state with pendingQuestions", () => {
+describe("QuestionToolCard - interactive form (pendingQuestion present)", () => {
   it("shows question text", () => {
     render(() => (
       <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
@@ -102,18 +94,12 @@ describe("QuestionToolCard - running state with pendingQuestions", () => {
     expect(screen.getByText("Favorite color")).toBeInTheDocument();
   });
 
-  it("shows option labels", () => {
+  it("shows option labels and descriptions", () => {
     render(() => (
       <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
     ));
     expect(screen.getByText("Red")).toBeInTheDocument();
     expect(screen.getByText("Blue")).toBeInTheDocument();
-  });
-
-  it("shows option descriptions", () => {
-    render(() => (
-      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
-    ));
     expect(screen.getByText("A warm color")).toBeInTheDocument();
     expect(screen.getByText("A cool color")).toBeInTheDocument();
   });
@@ -128,37 +114,19 @@ describe("QuestionToolCard - running state with pendingQuestions", () => {
   });
 
   it("renders checkboxes for multi-select questions", () => {
-    const block = makeBlock({
-      input: {
-        questions: [
-          {
-            question: "Pick all that apply",
-            header: "Multi pick",
-            options: [
-              { label: "Option A", description: "Desc A" },
-              { label: "Option B", description: "Desc B" },
-            ],
-            multiple: true,
-          },
-        ],
-      },
-    });
-    const pendingQ = makePendingQuestion({
-      questions: [
-        {
-          question: "Pick all that apply",
-          header: "Multi pick",
-          options: [
-            { label: "Option A", description: "Desc A" },
-            { label: "Option B", description: "Desc B" },
-          ],
-          multiple: true,
-        },
+    const multiQuestion = {
+      question: "Pick all that apply",
+      header: "Multi pick",
+      options: [
+        { label: "Option A", description: "Desc A" },
+        { label: "Option B", description: "Desc B" },
       ],
-    });
+      multiple: true,
+    };
+    const block = makeBlock({ input: { questions: [multiQuestion] } });
+    const pendingQ = makePendingQuestion({ questions: [multiQuestion] });
     render(() => <QuestionToolCard block={block} agentId="agent-1" pendingQuestions={() => [pendingQ]} />);
     const checkboxes = screen.getAllByRole("checkbox");
-    // Checkboxes include the Checkbox component's hidden inputs
     expect(checkboxes.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -169,20 +137,25 @@ describe("QuestionToolCard - running state with pendingQuestions", () => {
     expect(screen.getByPlaceholderText("Type your own answer")).toBeInTheDocument();
   });
 
+  it("shows submit button", () => {
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
+    expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
+  });
+
   it("disables submit button when nothing selected", () => {
     render(() => (
       <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
     ));
-    const submit = screen.getByRole("button", { name: /submit/i });
-    expect(submit).toBeDisabled();
+    expect(screen.getByRole("button", { name: /submit/i })).toBeDisabled();
   });
 
   it("enables submit button after selecting a radio option", async () => {
     render(() => (
       <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
     ));
-    const radios = screen.getAllByRole("radio");
-    radios[0]?.click();
+    screen.getAllByRole("radio")[0]?.click();
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /submit/i })).not.toBeDisabled();
     });
@@ -193,7 +166,6 @@ describe("QuestionToolCard - running state with pendingQuestions", () => {
       <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
     ));
     const textInput = screen.getByPlaceholderText("Type your own answer");
-    // Simulate input event
     Object.defineProperty(textInput, "value", { value: "my answer", writable: true });
     textInput.dispatchEvent(new Event("input", { bubbles: true }));
     await waitFor(() => {
@@ -208,15 +180,8 @@ describe("QuestionToolCard - running state with pendingQuestions", () => {
     render(() => (
       <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
     ));
-
-    // Select an option
-    const radios = screen.getAllByRole("radio");
-    radios[0]?.click();
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /submit/i })).not.toBeDisabled();
-    });
-
+    screen.getAllByRole("radio")[0]?.click();
+    await waitFor(() => expect(screen.getByRole("button", { name: /submit/i })).not.toBeDisabled());
     screen.getByRole("button", { name: /submit/i }).click();
 
     await waitFor(() => {
@@ -224,37 +189,9 @@ describe("QuestionToolCard - running state with pendingQuestions", () => {
     });
   });
 
-  it("uses block.callID as requestId when no pending question matches and block.status is running", async () => {
-    const replyMock = vi.mocked(questionsApi.replyToQuestion);
-    replyMock.mockResolvedValue(undefined);
-
-    // No pendingQuestions provided — falls back to block.input
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => []} />);
-
-    // With no matching pending question and status=running, the form renders using block.input
-    await waitFor(() => {
-      expect(screen.getByText("What is your favorite color?")).toBeInTheDocument();
-    });
-
-    const radios = screen.getAllByRole("radio");
-    radios[0]?.click();
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /submit/i })).not.toBeDisabled();
-    });
-
-    screen.getByRole("button", { name: /submit/i }).click();
-
-    // Should use block.callID as requestId
-    await waitFor(() => {
-      expect(replyMock).toHaveBeenCalledWith("test-workspace", "agent-1", "call-abc", [["Red"]]);
-    });
-  });
-
   it("shows loading state while submitting", async () => {
     let resolveReply: (() => void) | undefined;
-    const replyMock = vi.mocked(questionsApi.replyToQuestion);
-    replyMock.mockImplementation(
+    vi.mocked(questionsApi.replyToQuestion).mockImplementation(
       () =>
         new Promise<void>((resolve) => {
           resolveReply = resolve;
@@ -264,167 +201,129 @@ describe("QuestionToolCard - running state with pendingQuestions", () => {
     render(() => (
       <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
     ));
-
-    const radios = screen.getAllByRole("radio");
-    radios[0]?.click();
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /submit/i })).not.toBeDisabled();
-    });
-
+    screen.getAllByRole("radio")[0]?.click();
+    await waitFor(() => expect(screen.getByRole("button", { name: /submit/i })).not.toBeDisabled());
     screen.getByRole("button", { name: /submit/i }).click();
 
-    // Should show loading state
-    await waitFor(() => {
-      const spinner = document.querySelector(".animate-spin");
-      expect(spinner).not.toBeNull();
-    });
-
+    await waitFor(() => expect(document.querySelector(".animate-spin")).not.toBeNull());
     resolveReply?.();
   });
 });
 
-describe("QuestionToolCard - running state fallback to block.input", () => {
-  it("renders form from block.input when pendingQuestions not provided and status is running", async () => {
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" />);
+describe("QuestionToolCard - read-only (no pendingQuestion)", () => {
+  it("shows question text from block.input when no pending question", () => {
+    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => []} />);
+    expect(screen.getByText("What is your favorite color?")).toBeInTheDocument();
+  });
 
-    await waitFor(() => {
-      expect(screen.getByText("What is your favorite color?")).toBeInTheDocument();
-    });
+  it("shows question header from block.input when no pending question", () => {
+    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => []} />);
+    expect(screen.getByText("Favorite color")).toBeInTheDocument();
+  });
+
+  it("shows option labels from block.input when no pending question", () => {
+    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => []} />);
+    expect(screen.getByText("Red")).toBeInTheDocument();
+    expect(screen.getByText("Blue")).toBeInTheDocument();
+  });
+
+  it("does NOT show submit button when no pending question", () => {
+    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => []} />);
+    expect(screen.queryByRole("button", { name: /submit/i })).toBeNull();
+  });
+
+  it("does NOT show free-text input when no pending question", () => {
+    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => []} />);
+    expect(screen.queryByPlaceholderText("Type your own answer")).toBeNull();
+  });
+
+  it("shows 'not answered' label when no pending question", () => {
+    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => []} />);
+    expect(screen.getByText("not answered")).toBeInTheDocument();
+  });
+
+  it("shows read-only display when pendingQuestions not provided at all", () => {
+    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" />);
+    expect(screen.getByText("What is your favorite color?")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /submit/i })).toBeNull();
+  });
+
+  it("shows read-only for status=error (aborted with error)", () => {
+    render(() => (
+      <QuestionToolCard
+        block={makeBlock({ status: "error", error: "Tool execution aborted" })}
+        agentId="agent-1"
+        pendingQuestions={() => []}
+      />
+    ));
+    expect(screen.getByText("What is your favorite color?")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /submit/i })).toBeNull();
   });
 });
 
 describe("QuestionToolCard - completed state", () => {
-  it("shows compact summary when completed with JSON output", () => {
-    const block = makeBlock({
-      status: "completed",
-      output: JSON.stringify({ answers: [["Red"]] }),
-    });
+  it("shows compact summary with JSON output", () => {
+    const block = makeBlock({ status: "completed", output: JSON.stringify({ answers: [["Red"]] }) });
     render(() => <QuestionToolCard block={block} agentId="agent-1" />);
-    // Should show answered label/summary, not the form
     expect(screen.queryByRole("button", { name: /submit/i })).toBeNull();
     expect(screen.getByText("Red")).toBeInTheDocument();
   });
 
-  it("shows raw output when completed output is not JSON", () => {
-    const block = makeBlock({
-      status: "completed",
-      output: "Red",
-    });
+  it("shows raw output when output is not JSON", () => {
+    const block = makeBlock({ status: "completed", output: "Red" });
     render(() => <QuestionToolCard block={block} agentId="agent-1" />);
     expect(screen.getByText("Red")).toBeInTheDocument();
   });
 
-  it("shows fallback when completed with no output", () => {
+  it("renders without crashing when completed with no output", () => {
     const block = makeBlock({ status: "completed" });
     render(() => <QuestionToolCard block={block} agentId="agent-1" />);
-    // Should render without crashing and show some completed indication
     expect(screen.queryByRole("button", { name: /submit/i })).toBeNull();
   });
 });
 
 describe("QuestionToolCard - multiple questions", () => {
-  it("renders all questions", () => {
+  it("renders all questions interactively when pending", () => {
     const questions = [
-      {
-        question: "First question?",
-        header: "Q1",
-        options: [{ label: "Yes", description: "Affirmative" }],
-        multiple: false,
-      },
-      {
-        question: "Second question?",
-        header: "Q2",
-        options: [{ label: "Maybe", description: "Uncertain" }],
-        multiple: false,
-      },
+      { question: "First?", header: "Q1", options: [{ label: "Yes", description: "Yep" }], multiple: false },
+      { question: "Second?", header: "Q2", options: [{ label: "Maybe", description: "Unsure" }], multiple: false },
     ];
     const block = makeBlock({ input: { questions } });
     const pendingQ = makePendingQuestion({ questions });
     render(() => <QuestionToolCard block={block} agentId="agent-1" pendingQuestions={() => [pendingQ]} />);
 
-    expect(screen.getByText("First question?")).toBeInTheDocument();
-    expect(screen.getByText("Second question?")).toBeInTheDocument();
+    expect(screen.getByText("First?")).toBeInTheDocument();
+    expect(screen.getByText("Second?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
+  });
+
+  it("renders all questions read-only when not pending", () => {
+    const questions = [
+      { question: "First?", header: "Q1", options: [{ label: "Yes", description: "Yep" }], multiple: false },
+      { question: "Second?", header: "Q2", options: [{ label: "Maybe", description: "Unsure" }], multiple: false },
+    ];
+    const block = makeBlock({ input: { questions } });
+    render(() => <QuestionToolCard block={block} agentId="agent-1" pendingQuestions={() => []} />);
+
+    expect(screen.getByText("First?")).toBeInTheDocument();
+    expect(screen.getByText("Second?")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /submit/i })).toBeNull();
   });
 
   it("requires all questions answered before submit enabled", async () => {
     const questions = [
-      {
-        question: "First question?",
-        header: "Q1",
-        options: [{ label: "Yes", description: "Affirmative" }],
-        multiple: false,
-      },
-      {
-        question: "Second question?",
-        header: "Q2",
-        options: [{ label: "Maybe", description: "Uncertain" }],
-        multiple: false,
-      },
+      { question: "First?", header: "Q1", options: [{ label: "Yes", description: "Yep" }], multiple: false },
+      { question: "Second?", header: "Q2", options: [{ label: "Maybe", description: "Unsure" }], multiple: false },
     ];
     const block = makeBlock({ input: { questions } });
     const pendingQ = makePendingQuestion({ questions });
     render(() => <QuestionToolCard block={block} agentId="agent-1" pendingQuestions={() => [pendingQ]} />);
 
-    const radios = screen.getAllByRole("radio");
-    // Only click first radio
-    radios[0]?.click();
+    // Only answer first question
+    screen.getAllByRole("radio")[0]?.click();
 
-    // Submit should still be disabled (second question not answered)
     await waitFor(() => {
-      // Check that submit button remains disabled
-      const submit = screen.getByRole("button", { name: /submit/i });
-      expect(submit).toBeDisabled();
+      expect(screen.getByRole("button", { name: /submit/i })).toBeDisabled();
     });
-  });
-});
-
-describe("QuestionToolCard - interrupted state", () => {
-  it("shows interrupted state when status=running and isInterrupted=true", () => {
-    render(() => (
-      <QuestionToolCard
-        block={makeBlock()}
-        agentId="agent-1"
-        pendingQuestions={() => [makePendingQuestion()]}
-        isInterrupted={true}
-      />
-    ));
-    expect(screen.getByText("Question interrupted")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /submit/i })).toBeNull();
-  });
-
-  it("shows interactive form when status=running and isInterrupted=false", () => {
-    render(() => (
-      <QuestionToolCard
-        block={makeBlock()}
-        agentId="agent-1"
-        pendingQuestions={() => [makePendingQuestion()]}
-        isInterrupted={false}
-      />
-    ));
-    expect(screen.queryByText("Question interrupted")).toBeNull();
-    expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
-  });
-
-  it("shows interactive form when isInterrupted is omitted", () => {
-    render(() => (
-      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
-    ));
-    expect(screen.queryByText("Question interrupted")).toBeNull();
-    expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
-  });
-
-  it("shows completed summary even when isInterrupted=true", () => {
-    const block = makeBlock({ status: "completed", output: JSON.stringify({ answers: [["Red"]] }) });
-    render(() => <QuestionToolCard block={block} agentId="agent-1" isInterrupted={true} />);
-    expect(screen.queryByText("Question interrupted")).toBeNull();
-    expect(screen.getByText("Red")).toBeInTheDocument();
-  });
-
-  it("shows pending spinner even when isInterrupted=true", () => {
-    render(() => <QuestionToolCard block={makeBlock({ status: "pending" })} agentId="agent-1" isInterrupted={true} />);
-    expect(screen.queryByText("Question interrupted")).toBeNull();
-    const spinner = document.querySelector(".animate-spin");
-    expect(spinner).not.toBeNull();
   });
 });
