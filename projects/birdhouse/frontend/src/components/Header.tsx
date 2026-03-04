@@ -35,7 +35,7 @@ interface HeaderProps {
   onMenuClick?: () => void;
 }
 
-// Custom renderer for theme options - shows theme heading color for light or dark mode
+// Custom renderer for theme options - shows theme gradient as text color
 const renderThemeOption = (option: ComboboxOption<BaseThemeName>, _isHighlighted: boolean): JSX.Element => {
   const metadata = THEME_METADATA[option.value];
 
@@ -44,8 +44,19 @@ const renderThemeOption = (option: ComboboxOption<BaseThemeName>, _isHighlighted
     return <span class="font-medium text-text-primary">{option.label}</span>;
   }
 
+  const gradient = isDark() ? metadata.gradientDark : metadata.gradientLight;
+
   return (
-    <span class="font-medium" style={{ color: isDark() ? metadata.headingDark : metadata.headingLight }}>
+    <span
+      class="font-medium"
+      style={{
+        "background-image": `linear-gradient(to right, ${gradient.from}, ${gradient.to})`,
+        "-webkit-background-clip": "text",
+        "background-clip": "text",
+        color: "transparent",
+        display: "inline-block",
+      }}
+    >
       {option.label}
     </span>
   );
