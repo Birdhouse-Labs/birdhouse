@@ -39,6 +39,7 @@ describe("getAgentQuestions", () => {
 
     const deps = createTestDeps({
       listPendingQuestions: async () => [],
+      getSessionStatus: async () => ({ ses_1: { type: "busy" } }),
     });
     deps.agentsDB = agentsDB;
 
@@ -89,6 +90,7 @@ describe("getAgentQuestions", () => {
 
     const deps = createTestDeps({
       listPendingQuestions: async () => [matchingQuestion, otherSessionQuestion],
+      getSessionStatus: async () => ({ ses_1: { type: "busy" } }),
     });
     deps.agentsDB = agentsDB;
 
@@ -102,6 +104,68 @@ describe("getAgentQuestions", () => {
       expect(data).toHaveLength(1);
       expect(data[0].id).toBe("req_1");
       expect(data[0].sessionID).toBe("ses_1");
+    });
+  });
+
+  test("returns empty array when session is idle even if OpenCode has pending questions", async () => {
+    const agent = createRootAgent(agentsDB, {
+      id: "agent_1",
+      session_id: "ses_1",
+      title: "Test Agent",
+    });
+
+    const pendingQuestion: QuestionRequest = {
+      id: "req_1",
+      sessionID: "ses_1",
+      questions: [{ question: "Which approach?", header: "Approach", options: [] }],
+    };
+
+    const deps = createTestDeps({
+      listPendingQuestions: async () => [pendingQuestion],
+      // Session is idle — question is a leaked promise from an aborted run
+      getSessionStatus: async () => ({ ses_1: { type: "idle" } }),
+    });
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = createTestApp({ agentsDb: agentsDB });
+      app.get("/:id/questions", (c) => getAgentQuestions(c, deps));
+
+      const response = await app.request(`/${agent.id}/questions`);
+      expect(response.status).toBe(200);
+      const data = (await response.json()) as QuestionRequest[];
+      expect(data).toEqual([]);
+    });
+  });
+
+  test("returns empty array when session is not in status map (defaults to idle)", async () => {
+    const agent = createRootAgent(agentsDB, {
+      id: "agent_1",
+      session_id: "ses_1",
+      title: "Test Agent",
+    });
+
+    const pendingQuestion: QuestionRequest = {
+      id: "req_1",
+      sessionID: "ses_1",
+      questions: [{ question: "Which approach?", header: "Approach", options: [] }],
+    };
+
+    const deps = createTestDeps({
+      listPendingQuestions: async () => [pendingQuestion],
+      // Session not in map — treated as idle
+      getSessionStatus: async () => ({}),
+    });
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = createTestApp({ agentsDb: agentsDB });
+      app.get("/:id/questions", (c) => getAgentQuestions(c, deps));
+
+      const response = await app.request(`/${agent.id}/questions`);
+      expect(response.status).toBe(200);
+      const data = (await response.json()) as QuestionRequest[];
+      expect(data).toEqual([]);
     });
   });
 
@@ -125,6 +189,7 @@ describe("getAgentQuestions", () => {
 
     const deps = createTestDeps({
       listPendingQuestions: async () => [question1, question2],
+      getSessionStatus: async () => ({ ses_1: { type: "busy" } }),
     });
     deps.agentsDB = agentsDB;
 

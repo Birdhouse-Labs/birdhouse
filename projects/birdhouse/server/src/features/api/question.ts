@@ -6,10 +6,16 @@ import type { Deps } from "../../dependencies";
 
 /**
  * GET /agents/:id/questions - List pending questions for an agent
- * Fetches all pending questions from OpenCode and filters to those matching the agent's session
+ * Fetches all pending questions from OpenCode and filters to those matching the agent's session.
+ * Returns empty array if the session is idle — a pending question on an idle session is a leaked
+ * OpenCode promise from an aborted run and cannot be answered.
  */
 export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" | "opencode" | "log">) {
-  const { agentsDB, opencode, log } = deps;
+  const {
+    agentsDB,
+    opencode: { listPendingQuestions, getSessionStatus },
+    log,
+  } = deps;
   const agentId = c.req.param("id");
 
   const agent = agentsDB.getAgentById(agentId);
@@ -18,7 +24,15 @@ export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" 
   }
 
   try {
-    const allQuestions = await opencode.listPendingQuestions();
+    const [allQuestions, allStatuses] = await Promise.all([listPendingQuestions(), getSessionStatus()]);
+
+    // If the session is idle, any pending questions are leaked from an aborted run — not answerable
+    const sessionStatus = allStatuses[agent.session_id] ?? { type: "idle" };
+    if (sessionStatus.type === "idle") {
+      log.server.debug({ agentId, sessionId: agent.session_id }, "Session is idle — returning no pending questions");
+      return c.json([]);
+    }
+
     const agentQuestions = allQuestions.filter((q) => q.sessionID === agent.session_id);
     log.server.debug(
       { agentId, sessionId: agent.session_id, count: agentQuestions.length },
