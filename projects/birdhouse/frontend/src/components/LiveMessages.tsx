@@ -156,10 +156,15 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     return status.type === "busy" || status.type === "retry";
   };
 
-  // Subscribe to session.status SSE events to keep status updated
+  // Subscribe to session.status SSE events to keep status updated.
+  // When session goes idle (e.g. after stop/abort), clear pending questions immediately
+  // so the interactive form disappears without requiring a page refresh.
   createEffect(() => {
     const unsubscribe = streaming.subscribeToSessionStatus(props.agentId, (status) => {
       setAgentStatus(status);
+      if (status.type === "idle") {
+        setPendingQuestions([]);
+      }
     });
     onCleanup(unsubscribe);
   });
