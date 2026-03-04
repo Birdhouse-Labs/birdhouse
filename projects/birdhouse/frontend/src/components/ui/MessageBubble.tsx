@@ -535,6 +535,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
                             pendingQuestions: props.pendingQuestions,
                           })}
                           {...(props.onQuestionAnswered !== undefined && { onAnswered: props.onQuestionAnswered })}
+                          {...(wasInterrupted && { isInterrupted: true })}
                         />
                       );
                     default:

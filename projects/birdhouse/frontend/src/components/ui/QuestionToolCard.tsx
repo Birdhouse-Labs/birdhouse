@@ -1,7 +1,7 @@
 // ABOUTME: Renders the "question" tool call inline in the chat message stream
 // ABOUTME: Shows an interactive form when running, compact summary when completed
 
-import { CheckCircle2, HelpCircle } from "lucide-solid";
+import { AlertCircle, CheckCircle2, HelpCircle } from "lucide-solid";
 import { type Accessor, type Component, createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { replyToQuestion } from "../../services/questions-api";
@@ -16,6 +16,9 @@ export interface QuestionToolCardProps {
   pendingQuestions?: Accessor<QuestionRequest[]>;
   // Called after a successful reply so the parent can remove it from pendingQuestions
   onAnswered?: (questionId: string) => void;
+  // True when the message was aborted (MessageAbortedError) — shows interrupted state
+  // instead of the interactive form. Derived from opencodeMessage.error in MessageBubble.
+  isInterrupted?: boolean;
 }
 
 // Derive question items from either the matched pending question or block.input fallback
@@ -174,17 +177,9 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
   // Look up the pending question for this tool block by callID.
   // Reading pendingQuestions() inside createMemo makes SolidJS track it reactively —
   // when the signal updates, this memo (and anything that reads it) re-computes.
-  const pendingQuestion = createMemo(() => {
-    const all = props.pendingQuestions?.() ?? [];
-    const match = all.find((q) => q.tool?.callID === props.block.callID);
-    if (all.length > 0 && !match) {
-      console.debug("[QuestionToolCard] no match", {
-        blockCallID: props.block.callID,
-        pendingCallIDs: all.map((q) => q.tool?.callID),
-      });
-    }
-    return match;
-  });
+  const pendingQuestion = createMemo(() =>
+    (props.pendingQuestions?.() ?? []).find((q) => q.tool?.callID === props.block.callID),
+  );
 
   // Determine what questions to show — reactive memo so Show/For below re-evaluate when questions arrive
   const questions = createMemo(() => resolveQuestions(pendingQuestion(), props.block));
@@ -294,76 +289,92 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
           fallback={
             // ── Running state ──
             <Show
-              when={questions()}
+              when={props.isInterrupted}
               fallback={
-                // No question data yet (pendingQuestion not resolved, block.input has no questions)
-                <div class="my-2 px-3 py-1.5">
-                  <div class="flex items-center gap-1.5">
-                    <HelpCircle size={16} class="text-text-primary flex-shrink-0" />
-                    <span class="text-sm text-text-secondary">Waiting for question</span>
-                    <div class="ml-auto">
-                      <div class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
+                <Show
+                  when={questions()}
+                  fallback={
+                    // No question data yet (pendingQuestion not resolved, block.input has no questions)
+                    <div class="my-2 px-3 py-1.5">
+                      <div class="flex items-center gap-1.5">
+                        <HelpCircle size={16} class="text-text-primary flex-shrink-0" />
+                        <span class="text-sm text-text-secondary">Waiting for question</span>
+                        <div class="ml-auto">
+                          <div class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  }
+                >
+                  {(qs) => (
+                    <div class="my-2 overflow-hidden rounded-lg border border-border">
+                      {/* Header */}
+                      <div class="px-3 py-2 flex items-center gap-2 border-b border-border bg-surface-overlay/30">
+                        <HelpCircle size={16} class="text-accent flex-shrink-0" />
+                        <span class="text-sm font-medium text-text-primary">
+                          {qs().length === 1 ? "Question" : `${qs().length} Questions`}
+                        </span>
+                        <Show when={isSubmitting()}>
+                          <div class="ml-auto animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
+                        </Show>
+                      </div>
+
+                      {/* Question sections */}
+                      <div class="px-3 py-3 space-y-5 bg-surface-raised">
+                        <For each={qs()}>
+                          {(question, i) => (
+                            <QuestionFormSection
+                              question={question}
+                              index={i()}
+                              selectedOptions={selectedOptions()[i()] ?? []}
+                              customText={customTexts()[i()] ?? ""}
+                              onOptionToggle={(label) => handleOptionToggle(i(), label)}
+                              onCustomTextChange={(text) => handleCustomTextChange(i(), text)}
+                              onClearOptions={() => handleClearOptions(i())}
+                            />
+                          )}
+                        </For>
+
+                        {/* Error display */}
+                        <Show when={submitError()}>
+                          <div class="text-sm text-red-600 dark:text-red-400">{submitError()}</div>
+                        </Show>
+
+                        {/* Submit */}
+                        <div class="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={!canSubmit() || isSubmitting()}
+                            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            classList={{
+                              "bg-accent text-text-on-accent hover:brightness-110 cursor-pointer":
+                                canSubmit() && !isSubmitting(),
+                              "bg-surface-overlay text-text-muted cursor-not-allowed opacity-50":
+                                !canSubmit() || isSubmitting(),
+                            }}
+                          >
+                            <Show when={isSubmitting()} fallback="Submit">
+                              Submitting...
+                            </Show>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </Show>
               }
             >
-              {(qs) => (
-                <div class="my-2 overflow-hidden rounded-lg border border-border">
-                  {/* Header */}
-                  <div class="px-3 py-2 flex items-center gap-2 border-b border-border bg-surface-overlay/30">
-                    <HelpCircle size={16} class="text-accent flex-shrink-0" />
-                    <span class="text-sm font-medium text-text-primary">
-                      {qs().length === 1 ? "Question" : `${qs().length} Questions`}
-                    </span>
-                    <Show when={isSubmitting()}>
-                      <div class="ml-auto animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
-                    </Show>
-                  </div>
-
-                  {/* Question sections */}
-                  <div class="px-3 py-3 space-y-5 bg-surface-raised">
-                    <For each={qs()}>
-                      {(question, i) => (
-                        <QuestionFormSection
-                          question={question}
-                          index={i()}
-                          selectedOptions={selectedOptions()[i()] ?? []}
-                          customText={customTexts()[i()] ?? ""}
-                          onOptionToggle={(label) => handleOptionToggle(i(), label)}
-                          onCustomTextChange={(text) => handleCustomTextChange(i(), text)}
-                          onClearOptions={() => handleClearOptions(i())}
-                        />
-                      )}
-                    </For>
-
-                    {/* Error display */}
-                    <Show when={submitError()}>
-                      <div class="text-sm text-red-600 dark:text-red-400">{submitError()}</div>
-                    </Show>
-
-                    {/* Submit */}
-                    <div class="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={!canSubmit() || isSubmitting()}
-                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                        classList={{
-                          "bg-accent text-text-on-accent hover:brightness-110 cursor-pointer":
-                            canSubmit() && !isSubmitting(),
-                          "bg-surface-overlay text-text-muted cursor-not-allowed opacity-50":
-                            !canSubmit() || isSubmitting(),
-                        }}
-                      >
-                        <Show when={isSubmitting()} fallback="Submit">
-                          Submitting...
-                        </Show>
-                      </button>
-                    </div>
+              {/* Interrupted state: message was aborted while question was pending */}
+              <div class="my-2 px-3 py-1.5">
+                <div class="flex items-center gap-1.5">
+                  <HelpCircle size={16} class="text-red-500 dark:text-red-400 flex-shrink-0" />
+                  <span class="text-sm text-text-secondary">Question interrupted</span>
+                  <div class="ml-auto">
+                    <AlertCircle size={16} class="text-red-600 dark:text-red-400" />
                   </div>
                 </div>
-              )}
+              </div>
             </Show>
           }
         >

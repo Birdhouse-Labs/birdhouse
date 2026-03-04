@@ -378,3 +378,53 @@ describe("QuestionToolCard - multiple questions", () => {
     });
   });
 });
+
+describe("QuestionToolCard - interrupted state", () => {
+  it("shows interrupted state when status=running and isInterrupted=true", () => {
+    render(() => (
+      <QuestionToolCard
+        block={makeBlock()}
+        agentId="agent-1"
+        pendingQuestions={() => [makePendingQuestion()]}
+        isInterrupted={true}
+      />
+    ));
+    expect(screen.getByText("Question interrupted")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /submit/i })).toBeNull();
+  });
+
+  it("shows interactive form when status=running and isInterrupted=false", () => {
+    render(() => (
+      <QuestionToolCard
+        block={makeBlock()}
+        agentId="agent-1"
+        pendingQuestions={() => [makePendingQuestion()]}
+        isInterrupted={false}
+      />
+    ));
+    expect(screen.queryByText("Question interrupted")).toBeNull();
+    expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
+  });
+
+  it("shows interactive form when isInterrupted is omitted", () => {
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
+    expect(screen.queryByText("Question interrupted")).toBeNull();
+    expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
+  });
+
+  it("shows completed summary even when isInterrupted=true", () => {
+    const block = makeBlock({ status: "completed", output: JSON.stringify({ answers: [["Red"]] }) });
+    render(() => <QuestionToolCard block={block} agentId="agent-1" isInterrupted={true} />);
+    expect(screen.queryByText("Question interrupted")).toBeNull();
+    expect(screen.getByText("Red")).toBeInTheDocument();
+  });
+
+  it("shows pending spinner even when isInterrupted=true", () => {
+    render(() => <QuestionToolCard block={makeBlock({ status: "pending" })} agentId="agent-1" isInterrupted={true} />);
+    expect(screen.queryByText("Question interrupted")).toBeNull();
+    const spinner = document.querySelector(".animate-spin");
+    expect(spinner).not.toBeNull();
+  });
+});
