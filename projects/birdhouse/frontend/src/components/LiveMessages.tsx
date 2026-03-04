@@ -199,12 +199,24 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     onCleanup(unsubscribe);
   });
 
-  // Refetch pending questions when SSE reconnects (may have missed events while disconnected)
+  // Refetch pending questions when SSE reconnects (may have missed events while disconnected).
+  // Merges rather than replaces: adds any questions the server knows about that we missed,
+  // but keeps questions already in state that aren't in the response yet — they may have
+  // arrived via SSE moments before connection.established fired (race window). Questions
+  // answered by the user are removed immediately via removePendingQuestion, so keeping
+  // extras from prev is safe and never accumulates stale state.
   createEffect(() => {
     const unsubscribe = streaming.subscribeToConnectionEstablished(() => {
       fetchPendingQuestions(workspaceId, props.agentId)
-        .then((questions) => {
-          setPendingQuestions(questions);
+        .then((fetched) => {
+          setPendingQuestions((prev) => {
+            const prevIds = new Set(prev.map((q) => q.id));
+            // Add any from fetched not already in state (missed while disconnected)
+            const newFromFetch = fetched.filter((q) => !prevIds.has(q.id));
+            // Keep all of prev — server may not yet reflect questions that arrived via SSE
+            // in the race window between question.asked and connection.established
+            return [...prev, ...newFromFetch];
+          });
         })
         .catch((err) => {
           log.api.warn("Failed to refetch pending questions on reconnect", { agentId: props.agentId, err });
