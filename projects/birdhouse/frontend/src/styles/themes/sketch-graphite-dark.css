@@ -42,9 +42,9 @@
     --theme-glow: oklch(75.4% 0.085 67.1deg / 0.35); /* soft tan glow */
     
     /* Background gradient - charcoal paper with warmth */
-    --theme-bg-from: oklch(27.2% 0.009 67.4deg);         /* charcoal */
-    --theme-bg-via: oklch(33.6% 0.014 54.1deg);          /* warm dark brown */
-    --theme-bg-to: oklch(27.2% 0.009 67.4deg);           /* charcoal */
+    --theme-bg-from: oklch(18% 0.009 67.4deg);           /* dark charcoal */
+    --theme-bg-via: oklch(23% 0.014 54.1deg);            /* warm dark brown */
+    --theme-bg-to: oklch(18% 0.009 67.4deg);             /* dark charcoal */
     
     /* Prose/typography - legacy tokens */
     --theme-prose-link: oklch(75.4% 0.085 67.1deg);      /* tan for links */

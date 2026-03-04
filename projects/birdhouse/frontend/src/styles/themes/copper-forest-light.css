@@ -42,9 +42,9 @@
     --theme-glow: oklch(64.6% 0.194 41.1deg / 0.35); /* orange-600/25 */
     
     /* Background gradient */
-    --theme-bg-from: oklch(97% 0.001 106.4deg);         /* stone-100 */
-    --theme-bg-via: oklch(96.2% 0.058 95.6deg);          /* amber-100 */
-    --theme-bg-to: oklch(97% 0.001 106.4deg);           /* stone-100 */
+    --theme-bg-from: oklch(91% 0.001 106.4deg);         /* stone-200 */
+    --theme-bg-via: oklch(89% 0.058 95.6deg);            /* amber-200 */
+    --theme-bg-to: oklch(91% 0.001 106.4deg);           /* stone-200 */
     
     /* Prose/typography - legacy tokens */
     --theme-prose-link: oklch(55.3% 0.174 38.4deg);      /* orange-700 */

@@ -42,9 +42,9 @@
   --theme-glow: oklch(62.7% 0.233 303.9deg / 0.35); /* purple-500/25 */
   
   /* Background gradient */
-  --theme-bg-from: oklch(96.8% 0.007 247.9deg);         /* slate-100 */
-  --theme-bg-via: oklch(94.6% 0.033 307.2deg);          /* purple-100 */
-  --theme-bg-to: oklch(96.8% 0.007 247.9deg);           /* slate-100 */
+  --theme-bg-from: oklch(88% 0.007 247.9deg);           /* slate-300 */
+  --theme-bg-via: oklch(85% 0.04 307.2deg);             /* purple-300 */
+  --theme-bg-to: oklch(88% 0.007 247.9deg);             /* slate-300 */
   
   /* Prose/typography - legacy tokens */
   --theme-prose-link: oklch(54.1% 0.247 293deg);      /* violet-600 */

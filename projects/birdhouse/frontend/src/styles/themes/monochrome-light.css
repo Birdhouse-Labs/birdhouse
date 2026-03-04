@@ -41,10 +41,10 @@
     /* Glow/shadow color - very subtle */
     --theme-glow: rgb(0, 0, 0, 0.1); /* minimal shadow */
     
-    /* Background gradient - pure white */
-    --theme-bg-from: #ffffff;         /* white */
-    --theme-bg-via: #fbfbfb;          /* neutral-50 */
-    --theme-bg-to: #ffffff;           /* white */
+    /* Background gradient - light gray so white cards pop */
+    --theme-bg-from: #dedede;         /* neutral-300 */
+    --theme-bg-via: #d4d4d4;          /* neutral-350 */
+    --theme-bg-to: #dedede;           /* neutral-300 */
     
     /* Prose/typography - legacy tokens */
     --theme-prose-link: #343434;      /* neutral-900 - dark gray */
