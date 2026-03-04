@@ -2,7 +2,7 @@
 // ABOUTME: Orchestrates message rendering and input handling
 
 import { LibraryBig, Split, X } from "lucide-solid";
-import { type Component, createMemo, createSignal, For, Show } from "solid-js";
+import { type Accessor, type Component, createMemo, createSignal, For, Show } from "solid-js";
 import { findPendingAssistantId, isMessageQueued } from "../../domain/message-queue";
 import { uiSize } from "../../theme";
 import type { Message } from "../../types/messages";
@@ -27,7 +27,7 @@ export interface ChatContainerProps {
   onOpenAgentModal?: ((agentId: string) => void) | undefined;
   onCloneFromMessage?: ((messageId: string, messageContent: string, event: MouseEvent) => void) | undefined;
   onResetToMessage?: ((messageId: string) => void) | undefined;
-  getPendingQuestion?: (callID: string) => QuestionRequest | undefined;
+  pendingQuestions?: Accessor<QuestionRequest[]>;
   onQuestionAnswered?: (questionId: string) => void;
   inputRef?: (el: HTMLTextAreaElement) => void;
 }
@@ -154,7 +154,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
               isQueued={isMessageQueued(message, pendingAssistantId())}
               onCloneFromMessage={props.onCloneFromMessage}
               onResetToMessage={props.onResetToMessage}
-              {...(props.getPendingQuestion !== undefined && { getPendingQuestion: props.getPendingQuestion })}
+              {...(props.pendingQuestions !== undefined && { pendingQuestions: props.pendingQuestions })}
               {...(props.onQuestionAnswered !== undefined && { onQuestionAnswered: props.onQuestionAnswered })}
             />
           )}

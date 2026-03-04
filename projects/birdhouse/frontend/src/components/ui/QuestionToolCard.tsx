@@ -2,7 +2,7 @@
 // ABOUTME: Shows an interactive form when running, compact summary when completed
 
 import { CheckCircle2, HelpCircle } from "lucide-solid";
-import { type Component, createMemo, createSignal, For, Show } from "solid-js";
+import { type Accessor, type Component, createMemo, createSignal, For, Show } from "solid-js";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { replyToQuestion } from "../../services/questions-api";
 import type { ToolBlock } from "../../types/messages";
@@ -11,17 +11,15 @@ import type { QuestionItem, QuestionRequest } from "../../types/question";
 export interface QuestionToolCardProps {
   block: ToolBlock;
   agentId: string;
-  // undefined = not yet known; null = no pending question found; populated = use for interactive form
-  pendingQuestion?: QuestionRequest | null | undefined;
+  // Signal accessor for all pending questions — component looks up by callID internally
+  // so SolidJS can track the read reactively and re-render when questions change
+  pendingQuestions?: Accessor<QuestionRequest[]>;
   // Called after a successful reply so the parent can remove it from pendingQuestions
   onAnswered?: (questionId: string) => void;
 }
 
-// Derive question items from either the pendingQuestion prop or block.input fallback
-function resolveQuestions(
-  pendingQuestion: QuestionRequest | null | undefined,
-  block: ToolBlock,
-): QuestionItem[] | null {
+// Derive question items from either the matched pending question or block.input fallback
+function resolveQuestions(pendingQuestion: QuestionRequest | undefined, block: ToolBlock): QuestionItem[] | null {
   if (pendingQuestion) {
     return pendingQuestion.questions;
   }
@@ -173,8 +171,15 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
   const [isSubmitting, setIsSubmitting] = createSignal(false);
   const [submitError, setSubmitError] = createSignal<string | null>(null);
 
+  // Look up the pending question for this tool block by callID.
+  // Reading pendingQuestions() inside createMemo makes SolidJS track it reactively —
+  // when the signal updates, this memo (and anything that reads it) re-computes.
+  const pendingQuestion = createMemo(() =>
+    props.pendingQuestions?.().find((q) => q.tool?.callID === props.block.callID),
+  );
+
   // Determine what questions to show
-  const questions = createMemo(() => resolveQuestions(props.pendingQuestion, props.block));
+  const questions = createMemo(() => resolveQuestions(pendingQuestion(), props.block));
 
   // Initialize state arrays when questions change
   const initStateForQuestions = (qs: QuestionItem[]) => {
@@ -249,8 +254,8 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
     const qs = questions();
     if (!qs) return;
 
-    // requestId: prefer pendingQuestion.id, fall back to block.callID
-    const requestId = props.pendingQuestion?.id ?? props.block.callID;
+    // requestId: prefer pendingQuestion.id (the que_... ID OpenCode expects), fall back to block.callID
+    const requestId = pendingQuestion()?.id ?? props.block.callID;
 
     setIsSubmitting(true);
     setSubmitError(null);

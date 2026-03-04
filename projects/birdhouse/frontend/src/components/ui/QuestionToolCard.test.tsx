@@ -72,46 +72,56 @@ describe("QuestionToolCard - pending state", () => {
     expect(spinner).not.toBeNull();
   });
 
-  it("shows spinner when block.status is running but block.input has no questions and pendingQuestion is null", () => {
+  it("shows spinner when block.status is running but block.input has no questions and no pending question found", () => {
     const blockNoInput = makeBlock({ input: {} });
-    render(() => <QuestionToolCard block={blockNoInput} agentId="agent-1" pendingQuestion={null} />);
+    render(() => <QuestionToolCard block={blockNoInput} agentId="agent-1" pendingQuestions={() => []} />);
     const spinner = document.querySelector(".animate-spin");
     expect(spinner).not.toBeNull();
   });
 
-  it("shows spinner when block.status is running but block.input has no questions and pendingQuestion is undefined", () => {
+  it("shows spinner when block.status is running but block.input has no questions and pendingQuestions not provided", () => {
     const blockNoInput = makeBlock({ input: {} });
-    render(() => <QuestionToolCard block={blockNoInput} agentId="agent-1" pendingQuestion={undefined} />);
+    render(() => <QuestionToolCard block={blockNoInput} agentId="agent-1" />);
     const spinner = document.querySelector(".animate-spin");
     expect(spinner).not.toBeNull();
   });
 });
 
-describe("QuestionToolCard - running state with pendingQuestion", () => {
+describe("QuestionToolCard - running state with pendingQuestions", () => {
   it("shows question text", () => {
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={makePendingQuestion()} />);
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
     expect(screen.getByText("What is your favorite color?")).toBeInTheDocument();
   });
 
   it("shows question header", () => {
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={makePendingQuestion()} />);
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
     expect(screen.getByText("Favorite color")).toBeInTheDocument();
   });
 
   it("shows option labels", () => {
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={makePendingQuestion()} />);
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
     expect(screen.getByText("Red")).toBeInTheDocument();
     expect(screen.getByText("Blue")).toBeInTheDocument();
   });
 
   it("shows option descriptions", () => {
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={makePendingQuestion()} />);
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
     expect(screen.getByText("A warm color")).toBeInTheDocument();
     expect(screen.getByText("A cool color")).toBeInTheDocument();
   });
 
   it("renders radio inputs for single-select questions", () => {
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={makePendingQuestion()} />);
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
     const radios = screen.getAllByRole("radio");
     // 2 option radios + 1 for the custom text row
     expect(radios.length).toBe(3);
@@ -146,25 +156,31 @@ describe("QuestionToolCard - running state with pendingQuestion", () => {
         },
       ],
     });
-    render(() => <QuestionToolCard block={block} agentId="agent-1" pendingQuestion={pendingQ} />);
+    render(() => <QuestionToolCard block={block} agentId="agent-1" pendingQuestions={() => [pendingQ]} />);
     const checkboxes = screen.getAllByRole("checkbox");
     // Checkboxes include the Checkbox component's hidden inputs
     expect(checkboxes.length).toBeGreaterThanOrEqual(2);
   });
 
   it("always shows free-text input", () => {
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={makePendingQuestion()} />);
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
     expect(screen.getByPlaceholderText("Type your own answer")).toBeInTheDocument();
   });
 
   it("disables submit button when nothing selected", () => {
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={makePendingQuestion()} />);
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
     const submit = screen.getByRole("button", { name: /submit/i });
     expect(submit).toBeDisabled();
   });
 
   it("enables submit button after selecting a radio option", async () => {
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={makePendingQuestion()} />);
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
     const radios = screen.getAllByRole("radio");
     radios[0]?.click();
     await waitFor(() => {
@@ -173,7 +189,9 @@ describe("QuestionToolCard - running state with pendingQuestion", () => {
   });
 
   it("enables submit button after typing in text input", async () => {
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={makePendingQuestion()} />);
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
     const textInput = screen.getByPlaceholderText("Type your own answer");
     // Simulate input event
     Object.defineProperty(textInput, "value", { value: "my answer", writable: true });
@@ -183,11 +201,13 @@ describe("QuestionToolCard - running state with pendingQuestion", () => {
     });
   });
 
-  it("calls replyToQuestion with correct arguments on submit", async () => {
+  it("calls replyToQuestion with pendingQuestion.id as requestId on submit", async () => {
     const replyMock = vi.mocked(questionsApi.replyToQuestion);
     replyMock.mockResolvedValue(undefined);
 
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={makePendingQuestion()} />);
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
 
     // Select an option
     const radios = screen.getAllByRole("radio");
@@ -204,15 +224,14 @@ describe("QuestionToolCard - running state with pendingQuestion", () => {
     });
   });
 
-  it("uses block.callID as requestId when pendingQuestion is null and block.status is running", async () => {
+  it("uses block.callID as requestId when no pending question matches and block.status is running", async () => {
     const replyMock = vi.mocked(questionsApi.replyToQuestion);
     replyMock.mockResolvedValue(undefined);
 
-    // No pendingQuestion provided — falls back to block.input
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={null} />);
+    // No pendingQuestions provided — falls back to block.input
+    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => []} />);
 
-    // With pendingQuestion=null and status=running, the form should still render using block.input
-    // Wait for form to appear
+    // With no matching pending question and status=running, the form renders using block.input
     await waitFor(() => {
       expect(screen.getByText("What is your favorite color?")).toBeInTheDocument();
     });
@@ -242,7 +261,9 @@ describe("QuestionToolCard - running state with pendingQuestion", () => {
         }),
     );
 
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={makePendingQuestion()} />);
+    render(() => (
+      <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestions={() => [makePendingQuestion()]} />
+    ));
 
     const radios = screen.getAllByRole("radio");
     radios[0]?.click();
@@ -264,8 +285,8 @@ describe("QuestionToolCard - running state with pendingQuestion", () => {
 });
 
 describe("QuestionToolCard - running state fallback to block.input", () => {
-  it("renders form from block.input when pendingQuestion is undefined and status is running", async () => {
-    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" pendingQuestion={undefined} />);
+  it("renders form from block.input when pendingQuestions not provided and status is running", async () => {
+    render(() => <QuestionToolCard block={makeBlock()} agentId="agent-1" />);
 
     await waitFor(() => {
       expect(screen.getByText("What is your favorite color?")).toBeInTheDocument();
@@ -320,7 +341,7 @@ describe("QuestionToolCard - multiple questions", () => {
     ];
     const block = makeBlock({ input: { questions } });
     const pendingQ = makePendingQuestion({ questions });
-    render(() => <QuestionToolCard block={block} agentId="agent-1" pendingQuestion={pendingQ} />);
+    render(() => <QuestionToolCard block={block} agentId="agent-1" pendingQuestions={() => [pendingQ]} />);
 
     expect(screen.getByText("First question?")).toBeInTheDocument();
     expect(screen.getByText("Second question?")).toBeInTheDocument();
@@ -343,7 +364,7 @@ describe("QuestionToolCard - multiple questions", () => {
     ];
     const block = makeBlock({ input: { questions } });
     const pendingQ = makePendingQuestion({ questions });
-    render(() => <QuestionToolCard block={block} agentId="agent-1" pendingQuestion={pendingQ} />);
+    render(() => <QuestionToolCard block={block} agentId="agent-1" pendingQuestions={() => [pendingQ]} />);
 
     const radios = screen.getAllByRole("radio");
     // Only click first radio

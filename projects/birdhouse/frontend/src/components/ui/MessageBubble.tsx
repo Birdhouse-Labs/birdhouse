@@ -4,7 +4,7 @@
 import type { Message as OpencodeMessage } from "@opencode-ai/sdk/client";
 import Popover from "corvu/popover";
 import { Braces, Check, Copy, LibraryBig, MoreVertical, RotateCcw, Split } from "lucide-solid";
-import { type Component, createMemo, createSignal, For, Show } from "solid-js";
+import { type Accessor, type Component, createMemo, createSignal, For, Show } from "solid-js";
 import { formatSmartTime } from "../../adapters/utils/time-utils";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useZIndex } from "../../contexts/ZIndexContext";
@@ -42,7 +42,7 @@ export interface MessageBubbleProps {
   isQueued?: boolean; // Whether this message is queued (waiting for assistant to complete)
   onCloneFromMessage?: ((messageId: string, messageContent: string, event: MouseEvent) => void) | undefined;
   onResetToMessage?: ((messageId: string) => void) | undefined;
-  getPendingQuestion?: (callID: string) => QuestionRequest | undefined;
+  pendingQuestions?: Accessor<QuestionRequest[]>;
   onQuestionAnswered?: (questionId: string) => void;
 }
 const formatError = (
@@ -531,8 +531,8 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
                         <QuestionToolCard
                           block={block}
                           agentId={props.agentId}
-                          {...(props.getPendingQuestion !== undefined && {
-                            pendingQuestion: props.getPendingQuestion(block.callID),
+                          {...(props.pendingQuestions !== undefined && {
+                            pendingQuestions: props.pendingQuestions,
                           })}
                           {...(props.onQuestionAnswered !== undefined && { onAnswered: props.onQuestionAnswered })}
                         />

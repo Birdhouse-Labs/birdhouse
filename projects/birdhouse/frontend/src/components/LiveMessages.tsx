@@ -218,11 +218,6 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     setPendingQuestions((prev) => prev.filter((q) => q.id !== questionId));
   };
 
-  // Look up a pending question by the tool callID for passing to QuestionToolCard
-  const getPendingQuestion = (callID: string): QuestionRequest | undefined => {
-    return pendingQuestions().find((q) => q.tool?.callID === callID);
-  };
-
   // Input state management
   const [inputValue, setInputValue] = createSignal("");
   const [isSending, setIsSending] = createSignal(false);
@@ -691,7 +686,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
             onOpenAgentModal={props.onOpenAgentModal}
             onCloneFromMessage={handleCloneFromMessage}
             onResetToMessage={handleResetToMessage}
-            getPendingQuestion={getPendingQuestion}
+            pendingQuestions={pendingQuestions}
             onQuestionAnswered={removePendingQuestion}
             inputRef={(el) => {
               setInputRef(el);
