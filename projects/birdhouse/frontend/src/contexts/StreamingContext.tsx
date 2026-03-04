@@ -758,6 +758,11 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
       tool?: { messageID: string; callID: string };
     };
 
+    log.api.debug(
+      { agentId: questionData.agentId, id: questionData.id, hasTool: !!questionData.tool, toolCallID: questionData.tool?.callID },
+      "question.asked SSE event received",
+    );
+
     if (!questionData.agentId || !questionData.id || !questionData.questions) {
       // Malformed or non-Birdhouse-injected event - silently ignore
       return;

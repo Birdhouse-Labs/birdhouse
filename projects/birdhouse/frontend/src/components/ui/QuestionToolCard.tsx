@@ -174,9 +174,17 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
   // Look up the pending question for this tool block by callID.
   // Reading pendingQuestions() inside createMemo makes SolidJS track it reactively —
   // when the signal updates, this memo (and anything that reads it) re-computes.
-  const pendingQuestion = createMemo(() =>
-    props.pendingQuestions?.().find((q) => q.tool?.callID === props.block.callID),
-  );
+  const pendingQuestion = createMemo(() => {
+    const all = props.pendingQuestions?.() ?? [];
+    const match = all.find((q) => q.tool?.callID === props.block.callID);
+    if (all.length > 0 && !match) {
+      console.debug("[QuestionToolCard] no match", {
+        blockCallID: props.block.callID,
+        pendingCallIDs: all.map((q) => q.tool?.callID),
+      });
+    }
+    return match;
+  });
 
   // Determine what questions to show — reactive memo so Show/For below re-evaluate when questions arrive
   const questions = createMemo(() => resolveQuestions(pendingQuestion(), props.block));
