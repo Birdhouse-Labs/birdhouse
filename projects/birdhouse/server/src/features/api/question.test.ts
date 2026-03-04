@@ -277,4 +277,112 @@ describe("replyToAgentQuestion", () => {
       expect(data.error).toBe("Not Found");
     });
   });
+
+  test("resolves tool call ID to question ID when requestId does not start with que_", async () => {
+    const agent = createRootAgent(agentsDB, {
+      id: "agent_1",
+      session_id: "ses_1",
+      title: "Test Agent",
+    });
+
+    let capturedRequestID: string | undefined;
+
+    const deps = createTestDeps({
+      listPendingQuestions: async () => [
+        {
+          id: "que_abc123",
+          sessionID: "ses_1",
+          questions: [{ question: "Which approach?", header: "Approach", options: [] }],
+          tool: { messageID: "msg_1", callID: "toolu_xyz789" },
+        },
+      ],
+      replyToQuestion: async (requestID: string) => {
+        capturedRequestID = requestID;
+      },
+    });
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = createTestApp({ agentsDb: agentsDB });
+      app.post("/:id/questions/:requestId/reply", (c) => replyToAgentQuestion(c, deps));
+
+      const response = await app.request(`/${agent.id}/questions/toolu_xyz789/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: [["Option A"]] }),
+      });
+      expect(response.status).toBe(200);
+      // Must use the resolved que_ ID, not the tool call ID
+      expect(capturedRequestID).toBe("que_abc123");
+    });
+  });
+
+  test("forwards tool call ID as-is when no matching question is found", async () => {
+    const agent = createRootAgent(agentsDB, {
+      id: "agent_1",
+      session_id: "ses_1",
+      title: "Test Agent",
+    });
+
+    let capturedRequestID: string | undefined;
+
+    const deps = createTestDeps({
+      listPendingQuestions: async () => [],
+      replyToQuestion: async (requestID: string) => {
+        capturedRequestID = requestID;
+      },
+    });
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = createTestApp({ agentsDb: agentsDB });
+      app.post("/:id/questions/:requestId/reply", (c) => replyToAgentQuestion(c, deps));
+
+      const response = await app.request(`/${agent.id}/questions/toolu_unknown/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: [["Option A"]] }),
+      });
+      expect(response.status).toBe(200);
+      // Falls through with original ID when no match found
+      expect(capturedRequestID).toBe("toolu_unknown");
+    });
+  });
+
+  test("skips resolution lookup when requestId already starts with que_", async () => {
+    const agent = createRootAgent(agentsDB, {
+      id: "agent_1",
+      session_id: "ses_1",
+      title: "Test Agent",
+    });
+
+    let listPendingQuestionsCallCount = 0;
+    let capturedRequestID: string | undefined;
+
+    const deps = createTestDeps({
+      listPendingQuestions: async () => {
+        listPendingQuestionsCallCount++;
+        return [];
+      },
+      replyToQuestion: async (requestID: string) => {
+        capturedRequestID = requestID;
+      },
+    });
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = createTestApp({ agentsDb: agentsDB });
+      app.post("/:id/questions/:requestId/reply", (c) => replyToAgentQuestion(c, deps));
+
+      const response = await app.request(`/${agent.id}/questions/que_direct123/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: [["Option A"]] }),
+      });
+      expect(response.status).toBe(200);
+      expect(capturedRequestID).toBe("que_direct123");
+      // No lookup should have been performed
+      expect(listPendingQuestionsCallCount).toBe(0);
+    });
+  });
 });
