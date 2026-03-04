@@ -2,7 +2,7 @@
 // ABOUTME: Shows an interactive form when running, compact summary when completed
 
 import { CheckCircle2, HelpCircle } from "lucide-solid";
-import { type Accessor, type Component, createMemo, createSignal, For, Show } from "solid-js";
+import { type Accessor, type Component, createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { replyToQuestion } from "../../services/questions-api";
 import type { ToolBlock } from "../../types/messages";
@@ -178,14 +178,17 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
     props.pendingQuestions?.().find((q) => q.tool?.callID === props.block.callID),
   );
 
-  // Determine what questions to show
+  // Determine what questions to show — reactive memo so Show/For below re-evaluate when questions arrive
   const questions = createMemo(() => resolveQuestions(pendingQuestion(), props.block));
 
-  // Initialize state arrays when questions change
-  const initStateForQuestions = (qs: QuestionItem[]) => {
-    setSelectedOptions(qs.map(() => []));
-    setCustomTexts(qs.map(() => ""));
-  };
+  // Initialize state arrays when questions change (driven reactively via createEffect)
+  createEffect(() => {
+    const qs = questions();
+    if (qs && selectedOptions().length !== qs.length) {
+      setSelectedOptions(qs.map(() => []));
+      setCustomTexts(qs.map(() => ""));
+    }
+  });
 
   // Build answers array for submission: per question, combine selected options + custom text
   const buildAnswers = (): string[][] => {
@@ -271,118 +274,124 @@ const QuestionToolCard: Component<QuestionToolCardProps> = (props) => {
     }
   };
 
-  // ── Completed state: compact read-only summary ──
-  if (props.block.status === "completed") {
-    const answers = parseOutput(props.block.output);
-    const flatAnswers = answers ? answers.flat() : [];
-
-    return (
-      <div class="my-2 px-3 py-1.5">
-        <div class="flex items-center gap-1.5 flex-wrap">
-          <HelpCircle size={16} class="text-text-primary flex-shrink-0" />
-          <span class="text-sm text-text-secondary">Answered</span>
-          <Show when={flatAnswers.length > 0} fallback={<span class="text-sm text-text-muted">question</span>}>
-            <span class="text-sm text-text-primary font-medium">{flatAnswers.join(", ")}</span>
-          </Show>
-          <div class="ml-auto flex items-center gap-2">
-            <CheckCircle2 size={16} class="text-green-600 dark:text-green-400" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Pending block status (AI still constructing parameters): spinner ──
-  if (props.block.status === "pending") {
-    return (
-      <div class="my-2 px-3 py-1.5">
-        <div class="flex items-center gap-1.5">
-          <HelpCircle size={16} class="text-text-primary flex-shrink-0" />
-          <span class="text-sm text-text-secondary">Preparing question</span>
-          <div class="ml-auto">
-            <div class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Running state ──
-  const qs = questions();
-
-  // No question data yet (pendingQuestion not resolved, block.input has no questions)
-  if (!qs) {
-    return (
-      <div class="my-2 px-3 py-1.5">
-        <div class="flex items-center gap-1.5">
-          <HelpCircle size={16} class="text-text-primary flex-shrink-0" />
-          <span class="text-sm text-text-secondary">Waiting for question</span>
-          <div class="ml-auto">
-            <div class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Ensure state arrays are sized correctly for current question count
-  if (selectedOptions().length !== qs.length) {
-    initStateForQuestions(qs);
-  }
-
+  // All branches rendered via Show so SolidJS tracks signal reads reactively.
+  // Early if-returns would only run once during component setup and never re-evaluate
+  // when pendingQuestions or block.status change later.
   return (
-    <div class="my-2 overflow-hidden rounded-lg border border-border">
-      {/* Header */}
-      <div class="px-3 py-2 flex items-center gap-2 border-b border-border bg-surface-overlay/30">
-        <HelpCircle size={16} class="text-accent flex-shrink-0" />
-        <span class="text-sm font-medium text-text-primary">
-          {qs.length === 1 ? "Question" : `${qs.length} Questions`}
-        </span>
-        <Show when={isSubmitting()}>
-          <div class="ml-auto animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
-        </Show>
-      </div>
+    <Show
+      when={props.block.status === "completed"}
+      fallback={
+        <Show
+          when={props.block.status === "pending"}
+          fallback={
+            // ── Running state ──
+            <Show
+              when={questions()}
+              fallback={
+                // No question data yet (pendingQuestion not resolved, block.input has no questions)
+                <div class="my-2 px-3 py-1.5">
+                  <div class="flex items-center gap-1.5">
+                    <HelpCircle size={16} class="text-text-primary flex-shrink-0" />
+                    <span class="text-sm text-text-secondary">Waiting for question</span>
+                    <div class="ml-auto">
+                      <div class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
+                    </div>
+                  </div>
+                </div>
+              }
+            >
+              {(qs) => (
+                <div class="my-2 overflow-hidden rounded-lg border border-border">
+                  {/* Header */}
+                  <div class="px-3 py-2 flex items-center gap-2 border-b border-border bg-surface-overlay/30">
+                    <HelpCircle size={16} class="text-accent flex-shrink-0" />
+                    <span class="text-sm font-medium text-text-primary">
+                      {qs().length === 1 ? "Question" : `${qs().length} Questions`}
+                    </span>
+                    <Show when={isSubmitting()}>
+                      <div class="ml-auto animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
+                    </Show>
+                  </div>
 
-      {/* Question sections */}
-      <div class="px-3 py-3 space-y-5 bg-surface-raised">
-        <For each={qs}>
-          {(question, i) => (
-            <QuestionFormSection
-              question={question}
-              index={i()}
-              selectedOptions={selectedOptions()[i()] ?? []}
-              customText={customTexts()[i()] ?? ""}
-              onOptionToggle={(label) => handleOptionToggle(i(), label)}
-              onCustomTextChange={(text) => handleCustomTextChange(i(), text)}
-              onClearOptions={() => handleClearOptions(i())}
-            />
-          )}
-        </For>
+                  {/* Question sections */}
+                  <div class="px-3 py-3 space-y-5 bg-surface-raised">
+                    <For each={qs()}>
+                      {(question, i) => (
+                        <QuestionFormSection
+                          question={question}
+                          index={i()}
+                          selectedOptions={selectedOptions()[i()] ?? []}
+                          customText={customTexts()[i()] ?? ""}
+                          onOptionToggle={(label) => handleOptionToggle(i(), label)}
+                          onCustomTextChange={(text) => handleCustomTextChange(i(), text)}
+                          onClearOptions={() => handleClearOptions(i())}
+                        />
+                      )}
+                    </For>
 
-        {/* Error display */}
-        <Show when={submitError()}>
-          <div class="text-sm text-red-600 dark:text-red-400">{submitError()}</div>
-        </Show>
+                    {/* Error display */}
+                    <Show when={submitError()}>
+                      <div class="text-sm text-red-600 dark:text-red-400">{submitError()}</div>
+                    </Show>
 
-        {/* Submit */}
-        <div class="flex justify-end">
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!canSubmit() || isSubmitting()}
-            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            classList={{
-              "bg-accent text-text-on-accent hover:brightness-110 cursor-pointer": canSubmit() && !isSubmitting(),
-              "bg-surface-overlay text-text-muted cursor-not-allowed opacity-50": !canSubmit() || isSubmitting(),
-            }}
-          >
-            <Show when={isSubmitting()} fallback="Submit">
-              Submitting...
+                    {/* Submit */}
+                    <div class="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={!canSubmit() || isSubmitting()}
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                        classList={{
+                          "bg-accent text-text-on-accent hover:brightness-110 cursor-pointer":
+                            canSubmit() && !isSubmitting(),
+                          "bg-surface-overlay text-text-muted cursor-not-allowed opacity-50":
+                            !canSubmit() || isSubmitting(),
+                        }}
+                      >
+                        <Show when={isSubmitting()} fallback="Submit">
+                          Submitting...
+                        </Show>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </Show>
-          </button>
-        </div>
-      </div>
-    </div>
+          }
+        >
+          {/* Pending block status (AI still constructing parameters): spinner */}
+          <div class="my-2 px-3 py-1.5">
+            <div class="flex items-center gap-1.5">
+              <HelpCircle size={16} class="text-text-primary flex-shrink-0" />
+              <span class="text-sm text-text-secondary">Preparing question</span>
+              <div class="ml-auto">
+                <div class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-accent" />
+              </div>
+            </div>
+          </div>
+        </Show>
+      }
+    >
+      {/* Completed state: compact read-only summary */}
+      {(() => {
+        const answers = parseOutput(props.block.output);
+        const flatAnswers = answers ? answers.flat() : [];
+        return (
+          <div class="my-2 px-3 py-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <HelpCircle size={16} class="text-text-primary flex-shrink-0" />
+              <span class="text-sm text-text-secondary">Answered</span>
+              <Show when={flatAnswers.length > 0} fallback={<span class="text-sm text-text-muted">question</span>}>
+                <span class="text-sm text-text-primary font-medium">{flatAnswers.join(", ")}</span>
+              </Show>
+              <div class="ml-auto flex items-center gap-2">
+                <CheckCircle2 size={16} class="text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </Show>
   );
 };
 
