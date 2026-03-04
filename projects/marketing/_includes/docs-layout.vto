@@ -34,13 +34,8 @@ bodyClass: bg-base-200
         <img class="w-[140px]" src="/assets/logo.webp" alt="Birdhouse Labs" />
       </a>
     </div>
-    <div class="flex-none">
-      <input
-        type="text"
-        placeholder="Search docs..."
-        class="input input-bordered input-sm w-40 md:w-64"
-        disabled
-      />
+    <div class="flex-none w-40 md:w-64">
+      <div id="search"></div>
     </div>
   </div>
 
@@ -50,7 +45,7 @@ bodyClass: bg-base-200
 
     <!-- Main content area -->
     <div class="drawer-content flex flex-col">
-      <main class="flex-1 p-6 md:p-10 bg-base-100">
+      <main class="flex-1 p-6 md:p-10 bg-base-100" data-pagefind-body>
         <div class="prose prose-invert max-w-none">
           {{ content }}
 

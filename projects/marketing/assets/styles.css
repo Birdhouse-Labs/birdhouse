@@ -54,6 +54,18 @@
   font-family: Rockwell;
 }
 
+#search {
+  --pagefind-ui-primary: #a68f65;
+  --pagefind-ui-text: #e5e2d6;
+  --pagefind-ui-background: oklch(15% 0.1 150);
+  --pagefind-ui-border: oklch(25% 0.1 150);
+  --pagefind-ui-tag: oklch(20% 0.1 150);
+  --pagefind-ui-font: Rockwell, serif;
+  --pagefind-ui-border-width: 1px;
+  --pagefind-ui-border-radius: 0.25rem;
+  --pagefind-ui-scale: 0.8;
+}
+
 .btn {
   font-family: sans-serif;
 }

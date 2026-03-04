@@ -12,6 +12,7 @@ import sitemap from "lume/plugins/sitemap.ts";
 import metas from "lume/plugins/metas.ts";
 import nav from "lume/plugins/nav.ts";
 import transformImages from "lume/plugins/transform_images.ts";
+import pagefind from "lume/plugins/pagefind.ts";
 
 const site = lume({
   location: new URL(Deno.env.get("HOST")),
@@ -33,6 +34,12 @@ site.use(sourceMaps());
 site.use(metas());
 site.use(seo());
 site.use(nav());
+site.use(pagefind({
+  ui: {
+    containerId: "search",
+    resetStyles: false,
+  },
+}));
 site.use(transformImages(/* Options */));
 site.add("assets");
 site.add("favicon.ico");
