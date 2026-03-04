@@ -4,6 +4,7 @@
 import { Hono } from "hono";
 import * as handlers from "../features/api";
 import { archive } from "../features/api/archive";
+import { getAgentQuestions, replyToAgentQuestion } from "../features/api/question";
 import { unarchive } from "../features/api/unarchive";
 import type { AgentNode, SortDirection, SortOrder } from "../lib/agents-db";
 import { loadAllAgentTrees } from "../lib/agents-db";
@@ -242,6 +243,12 @@ export function createAgentRoutes() {
   app.get("/:id/wait", (c) => handlers.wait(c, getDepsFromContext(c)));
 
   app.post("/:id/stop", (c) => handlers.stopAgent(c, getDepsFromContext(c)));
+
+  // GET /api/agents/:id/questions - List pending questions for agent
+  app.get("/:id/questions", (c) => getAgentQuestions(c, getDepsFromContext(c)));
+
+  // POST /api/agents/:id/questions/:requestId/reply - Reply to a pending question
+  app.post("/:id/questions/:requestId/reply", (c) => replyToAgentQuestion(c, getDepsFromContext(c)));
 
   return app;
 }

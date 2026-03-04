@@ -2,7 +2,6 @@
 // ABOUTME: Handles text content with timestamp metadata
 
 import type { Part } from "@opencode-ai/sdk";
-import { generateUUID } from "../../lib/uuid";
 import type { TextBlock } from "../../types/messages";
 
 /**
@@ -11,7 +10,7 @@ import type { TextBlock } from "../../types/messages";
  */
 export function mapTextPart(part: Part & { type: "text" }): TextBlock {
   const block: TextBlock = {
-    id: generateUUID(),
+    id: part.id,
     type: "text",
     content: part.text,
     timestamp: new Date(),

@@ -14,6 +14,7 @@ import {
 import { API_ENDPOINT_BASE } from "../config/api";
 import type { StreamingPart } from "../domain/message-updates";
 import { log } from "../lib/logger";
+import type { QuestionRequest } from "../types/question";
 
 /**
  * Event payload from server SSE stream
@@ -130,6 +131,12 @@ export type AgentUnarchivedHandler = (payload: {
  * Fires when SSE connection is (re)established - useful for refreshing stale data
  */
 export type ConnectionEstablishedHandler = () => void;
+
+/**
+ * Handler function for question asked events (OpenCode question tool)
+ * Fires when an AI agent pauses to ask the human a question
+ */
+export type QuestionAskedHandler = (question: QuestionRequest) => void;
 
 /**
  * Handler function for pattern created events (Birdhouse custom event)
@@ -302,6 +309,13 @@ interface StreamingContextValue {
   subscribeToPatternDeleted: (handler: PatternDeletedHandler) => () => void;
 
   /**
+   * Subscribe to question asked events for a specific agent
+   * Fires when an AI agent pauses to ask the human a question via the question tool
+   * @returns Cleanup function to unsubscribe
+   */
+  subscribeToQuestionAsked: (agentId: string, handler: QuestionAskedHandler) => () => void;
+
+  /**
    * Current connection status
    */
   connectionStatus: Accessor<ConnectionStatus>;
@@ -332,6 +346,9 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
   const agentIdleHandlers = new Map<string, Set<AgentIdleHandler>>();
   const agentErrorHandlers = new Map<string, Set<AgentErrorHandler>>();
   const sessionStatusHandlers = new Map<string, Set<SessionStatusHandler>>();
+
+  // Maps to track agent-specific question asked subscriptions
+  const questionAskedHandlers = new Map<string, Set<QuestionAskedHandler>>();
 
   // Sets to track global handlers (not agent-specific)
   const sessionCreatedHandlers = new Set<SessionCreatedHandler>();
@@ -732,6 +749,42 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     }
   };
 
+  const handleQuestionAsked = (properties: Record<string, unknown>) => {
+    const questionData = properties as {
+      agentId?: string;
+      id?: string;
+      sessionID?: string;
+      questions?: unknown[];
+      tool?: { messageID: string; callID: string };
+    };
+
+    log.api.debug("question.asked SSE event received", {
+      agentId: questionData.agentId,
+      id: questionData.id,
+      hasTool: !!questionData.tool,
+      toolCallID: questionData.tool?.callID,
+    });
+
+    if (!questionData.agentId || !questionData.id || !questionData.questions) {
+      // Malformed or non-Birdhouse-injected event - silently ignore
+      return;
+    }
+
+    const question: QuestionRequest = {
+      id: questionData.id,
+      sessionID: questionData.sessionID || "",
+      questions: questionData.questions as QuestionRequest["questions"],
+      ...(questionData.tool !== undefined && { tool: questionData.tool }),
+    };
+
+    const handlers = questionAskedHandlers.get(questionData.agentId);
+    if (handlers) {
+      for (const handler of handlers) {
+        handler(question);
+      }
+    }
+  };
+
   const handleMessage = (event: MessageEvent) => {
     try {
       const serverEvent: ServerEvent = JSON.parse(event.data);
@@ -785,6 +838,9 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
           break;
         case "birdhouse.pattern.deleted":
           handlePatternDeleted(serverEvent.properties);
+          break;
+        case "question.asked":
+          handleQuestionAsked(serverEvent.properties);
           break;
         case "birdhouse.connection.established":
           // Connection established - notify subscribers to refresh stale data
@@ -860,6 +916,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     patternCreatedHandlers.clear();
     patternUpdatedHandlers.clear();
     patternDeletedHandlers.clear();
+    questionAskedHandlers.clear();
   });
 
   /**
@@ -1138,6 +1195,26 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     };
   };
 
+  /**
+   * Subscribe to question asked events for a specific agent
+   */
+  const subscribeToQuestionAsked = (agentId: string, handler: QuestionAskedHandler): (() => void) => {
+    if (!questionAskedHandlers.has(agentId)) {
+      questionAskedHandlers.set(agentId, new Set());
+    }
+    questionAskedHandlers.get(agentId)?.add(handler);
+
+    return () => {
+      const handlers = questionAskedHandlers.get(agentId);
+      if (handlers) {
+        handlers.delete(handler);
+        if (handlers.size === 0) {
+          questionAskedHandlers.delete(agentId);
+        }
+      }
+    };
+  };
+
   const value: StreamingContextValue = {
     subscribeToMessageUpdates,
     subscribeToSessionUpdates,
@@ -1158,6 +1235,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     subscribeToPatternCreated,
     subscribeToPatternUpdated,
     subscribeToPatternDeleted,
+    subscribeToQuestionAsked,
     connectionStatus,
   };
 

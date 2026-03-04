@@ -3,14 +3,15 @@
 
 import type { Message as OpencodeMessage } from "@opencode-ai/sdk/client";
 import Popover from "corvu/popover";
-import { Check, Copy, LibraryBig, MoreVertical, RotateCcw, Split } from "lucide-solid";
-import { type Component, createMemo, createSignal, For, Show } from "solid-js";
+import { Braces, Check, Copy, LibraryBig, MoreVertical, RotateCcw, Split } from "lucide-solid";
+import { type Accessor, type Component, createMemo, createSignal, For, Show } from "solid-js";
 import { formatSmartTime } from "../../adapters/utils/time-utils";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { uiSize } from "../../theme";
 import type { Message } from "../../types/messages";
 import { isAgentEventBlock, isReasoningBlock, isSystemMessage, isToolBlock } from "../../types/messages";
+import type { QuestionRequest } from "../../types/question";
 import { recordAgentView } from "../../utils/agent-navigation";
 import { copyToClipboard } from "../../utils/clipboard";
 import { extractPatternsFromXML, stripPatternXML } from "../../utils/patternParsing";
@@ -24,6 +25,7 @@ import IconButton from "./IconButton";
 import MenuItemButton from "./MenuItemButton";
 import MessageBubbleContent from "./MessageBubbleContent";
 import PatternReferencesDialog from "./PatternReferencesDialog";
+import QuestionToolCard from "./QuestionToolCard";
 import ReasoningBlock from "./ReasoningBlock";
 import ToolCallCard from "./ToolCallCard";
 import AgentManagementCard from "./tools/AgentManagementCard";
@@ -40,6 +42,8 @@ export interface MessageBubbleProps {
   isQueued?: boolean; // Whether this message is queued (waiting for assistant to complete)
   onCloneFromMessage?: ((messageId: string, messageContent: string, event: MouseEvent) => void) | undefined;
   onResetToMessage?: ((messageId: string) => void) | undefined;
+  pendingQuestions?: Accessor<QuestionRequest[]>;
+  onQuestionAnswered?: (questionId: string) => void;
 }
 const formatError = (
   opencodeMessage: OpencodeMessage | undefined,
@@ -69,6 +73,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
   const [clickedPatternId, setClickedPatternId] = createSignal<string | undefined>(undefined);
   const [isMenuOpen, setIsMenuOpen] = createSignal(false);
   const [showCopySuccess, setShowCopySuccess] = createSignal(false);
+  const [showCopyJSONSuccess, setShowCopyJSONSuccess] = createSignal(false);
 
   // Extract sender info from first text block's metadata
   const senderInfo = createMemo(() => {
@@ -154,6 +159,17 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
       setShowCopySuccess(true);
       setIsMenuOpen(false);
       setTimeout(() => setShowCopySuccess(false), 2000);
+    }
+  };
+
+  // Handle copy JSON action - copies the full Message object as pretty-printed JSON
+  const handleCopyJSON = async () => {
+    const json = JSON.stringify(props.message, null, 2);
+    const success = await copyToClipboard(json);
+    if (success) {
+      setShowCopyJSONSuccess(true);
+      setIsMenuOpen(false);
+      setTimeout(() => setShowCopyJSONSuccess(false), 2000);
     }
   };
 
@@ -269,6 +285,12 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
                   <MenuItemButton icon={<Copy size={16} />} onClick={handleCopyContent} disabled={!copyableContent()}>
                     Copy Content
                   </MenuItemButton>
+                  <MenuItemButton
+                    icon={showCopyJSONSuccess() ? <Check size={16} /> : <Braces size={16} />}
+                    onClick={handleCopyJSON}
+                  >
+                    Copy JSON
+                  </MenuItemButton>
                   <Show when={props.onCloneFromMessage}>
                     <MenuItemButton
                       icon={<Split size={16} />}
@@ -348,6 +370,12 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
                   <MenuItemButton icon={<Copy size={16} />} onClick={handleCopyContent} disabled={!copyableContent()}>
                     Copy Content
                   </MenuItemButton>
+                  <MenuItemButton
+                    icon={showCopyJSONSuccess() ? <Check size={16} /> : <Braces size={16} />}
+                    onClick={handleCopyJSON}
+                  >
+                    Copy JSON
+                  </MenuItemButton>
                 </Popover.Content>
               </Popover.Portal>
             </Popover>
@@ -405,6 +433,12 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
                 >
                   <MenuItemButton icon={<Copy size={16} />} onClick={handleCopyContent} disabled={!copyableContent()}>
                     Copy Content
+                  </MenuItemButton>
+                  <MenuItemButton
+                    icon={showCopyJSONSuccess() ? <Check size={16} /> : <Braces size={16} />}
+                    onClick={handleCopyJSON}
+                  >
+                    Copy JSON
                   </MenuItemButton>
                   <Show when={props.onCloneFromMessage}>
                     <MenuItemButton
@@ -492,6 +526,17 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
                       return <TaskToolCard block={block} />;
                     case "skill":
                       return <AgentManagementCard block={block} />;
+                    case "question":
+                      return (
+                        <QuestionToolCard
+                          block={block}
+                          agentId={props.agentId}
+                          {...(props.pendingQuestions !== undefined && {
+                            pendingQuestions: props.pendingQuestions,
+                          })}
+                          {...(props.onQuestionAnswered !== undefined && { onAnswered: props.onQuestionAnswered })}
+                        />
+                      );
                     default:
                       // Fallback to generic ToolCallCard for unknown tools
                       return <ToolCallCard block={block} />;

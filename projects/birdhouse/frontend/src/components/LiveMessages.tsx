@@ -21,7 +21,9 @@ import {
   stopAgent,
   unrevertAgent,
 } from "../services/messages-api";
+import { fetchPendingQuestions } from "../services/questions-api";
 import type { Message } from "../types/messages";
+import type { QuestionRequest } from "../types/question";
 import { prepareMessageForSending } from "../utils/messageEnrichment";
 import AgentHeader from "./AgentHeader";
 import Button from "./ui/Button";
@@ -154,10 +156,15 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     return status.type === "busy" || status.type === "retry";
   };
 
-  // Subscribe to session.status SSE events to keep status updated
+  // Subscribe to session.status SSE events to keep status updated.
+  // When session goes idle (e.g. after stop/abort), clear pending questions immediately
+  // so the interactive form disappears without requiring a page refresh.
   createEffect(() => {
     const unsubscribe = streaming.subscribeToSessionStatus(props.agentId, (status) => {
       setAgentStatus(status);
+      if (status.type === "idle") {
+        setPendingQuestions([]);
+      }
     });
     onCleanup(unsubscribe);
   });
@@ -169,6 +176,64 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     });
     onCleanup(unsubscribe);
   });
+
+  // Pending questions - tracks active question tool calls that need human answers
+  const [pendingQuestions, setPendingQuestions] = createSignal<QuestionRequest[]>([]);
+
+  // Fetch pending questions on mount (handles page refresh while question is active)
+  createEffect(() => {
+    const agentId = props.agentId;
+    fetchPendingQuestions(workspaceId, agentId)
+      .then((questions) => {
+        setPendingQuestions(questions);
+      })
+      .catch((err) => {
+        log.api.warn("Failed to fetch pending questions", { agentId, err });
+      });
+  });
+
+  // Subscribe to new questions arriving via SSE
+  createEffect(() => {
+    const unsubscribe = streaming.subscribeToQuestionAsked(props.agentId, (question) => {
+      setPendingQuestions((prev) => {
+        // Avoid duplicates if the same question arrives twice
+        if (prev.some((q) => q.id === question.id)) return prev;
+        return [...prev, question];
+      });
+    });
+    onCleanup(unsubscribe);
+  });
+
+  // Refetch pending questions when SSE reconnects (may have missed events while disconnected).
+  // Merges rather than replaces: adds any questions the server knows about that we missed,
+  // but keeps questions already in state that aren't in the response yet — they may have
+  // arrived via SSE moments before connection.established fired (race window). Questions
+  // answered by the user are removed immediately via removePendingQuestion, so keeping
+  // extras from prev is safe and never accumulates stale state.
+  createEffect(() => {
+    const unsubscribe = streaming.subscribeToConnectionEstablished(() => {
+      fetchPendingQuestions(workspaceId, props.agentId)
+        .then((fetched) => {
+          setPendingQuestions((prev) => {
+            const prevIds = new Set(prev.map((q) => q.id));
+            // Add any from fetched not already in state (missed while disconnected)
+            const newFromFetch = fetched.filter((q) => !prevIds.has(q.id));
+            // Keep all of prev — server may not yet reflect questions that arrived via SSE
+            // in the race window between question.asked and connection.established
+            return [...prev, ...newFromFetch];
+          });
+        })
+        .catch((err) => {
+          log.api.warn("Failed to refetch pending questions on reconnect", { agentId: props.agentId, err });
+        });
+    });
+    onCleanup(unsubscribe);
+  });
+
+  // Remove a question from pendingQuestions after it has been answered
+  const removePendingQuestion = (questionId: string) => {
+    setPendingQuestions((prev) => prev.filter((q) => q.id !== questionId));
+  };
 
   // Input state management
   const [inputValue, setInputValue] = createSignal("");
@@ -638,6 +703,8 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
             onOpenAgentModal={props.onOpenAgentModal}
             onCloneFromMessage={handleCloneFromMessage}
             onResetToMessage={handleResetToMessage}
+            pendingQuestions={pendingQuestions}
+            onQuestionAnswered={removePendingQuestion}
             inputRef={(el) => {
               setInputRef(el);
             }}

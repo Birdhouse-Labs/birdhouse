@@ -2,7 +2,6 @@
 // ABOUTME: Handles image/PDF/attachment content with MIME types
 
 import type { FilePart } from "@opencode-ai/sdk";
-import { generateUUID } from "../../lib/uuid";
 import type { FileBlock } from "../../types/messages";
 
 /**
@@ -11,7 +10,7 @@ import type { FileBlock } from "../../types/messages";
  */
 export function mapFilePart(part: FilePart): FileBlock {
   const block: FileBlock = {
-    id: generateUUID(),
+    id: part.id,
     type: "file",
     mimeType: part.mime,
     url: part.url,

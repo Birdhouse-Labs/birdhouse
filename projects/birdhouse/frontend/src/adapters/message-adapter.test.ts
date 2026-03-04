@@ -40,6 +40,7 @@ describe("mapMessage", () => {
     const firstBlock = result.blocks?.[0];
     if (firstBlock) {
       expect(firstBlock.type).toBe("text");
+      expect(firstBlock.id).toBe("part_1");
     }
     expect(result.timestamp).toEqual(new Date("2024-01-01T00:00:00.000Z"));
     expect(result.opencodeMessage).toEqual(ocMessage.info);
@@ -170,6 +171,7 @@ describe("mapMessage", () => {
     expect(result.blocks).toHaveLength(1);
     const firstBlock = result.blocks?.[0];
     if (firstBlock?.type === "tool") {
+      expect(firstBlock.id).toBe("part_1");
       expect(firstBlock.name).toBe("bash");
       expect(firstBlock.status).toBe("completed");
       expect(firstBlock.callID).toBe("call_123");
@@ -217,6 +219,7 @@ describe("mapMessage", () => {
     expect(result.blocks).toHaveLength(1);
     const firstBlock = result.blocks?.[0];
     if (firstBlock?.type === "reasoning") {
+      expect(firstBlock.id).toBe("part_1");
       expect(firstBlock.content).toBe("Let me think about this...");
     }
   });
@@ -291,6 +294,7 @@ describe("mapMessage", () => {
     expect(result.blocks).toHaveLength(1);
     const firstBlock = result.blocks?.[0];
     if (firstBlock?.type === "file") {
+      expect(firstBlock.id).toBe("part_1");
       expect(firstBlock.mimeType).toBe("image/png");
       expect(firstBlock.filename).toBe("screenshot.png");
       expect(firstBlock.url).toBe("http://example.com/image.png");
