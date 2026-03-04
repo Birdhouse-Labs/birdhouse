@@ -465,19 +465,19 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
           z-index: 0;
         }
 
-        /* Working state: Gradient pulses between 50% and 30% opacity */
+        /* Working state: Gradient pulses between 100% and 70% opacity */
         @keyframes gradient-pulse {
           0%, 100% { 
-            opacity: 0.5;
+            opacity: 1;
           }
           50% { 
-            opacity: 0.3;
+            opacity: 0.7;
           }
         }
 
         .working-gradient-pulse .gradient-overlay {
           animation: gradient-pulse 2s ease-in-out infinite;
-          opacity: 0.5;
+          opacity: 1;
         }
 
         /* ===== LAYER 2: Content Wrapper ===== */
