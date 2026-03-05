@@ -160,8 +160,8 @@ const Button: Component<ButtonProps> = (props) => {
           border-radius: 50%;
           background: radial-gradient(
             circle closest-side,
-            rgba(255, 255, 255, 0.25),
-            rgba(255, 255, 255, 0.1) 50%,
+            color-mix(in srgb, var(--theme-gradient-from) 35%, transparent),
+            color-mix(in srgb, var(--theme-gradient-from) 15%, transparent) 50%,
             transparent 100%
           );
           opacity: 0;
