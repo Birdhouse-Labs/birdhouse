@@ -154,6 +154,8 @@ const Button: Component<ButtonProps> = (props) => {
         .cursor-follow-button::before {
           content: '';
           position: absolute;
+          top: 0;
+          left: 0;
           width: 150px;
           height: 150px;
           border-radius: 50%;
