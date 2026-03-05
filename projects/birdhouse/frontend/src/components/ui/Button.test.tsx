@@ -20,7 +20,8 @@ describe("Button", () => {
   it("applies secondary variant classes", () => {
     render(() => <Button variant="secondary">Secondary</Button>);
     const button = screen.getByRole("button");
-    expect(button.className).toContain("bg-surface-overlay");
+    expect(button.className).toContain("bg-surface-raised");
+    expect(button.className).toContain("border-border-muted");
   });
 
   it("disables button when disabled prop is true", () => {

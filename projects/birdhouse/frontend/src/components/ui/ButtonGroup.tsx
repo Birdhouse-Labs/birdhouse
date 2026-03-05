@@ -88,29 +88,56 @@ const ButtonGroup: Component<ButtonGroupProps> = (props) => {
     } ${!isLast ? "border-r border-border-muted" : ""}`;
 
     if (active) {
-      return `${baseClasses} bg-gradient-to text-text-on-accent`;
+      return `${baseClasses} cursor-follow-button-group-active bg-gradient-to text-text-on-accent`;
     }
 
-    return `${baseClasses} bg-surface-raised hover:brightness-110 text-text-primary`;
+    return `${baseClasses} cursor-follow-button-group bg-surface-raised text-text-primary`;
   };
 
   return (
     <>
       <style>{`
         /* Cursor-following gradient effect for button group */
-        .cursor-follow-button-group {
+        .cursor-follow-button-group,
+        .cursor-follow-button-group-active {
           position: relative;
           overflow: hidden;
         }
         
         /* Ensure child elements (like icons) don't block mouse events */
-        .cursor-follow-button-group > * {
+        .cursor-follow-button-group > *,
+        .cursor-follow-button-group-active > * {
           pointer-events: none;
           position: relative;
           z-index: 1;
         }
         
         .cursor-follow-button-group::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 200px;
+          height: 200px;
+          border-radius: 50%;
+          background: radial-gradient(
+            circle closest-side,
+            color-mix(in srgb, var(--theme-gradient-to) 35%, transparent),
+            color-mix(in srgb, var(--theme-gradient-to) 15%, transparent) 50%,
+            transparent 100%
+          );
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+          transform: translate(
+            calc(var(--x, -9999px) - 100px),
+            calc(var(--y, -9999px) - 100px)
+          );
+          will-change: transform;
+          z-index: 0;
+        }
+
+        .cursor-follow-button-group-active::before {
           content: '';
           position: absolute;
           top: 0;
@@ -135,12 +162,14 @@ const ButtonGroup: Component<ButtonGroupProps> = (props) => {
           z-index: 0;
         }
         
-        .cursor-follow-button-group:hover::before {
+        .cursor-follow-button-group:hover::before,
+        .cursor-follow-button-group-active:hover::before {
           opacity: 1;
         }
         
         @media (prefers-reduced-motion: reduce) {
-          .cursor-follow-button-group::before {
+          .cursor-follow-button-group::before,
+          .cursor-follow-button-group-active::before {
             display: none;
           }
         }
@@ -150,7 +179,7 @@ const ButtonGroup: Component<ButtonGroupProps> = (props) => {
           {(item, index) => (
             <button
               type="button"
-              class={`cursor-follow-button-group ${sizeClasses()} ${getButtonClasses(item.value, index())}`}
+              class={`${sizeClasses()} ${getButtonClasses(item.value, index())}`}
               onClick={() => props.onChange(item.value)}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
