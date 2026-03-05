@@ -19,6 +19,7 @@
     --theme-surface: oklch(20.8% 0.04 265.8deg);         /* slate-900 */
     --theme-surface-raised: oklch(27.9% 0.037 260deg);  /* slate-800 */
     --theme-surface-overlay: oklch(37.2% 0.039 257.3deg); /* slate-700 */
+    --theme-surface-hover: oklch(42% 0.039 257.3deg);     /* lighter slate hover */
     --theme-surface-inset: oklch(12.9% 0.041 264.7deg);   /* slate-950 */
     
     /* Text colors */

@@ -95,7 +95,7 @@ const Button: Component<ButtonProps> = (props) => {
         return "font-medium bg-gradient-to-r from-gradient-from to-gradient-to rounded-lg hover:brightness-110 active:scale-90 md:active:scale-95 transition-all duration-200 shadow-lg shadow-glow hover:scale-[1.02] text-text-on-accent select-none";
 
       case "secondary":
-        return "rounded-lg font-medium transition-all active:scale-90 md:active:scale-95 bg-surface-overlay hover:brightness-110 text-text-primary select-none";
+        return "rounded-lg font-medium transition-all active:scale-90 md:active:scale-95 bg-surface-overlay hover:bg-surface-hover text-text-primary select-none";
 
       case "tertiary":
         return "rounded-lg font-medium transition-all active:scale-90 md:active:scale-95 hover:bg-accent/20 text-accent select-none";

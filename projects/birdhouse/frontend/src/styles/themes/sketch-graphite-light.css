@@ -19,6 +19,7 @@
     --theme-surface: oklch(96.5% 0.005 78.3deg);         /* light cream paper */
     --theme-surface-raised: oklch(98% 0.005 78.3deg);   /* bright sketch paper */
     --theme-surface-overlay: oklch(94.5% 0.004 56.4deg);  /* slightly darker cream */
+    --theme-surface-hover: oklch(89.5% 0.004 56.4deg);    /* darker cream hover */
     --theme-surface-inset: oklch(92.1% 0.008 73.7deg);    /* subtle shadow */
     
     /* Text colors - soft graphite, not harsh black */

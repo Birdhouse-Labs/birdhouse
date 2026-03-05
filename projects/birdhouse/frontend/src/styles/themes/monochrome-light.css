@@ -18,7 +18,8 @@
     /* Surface colors - pure whites and very light grays */
     --theme-surface: #fbfbfb;         /* neutral-50 */
     --theme-surface-raised: #ffffff;   /* pure white */
-    --theme-surface-overlay: #f7f7f7;  /* neutral-100 */
+    --theme-surface-overlay: #ebebeb;  /* neutral-200 */
+    --theme-surface-hover: #d4d4d4;    /* neutral-350 - darker hover */
     --theme-surface-inset: #ebebeb;    /* neutral-200 */
     
     /* Text colors - black to light gray */

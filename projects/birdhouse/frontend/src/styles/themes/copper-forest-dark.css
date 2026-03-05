@@ -19,6 +19,7 @@
   --theme-surface: oklch(21.6% 0.006 56deg);         /* stone-900 */
   --theme-surface-raised: oklch(26.8% 0.006 34.3deg);  /* stone-800 */
   --theme-surface-overlay: oklch(37.4% 0.009 67.6deg); /* stone-700 */
+  --theme-surface-hover: oklch(42% 0.009 67.6deg);     /* lighter stone hover */
   --theme-surface-inset: oklch(14.7% 0.004 49.2deg);   /* stone-950 */
   
   /* Text colors */

@@ -93,7 +93,7 @@ const IconButton: Component<IconButtonProps> = (props) => {
         return "bg-surface-overlay hover:brightness-110 text-text-primary";
 
       case "ghost":
-        return "hover:bg-surface-overlay text-text-muted hover:text-text-primary";
+        return "hover:bg-surface-hover text-text-muted hover:text-text-primary";
 
       case "ghost-danger":
         return "hover:bg-danger/10 text-text-muted hover:text-danger";

@@ -19,6 +19,7 @@
     --theme-surface: #252525;         /* neutral-950 */
     --theme-surface-raised: #343434;  /* neutral-900 */
     --theme-surface-overlay: #454545; /* neutral-800 */
+    --theme-surface-hover: #5f5f5f;   /* neutral-700 - lighter hover */
     --theme-surface-inset: #000000;   /* pure black */
     
     /* Text colors - white to dark gray */

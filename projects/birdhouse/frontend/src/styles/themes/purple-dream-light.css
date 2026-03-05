@@ -18,7 +18,8 @@
   /* Surface colors */
   --theme-surface: oklch(96.8% 0.007 247.9deg);         /* slate-100 */
   --theme-surface-raised: #ffffff;   /* white */
-  --theme-surface-overlay: oklch(98.4% 0.003 247.9deg);  /* slate-50 */
+  --theme-surface-overlay: oklch(94% 0.01 307.2deg);  /* purple-tinted slate-200 */
+  --theme-surface-hover: oklch(89% 0.01 307.2deg);    /* darker purple-tinted hover */
   --theme-surface-inset: oklch(92.9% 0.013 255.5deg);    /* slate-200 */
   
   /* Text colors */
