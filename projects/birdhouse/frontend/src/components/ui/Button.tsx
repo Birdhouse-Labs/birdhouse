@@ -101,10 +101,10 @@ const Button: Component<ButtonProps> = (props) => {
         return "rounded-lg font-medium transition-all active:scale-90 md:active:scale-95 hover:bg-accent/20 text-accent select-none";
 
       case "success":
-        return "rounded-lg font-medium border-2 transition-all active:scale-90 md:active:scale-95 border-success text-success hover:bg-success/10 select-none";
+        return "cursor-follow-button-success rounded-lg font-medium border-2 transition-all active:scale-90 md:active:scale-95 border-success text-success select-none";
 
       case "danger":
-        return "rounded-lg font-medium border-2 transition-all active:scale-90 md:active:scale-95 border-danger text-danger hover:bg-danger/10 select-none";
+        return "cursor-follow-button-danger rounded-lg font-medium border-2 transition-all active:scale-90 md:active:scale-95 border-danger text-danger select-none";
 
       default:
         return "";
@@ -124,8 +124,10 @@ const Button: Component<ButtonProps> = (props) => {
   };
 
   // Reactive class computation - must be reactive to update when disabled changes
+  // success/danger variants include their own cursor-follow class via variantClasses()
+  const hasDedicatedCursorClass = () => variant() === "success" || variant() === "danger";
   const buttonClass = () =>
-    `cursor-follow-button text-sm ${buttonClasses()} ${local.leftIcon || local.rightIcon ? "flex items-center gap-2" : ""}`;
+    `${hasDedicatedCursorClass() ? "" : "cursor-follow-button "}text-sm ${buttonClasses()} ${local.leftIcon || local.rightIcon ? "flex items-center gap-2" : ""}`;
 
   const content = (
     <>
@@ -179,13 +181,97 @@ const Button: Component<ButtonProps> = (props) => {
         .cursor-follow-button:hover::before {
           opacity: 1;
         }
-        
-        .cursor-follow-button:disabled::before {
+
+        .cursor-follow-button-success {
+          position: relative;
+          overflow: hidden;
+          transform: translateZ(0);
+        }
+
+        .cursor-follow-button-success > * {
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .cursor-follow-button-success::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 150px;
+          height: 150px;
+          border-radius: 50%;
+          background: radial-gradient(
+            circle closest-side,
+            color-mix(in srgb, var(--theme-success) 35%, transparent),
+            color-mix(in srgb, var(--theme-success) 15%, transparent) 50%,
+            transparent 100%
+          );
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+          transform: translate(
+            calc(var(--x, -9999px) - 75px),
+            calc(var(--y, -9999px) - 75px)
+          );
+          will-change: transform;
+          z-index: 0;
+        }
+
+        .cursor-follow-button-success:hover::before {
+          opacity: 1;
+        }
+
+        .cursor-follow-button-danger {
+          position: relative;
+          overflow: hidden;
+          transform: translateZ(0);
+        }
+
+        .cursor-follow-button-danger > * {
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .cursor-follow-button-danger::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 150px;
+          height: 150px;
+          border-radius: 50%;
+          background: radial-gradient(
+            circle closest-side,
+            color-mix(in srgb, var(--theme-danger) 35%, transparent),
+            color-mix(in srgb, var(--theme-danger) 15%, transparent) 50%,
+            transparent 100%
+          );
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+          transform: translate(
+            calc(var(--x, -9999px) - 75px),
+            calc(var(--y, -9999px) - 75px)
+          );
+          will-change: transform;
+          z-index: 0;
+        }
+
+        .cursor-follow-button-danger:hover::before {
+          opacity: 1;
+        }
+
+        .cursor-follow-button:disabled::before,
+        .cursor-follow-button-success:disabled::before,
+        .cursor-follow-button-danger:disabled::before {
           display: none;
         }
         
         @media (prefers-reduced-motion: reduce) {
-          .cursor-follow-button::before {
+          .cursor-follow-button::before,
+          .cursor-follow-button-success::before,
+          .cursor-follow-button-danger::before {
             display: none;
           }
         }
