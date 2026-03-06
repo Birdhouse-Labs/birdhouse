@@ -42,6 +42,10 @@ const WorkspaceHealthStatus: Component<WorkspaceHealthStatusProps> = (props) => 
     lines.push(`Status: ${props.health.opencodeRunning ? "Online" : "Offline"}`);
 
     if (props.health.opencodeRunning) {
+      if (props.health.port !== null) {
+        lines.push(`Port: ${props.health.port}`);
+      }
+
       if (props.health.pid !== null) {
         lines.push(`PID: ${props.health.pid}`);
       }
