@@ -24,8 +24,13 @@ metas:
     <img class="w-[200px]" src="assets/logo.webp" alt="Birdhouse Labs" />
   </div>
 
-  <div class="flex-none">
-    <a href="https://github.com/birdhouse-labs/birdhouse/releases" target="_blank" class="btn btn-primary btn-sm md:btn-md">
+  <div class="flex-none gap-2">
+    <a href="/docs/" class="btn btn-ghost btn-sm md:btn-md">Docs</a>
+    <a
+      href="https://github.com/birdhouse-labs/birdhouse/releases"
+      target="_blank"
+      class="btn btn-primary btn-sm md:btn-md"
+    >
       Get Birdhouse
     </a>
   </div>
@@ -40,12 +45,12 @@ metas:
   >
     <div class="text-left text-center flex flex-col items-center">
       <div class="h-1 w-12 bg-primary mb-4"></div>
-      <p
+      <h1
         class="py-6 text-4xl md:text-5xl text-center text-base-content/90 leading-tight max-w-3xl lg:mx-auto mb-4 md:mb-6"
       >
         Code with <br class="md:hidden block" /> multi-agent teams. <br /> Soar
         to new heights.
-      </p>
+      </h1>
       <div class="flex-col md:flex-row justify-between md-4 md:mb-6">
         <a
           href="https://github.com/birdhouse-labs/birdhouse/releases"
@@ -56,11 +61,11 @@ metas:
           Get Birdhouse
         </a>
         <a
-          href="#features"
+          href="/docs/"
           class="btn btn-outline btn-lg md:btn-lg w-full md:w-auto"
         >
-          See Features
-          <i data-lucide="move-down"></i>
+          Read the Docs
+          <i data-lucide="arrow-right"></i>
         </a>
       </div>
     </div>
@@ -72,13 +77,23 @@ metas:
       aria-live="polite"
     >
       <div class="flex flex-col items-center">
-        <span id="metric-agents" class="text-3xl md:text-5xl font-bold text-primary tabular-nums">—</span>
-        <span class="text-sm md:text-base text-base-content/60 mt-1 tracking-wide uppercase">Agents Created</span>
+        <span
+          id="metric-agents"
+          class="text-3xl md:text-5xl font-bold text-primary tabular-nums"
+        >—</span>
+        <span
+          class="text-sm md:text-base text-base-content/60 mt-1 tracking-wide uppercase"
+        >Agents Created</span>
       </div>
       <div class="w-px h-12 bg-base-content/20"></div>
       <div class="flex flex-col items-center">
-        <span id="metric-tokens" class="text-3xl md:text-5xl font-bold text-primary tabular-nums">—</span>
-        <span class="text-sm md:text-base text-base-content/60 mt-1 tracking-wide uppercase">Tokens Processed</span>
+        <span
+          id="metric-tokens"
+          class="text-3xl md:text-5xl font-bold text-primary tabular-nums"
+        >—</span>
+        <span
+          class="text-sm md:text-base text-base-content/60 mt-1 tracking-wide uppercase"
+        >Tokens Processed</span>
       </div>
     </div>
 

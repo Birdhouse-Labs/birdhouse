@@ -9,14 +9,7 @@
 - **Theme**: Dark mode with gradient accents
 - **Responsive**: Mobile-first, fully responsive design
 
-### 2. Smooth Scroll Experience
-
-- **Status**: ✅ Implemented with Lenis
-- **Scroll Library**: Lenis 1.3.17 (lightweight, performant)
-- **Duration**: 1.2 seconds per scroll animation
-- **Easing**: Custom cubic-out easing for natural feel
-
-### 3. Section Navigation
+### 2. Section Navigation
 
 All sections have smooth scroll anchor links:
 
@@ -141,17 +134,15 @@ Hero Section
 
 ## ⌨️ Keyboard Navigation
 
-All keyboard shortcuts powered by Lenis:
-
 - **Arrow Up** → Scroll up 100px
 - **Arrow Down** → Scroll down 100px
 - **Home** → Jump to top of page
 - **End** → Jump to bottom of page
-- **Click any anchor link** → Smooth scroll (managed by Lenis)
+- **Click any anchor link** → Native browser smooth scroll
 
 ## 🚀 Performance Metrics
 
-- **Bundle Size**: ~14KB HTML (minified) + ~8KB Lenis JS
+- **Bundle Size**: ~14KB HTML (minified)
 - **CSS**: ~30KB DaisyUI + Tailwind (external CDN)
 - **Load Time**: < 2 seconds on modern connections
 - **Lighthouse Score**: 95+ (optimization ready)
@@ -169,23 +160,6 @@ All keyboard shortcuts powered by Lenis:
 | Chrome Mobile  | ✅ Full | Yes           | Touch-optimized      |
 
 ## 🔧 Configuration
-
-### Lenis Settings (in layout.vto)
-
-```javascript
-{
-  duration: 1.2,                        // Scroll animation duration
-  easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Custom easing
-  smoothWheel: true,                    // Smooth mouse wheel
-  autoRaf: true,                        // Auto animation loop
-  anchors: {
-    offset: 80,                         // Account for sticky navbar
-    duration: 1.2
-  },
-  stopInertiaOnNavigate: true,          // Stop momentum on link click
-  allowNestedScroll: false,             // Single scroll container
-}
-```
 
 ### Tailwind Theme (via DaisyUI)
 
@@ -219,19 +193,7 @@ All keyboard shortcuts powered by Lenis:
 
 ## 📊 Analytics Ready
 
-Lenis scroll events are wired for analytics:
-
-```javascript
-lenis.on("scroll", (e) => {
-  // Can track:
-  // - Scroll depth
-  // - Section engagement
-  // - User interaction patterns
-  // - Time spent per section
-});
-```
-
-Implement analytics service in the `scroll` event handler.
+Scroll events can be wired for analytics via native `window.addEventListener("scroll", ...)`.
 
 ## 🔐 Security & Privacy
 
@@ -317,7 +279,7 @@ deno task serve
 projects/marketing/
 ├── index.vto                    # Main landing page
 ├── _includes/
-│   └── layout.vto               # HTML template with Lenis
+│   └── layout.vto               # HTML template
 ├── _config.ts                   # Lume configuration
 ├── assets/
 │   └── styles.css               # Tailwind + DaisyUI import
@@ -347,14 +309,12 @@ To modify the site:
 ### Smooth scroll not working
 
 - Check browser support (Chrome 90+, Firefox 87+, Safari 15+)
-- Verify Lenis CDN is accessible
 - Check browser console for errors
 
 ### Anchor links not scrolling
 
 - Verify anchor targets exist in HTML (id attributes)
 - Check offset value matches navbar height
-- Ensure Lenis is initialized after DOM loads
 
 ### Layout looks broken on mobile
 
@@ -364,7 +324,6 @@ To modify the site:
 
 ### Performance issues
 
-- Disable scroll animations in Lenis if needed
 - Check for console errors
 - Profile in DevTools Performance tab
 
@@ -373,8 +332,6 @@ To modify the site:
 For questions about:
 
 - **DaisyUI**: See [daisyui.com](https://daisyui.com)
-- **Lenis**: See
-  [github.com/darkroomengineering/lenis](https://github.com/darkroomengineering/lenis)
 - **Tailwind CSS**: See [tailwindcss.com](https://tailwindcss.com)
 - **Lume**: See [lume.land](https://lume.land)
 

@@ -1,0 +1,37 @@
+{
+  "layout": "docs-layout.vto",
+  "metas": {
+    "site": "Birdhouse Docs",
+    "title": "=title"
+  },
+  "docs_nav": [
+    { "title": "Welcome", "url": "/docs/" },
+    {
+      "title": "Getting Started",
+      "url": "/docs/getting-started/",
+      "children": [
+        {
+          "title": "Installation",
+          "url": "/docs/getting-started/installation/"
+        },
+        { "title": "Quick Start", "url": "/docs/getting-started/quick-start/" }
+      ]
+    },
+    {
+      "title": "Guides",
+      "url": "/docs/guides/",
+      "children": [
+        { "title": "Agent Teams", "url": "/docs/guides/agent-teams/" },
+        { "title": "Agent Tree", "url": "/docs/guides/agent-tree/" },
+        { "title": "Patterns", "url": "/docs/guides/patterns/" }
+      ]
+    },
+    {
+      "title": "Reference",
+      "url": "/docs/reference/",
+      "children": [
+        { "title": "Configuration", "url": "/docs/reference/configuration/" }
+      ]
+    }
+  ]
+}

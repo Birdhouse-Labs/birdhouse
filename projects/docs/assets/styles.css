@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "npm:lenis/dist/lenis.css";
 @plugin "@tailwindcss/typography";
 @plugin "daisyui" {
   themes: birdhouse --default;
@@ -53,6 +52,29 @@
 * {
   font-family: Rockwell;
 }
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+#search {
+  --pagefind-ui-primary: #a68f65;
+  --pagefind-ui-text: #e5e2d6;
+  --pagefind-ui-background: var(--color-base-100);
+  --pagefind-ui-border: var(--color-base-300);
+  --pagefind-ui-tag: var(--color-base-200);
+  --pagefind-ui-font: Rockwell, serif;
+  --pagefind-ui-border-width: 1px;
+  --pagefind-ui-border-radius: 0.25rem;
+  --pagefind-ui-scale: 1;
+  padding: 1rem;
+}
+
+#search .pagefind-ui__message {
+  display: none;
+}
+
 
 .btn {
   font-family: sans-serif;

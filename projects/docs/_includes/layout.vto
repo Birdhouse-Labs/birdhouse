@@ -5,19 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ title }}</title>
 
-    <meta name="twitter:image" content="https://birdhouselabs.ai/assets/og-image.png">
+    <meta
+      name="twitter:image"
+      content="https://birdhouselabs.ai/assets/og-image.png"
+    >
 
     <link rel="stylesheet" href="/assets/styles.css">
   </head>
-  <body data-theme="coffeee">
+  <body data-theme="coffeee" class="{{ bodyClass }}">
     {{ content }}
     <script>
       window.POSTHOG_PUBLIC_KEY = "{{ POSTHOG_PUBLIC_KEY }}";
       window.SUPABASE_URL = "{{ SUPABASE_URL }}";
       window.SUPABASE_ANON_KEY = "{{ SUPABASE_ANON_KEY }}";
     </script>
-     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-     <script src="/assets/script.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="/assets/script.js"></script>
     <script>
       // Theme is set to coffee by default
       document.addEventListener("DOMContentLoaded", () => {

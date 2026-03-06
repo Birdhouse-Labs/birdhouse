@@ -154,7 +154,7 @@ deno task build
 - **Waitlist Form** - Supabase integration with client-side form submission
 - **Environment Management** - direnv + .env configuration
 - **Dark Mode** - DaisyUI theme system ready
-- **Smooth Scrolling** - Lenis integration
+- **Smooth Scrolling** - Native browser scroll
 - **Animations** - GSAP ticker animations
 
 ### 📋 Future Enhancements
