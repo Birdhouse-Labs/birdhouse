@@ -15,7 +15,9 @@ const REDIRECT_KEY = "birdhouse.setup.redirect";
 
 /**
  * Reads user profile status and redirects to /setup/profile when name is not set.
- * Once a name is stored, this guard never redirects again.
+ * Only redirects when the profile request succeeds with no name — server errors
+ * (500, network failure, etc.) are ignored so a broken server doesn't redirect
+ * the user away from wherever they are.
  */
 const ProfileRedirect: Component<{ children: JSX.Element }> = (props) => {
   const [profile, { refetch: _refetch }] = createResource(fetchUserProfile);
@@ -26,9 +28,10 @@ const ProfileRedirect: Component<{ children: JSX.Element }> = (props) => {
     if (profile.loading) return;
 
     const isProfilePage = location.pathname === "/setup/profile";
-    const hasName = !profile.error && !!profile()?.name;
+    const profileLoaded = !profile.error && profile() !== undefined;
+    const hasName = profileLoaded && !!profile()?.name;
 
-    log.ui.info("ProfileRedirect effect running", { hasName, pathname: location.pathname, loading: profile.loading });
+    log.ui.info("ProfileRedirect effect running", { hasName, profileLoaded, pathname: location.pathname, loading: profile.loading });
 
     // Already on the profile page and name is now set — redirect back
     if (isProfilePage && hasName) {
@@ -38,8 +41,8 @@ const ProfileRedirect: Component<{ children: JSX.Element }> = (props) => {
       return;
     }
 
-    // Not on the profile page and name is missing — redirect to it
-    if (!isProfilePage && !hasName) {
+    // Not on the profile page, request succeeded, but name is missing — redirect to setup
+    if (!isProfilePage && profileLoaded && !hasName) {
       const current = location.pathname + location.search;
       if (current !== "/") {
         sessionStorage.setItem(REDIRECT_KEY, current);
