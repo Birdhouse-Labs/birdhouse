@@ -83,7 +83,8 @@ export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "ope
     }
 
     // FILTER for plugin consumption (remove IDs, cost, metadata)
-    const filtered = filterMessagesForView(selected, mode === "full" ? "full" : "default");
+    const view = mode === "full" ? "full" : mode === "latest_turn" ? "exchange" : "default";
+    const filtered = filterMessagesForView(selected, view);
 
     return c.json(filtered);
   } catch (error) {

@@ -3,7 +3,7 @@
 
 import type { Message } from "../../../lib/opencode-client";
 
-export type FilterView = "default" | "full" | "tool_call";
+export type FilterView = "default" | "full" | "exchange" | "tool_call";
 
 interface FilteredDiffSummary {
   file?: string;
@@ -57,7 +57,12 @@ export interface FilteredMessage {
 
 const FULL_VIEW_OMIT_PART_TYPES = new Set(["reasoning", "patch"]);
 const NOISY_TOOL_INPUT_KEYS = new Set(["prompt", "system", "message", "patchText", "command"]);
+const EXCHANGE_NOISY_TOOL_INPUT_KEYS = new Set(["prompt", "system", "message", "patchText"]);
 const FULL_OUTPUT_PREVIEW_MAX_CHARS = 400;
+
+function isCompactView(view: FilterView): boolean {
+  return view === "full" || view === "exchange";
+}
 
 function truncateString(value: string, maxLength = 280): string {
   if (value.length <= maxLength) {
@@ -67,7 +72,7 @@ function truncateString(value: string, maxLength = 280): string {
   return `${value.slice(0, maxLength - 3)}...`;
 }
 
-function summarizeToolInputValue(value: unknown): unknown {
+function summarizeToolInputValue(value: unknown, noisyToolInputKeys = NOISY_TOOL_INPUT_KEYS): unknown {
   if (typeof value === "string") {
     return truncateString(value);
   }
@@ -78,7 +83,7 @@ function summarizeToolInputValue(value: unknown): unknown {
 
   if (Array.isArray(value)) {
     const summarizedItems = value
-      .map(summarizeToolInputValue)
+      .map((item) => summarizeToolInputValue(item, noisyToolInputKeys))
       .filter((item) => item !== undefined);
 
     return summarizedItems.length > 0 ? summarizedItems : undefined;
@@ -89,14 +94,14 @@ function summarizeToolInputValue(value: unknown): unknown {
   }
 
   const summarizedEntries = Object.entries(value)
-    .filter(([key]) => !NOISY_TOOL_INPUT_KEYS.has(key))
-    .map(([key, itemValue]) => [key, summarizeToolInputValue(itemValue)] as const)
+    .filter(([key]) => !noisyToolInputKeys.has(key))
+    .map(([key, itemValue]) => [key, summarizeToolInputValue(itemValue, noisyToolInputKeys)] as const)
     .filter(([, itemValue]) => itemValue !== undefined);
 
   return summarizedEntries.length > 0 ? Object.fromEntries(summarizedEntries) : undefined;
 }
 
-function filterToolStateForFull(part: Record<string, unknown>): Record<string, unknown> | undefined {
+function filterToolStateForCompact(part: Record<string, unknown>, noisyToolInputKeys: Set<string>): Record<string, unknown> | undefined {
   if (typeof part.state !== "object" || part.state === null) {
     return undefined;
   }
@@ -112,7 +117,7 @@ function filterToolStateForFull(part: Record<string, unknown>): Record<string, u
     filteredState.title = state.title;
   }
 
-  const summarizedInput = summarizeToolInputValue(state.input);
+  const summarizedInput = summarizeToolInputValue(state.input, noisyToolInputKeys);
   if (summarizedInput !== undefined) {
     filteredState.input = summarizedInput;
   }
@@ -268,7 +273,7 @@ export function filterMessage(message: Message, view: FilterView = "default"): F
   if ("finish" in message.info) filteredInfo.finish = message.info.finish as string | undefined;
   if ("path" in message.info) filteredInfo.path = message.info.path as { cwd: string; root: string } | undefined;
   if ("summary" in message.info) {
-    const summary = view === "full" ? filterSummaryForFull(message.info.summary) : message.info.summary;
+    const summary = isCompactView(view) ? filterSummaryForFull(message.info.summary) : message.info.summary;
     if (summary) {
       filteredInfo.summary = summary as FilteredMessageSummary;
     }
@@ -284,7 +289,7 @@ export function filterMessage(message: Message, view: FilterView = "default"): F
       // Remove step markers (UI only) - these exist in DB but not in typed MessagePart
       const partType = (p as Record<string, unknown>).type;
       if (partType === "step-start" || partType === "step-finish") return false;
-      if (view === "full" && FULL_VIEW_OMIT_PART_TYPES.has(String(partType))) return false;
+      if (isCompactView(view) && FULL_VIEW_OMIT_PART_TYPES.has(String(partType))) return false;
       return true;
     })
     .map((p): FilteredMessagePart => {
@@ -294,7 +299,7 @@ export function filterMessage(message: Message, view: FilterView = "default"): F
         type: part.type as string,
       };
 
-      if ((view === "full" || view === "tool_call") && typeof part.callID === "string") {
+      if ((isCompactView(view) || view === "tool_call") && typeof part.callID === "string") {
         filtered.callID = part.callID as string;
       }
 
@@ -305,8 +310,9 @@ export function filterMessage(message: Message, view: FilterView = "default"): F
 
       // Filter tool state - keep everything except metadata
       if ("state" in part && typeof part.state === "object" && part.state !== null) {
-        if (view === "full") {
-          const filteredToolState = filterToolStateForFull(part);
+        if (isCompactView(view)) {
+          const noisyKeys = view === "exchange" ? EXCHANGE_NOISY_TOOL_INPUT_KEYS : NOISY_TOOL_INPUT_KEYS;
+          const filteredToolState = filterToolStateForCompact(part, noisyKeys);
           if (filteredToolState) {
             filtered.state = filteredToolState;
           }

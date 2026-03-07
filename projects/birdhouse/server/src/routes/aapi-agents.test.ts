@@ -545,6 +545,135 @@ describe("AAPI Agent Routes", () => {
         });
       });
 
+      test("mode=latest_turn uses compact filtering and keeps bash command", async () => {
+        const agent = createRootAgent(agentsDB, {
+          id: "agent_turn_compact",
+          session_id: "ses_turn_compact",
+          title: "Turn Compact Test",
+        });
+
+        const mockMessages = [
+          {
+            info: {
+              id: "msg_1",
+              sessionID: "ses_turn_compact",
+              role: "user",
+              time: { created: 1 },
+              agent: "build",
+              model: { providerID: "anthropic", modelID: "claude" },
+            },
+            parts: [
+              {
+                type: "text",
+                text: "Question",
+                id: "part_1",
+                sessionID: "ses_123",
+                messageID: "msg_1",
+              },
+            ],
+          },
+          {
+            info: {
+              id: "msg_2",
+              sessionID: "ses_turn_compact",
+              role: "assistant",
+              time: { created: 2, completed: 3 },
+              parentID: "msg_1",
+              modelID: "claude",
+              providerID: "anthropic",
+              mode: "build",
+              cost: 0.01,
+              tokens: {
+                input: 10,
+                output: 20,
+                reasoning: 0,
+                cache: { read: 0, write: 0 },
+              },
+              finish: "tool-calls",
+            },
+            parts: [
+              { type: "reasoning", text: "internal notes" },
+              {
+                type: "tool",
+                tool: "bash",
+                callID: "call_bash_turn",
+                state: {
+                  status: "completed",
+                  input: {
+                    command: "git status --short",
+                    workdir: "/repo",
+                    description: "Shows concise repo status",
+                  },
+                  output: "M src/file.ts\n",
+                  title: "Shows concise repo status",
+                },
+              },
+            ],
+          },
+          {
+            info: {
+              id: "msg_3",
+              sessionID: "ses_turn_compact",
+              role: "assistant",
+              time: { created: 4, completed: 5 },
+              parentID: "msg_1",
+              modelID: "claude",
+              providerID: "anthropic",
+              mode: "build",
+              cost: 0.01,
+              tokens: {
+                input: 10,
+                output: 20,
+                reasoning: 0,
+                cache: { read: 0, write: 0 },
+              },
+              finish: "stop",
+            },
+            parts: [
+              {
+                type: "text",
+                text: "Final answer",
+                id: "part_2",
+                sessionID: "ses_123",
+                messageID: "msg_3",
+              },
+            ],
+          },
+        ] as unknown as Message[];
+
+        const deps = createTestDeps({ getMessages: async () => mockMessages });
+        deps.agentsDB = agentsDB;
+
+        await withDeps(deps, async () => {
+          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const response = await app.request(`/${agent.id}/messages?mode=latest_turn`);
+
+          expect(response.status).toBe(200);
+          const filtered = (await response.json()) as FilteredMessage[];
+
+          expect(filtered.length).toBe(3);
+          expect(filtered[1].parts).toEqual([
+            {
+              type: "tool",
+              callID: "call_bash_turn",
+              tool: "bash",
+              summary: "Shows concise repo status",
+              state: {
+                status: "completed",
+                title: "Shows concise repo status",
+                input: {
+                  command: "git status --short",
+                  workdir: "/repo",
+                  description: "Shows concise repo status",
+                },
+                output: "M src/file.ts\n",
+                outputTruncated: false,
+              },
+            },
+          ]);
+        });
+      });
+
       test("mode=all returns all messages", async () => {
         const agent = createRootAgent(agentsDB, {
           id: "agent_all",

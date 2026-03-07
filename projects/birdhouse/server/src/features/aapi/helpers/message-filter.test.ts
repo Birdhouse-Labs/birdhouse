@@ -529,4 +529,68 @@ describe("filterMessage", () => {
       ],
     });
   });
+
+  it("latest exchange view keeps bash command while using compact tool filtering", () => {
+    const longOutput = "0123456789".repeat(60);
+    const message: Message = {
+      info: {
+        id: "msg_latest_exchange",
+        sessionID: "ses_123",
+        role: "assistant",
+        time: { created: 1704067200000, completed: 1704067210000 },
+        parentID: "msg_user_123",
+        modelID: "claude-sonnet-4",
+        providerID: "anthropic",
+        mode: "build",
+        cost: 0,
+        tokens: {
+          input: 0,
+          output: 0,
+          reasoning: 0,
+          cache: { read: 0, write: 0 },
+        },
+        finish: "tool-calls",
+      } as AssistantMessage,
+      parts: [
+        { type: "reasoning", text: "internal thoughts" } as never,
+        {
+          type: "tool",
+          tool: "bash",
+          callID: "call_latest_bash",
+          state: {
+            status: "completed",
+            input: {
+              command: "git status --short",
+              workdir: "/repo",
+              description: "Shows concise repo status",
+            },
+            output: longOutput,
+            title: "Shows concise repo status",
+          },
+        } as never,
+      ],
+    };
+
+    const result = filterMessage(message, "exchange");
+
+    expect(result.parts).toEqual([
+      {
+        type: "tool",
+        callID: "call_latest_bash",
+        tool: "bash",
+        summary: "Shows concise repo status",
+        state: {
+          status: "completed",
+          title: "Shows concise repo status",
+          input: {
+            command: "git status --short",
+            workdir: "/repo",
+            description: "Shows concise repo status",
+          },
+          output: expect.any(String),
+          outputTruncated: true,
+        },
+      },
+    ]);
+  });
 });
