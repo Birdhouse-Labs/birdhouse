@@ -6,135 +6,18 @@ import * as handlers from "../features/api";
 import { archive } from "../features/api/archive";
 import { getAgentQuestions, replyToAgentQuestion } from "../features/api/question";
 import { unarchive } from "../features/api/unarchive";
-import type { AgentNode, SortDirection, SortOrder } from "../lib/agents-db";
-import { loadAllAgentTrees } from "../lib/agents-db";
 import { getDepsFromContext } from "../lib/context-deps";
 import { syncAgentTitle } from "../lib/sync-agent-title";
 import "../types/context";
-
-// Sort field for search (includes relevance)
-type SortField = "relevance" | SortOrder;
 
 export function createAgentRoutes() {
   const app = new Hono();
 
   // GET /api/agents/search - Search agents by query with fuzzy matching and sorting
-  app.get("/search", async (c) => {
-    const { agentsDB, opencode } = getDepsFromContext(c);
-
-    const query = c.req.query("q") || "";
-    const includeTreesParam = c.req.query("includeTrees");
-    const sortByParam = c.req.query("sortBy");
-    const orderParam = c.req.query("order");
-
-    // Validate includeTrees parameter
-    let includeTrees = false;
-    if (includeTreesParam !== undefined) {
-      if (includeTreesParam !== "true" && includeTreesParam !== "false") {
-        return c.json({ error: "includeTrees must be 'true' or 'false'" }, 400);
-      }
-      includeTrees = includeTreesParam === "true";
-    }
-
-    // Determine default sortBy based on whether we have a search query
-    const hasQuery = query.trim().length > 0;
-    const defaultSortBy: SortField = hasQuery ? "relevance" : "updated_at";
-    const sortBy = (sortByParam || defaultSortBy) as SortField;
-
-    // Validate sortBy parameter
-    if (sortBy !== "relevance" && sortBy !== "updated_at" && sortBy !== "created_at") {
-      return c.json({ error: "sortBy must be 'relevance', 'updated_at', or 'created_at'" }, 400);
-    }
-
-    // Validate order parameter
-    const order = (orderParam || "desc") as SortDirection;
-    if (order !== "asc" && order !== "desc") {
-      return c.json({ error: "order must be 'asc' or 'desc'" }, 400);
-    }
-
-    // Relevance sorting requires a non-empty query
-    if (sortBy === "relevance" && !hasQuery) {
-      return c.json({ error: "sortBy=relevance requires a non-empty query" }, 400);
-    }
-
-    if (includeTrees) {
-      // Tree search mode: return complete trees for matching agents
-      // Note: relevance sorting uses updated_at for tree ordering (Database Specialist's decision)
-      const treeSortBy: SortOrder = sortBy === "relevance" ? "updated_at" : sortBy;
-      const { rows, matchedAgentIds } = agentsDB.searchAgentsWithTrees(query, treeSortBy, order);
-
-      // Assemble trees using existing helper
-      const trees = loadAllAgentTrees(agentsDB, treeSortBy, order, rows);
-
-      // Inject status recursively (same code as GET /api/agents)
-      const sessionStatuses = await opencode.getSessionStatus();
-      const injectStatus = (node: AgentNode): void => {
-        node.status = sessionStatuses[node.session_id] || { type: "idle" };
-        node.children.forEach(injectStatus);
-      };
-      for (const tree of trees) {
-        injectStatus(tree.root);
-      }
-
-      return c.json({ trees, matchedAgentIds, total: matchedAgentIds.length });
-    } else {
-      // Flat search mode: return matching agents only
-      // Note: searchAgents() always sorts by relevance internally
-      const agents = agentsDB.searchAgents(query);
-
-      // If user requested timestamp sorting, re-sort the results
-      let sortedAgents = agents;
-      if (sortBy === "updated_at" || sortBy === "created_at") {
-        sortedAgents = [...agents].sort((a, b) => {
-          const aVal = sortBy === "updated_at" ? a.updated_at : a.created_at;
-          const bVal = sortBy === "updated_at" ? b.updated_at : b.created_at;
-          return order === "desc" ? bVal - aVal : aVal - bVal;
-        });
-      }
-      // If sortBy === "relevance", keep the order from searchAgents (already sorted by relevance)
-
-      // Inject status into each agent and add empty children array for type consistency
-      const sessionStatuses = await opencode.getSessionStatus();
-      const agentsWithStatus = sortedAgents.map((agent) => ({
-        ...agent,
-        children: [],
-        status: sessionStatuses[agent.session_id] || { type: "idle" },
-      }));
-
-      return c.json({ agents: agentsWithStatus, total: agents.length });
-    }
-  });
+  app.get("/search", (c) => handlers.searchAgents(c, getDepsFromContext(c)));
 
   // GET /api/agents - Load all agent trees
-  app.get("/", async (c) => {
-    const { agentsDB, opencode } = getDepsFromContext(c);
-
-    // Get optional sortBy query param
-    const sortBy = c.req.query("sortBy") as SortOrder | undefined;
-
-    // Validate sortBy
-    if (sortBy && sortBy !== "updated_at" && sortBy !== "created_at") {
-      return c.json({ error: "Invalid sortBy parameter" }, 400);
-    }
-
-    // Load and assemble trees
-    const trees = loadAllAgentTrees(agentsDB, sortBy || "updated_at", "desc");
-
-    // Fetch session statuses in bulk
-    const sessionStatuses = await opencode.getSessionStatus();
-
-    // Inject status into each node recursively
-    const injectStatus = (node: AgentNode): void => {
-      node.status = sessionStatuses[node.session_id] || { type: "idle" };
-      node.children.forEach(injectStatus);
-    };
-
-    trees.forEach((tree) => {
-      injectStatus(tree.root);
-    });
-
-    return c.json({ trees });
-  });
+  app.get("/", (c) => handlers.getAgents(c, getDepsFromContext(c)));
 
   // POST /api/agents - Create a new agent
   app.post("/", (c) => handlers.create(c, getDepsFromContext(c)));

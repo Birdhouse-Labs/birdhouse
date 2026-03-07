@@ -1,10 +1,10 @@
 // ABOUTME: Tests dev-mode plugin sync into the local OpenCode checkout.
 // ABOUTME: Verifies the OpenCode plugin file is refreshed even when it already exists.
 
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { syncDevPluginSource } from "./dev-plugin-sync";
 
 describe("syncDevPluginSource", () => {

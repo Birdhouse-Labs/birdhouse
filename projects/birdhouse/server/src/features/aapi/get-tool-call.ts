@@ -25,8 +25,7 @@ export async function getToolCall(c: Context, deps: Pick<Deps, "agentsDB" | "ope
     for (const message of messages) {
       const matchingPart = message.parts.find(
         (part) =>
-          (part as Record<string, unknown>).type === "tool" &&
-          (part as Record<string, unknown>).callID === callId,
+          (part as Record<string, unknown>).type === "tool" && (part as Record<string, unknown>).callID === callId,
       );
 
       if (!matchingPart) {

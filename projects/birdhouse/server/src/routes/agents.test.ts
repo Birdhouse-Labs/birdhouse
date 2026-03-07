@@ -1300,6 +1300,89 @@ describe("GET /api/agents - Load all agent trees", () => {
     });
   });
 
+  test("injects explicit status and falls back to idle for descendants", async () => {
+    const agentsDB = createAgentsDB(":memory:");
+    const now = Date.now();
+
+    const root = createRootAgent(agentsDB, {
+      id: "agent_status_list_root",
+      session_id: "ses_status_list_root",
+      title: "Root Status",
+      created_at: now,
+      updated_at: now,
+    });
+
+    const child = createChildAgent(agentsDB, root.id, {
+      id: "agent_status_list_child",
+      session_id: "ses_status_list_child",
+      title: "Child Status",
+      created_at: now,
+      updated_at: now,
+    });
+
+    const deps = createTestDeps({
+      getSessionStatus: async () => ({
+        [root.session_id]: { type: "busy" },
+      }),
+    });
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const res = await app.request("/");
+
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as { trees: AgentTree[] };
+      expect(data.trees).toHaveLength(1);
+      expect(data.trees[0]?.root.status).toEqual({ type: "busy" });
+      expect(data.trees[0]?.root.children).toEqual([
+        expect.objectContaining({ id: child.id, status: { type: "idle" } }),
+      ]);
+    });
+  });
+
+  test("defaults to updated_at sort while created_at sort can produce a different tree order", async () => {
+    const agentsDB = createAgentsDB(":memory:");
+    const now = Date.now();
+
+    const olderCreatedRecentlyUpdated = createRootAgent(agentsDB, {
+      id: "agent_sort_updated_first",
+      title: "Older Created Recently Updated",
+      created_at: now - 10_000,
+      updated_at: now,
+    });
+
+    const newerCreatedOlderUpdated = createRootAgent(agentsDB, {
+      id: "agent_sort_created_first",
+      title: "Newer Created Older Updated",
+      created_at: now - 1_000,
+      updated_at: now - 5_000,
+    });
+
+    const deps = createTestDeps();
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+
+      const defaultRes = await app.request("/");
+      expect(defaultRes.status).toBe(200);
+      const defaultData = (await defaultRes.json()) as { trees: AgentTree[] };
+      expect(defaultData.trees.map((tree) => tree.tree_id)).toEqual([
+        olderCreatedRecentlyUpdated.tree_id,
+        newerCreatedOlderUpdated.tree_id,
+      ]);
+
+      const createdRes = await app.request("/?sortBy=created_at");
+      expect(createdRes.status).toBe(200);
+      const createdData = (await createdRes.json()) as { trees: AgentTree[] };
+      expect(createdData.trees.map((tree) => tree.tree_id)).toEqual([
+        newerCreatedOlderUpdated.tree_id,
+        olderCreatedRecentlyUpdated.tree_id,
+      ]);
+    });
+  });
+
   test("returns 400 for invalid sortBy parameter", async () => {
     const agentsDB = createAgentsDB(":memory:");
     const deps = createTestDeps();
@@ -1311,7 +1394,7 @@ describe("GET /api/agents - Load all agent trees", () => {
 
       expect(res.status).toBe(400);
       const data = (await res.json()) as { error: string };
-      expect(data.error).toContain("Invalid sortBy parameter");
+      expect(data).toEqual({ error: "Invalid sortBy parameter" });
     });
   });
 

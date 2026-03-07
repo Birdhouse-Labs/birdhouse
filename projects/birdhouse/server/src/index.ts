@@ -55,10 +55,14 @@ if (!isDevMode && !process.env.BIRDHOUSE_OPENCODE_BIN) {
 }
 
 if (isDevMode) {
-  const opencodeIndexPath = join(process.env.OPENCODE_PATH!, "packages", "opencode", "src", "index.ts");
+  const opencodePath = process.env.OPENCODE_PATH;
+  if (!opencodePath) {
+    throw new Error("OPENCODE_PATH is required in dev mode");
+  }
+  const opencodeIndexPath = join(opencodePath, "packages", "opencode", "src", "index.ts");
   if (!existsSync(opencodeIndexPath)) {
     console.error(`❌ OPENCODE_PATH is set but does not look like a valid OpenCode repository:`);
-    console.error(`   ${process.env.OPENCODE_PATH}`);
+    console.error(`   ${opencodePath}`);
     console.error("");
     console.error("  Expected to find: packages/opencode/src/index.ts");
     console.error("");

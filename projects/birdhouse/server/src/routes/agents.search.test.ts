@@ -113,7 +113,7 @@ describe("GET /api/agents/search - Basic behavior", () => {
 
       expect(res.status).toBe(400);
       const data = (await res.json()) as { error: string };
-      expect(data.error).toContain("includeTrees must be 'true' or 'false'");
+      expect(data).toEqual({ error: "includeTrees must be 'true' or 'false'" });
     });
   });
 
@@ -132,6 +132,74 @@ describe("GET /api/agents/search - Basic behavior", () => {
         agents: [],
         total: 0,
       });
+    });
+  });
+
+  test("treats empty query parameter as match-all when agents exist", async () => {
+    const agentsDB = createAgentsDB(":memory:");
+    const now = Date.now();
+
+    const older = createRootAgent(agentsDB, {
+      id: "agent_empty_query_older",
+      session_id: "ses_empty_query_older",
+      title: "Older Agent",
+      created_at: now - 2000,
+      updated_at: now - 2000,
+    });
+
+    const newer = createRootAgent(agentsDB, {
+      id: "agent_empty_query_newer",
+      session_id: "ses_empty_query_newer",
+      title: "Newer Agent",
+      created_at: now - 1000,
+      updated_at: now - 1000,
+    });
+
+    const deps = createTestDeps();
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const res = await app.request("/search?q=");
+
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as FlatSearchResponse;
+      expect(data.total).toBe(2);
+      expect(data.agents.map((agent) => agent.id)).toEqual([newer.id, older.id]);
+    });
+  });
+
+  test("treats whitespace-only query as empty for default sorting and match-all", async () => {
+    const agentsDB = createAgentsDB(":memory:");
+    const now = Date.now();
+
+    const older = createRootAgent(agentsDB, {
+      id: "agent_whitespace_older",
+      session_id: "ses_whitespace_older",
+      title: "Whitespace Older",
+      created_at: now - 2000,
+      updated_at: now - 2000,
+    });
+
+    const newer = createRootAgent(agentsDB, {
+      id: "agent_whitespace_newer",
+      session_id: "ses_whitespace_newer",
+      title: "Whitespace Newer",
+      created_at: now - 1000,
+      updated_at: now - 1000,
+    });
+
+    const deps = createTestDeps();
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const res = await app.request("/search?q=%20%20");
+
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as FlatSearchResponse;
+      expect(data.total).toBe(2);
+      expect(data.agents.map((agent) => agent.id)).toEqual([newer.id, older.id]);
     });
   });
 
@@ -268,6 +336,79 @@ describe("GET /api/agents/search - Flat mode with real data", () => {
       const data = (await res.json()) as FlatSearchResponse;
       expect(data.agents[0].status).toBeDefined();
       expect(data.agents[0].status?.type).toMatch(/idle|busy|retry/);
+    });
+  });
+
+  test("injects explicit status and falls back to idle in flat mode", async () => {
+    const agentsDB = createAgentsDB(":memory:");
+    const now = Date.now();
+
+    const busyAgent = createRootAgent(agentsDB, {
+      id: "agent_busy_flat",
+      session_id: "ses_busy_flat",
+      title: "api",
+      created_at: now - 2000,
+      updated_at: now - 2000,
+    });
+
+    const idleAgent = createRootAgent(agentsDB, {
+      id: "agent_idle_flat",
+      session_id: "ses_idle_flat",
+      title: "api testing",
+      created_at: now - 1000,
+      updated_at: now - 1000,
+    });
+
+    const deps = createTestDeps({
+      getSessionStatus: async () => ({
+        [busyAgent.session_id]: { type: "busy" },
+      }),
+    });
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const res = await app.request("/search?q=api");
+
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as FlatSearchResponse;
+      expect(data.agents.map((agent) => ({ id: agent.id, status: agent.status }))).toEqual([
+        { id: busyAgent.id, status: { type: "busy" } },
+        { id: idleAgent.id, status: { type: "idle" } },
+      ]);
+    });
+  });
+
+  test("keeps relevance order in flat mode even when order=asc is requested", async () => {
+    const agentsDB = createAgentsDB(":memory:");
+    const now = Date.now();
+
+    const exact = createRootAgent(agentsDB, {
+      id: "agent_flat_exact",
+      session_id: "ses_flat_exact",
+      title: "api",
+      created_at: now - 2000,
+      updated_at: now - 2000,
+    });
+
+    const partial = createRootAgent(agentsDB, {
+      id: "agent_flat_partial",
+      session_id: "ses_flat_partial",
+      title: "api planning",
+      created_at: now - 1000,
+      updated_at: now - 1000,
+    });
+
+    const deps = createTestDeps();
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const res = await app.request("/search?q=api&sortBy=relevance&order=asc");
+
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as FlatSearchResponse;
+      expect(data.agents.map((agent) => agent.id)).toEqual([exact.id, partial.id]);
     });
   });
 });
@@ -451,6 +592,83 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
       expect(tree.root.status?.type).toMatch(/idle|busy|retry/);
       expect(tree.root.children[0].status).toBeDefined();
       expect(tree.root.children[0].status?.type).toMatch(/idle|busy|retry/);
+    });
+  });
+
+  test("injects explicit status and falls back to idle in tree mode", async () => {
+    const agentsDB = createAgentsDB(":memory:");
+    const now = Date.now();
+
+    const root = createRootAgent(agentsDB, {
+      id: "agent_tree_status_root",
+      session_id: "ses_tree_status_root",
+      title: "status root",
+      created_at: now,
+      updated_at: now,
+    });
+
+    const child = createChildAgent(agentsDB, root.id, {
+      id: "agent_tree_status_child",
+      session_id: "ses_tree_status_child",
+      title: "status child",
+      created_at: now,
+      updated_at: now,
+    });
+
+    const deps = createTestDeps({
+      getSessionStatus: async () => ({
+        [root.session_id]: { type: "retry" },
+      }),
+    });
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const res = await app.request("/search?q=status&includeTrees=true");
+
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as TreeSearchResponse;
+      expect(data.trees).toHaveLength(1);
+      expect(data.trees[0]?.root.status).toEqual({ type: "retry" });
+      expect(data.trees[0]?.root.children).toEqual([
+        expect.objectContaining({ id: child.id, status: { type: "idle" } }),
+      ]);
+    });
+  });
+
+  test("tree mode keeps matched ids by relevance but orders trees by updated_at for sortBy=relevance", async () => {
+    const agentsDB = createAgentsDB(":memory:");
+    const now = Date.now();
+
+    const exactTree = createRootAgent(agentsDB, {
+      id: "agent_tree_exact",
+      session_id: "ses_tree_exact",
+      title: "api",
+      created_at: now - 3000,
+      updated_at: now - 3000,
+    });
+
+    const partialTree = createRootAgent(agentsDB, {
+      id: "agent_tree_partial",
+      session_id: "ses_tree_partial",
+      title: "api planning",
+      created_at: now - 1000,
+      updated_at: now - 1000,
+    });
+
+    const deps = createTestDeps();
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const res = await app.request("/search?q=api&includeTrees=true&sortBy=relevance&order=desc");
+
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as TreeSearchResponse;
+      expect(data.matchedAgentIds).toEqual([exactTree.id, partialTree.id]);
+      expect(data.trees.map((tree) => tree.tree_id)).toEqual([partialTree.tree_id, exactTree.tree_id]);
+      expect(data.total).toBe(data.matchedAgentIds.length);
+      expect(data.trees).toHaveLength(2);
     });
   });
 });
@@ -730,7 +948,7 @@ describe("GET /api/agents/search - Sort validation", () => {
 
       expect(res.status).toBe(400);
       const data = (await res.json()) as { error: string };
-      expect(data.error).toContain("sortBy must be");
+      expect(data).toEqual({ error: "sortBy must be 'relevance', 'updated_at', or 'created_at'" });
     });
   });
 
@@ -745,7 +963,7 @@ describe("GET /api/agents/search - Sort validation", () => {
 
       expect(res.status).toBe(400);
       const data = (await res.json()) as { error: string };
-      expect(data.error).toContain("order must be");
+      expect(data).toEqual({ error: "order must be 'asc' or 'desc'" });
     });
   });
 
@@ -760,11 +978,11 @@ describe("GET /api/agents/search - Sort validation", () => {
 
       expect(res.status).toBe(400);
       const data = (await res.json()) as { error: string };
-      expect(data.error).toContain("requires a non-empty query");
+      expect(data).toEqual({ error: "sortBy=relevance requires a non-empty query" });
     });
   });
 
-  test("accepts relevance sorting with whitespace-only query", async () => {
+  test("rejects relevance sorting with whitespace-only query", async () => {
     const agentsDB = createAgentsDB(":memory:");
     const deps = createTestDeps();
     deps.agentsDB = agentsDB;
@@ -775,7 +993,7 @@ describe("GET /api/agents/search - Sort validation", () => {
 
       expect(res.status).toBe(400);
       const data = (await res.json()) as { error: string };
-      expect(data.error).toContain("requires a non-empty query");
+      expect(data).toEqual({ error: "sortBy=relevance requires a non-empty query" });
     });
   });
 });

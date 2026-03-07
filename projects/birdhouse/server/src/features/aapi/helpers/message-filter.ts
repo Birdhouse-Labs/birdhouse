@@ -101,7 +101,10 @@ function summarizeToolInputValue(value: unknown, noisyToolInputKeys = NOISY_TOOL
   return summarizedEntries.length > 0 ? Object.fromEntries(summarizedEntries) : undefined;
 }
 
-function filterToolStateForCompact(part: Record<string, unknown>, noisyToolInputKeys: Set<string>): Record<string, unknown> | undefined {
+function filterToolStateForCompact(
+  part: Record<string, unknown>,
+  noisyToolInputKeys: Set<string>,
+): Record<string, unknown> | undefined {
   if (typeof part.state !== "object" || part.state === null) {
     return undefined;
   }
