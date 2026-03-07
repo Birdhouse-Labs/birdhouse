@@ -14,7 +14,7 @@ const ConnectionStatusBanner: Component<ConnectionStatusBannerProps> = (props) =
     <Transition name="connection-banner">
       <Show when={props.status !== "connected"}>
         <div
-          class="fixed top-2 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg border flex items-center gap-2 text-sm bg-surface-raised"
+          class="fixed top-2 left-1/2 transform -translate-x-1/2 z-[9999] px-4 py-2 rounded-lg shadow-lg border flex items-center gap-2 text-sm bg-surface-raised"
           classList={{
             "border-warning text-warning": props.status === "connecting",
             "border-danger text-danger": props.status === "disconnected",
