@@ -222,14 +222,15 @@ If you see connection errors, make sure Birdhouse server is running at ${BIRDHOU
        * Read messages from an agent (returns raw JSON)
        */
       agent_read: tool({
-        description: "Read an agent's messages as raw JSON. By default, waits for the agent to complete before returning messages. Use skip_wait=true to read immediately without waiting. Use latest_turn=true to get all messages in the current turn. Use all=true for full conversation.",
+        description: "Read an agent's messages as raw JSON. By default, waits for the agent to complete before returning the latest assistant reply. Use `latest_turn=true` when you need the latest exchange, especially if the latest reply feels incomplete or the exchange spans multiple assistant messages. Use `full=true` for the recommended full-conversation handoff view with compact tool summaries and drill-down ids. Use `all=true` only when you need the raw full conversation for debugging because it is much more verbose. Use `skip_wait=true` to read immediately without waiting.",
         args: {
           agent_id: tool.schema.string().describe("Agent ID to read from (e.g., 'agent_abc123')"),
           skip_wait: tool.schema.boolean().optional().describe("Skip waiting for agent completion and return immediately. Default: false (waits for completion)."),
           latest_turn: tool.schema.boolean().optional().describe("Get all messages in the current turn (since last user message). Default: false."),
-          all: tool.schema.boolean().optional().describe("Read entire conversation including all user and assistant messages. Default: false."),
+          all: tool.schema.boolean().optional().describe("Read the raw full conversation including all user and assistant messages. Usually only needed for debugging because it is much more verbose. Default: false."),
+          full: tool.schema.boolean().optional().describe("Read the recommended full-conversation handoff view with compact filtering, tool summaries, and drill-down call ids. Default: false."),
         },
-        async execute({ agent_id, skip_wait = false, latest_turn = false, all = false }, ctx) {
+        async execute({ agent_id, skip_wait = false, latest_turn = false, all = false, full = false }, ctx) {
           try {
             // WAIT FOR COMPLETION (unless skip_wait=true)
             if (!skip_wait) {
@@ -248,7 +249,7 @@ If you see connection errors, make sure Birdhouse server is running at ${BIRDHOU
             
             // FETCH MESSAGES (after waiting or immediately if skip_wait=true)
             // Server handles selection via mode parameter
-            const mode = all ? 'all' : (latest_turn ? 'latest_turn' : 'last');
+            const mode = full ? 'full' : (all ? 'all' : (latest_turn ? 'latest_turn' : 'last'));
             const response = await fetch(
               `${BIRDHOUSE_SERVER}/aapi/agents/${agent_id}/messages?mode=${mode}`,
               {
@@ -270,7 +271,9 @@ ${skip_wait ? 'The agent may still be working. Try again without skip_wait to wa
             }
             
             // Messages are already selected AND filtered by server
-            const modeLabel = all ? 'all messages' : (latest_turn ? 'latest turn' : 'last assistant message');
+            const modeLabel = full
+              ? 'full conversation'
+              : (all ? 'all messages' : (latest_turn ? 'latest turn' : 'last assistant message'));
             return `Agent: ${agent_id}
 Mode: ${modeLabel}
 Messages: ${messages.length}
@@ -299,6 +302,67 @@ Make sure Birdhouse server is running at ${BIRDHOUSE_SERVER}`;
             
             // Generic
             return `Error reading agent: ${errorMessage}`;
+          }
+        },
+      }),
+
+      /**
+       * Read a single tool call from an agent
+       */
+      agent_read_tool_call: tool({
+        description: "Read one specific tool call from an agent by call id. Use this after `agent_read({ full: true })` when a tool summary or `outputTruncated: true` tells you a specific tool call is worth inspecting in detail.",
+        args: {
+          agent_id: tool.schema.string().describe("Agent ID to read from (e.g., 'agent_abc123')"),
+          call_id: tool.schema.string().describe("Tool call ID from a prior `agent_read({ full: true })` response."),
+          skip_wait: tool.schema.boolean().optional().describe("Skip waiting for agent completion and return immediately. Default: false (waits for completion)."),
+        },
+        async execute({ agent_id, call_id, skip_wait = false }, ctx) {
+          try {
+            if (!skip_wait) {
+              const waitResponse = await fetch(`${BIRDHOUSE_SERVER}/aapi/agents/${agent_id}/wait`, {
+                headers: getHeaders(),
+              });
+
+              if (!waitResponse.ok) {
+                const error = await waitResponse.text();
+                return `Error waiting for agent ${agent_id}: ${waitResponse.status} ${error}`;
+              }
+            }
+
+            const response = await fetch(`${BIRDHOUSE_SERVER}/aapi/agents/${agent_id}/tool-calls/${call_id}`, {
+              headers: getHeaders(),
+            });
+
+            if (!response.ok) {
+              const error = await response.text();
+              return `Error reading tool call: ${response.status} ${error}`;
+            }
+
+            const toolCall = await response.json() as Record<string, unknown>;
+
+            return `Agent: ${agent_id}
+Tool Call: ${call_id}
+
+${JSON.stringify(toolCall, null, 2)}`;
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+
+            if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
+              return `⏱️ Timeout while waiting for agent ${agent_id}
+
+The agent is still working (>5 minutes). Try:
+  1. Wait longer: agent_read_tool_call({ agent_id: "${agent_id}", call_id: "${call_id}" })
+  2. Check status: agent_tree()
+  3. Read partial results: agent_read_tool_call({ agent_id: "${agent_id}", call_id: "${call_id}", skip_wait: true })`;
+            }
+
+            if (errorMessage.includes('fetch') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('network')) {
+              return `Error reading tool call: ${errorMessage}
+
+Make sure Birdhouse server is running at ${BIRDHOUSE_SERVER}`;
+            }
+
+            return `Error reading tool call: ${errorMessage}`;
           }
         },
       }),

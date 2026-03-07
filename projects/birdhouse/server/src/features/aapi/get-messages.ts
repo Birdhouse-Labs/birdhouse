@@ -4,7 +4,7 @@
 import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
 import type { Message } from "../../lib/opencode-client";
-import { filterMessages } from "./helpers/message-filter";
+import { filterMessagesForView } from "./helpers/message-filter";
 
 /**
  * GET /agents/:id/messages - Get filtered and selected messages for plugin consumption
@@ -21,7 +21,7 @@ export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "ope
 
   try {
     // Validate mode parameter
-    const validModes = ["last", "latest_turn", "all"];
+    const validModes = ["last", "latest_turn", "all", "full"];
     if (!validModes.includes(mode)) {
       return c.json(
         {
@@ -37,8 +37,8 @@ export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "ope
       return c.json({ error: `Agent ${agentId} not found` }, 404);
     }
 
-    // Fetch ALL messages from OpenCode (we select in memory)
-    const allMessages = await getMessagesFromOpenCode(agent.session_id, 1000);
+    const historyLimit = mode === "last" ? 1000 : undefined;
+    const allMessages = await getMessagesFromOpenCode(agent.session_id, historyLimit);
 
     // SELECT messages based on mode
     let selected: Message[];
@@ -46,6 +46,11 @@ export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "ope
     switch (mode) {
       case "all": {
         // Return all messages (full conversation)
+        selected = allMessages;
+        break;
+      }
+
+      case "full": {
         selected = allMessages;
         break;
       }
@@ -78,7 +83,7 @@ export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "ope
     }
 
     // FILTER for plugin consumption (remove IDs, cost, metadata)
-    const filtered = filterMessages(selected);
+    const filtered = filterMessagesForView(selected, mode === "full" ? "full" : "default");
 
     return c.json(filtered);
   } catch (error) {

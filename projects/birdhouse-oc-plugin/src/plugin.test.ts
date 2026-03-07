@@ -327,6 +327,152 @@ describe("BirdhousePlugin - Comprehensive Tests", () => {
     );
   });
 
+  test("agent_read: documents full as recommended and all as verbose", async () => {
+    await withEnv(
+      {
+        BIRDHOUSE_SERVER: "http://localhost:3000",
+        BIRDHOUSE_WORKSPACE_ID: "ws_docs_123",
+      },
+      async () => {
+        globalThis.fetch = fetchMock.mock as any;
+
+        const plugin = await BirdhousePlugin({
+          client: createMockClient(),
+          directory: "/test",
+          project: createMockProject(),
+          worktree: "/test",
+          $: createMockShell(),
+        });
+
+        expect(plugin.tool!.agent_read.description).toContain("latest exchange");
+        expect(plugin.tool!.agent_read.description).toContain("recommended full-conversation handoff view");
+        expect(plugin.tool!.agent_read.description).toContain("all=true");
+        expect(plugin.tool!.agent_read.description).toContain("debugging");
+        expect(plugin.tool!.agent_read_tool_call.description).toContain("outputTruncated: true");
+      }
+    );
+  });
+
+  test("agent_read: supports full mode", async () => {
+    await withEnv(
+      {
+        BIRDHOUSE_SERVER: "http://localhost:3000",
+        BIRDHOUSE_WORKSPACE_ID: "ws_full_123",
+      },
+      async () => {
+        globalThis.fetch = (async (url: string, init?: RequestInit) => {
+          fetchMock.calls.push({ url, init });
+
+          if (url.includes("/wait")) {
+            return {
+              ok: true,
+              json: async () => ({}),
+              text: async () => "",
+            };
+          }
+
+          return {
+            ok: true,
+            json: async () => [
+              {
+                info: { role: "assistant", time: { created: 123, completed: 456 } },
+                parts: [{ type: "text", text: "Filtered full output" }],
+              },
+            ],
+            text: async () => JSON.stringify([
+              {
+                info: { role: "assistant", time: { created: 123, completed: 456 } },
+                parts: [{ type: "text", text: "Filtered full output" }],
+              },
+            ]),
+          };
+        }) as any;
+
+        const plugin = await BirdhousePlugin({
+          client: createMockClient(),
+          directory: "/test",
+          project: createMockProject(),
+          worktree: "/test",
+          $: createMockShell(),
+        });
+
+        const result = await plugin.tool!.agent_read.execute(
+          { agent_id: "agent_target_full", full: true },
+          createMockContext()
+        );
+
+        expect(fetchMock.calls.length).toBe(2);
+        const messagesCall = fetchMock.calls[1];
+        expect(messagesCall?.url).toContain("mode=full");
+        expect(result).toContain("full conversation");
+        expect(result).toContain("Filtered full output");
+      }
+    );
+  });
+
+  test("agent_read_tool_call: fetches a single tool call", async () => {
+    await withEnv(
+      {
+        BIRDHOUSE_SERVER: "http://localhost:3000",
+        BIRDHOUSE_WORKSPACE_ID: "ws_tool_call_123",
+      },
+      async () => {
+        globalThis.fetch = (async (url: string, init?: RequestInit) => {
+          fetchMock.calls.push({ url, init });
+
+          if (url.includes("/wait")) {
+            return {
+              ok: true,
+              json: async () => ({}),
+              text: async () => "",
+            };
+          }
+
+          return {
+            ok: true,
+            json: async () => ({
+              info: { role: "assistant", time: { created: 123, completed: 456 } },
+              part: {
+                type: "tool",
+                callID: "call_123",
+                tool: "bash",
+                state: { status: "completed", output: "M src/file.ts\n" },
+              },
+            }),
+            text: async () => JSON.stringify({
+              info: { role: "assistant", time: { created: 123, completed: 456 } },
+              part: {
+                type: "tool",
+                callID: "call_123",
+                tool: "bash",
+                state: { status: "completed", output: "M src/file.ts\n" },
+              },
+            }),
+          };
+        }) as any;
+
+        const plugin = await BirdhousePlugin({
+          client: createMockClient(),
+          directory: "/test",
+          project: createMockProject(),
+          worktree: "/test",
+          $: createMockShell(),
+        });
+
+        const result = await plugin.tool!.agent_read_tool_call.execute(
+          { agent_id: "agent_target_full", call_id: "call_123" },
+          createMockContext()
+        );
+
+        expect(fetchMock.calls.length).toBe(2);
+        const toolCallRequest = fetchMock.calls[1];
+        expect(toolCallRequest?.url).toContain("/aapi/agents/agent_target_full/tool-calls/call_123");
+        expect(result).toContain("call_123");
+        expect(result).toContain("M src/file.ts");
+      }
+    );
+  });
+
   test("agent_create: handles HTTP error responses correctly", async () => {
     await withEnv(
       {

@@ -667,6 +667,226 @@ describe("AAPI Agent Routes", () => {
         });
       });
 
+      test("mode=full returns all messages with compact tool details", async () => {
+        const agent = createRootAgent(agentsDB, {
+          id: "agent_full",
+          session_id: "ses_full_test",
+          title: "Full Test",
+        });
+
+        const mockMessages = [
+          {
+            info: {
+              id: "msg_1",
+              sessionID: "ses_full_test",
+              role: "user",
+              time: { created: 1 },
+              agent: "build",
+              model: { providerID: "anthropic", modelID: "claude" },
+            },
+            parts: [
+              {
+                type: "text",
+                text: "Investigate secrets",
+                id: "part_1",
+                sessionID: "ses_123",
+                messageID: "msg_1",
+              },
+            ],
+          },
+          {
+            info: {
+              id: "msg_2",
+              sessionID: "ses_full_test",
+              role: "assistant",
+              time: { created: 2, completed: 3 },
+              parentID: "msg_1",
+              modelID: "claude",
+              providerID: "anthropic",
+              mode: "build",
+              cost: 0.01,
+              tokens: {
+                input: 10,
+                output: 20,
+                reasoning: 0,
+                cache: { read: 0, write: 0 },
+              },
+              finish: "tool-calls",
+            },
+            parts: [
+              { type: "step-start" },
+              {
+                type: "tool",
+                tool: "bash",
+                callID: "call_1",
+                state: {
+                  status: "completed",
+                  input: {
+                    command: "git status --short",
+                    description: "Check git status",
+                  },
+                  output: "M src/file.ts\n",
+                  metadata: { exit: 0 },
+                },
+              },
+              { type: "reasoning", text: "Thinking" },
+              { type: "step-finish", reason: "stop", cost: 0, tokens: {} },
+            ],
+          },
+        ] as unknown as Message[];
+
+        const deps = createTestDeps({ getMessages: async () => mockMessages });
+        deps.agentsDB = agentsDB;
+
+        await withDeps(deps, async () => {
+          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const response = await app.request(`/${agent.id}/messages?mode=full`);
+
+          expect(response.status).toBe(200);
+          const filtered = (await response.json()) as FilteredMessage[];
+
+          expect(filtered.length).toBe(2);
+          expect(filtered[0].parts[0].text).toBe("Investigate secrets");
+          expect(filtered[1].parts).toEqual([
+            {
+              type: "tool",
+              callID: "call_1",
+              tool: "bash",
+              summary: "Check git status",
+              state: {
+                status: "completed",
+                input: {
+                  description: "Check git status",
+                },
+                output: "M src/file.ts\n",
+                outputTruncated: false,
+              },
+            },
+          ]);
+        });
+      });
+
+      test("GET tool call returns filtered tool details with message context", async () => {
+        const agent = createRootAgent(agentsDB, {
+          id: "agent_tool_call",
+          session_id: "ses_tool_call",
+          title: "Tool Call Test",
+        });
+
+        const mockMessages = [
+          {
+            info: {
+              id: "msg_tool_call",
+              sessionID: "ses_tool_call",
+              role: "assistant",
+              time: { created: 2, completed: 3 },
+              parentID: "msg_1",
+              modelID: "claude",
+              providerID: "anthropic",
+              mode: "build",
+              cost: 0.01,
+              tokens: {
+                input: 10,
+                output: 20,
+                reasoning: 0,
+                cache: { read: 0, write: 0 },
+              },
+              finish: "tool-calls",
+            },
+            parts: [
+              {
+                type: "tool",
+                tool: "bash",
+                callID: "call_lookup_1",
+                state: {
+                  status: "completed",
+                  input: {
+                    command: "git status --short",
+                    description: "Check git status",
+                  },
+                  output: "M src/file.ts\n",
+                  metadata: { exit: 0 },
+                },
+              },
+            ],
+          },
+        ] as unknown as Message[];
+
+        const deps = createTestDeps({ getMessages: async () => mockMessages });
+        deps.agentsDB = agentsDB;
+
+        await withDeps(deps, async () => {
+          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const response = await app.request(`/${agent.id}/tool-calls/call_lookup_1`);
+
+          expect(response.status).toBe(200);
+          const toolCall = (await response.json()) as {
+            info: FilteredMessage["info"];
+            part: FilteredMessage["parts"][number];
+          };
+
+          expect(toolCall.info.role).toBe("assistant");
+          expect(toolCall.part).toEqual({
+            type: "tool",
+            callID: "call_lookup_1",
+            tool: "bash",
+            state: {
+              status: "completed",
+              input: {
+                command: "git status --short",
+                description: "Check git status",
+              },
+              output: "M src/file.ts\n",
+            },
+          });
+        });
+      });
+
+      test("GET tool call returns 404 when call id is missing", async () => {
+        const agent = createRootAgent(agentsDB, {
+          id: "agent_missing_tool_call",
+          session_id: "ses_missing_tool_call",
+          title: "Missing Tool Call Test",
+        });
+
+        const deps = createTestDeps({ getMessages: async () => [] as Message[] });
+        deps.agentsDB = agentsDB;
+
+        await withDeps(deps, async () => {
+          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const response = await app.request(`/${agent.id}/tool-calls/call_missing`);
+
+          expect(response.status).toBe(404);
+          const body = (await response.json()) as { error: string };
+          expect(body.error).toContain("Tool call call_missing not found");
+        });
+      });
+
+      test("mode=full fetches full history without a hard limit", async () => {
+        const agent = createRootAgent(agentsDB, {
+          id: "agent_full_history",
+          session_id: "ses_full_history",
+          title: "Full History",
+        });
+
+        let receivedLimit: number | undefined;
+        const deps = createTestDeps({
+          getMessages: async (_sessionId: string, limit?: number) => {
+            receivedLimit = limit;
+            return [];
+          },
+        });
+        deps.agentsDB = agentsDB;
+
+        await withDeps(deps, async () => {
+          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const response = await app.request(`/${agent.id}/messages?mode=full`);
+
+          expect(response.status).toBe(200);
+          expect(receivedLimit).toBeUndefined();
+        });
+      });
+
       test("default mode returns last assistant message", async () => {
         const agent = createRootAgent(agentsDB, {
           id: "agent_default",

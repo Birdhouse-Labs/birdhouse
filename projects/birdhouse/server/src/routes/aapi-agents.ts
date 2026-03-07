@@ -27,6 +27,9 @@ export function createAAPIAgentRoutes() {
   // GET /aapi/agents/:id/messages - Get filtered messages for plugin consumption
   app.get("/:id/messages", (c) => handlers.getMessages(c, getDepsFromContext(c)));
 
+  // GET /aapi/agents/:id/tool-calls/:callId - Get one filtered tool call by id
+  app.get("/:id/tool-calls/:callId", (c) => handlers.getToolCall(c, getDepsFromContext(c)));
+
   // POST /aapi/agents/:id/export - Export agent timeline to file
   app.post("/:id/export", (c) => handlers.exportMarkdown(c, getDepsFromContext(c)));
 

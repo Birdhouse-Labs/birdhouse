@@ -6,6 +6,7 @@ export { exportMarkdown } from "./export-markdown";
 export { exportTree } from "./export-tree";
 export { getBySession } from "./get-by-session";
 export { getMessages } from "./get-messages";
+export { getToolCall } from "./get-tool-call";
 export { sendMessage } from "./send-message";
 export { getTree } from "./tree";
 export { wait } from "./wait";
