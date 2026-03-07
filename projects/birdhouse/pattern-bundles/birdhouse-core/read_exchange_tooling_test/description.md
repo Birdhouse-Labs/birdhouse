@@ -1,0 +1,1 @@
+Exercises `agent_create`, `agent_reply`, `agent_read`, `agent_read_tool_call`, file edit tools, and bash across many exchanges so you can compare how `last`, `latest_turn`, `full`, and `all` behave on the same worker agent.

@@ -1,0 +1,5 @@
+title: Agent Read Exchange Tooling Test
+trigger_phrases:
+  - run an agent read exchange test
+  - test agent read modes
+  - test latest exchange reading
