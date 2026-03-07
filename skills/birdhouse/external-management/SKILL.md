@@ -12,7 +12,7 @@ This is the right approach when:
 - you are changing OpenCode plugin behavior
 - you are changing Birdhouse AAPI routes or read modes
 - you want a real agent-controlled dev environment on its own ports
-- you want to run the agent test suite in isolation
+- you want to run an agent test suite in isolation
 - you want a realistic multi-agent tree without polluting the current Birdhouse environment
 
 ## Core Mental Model
@@ -45,9 +45,11 @@ That gives you:
 - Birdhouse server: `http://127.0.0.1:50150`
 - OpenCode workspaces: ports starting at `50160`
 
+If a known-good snapshot tarball already exists, restoring that snapshot is often faster and more reliable than rebuilding the dataset from scratch.
+
 ## Isolation Strategy
 
-For most plugin/read-mode work, a **unique workspace directory** is enough to isolate the agent tree and test artifacts while still letting humans inspect that workspace from other Birdhouse instances.
+For most plugin/read-mode work, a unique workspace directory is enough to isolate the agent tree and test artifacts while still letting humans inspect that workspace from other Birdhouse instances.
 
 Example workspace directory:
 
@@ -60,8 +62,6 @@ If you also want a separate central Birdhouse database for that server, set:
 ```bash
 BIRDHOUSE_DATA_DB_PATH=/absolute/path/to/test-data.db
 ```
-
-This isolates the main Birdhouse data DB while keeping the workspace in a normal inspectable location.
 
 ## Setup On A Machine That Is Not Ready Yet
 
@@ -78,6 +78,27 @@ Recommended OpenCode checkout:
 ```
 
 If OpenCode is missing, clone the Birdhouse OpenCode fork first.
+
+## Snapshot-Based Setup
+
+If you already have a known-good isolated dataset snapshot, restore it instead of rebuilding it by hand.
+
+Current example snapshot path:
+
+```bash
+/Users/<user>/dev/<repo>/tmp/full-mode-e2e-snapshot.tar.gz
+```
+
+Restore it with:
+
+```bash
+/absolute/path/to/projects/birdhouse/scripts/restore-external-test-workspace.sh \
+  --archive-path "/absolute/path/to/full-mode-e2e-snapshot.tar.gz" \
+  --server-port 50150 \
+  --trash-existing
+```
+
+Then start the external server again and restart the workspace OpenCode instance if needed.
 
 ## Start The External Birdhouse Server
 
@@ -153,9 +174,9 @@ If another Birdhouse workspace already has working provider config, you can copy
 
 Use these endpoints intentionally:
 
-- Create fresh root agents through `/api/workspace/:workspaceId/agents`
-- Use `/aapi/agents/:id/messages` for reads
-- Use `/aapi/agents/:id/tool-calls/:callId` for drill-down
+- create fresh root agents through `/api/workspace/:workspaceId/agents`
+- use `/aapi/agents/:id/messages` for reads
+- use `/aapi/agents/:id/tool-calls/:callId` for drill-down
 
 Why:
 
@@ -242,7 +263,7 @@ curl -sS "$SERVER/api/workspaces/$WORKSPACE_ID/health"
 
 ## Raw OpenCode Validation
 
-When validating how Birdhouse filters or reshapes messages, it is useful to compare Birdhouse output against raw OpenCode session messages.
+When validating how Birdhouse filters or reshapes messages, compare Birdhouse output against raw OpenCode session messages.
 
 If your workspace OpenCode port is `50160`, the raw message endpoint looks like:
 
@@ -255,7 +276,7 @@ Use this when you need to verify that Birdhouse filtering removed or preserved t
 
 ## Running The Agent Test Suite
 
-The test suite entry point is:
+Use the suite entry point:
 
 ```bash
 projects/birdhouse/agent-test-cases/run-agent-test-suite.md
@@ -279,6 +300,8 @@ Run the suite in your current Birdhouse environment and report the results exact
 You may create or edit the specific temp fixture file required by the read-exchange test under `tmp/read-exchange-test/note.txt` because that is part of the test itself.
 Do not modify unrelated files.
 ```
+
+If your environment already has a restored snapshot that includes a fixed implementation-tree dataset, the suite can validate that richer artifact immediately.
 
 ## Writing A New Agent Test Case
 
@@ -313,6 +336,47 @@ Good candidates for new cases:
 - real implementation-tree comprehension
 - plugin behavior validation after a server/workspace restart
 
+## Refreshing The Snapshot After Building A Better Dataset
+
+When you create a better isolated workspace tree and want future agents to reuse it, archive it.
+
+Example:
+
+```bash
+/absolute/path/to/projects/birdhouse/scripts/archive-external-test-workspace.sh \
+  --workspace-id <workspace_id> \
+  --workspace-dir "/absolute/path/to/test-workspace" \
+  --data-db-path "/absolute/path/to/test-data.db" \
+  --archive-path "/absolute/path/to/test-snapshot.tar.gz" \
+  --server-port 50150
+```
+
+This tar.gz captures:
+
+- the workspace directory
+- the custom Birdhouse data DB
+- SQLite sidecars
+- the app-support workspace folder
+
+If you need to reset before restoring a snapshot, use:
+
+```bash
+/absolute/path/to/projects/birdhouse/scripts/trash-external-test-workspace.sh \
+  --workspace-id <workspace_id> \
+  --workspace-dir "/absolute/path/to/test-workspace" \
+  --data-db-path "/absolute/path/to/test-data.db" \
+  --server-port 50150
+```
+
+Restore the archive later with:
+
+```bash
+/absolute/path/to/projects/birdhouse/scripts/restore-external-test-workspace.sh \
+  --archive-path "/absolute/path/to/test-snapshot.tar.gz" \
+  --server-port 50150 \
+  --trash-existing
+```
+
 ## Plugin Testing Workflow
 
 When working on plugin or read-mode changes:
@@ -336,4 +400,5 @@ When working on plugin or read-mode changes:
 - using `/aapi/agents` for fresh external root-agent creation when `/api/workspace/:workspaceId/agents` is the simpler fit
 - forgetting to seed provider keys before creating real agents
 - forgetting to verify whether `full` and `agent_read_tool_call` actually exist in the environment you are testing
+- rebuilding a valuable implementation-tree dataset by hand when a snapshot tarball already exists
 - using a workspace directory that collides with unrelated test data
