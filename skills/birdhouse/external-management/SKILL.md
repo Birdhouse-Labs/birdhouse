@@ -92,7 +92,7 @@ Current example snapshot path:
 Restore it with:
 
 ```bash
-/absolute/path/to/projects/birdhouse/scripts/restore-external-test-workspace.sh \
+/absolute/path/to/skills/birdhouse/external-management/restore-external-test-workspace.sh \
   --archive-path "/absolute/path/to/full-mode-e2e-snapshot.tar.gz" \
   --server-port 50150 \
   --trash-existing
@@ -343,7 +343,7 @@ When you create a better isolated workspace tree and want future agents to reuse
 Example:
 
 ```bash
-/absolute/path/to/projects/birdhouse/scripts/archive-external-test-workspace.sh \
+/absolute/path/to/skills/birdhouse/external-management/archive-external-test-workspace.sh \
   --workspace-id <workspace_id> \
   --workspace-dir "/absolute/path/to/test-workspace" \
   --data-db-path "/absolute/path/to/test-data.db" \
@@ -361,7 +361,7 @@ This tar.gz captures:
 If you need to reset before restoring a snapshot, use:
 
 ```bash
-/absolute/path/to/projects/birdhouse/scripts/trash-external-test-workspace.sh \
+/absolute/path/to/skills/birdhouse/external-management/trash-external-test-workspace.sh \
   --workspace-id <workspace_id> \
   --workspace-dir "/absolute/path/to/test-workspace" \
   --data-db-path "/absolute/path/to/test-data.db" \
@@ -371,7 +371,7 @@ If you need to reset before restoring a snapshot, use:
 Restore the archive later with:
 
 ```bash
-/absolute/path/to/projects/birdhouse/scripts/restore-external-test-workspace.sh \
+/absolute/path/to/skills/birdhouse/external-management/restore-external-test-workspace.sh \
   --archive-path "/absolute/path/to/test-snapshot.tar.gz" \
   --server-port 50150 \
   --trash-existing
