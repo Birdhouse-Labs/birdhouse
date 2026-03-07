@@ -16,6 +16,15 @@ This validates whether Birdhouse read modes can help an agent understand a reali
 
 This is the strongest of the current test cases for evaluating how well Birdhouse helps an agent understand real work.
 
+## Environment Requirements
+
+- This case assumes the current environment supports:
+  - `agent_read({ ..., full: true })`
+  - `agent_read_tool_call`
+- This case also assumes the fixed dataset agents below still exist.
+
+If the tool surface is missing or the dataset agents are gone, the correct result is `blocked`, not failure by the runner.
+
 ## Dataset
 
 This test uses a specific recorded tree from an isolated Birdhouse environment.

@@ -16,6 +16,18 @@ This validates:
 
 It is designed to compare `last`, `latest_turn`, `full`, and `all` on the same worker.
 
+## Environment Requirements
+
+- Minimum runnable requirements:
+  - `agent_create`
+  - `agent_reply`
+  - `agent_read`
+- Full intended coverage also requires:
+  - `agent_read({ ..., full: true })`
+  - `agent_read_tool_call`
+
+If `full` or `agent_read_tool_call` are missing in your environment, run the case anyway and mark it as `partially runnable`.
+
 ## Procedure
 
 1. Create one child agent named `Read exchange worker`.
