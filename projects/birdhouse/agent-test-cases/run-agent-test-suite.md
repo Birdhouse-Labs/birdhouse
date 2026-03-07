@@ -59,6 +59,8 @@ Use these meanings:
 
 - Requires `agent_create`, `agent_reply`, and `agent_read`
 - Fully validates the intended workflow only if `full` and `agent_read_tool_call` are available
+- This case intentionally creates and edits the fixture file `tmp/read-exchange-test/note.txt`
+- Those writes are allowed because they are the test fixture itself
 - If those are missing, mark the case `partially runnable`
 
 ### `implementation-tree-reading.md`

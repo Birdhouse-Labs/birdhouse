@@ -61,6 +61,9 @@ Use this workspace-relative temp path throughout:
 tmp/read-exchange-test/note.txt
 ```
 
+This file is the test fixture for the case.
+Creating and editing it is intentional and allowed.
+
 ## Step Sequence
 
 Drive the worker through these steps with separate `agent_reply` calls. Wait after each one.
