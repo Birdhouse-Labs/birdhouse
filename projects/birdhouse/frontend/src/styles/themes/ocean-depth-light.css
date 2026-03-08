@@ -18,7 +18,8 @@
     /* Surface colors */
     --theme-surface: oklch(98.4% 0.003 247.9deg);         /* slate-50 */
     --theme-surface-raised: #ffffff;   /* white */
-    --theme-surface-overlay: oklch(96.8% 0.007 247.9deg);  /* slate-100 */
+    --theme-surface-overlay: oklch(94% 0.01 247.9deg);  /* slate-200 */
+    --theme-surface-hover: oklch(89% 0.01 247.9deg);     /* darker slate hover */
     --theme-surface-inset: oklch(92.9% 0.013 255.5deg);    /* slate-200 */
     
     /* Text colors */
@@ -42,9 +43,9 @@
     --theme-glow: oklch(79.7% 0.134 211.5deg / 0.35); /* cyan-400/25 */
     
     /* Background gradient */
-    --theme-bg-from: oklch(98.4% 0.003 247.9deg);         /* slate-50 */
-    --theme-bg-via: oklch(95.1% 0.025 236.8deg);          /* sky-100 */
-    --theme-bg-to: oklch(98.4% 0.003 247.9deg);           /* slate-50 */
+    --theme-bg-from: oklch(88% 0.02 247.9deg);            /* slate-300 */
+    --theme-bg-via: oklch(85% 0.04 236.8deg);             /* sky-300 */
+    --theme-bg-to: oklch(88% 0.02 247.9deg);              /* slate-300 */
     
     /* Prose/typography - legacy tokens */
     --theme-prose-link: oklch(58.8% 0.139 242deg);      /* sky-600 */

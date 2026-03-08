@@ -115,8 +115,9 @@ const AgentTreeItem: Component<AgentTreeItemProps> = (props) => {
               <span
                 class="w-4 h-4 flex items-center justify-center text-[10px] flex-shrink-0"
                 classList={{
-                  "text-text-muted": !props.isSelected,
-                  "text-text-primary": props.isSelected,
+                  "text-text-on-accent": props.node.isActivelyWorking || isMatchedNode(),
+                  "text-text-muted": !props.node.isActivelyWorking && !isMatchedNode() && !props.isSelected,
+                  "text-text-primary": !props.node.isActivelyWorking && !isMatchedNode() && props.isSelected,
                 }}
               >
                 •
@@ -129,8 +130,9 @@ const AgentTreeItem: Component<AgentTreeItemProps> = (props) => {
               classList={{
                 "rotate-0": !props.node.collapsed,
                 "-rotate-90": props.node.collapsed,
-                "text-text-muted": !props.isSelected,
-                "text-text-primary": props.isSelected,
+                "text-text-on-accent": props.node.isActivelyWorking || isMatchedNode(),
+                "text-text-muted": !props.node.isActivelyWorking && !isMatchedNode() && !props.isSelected,
+                "text-text-primary": !props.node.isActivelyWorking && !isMatchedNode() && props.isSelected,
               }}
               onClick={(e) => {
                 e.preventDefault(); // Prevent <a> navigation
@@ -152,8 +154,17 @@ const AgentTreeItem: Component<AgentTreeItemProps> = (props) => {
           <span
             class="text-xs flex-1 min-w-0 truncate"
             classList={{
-              "text-text-primary font-bold": props.isSelected || (isMatchedNode() && !context.flatMode()),
-              "text-text-secondary": !props.isSelected && !(isMatchedNode() && !context.flatMode()),
+              "text-text-on-accent": props.node.isActivelyWorking || isMatchedNode(),
+              "text-text-primary font-bold":
+                !props.node.isActivelyWorking &&
+                !isMatchedNode() &&
+                (props.isSelected || (isMatchedNode() && !context.flatMode())),
+              "text-text-secondary":
+                !props.node.isActivelyWorking &&
+                !isMatchedNode() &&
+                !props.isSelected &&
+                !(isMatchedNode() && !context.flatMode()),
+              "font-bold": props.isSelected || (isMatchedNode() && !context.flatMode()),
             }}
           >
             {props.node.title}
@@ -178,16 +189,16 @@ const AgentTreeItem: Component<AgentTreeItemProps> = (props) => {
 
         @keyframes gradient-pulse {
           0%, 100% {
-            opacity: 0.5;
+            opacity: 1;
           }
           50% {
-            opacity: 0.3;
+            opacity: 0.7;
           }
         }
 
         .working-gradient-pulse .gradient-overlay {
           animation: gradient-pulse 2s ease-in-out infinite;
-          opacity: 0.5;
+          opacity: 1;
         }
 
         .matched-node::before {
@@ -233,6 +244,7 @@ const AgentTreeItem: Component<AgentTreeItemProps> = (props) => {
         clonedFrom={props.node.clonedFrom}
         clonedAt={props.node.clonedAt}
         isSelected={props.isSelected}
+        isGradientActive={props.node.isActivelyWorking || isMatchedNode()}
         sectionDate={sectionDate()}
         onAgentLinkClick={(agentId, metaKey) => {
           if (metaKey) {

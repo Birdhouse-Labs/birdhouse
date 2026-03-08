@@ -92,7 +92,8 @@ describe("ProviderDeleteDialog", () => {
     it("Cancel button has secondary variant styling", () => {
       render(() => <ProviderDeleteDialog {...mockProps} />);
       const cancelButton = screen.getByRole("button", { name: "Cancel" });
-      expect(cancelButton.className).toContain("bg-surface-overlay");
+      expect(cancelButton.className).toContain("bg-surface-raised");
+      expect(cancelButton.className).toContain("border-border-muted");
     });
   });
 

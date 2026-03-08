@@ -33,6 +33,7 @@
   --color-surface: var(--theme-surface);
   --color-surface-raised: var(--theme-surface-raised);
   --color-surface-overlay: var(--theme-surface-overlay);
+  --color-surface-hover: var(--theme-surface-hover);
   --color-surface-inset: var(--theme-surface-inset);
   
   /* Text colors: text-primary, text-secondary, text-on-accent */

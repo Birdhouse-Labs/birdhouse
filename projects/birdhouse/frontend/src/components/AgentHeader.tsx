@@ -297,11 +297,16 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
 
           <button
             type="button"
-            onClick={() => props.onModeChange(props.mode === "build" ? "plan" : "build")}
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onModeChange(props.mode === "build" ? "plan" : "build");
+            }}
             class="relative z-10 flex items-center justify-center w-7 h-7 rounded-lg transition-all"
             classList={{
-              "bg-accent/20 text-accent hover:bg-accent/30": props.mode === "plan",
-              "text-text-secondary hover:bg-surface hover:text-text-primary": props.mode === "build",
+              "bg-accent/20 text-accent hover:bg-accent/30": props.mode === "plan" && !isWorking(),
+              "text-text-secondary hover:bg-surface-overlay hover:text-text-primary":
+                props.mode === "build" && !isWorking(),
+              "!text-text-on-accent hover:bg-white/20": isWorking(),
             }}
             aria-label={`Switch to ${props.mode === "build" ? "plan" : "build"} mode`}
             title={`Current: ${props.mode} mode. Click to switch.`}
@@ -314,10 +319,10 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
             <Popover.Trigger
               as={IconButton}
               icon={<MoreVertical size={16} />}
-              variant="ghost"
+              variant={isWorking() ? "secondary" : "ghost"}
               aria-label="Actions menu"
               fixedSize
-              class={isWorking() ? "!text-text-on-accent" : ""}
+              class={isWorking() ? "!text-text-on-accent !bg-transparent hover:!bg-white/20" : ""}
               data-ph-capture-attribute-button-type="open-agent-actions-menu"
               data-ph-capture-attribute-agent-id={props.agentId}
             />
@@ -465,19 +470,19 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
           z-index: 0;
         }
 
-        /* Working state: Gradient pulses between 50% and 30% opacity */
+        /* Working state: Gradient pulses between 100% and 70% opacity */
         @keyframes gradient-pulse {
           0%, 100% { 
-            opacity: 0.5;
+            opacity: 1;
           }
           50% { 
-            opacity: 0.3;
+            opacity: 0.7;
           }
         }
 
         .working-gradient-pulse .gradient-overlay {
           animation: gradient-pulse 2s ease-in-out infinite;
-          opacity: 0.5;
+          opacity: 1;
         }
 
         /* ===== LAYER 2: Content Wrapper ===== */

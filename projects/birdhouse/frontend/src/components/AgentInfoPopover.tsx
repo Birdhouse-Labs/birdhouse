@@ -20,6 +20,7 @@ export interface AgentInfoPopoverProps {
   clonedFrom: string | null;
   clonedAt: Date | null;
   isSelected: boolean;
+  isGradientActive: boolean;
   sectionDate: Date;
   onAgentLinkClick?: (agentId: string, metaKey: boolean) => void;
 }
@@ -104,10 +105,11 @@ export const AgentInfoPopover: Component<AgentInfoPopoverProps> = (props) => {
       <Popover.Trigger
         as="button"
         type="button"
-        class="text-[10px] flex-shrink-0 hover:text-accent cursor-pointer pr-2"
+        class="text-[10px] flex-shrink-0 cursor-pointer pr-2 relative z-10"
         classList={{
-          "text-text-muted": !props.isSelected,
-          "text-text-primary": props.isSelected,
+          "!text-text-on-accent hover:!text-text-on-accent/70": props.isGradientActive,
+          "text-text-muted hover:text-accent": !props.isGradientActive && !props.isSelected,
+          "text-text-primary hover:text-accent": !props.isGradientActive && props.isSelected,
         }}
         aria-label="Show agent info"
       >
