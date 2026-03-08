@@ -195,7 +195,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       };
 
       const { error } = await supabaseClient
-        .from("waitlist")
+        .from("mailing_list")
         .insert(data);
 
       if (error) {
