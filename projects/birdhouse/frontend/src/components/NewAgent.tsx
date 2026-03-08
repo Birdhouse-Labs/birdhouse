@@ -17,6 +17,14 @@ const STORAGE_KEY = "birdhouse:last-selected-model";
 const NEW_AGENT_DRAFT_KEY = "birdhouse:new-agent-draft";
 const DRAFT_BACKUP_PREFIX = "birdhouse:draft-backup-";
 
+// Provider priority for model ordering (lower index = higher priority)
+const PROVIDER_PRIORITY: Record<string, number> = {
+  anthropic: 0,
+  openai: 1,
+};
+
+const getProviderPriority = (provider: string): number => PROVIDER_PRIORITY[provider] ?? 2;
+
 const modelToOption = (model: Model): ComboboxOption<string> => ({
   value: model.id,
   label: model.name,
@@ -102,8 +110,11 @@ const NewAgent: Component = () => {
     }
   });
 
-  // Get available models or fallback to empty array
-  const availableModels = () => models() || [];
+  // Get available models sorted by provider priority (Anthropic, OpenAI, then others)
+  const availableModels = createMemo(() => {
+    const list = models() || [];
+    return [...list].sort((a, b) => getProviderPriority(a.provider) - getProviderPriority(b.provider));
+  });
 
   // Map of model id → model for the custom render function
   const modelMap = createMemo(() => {
@@ -112,6 +123,13 @@ const NewAgent: Component = () => {
     return map;
   });
   const renderModelOption = createMemo(() => makeModelRenderOption(modelMap()));
+
+  // Display value shown in the closed combobox input (includes provider name for disambiguation)
+  const modelDisplayValue = createMemo(() => {
+    const model = modelMap().get(selectedModelId());
+    if (!model) return undefined;
+    return `${model.provider} / ${model.name}`;
+  });
 
   // Set default model once models load
   createEffect(() => {
@@ -209,6 +227,7 @@ const NewAgent: Component = () => {
             onSelect={setSelectedModelId}
             placeholder={models.loading ? "Loading models..." : "Select a model..."}
             renderOption={renderModelOption()}
+            displayValue={modelDisplayValue()}
           />
         </div>
 

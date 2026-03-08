@@ -24,6 +24,8 @@ export interface ComboboxProps<T = unknown> {
   placeholder?: string;
   filterFn?: (option: ComboboxOption<T>, query: string) => boolean;
   renderOption?: ComboboxRenderFn<T>;
+  // Overrides the label shown in the input when the dropdown is closed
+  displayValue?: string | undefined;
   class?: string;
   inputClass?: string;
   dropdownClass?: string;
@@ -72,9 +74,9 @@ export const Combobox = <T,>(props: ComboboxProps<T>) => {
 
   // Initialize inputValue with current selection (prevents flash on first open)
   const initialDisplayValue = () => {
-    if (!props.value) return "";
+    if (!props.value) return props.displayValue || "";
     const option = props.options.find((opt) => opt.value === props.value);
-    return option?.label || "";
+    return props.displayValue || option?.label || "";
   };
   const [inputValue, setInputValue] = createSignal(initialDisplayValue());
 
@@ -92,6 +94,7 @@ export const Combobox = <T,>(props: ComboboxProps<T>) => {
   });
 
   // Find display value for a given value (or committed if not specified)
+  // Returns just the option label (used for typeahead matching while focused)
   const getDisplayValueFor = (value?: T) => {
     const targetValue = value ?? committedValue();
     if (!targetValue) return "";
@@ -99,8 +102,11 @@ export const Combobox = <T,>(props: ComboboxProps<T>) => {
     return option?.label || "";
   };
 
-  // Find initial display value
-  const getDisplayValue = () => getDisplayValueFor(props.value);
+  // Returns the label shown in the input when blurred (may be overridden by displayValue prop)
+  const getDisplayValue = () => props.displayValue || getDisplayValueFor(props.value);
+
+  // Returns the plain option label used when focused/searching (ignores displayValue override)
+  const getLabelValue = () => getDisplayValueFor(props.value);
 
   // Initialize input with current value when blurred
   createEffect(() => {
@@ -345,6 +351,8 @@ export const Combobox = <T,>(props: ComboboxProps<T>) => {
         onInput={handleInput}
         onKeyDown={handleKeyDown}
         onFocus={(e) => {
+          // Reset to plain label (not displayValue override) so typeahead matches correctly
+          setInputValue(getLabelValue());
           setIsFocused(true);
           setHighlightedIndex(findCurrentIndex()); // Set index FIRST before dropdown shows
           setShowDropdown(true); // Then show dropdown
