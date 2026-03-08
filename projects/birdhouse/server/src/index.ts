@@ -12,6 +12,7 @@ import { DATA_DIR, getDataDB, initDataDB } from "./lib/data-db";
 import { log, rootLogger } from "./lib/logger";
 import { OpenCodeManager } from "./lib/opencode-manager";
 import { initPatternGroupsPersistence } from "./lib/pattern-groups-db";
+import { warmRecentWorkspacesInBackground } from "./lib/startup-warmup";
 import { createAAPIMiddleware } from "./middleware/aapi";
 import { createWorkspaceMiddleware } from "./middleware/workspace";
 import { createAAPIAgentRoutes } from "./routes/aapi-agents";
@@ -282,6 +283,7 @@ app.onError((err, c) => {
 
 // Start server
 log.server.info({ port: PORT }, "Birdhouse Server started");
+warmRecentWorkspacesInBackground(dataDb, opencodeManager);
 
 export default {
   port: PORT,
