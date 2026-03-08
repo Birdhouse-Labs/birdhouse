@@ -45,6 +45,7 @@ export function createEventRoutes() {
       // We attempt translation on ALL events, but only log warnings for these specific events
       const EVENTS_EXPECTING_AGENT_ID = new Set([
         "message.part.updated",
+        "message.part.delta",
         "message.updated",
         "message.removed",
         "session.idle",
@@ -87,6 +88,7 @@ export function createEventRoutes() {
 
         // Pattern 4: Nested in part.sessionID (message part events)
         // Used by: message.part.updated, message.part.removed
+        // Note: message.part.delta has sessionID at top level (Pattern 1), so it never reaches here
         if (eventType.startsWith("message.part.")) {
           const part = properties.part as { sessionID?: string } | undefined;
           if (part?.sessionID) return part.sessionID;

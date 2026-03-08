@@ -4,8 +4,8 @@
 import type { AssistantMessage, UserMessage } from "@opencode-ai/sdk";
 import { createStore } from "solid-js/store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Message, ToolBlock } from "../types/messages";
-import { handlePartUpdate, type StreamingPart } from "./message-updates";
+import type { Message, TextBlock, ToolBlock } from "../types/messages";
+import { handlePartDelta, handlePartUpdate, type StreamingPart, type StreamingPartDelta } from "./message-updates";
 
 /**
  * Helper to create mock OpenCode message info for tests
@@ -354,5 +354,101 @@ describe("handlePartUpdate - race condition handling", () => {
     handlePartUpdate(event, messages, setMessages);
 
     expect(messages[0]?.blocks).toHaveLength(0);
+  });
+});
+
+describe("handlePartDelta - incremental text streaming", () => {
+  it("appends delta text to an existing text block", () => {
+    const [messages, setMessages] = createStore<Message[]>([
+      {
+        id: "msg_1",
+        role: "assistant",
+        content: "Hello",
+        blocks: [{ id: "part_text", type: "text", content: "Hello", isStreaming: true }],
+        timestamp: new Date(),
+        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+      },
+    ]);
+
+    const delta: StreamingPartDelta = {
+      sessionID: "session_1",
+      messageID: "msg_1",
+      partID: "part_text",
+      field: "text",
+      delta: ", world",
+    };
+
+    handlePartDelta(delta, messages, setMessages);
+
+    const block = messages[0]?.blocks?.[0] as TextBlock;
+    expect(block.content).toBe("Hello, world");
+  });
+
+  it("is a no-op when the message does not exist", () => {
+    const [messages, setMessages] = createStore<Message[]>([]);
+
+    const delta: StreamingPartDelta = {
+      sessionID: "session_1",
+      messageID: "msg_nonexistent",
+      partID: "part_text",
+      field: "text",
+      delta: "hello",
+    };
+
+    // Should not throw
+    expect(() => handlePartDelta(delta, messages, setMessages)).not.toThrow();
+    expect(messages).toHaveLength(0);
+  });
+
+  it("is a no-op when the block does not exist yet", () => {
+    const [messages, setMessages] = createStore<Message[]>([
+      {
+        id: "msg_1",
+        role: "assistant",
+        content: "",
+        blocks: [],
+        timestamp: new Date(),
+        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+      },
+    ]);
+
+    const delta: StreamingPartDelta = {
+      sessionID: "session_1",
+      messageID: "msg_1",
+      partID: "part_unknown",
+      field: "text",
+      delta: "hello",
+    };
+
+    handlePartDelta(delta, messages, setMessages);
+
+    // Block doesn't exist yet — delta is dropped until message.part.updated creates it
+    expect(messages[0]?.blocks).toHaveLength(0);
+  });
+
+  it("only applies deltas to the 'text' field (ignores other fields)", () => {
+    const [messages, setMessages] = createStore<Message[]>([
+      {
+        id: "msg_1",
+        role: "assistant",
+        content: "Hello",
+        blocks: [{ id: "part_text", type: "text", content: "Hello", isStreaming: true }],
+        timestamp: new Date(),
+        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+      },
+    ]);
+
+    const delta: StreamingPartDelta = {
+      sessionID: "session_1",
+      messageID: "msg_1",
+      partID: "part_text",
+      field: "someOtherField",
+      delta: "ignored",
+    };
+
+    handlePartDelta(delta, messages, setMessages);
+
+    const block = messages[0]?.blocks?.[0] as TextBlock;
+    expect(block.content).toBe("Hello");
   });
 });

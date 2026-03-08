@@ -8,7 +8,7 @@ import type { EventType } from "../../../server/src/types/agent-events";
 import { API_ENDPOINT_BASE } from "../config/api";
 import { type SessionStatus, useStreaming } from "../contexts/StreamingContext";
 import { useWorkspace } from "../contexts/WorkspaceContext";
-import { handlePartUpdate } from "../domain/message-updates";
+import { handlePartDelta, handlePartUpdate } from "../domain/message-updates";
 
 import { log } from "../lib/logger";
 import {
@@ -324,9 +324,14 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
       }
     });
 
-    // Subscribe to part updates
+    // Subscribe to part updates (full part on create/complete)
     const unsubscribeParts = streaming.subscribeToPartUpdates(props.agentId, (part) => {
       handlePartUpdate(part, messagesStore, setMessages);
+    });
+
+    // Subscribe to part deltas (incremental text during streaming)
+    const unsubscribeDeltas = streaming.subscribeToPartDeltas(props.agentId, (delta) => {
+      handlePartDelta(delta, messagesStore, setMessages);
     });
 
     // Subscribe to agent idle (streaming complete)
@@ -414,6 +419,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     onCleanup(() => {
       unsubscribeMessages();
       unsubscribeParts();
+      unsubscribeDeltas();
       unsubscribeError();
       unsubscribeEvents();
       unsubscribeAgentUpdates();

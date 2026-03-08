@@ -30,6 +30,18 @@ interface ServerEvent {
 export type PartUpdateHandler = (part: StreamingPart) => void;
 
 /**
+ * Handler function for streaming part deltas (incremental text during streaming)
+ */
+export type PartDeltaHandler = (delta: {
+  sessionID: string;
+  messageID: string;
+  partID: string;
+  field: string;
+  delta: string;
+  agentId?: string;
+}) => void;
+
+/**
  * Handler function for message updates (full message with role)
  */
 export type MessageUpdateHandler = (message: { info: OpencodeMessage }) => void;
@@ -207,6 +219,13 @@ interface StreamingContextValue {
   subscribeToPartUpdates: (agentId: string, handler: PartUpdateHandler) => () => void;
 
   /**
+   * Subscribe to part delta events for a specific agent
+   * Fires for every incremental text chunk during streaming (message.part.delta)
+   * @returns Cleanup function to unsubscribe
+   */
+  subscribeToPartDeltas: (agentId: string, handler: PartDeltaHandler) => () => void;
+
+  /**
    * Subscribe to agent idle events for a specific agent
    * @returns Cleanup function to unsubscribe
    */
@@ -343,6 +362,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
   const sessionUpdateHandlers = new Map<string, Set<SessionUpdateHandler>>();
   const messageRemovedHandlers = new Map<string, Set<MessageRemovedHandler>>();
   const partUpdateHandlers = new Map<string, Set<PartUpdateHandler>>();
+  const partDeltaHandlers = new Map<string, Set<PartDeltaHandler>>();
   const agentIdleHandlers = new Map<string, Set<AgentIdleHandler>>();
   const agentErrorHandlers = new Map<string, Set<AgentErrorHandler>>();
   const sessionStatusHandlers = new Map<string, Set<SessionStatusHandler>>();
@@ -472,6 +492,29 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     if (handlers) {
       for (const handler of handlers) {
         handler(part);
+      }
+    }
+  };
+
+  const handlePartDelta = (properties: Record<string, unknown>) => {
+    const deltaData = properties as {
+      sessionID: string;
+      messageID: string;
+      partID: string;
+      field: string;
+      delta: string;
+      agentId?: string;
+    };
+
+    if (!deltaData.agentId) {
+      // Event from non-Birdhouse agent - silently ignore
+      return;
+    }
+
+    const handlers = partDeltaHandlers.get(deltaData.agentId);
+    if (handlers) {
+      for (const handler of handlers) {
+        handler(deltaData);
       }
     }
   };
@@ -803,6 +846,9 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
         case "message.part.updated":
           handlePartUpdate(serverEvent.properties);
           break;
+        case "message.part.delta":
+          handlePartDelta(serverEvent.properties);
+          break;
         case "session.idle":
           handleAgentIdle(serverEvent.properties);
           break;
@@ -901,6 +947,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     sessionUpdateHandlers.clear();
     messageRemovedHandlers.clear();
     partUpdateHandlers.clear();
+    partDeltaHandlers.clear();
     agentIdleHandlers.clear();
     agentErrorHandlers.clear();
     sessionCreatedHandlers.clear();
@@ -998,6 +1045,26 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
         handlers.delete(handler);
         if (handlers.size === 0) {
           partUpdateHandlers.delete(agentId);
+        }
+      }
+    };
+  };
+
+  /**
+   * Subscribe to part delta events for an agent
+   */
+  const subscribeToPartDeltas = (agentId: string, handler: PartDeltaHandler): (() => void) => {
+    if (!partDeltaHandlers.has(agentId)) {
+      partDeltaHandlers.set(agentId, new Set());
+    }
+    partDeltaHandlers.get(agentId)?.add(handler);
+
+    return () => {
+      const handlers = partDeltaHandlers.get(agentId);
+      if (handlers) {
+        handlers.delete(handler);
+        if (handlers.size === 0) {
+          partDeltaHandlers.delete(agentId);
         }
       }
     };
@@ -1220,6 +1287,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     subscribeToSessionUpdates,
     subscribeToMessageRemoved,
     subscribeToPartUpdates,
+    subscribeToPartDeltas,
     subscribeToAgentIdle,
     subscribeToAllAgentIdle,
     subscribeToAgentError,
