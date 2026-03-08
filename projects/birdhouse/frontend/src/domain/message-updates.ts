@@ -2,7 +2,7 @@
 // ABOUTME: Find-or-create pattern for messages and blocks with stable part IDs
 
 import type { SetStoreFunction } from "solid-js/store";
-import { reconcile } from "solid-js/store";
+import { produce, reconcile } from "solid-js/store";
 import { log } from "../lib/logger";
 import type { ContentBlock, Message } from "../types/messages";
 
@@ -193,11 +193,19 @@ export function handlePartDelta(
   const block = message.blocks?.[blockIndex];
   if (!block || (block.type !== "text" && block.type !== "reasoning")) return;
 
-  // Append delta to block content
-  setMessages(msgIndex, "blocks", blockIndex, "content", (prev: string) => (prev ?? "") + delta.delta);
+  // Use produce to mutate through the union type — the deep path setter
+  // can't resolve "content" as valid across all ContentBlock variants
+  setMessages(
+    produce((draft) => {
+      const draftBlock = draft[msgIndex]?.blocks?.[blockIndex];
+      if (!draftBlock || (draftBlock.type !== "text" && draftBlock.type !== "reasoning")) return;
+      draftBlock.content = (draftBlock.content ?? "") + delta.delta;
 
-  // Keep message-level content field in sync
-  setMessages(msgIndex, "content", (prev: string) => (prev ?? "") + delta.delta);
+      // Keep message-level content field in sync
+      const msg = draft[msgIndex];
+      if (msg) msg.content = (msg.content ?? "") + delta.delta;
+    }),
+  );
 }
 
 /**
