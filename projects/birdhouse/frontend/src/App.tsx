@@ -31,7 +31,12 @@ const ProfileRedirect: Component<{ children: JSX.Element }> = (props) => {
     const profileLoaded = !profile.error && profile() !== undefined;
     const hasName = profileLoaded && !!profile()?.name;
 
-    log.ui.info("ProfileRedirect effect running", { hasName, profileLoaded, pathname: location.pathname, loading: profile.loading });
+    log.ui.info("ProfileRedirect effect running", {
+      hasName,
+      profileLoaded,
+      pathname: location.pathname,
+      loading: profile.loading,
+    });
 
     // Already on the profile page and name is now set — redirect back
     if (isProfilePage && hasName) {
