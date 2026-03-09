@@ -9,6 +9,7 @@ import { createEffect, createMemo, createResource, createSignal, For, Show } fro
 import MarkdownRenderer from "../../components/MarkdownRenderer";
 import { Button } from "../../components/ui";
 import { serializeModalStack, useModalRoute, useWorkspaceId } from "../../lib/routing";
+import { normalizeBundleDisplayCopy } from "../../patterns/utils/patternUiCopy";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
 import { type BundleAPI, type BundleAPIMetadata, fetchBundle, fetchBundles } from "./bundles-api";
 
@@ -16,7 +17,7 @@ export const metadata = {
   id: "01",
   title: "Bundle-First Marketplace (VS Code Style)",
   description:
-    "Patterns organized into installable bundles (like VS Code extensions). Features bundle-level install, scope selection (user/workspace), and split-panel browsing.",
+    "Skills organized into installable bundles (like VS Code extensions). Features bundle-level install, scope selection (user/workspace), and split-panel browsing.",
   date: "2025-02-23",
 };
 
@@ -46,26 +47,32 @@ interface PatternBundle {
  * Convert API bundle metadata to UI bundle type
  */
 function adaptBundleMetadata(apiBundles: BundleAPIMetadata[]): PatternBundle[] {
-  return apiBundles.map((bundle) => ({
-    id: bundle.id,
-    name: bundle.name,
-    type: bundle.type,
-    description: bundle.description,
-    installed: bundle.installed,
-    patternCount: bundle.pattern_count,
-    patterns: [], // Will be loaded when bundle is selected
-  }));
+  return apiBundles.map((bundle) => {
+    const displayBundle = normalizeBundleDisplayCopy(bundle);
+
+    return {
+      id: bundle.id,
+      name: displayBundle.name,
+      type: bundle.type,
+      description: displayBundle.description,
+      installed: bundle.installed,
+      patternCount: bundle.pattern_count,
+      patterns: [], // Will be loaded when bundle is selected
+    };
+  });
 }
 
 /**
  * Convert API bundle with patterns to UI bundle type
  */
 function adaptBundleWithPatterns(apiBundle: BundleAPI): PatternBundle {
+  const displayBundle = normalizeBundleDisplayCopy(apiBundle);
+
   return {
     id: apiBundle.id,
-    name: apiBundle.name,
+    name: displayBundle.name,
     type: apiBundle.type,
-    description: apiBundle.description,
+    description: displayBundle.description,
     installed: apiBundle.installed,
     patternCount: apiBundle.pattern_count,
     patterns: apiBundle.patterns.map((p) => ({
@@ -88,7 +95,7 @@ const MOCK_BUNDLES_FALLBACK: PatternBundle[] = [
     name: "Birdhouse Core",
     type: "marketplace",
     description:
-      "Essential patterns for agent orchestration and collaboration. Covers delegation strategies, pattern creation workflows, inter-agent communication, and testing delegation patterns.",
+      "Essential skills for agent orchestration and collaboration. Covers delegation strategies, skill creation workflows, inter-agent communication, and testing delegation patterns.",
     installed: true,
     patternCount: 4,
     patterns: [
@@ -119,12 +126,12 @@ When delegating work to child agents, follow these principles:
       },
       {
         id: "pattern-creation",
-        title: "Creating New Patterns",
+        title: "Creating New Skills",
         description:
-          "Step-by-step guide for creating patterns in the Birdhouse system. Covers directory structure, metadata, and testing.",
-        prompt: `# Creating New Patterns
+          "Step-by-step guide for creating skills in the Birdhouse system. Covers directory structure, metadata, and testing.",
+        prompt: `# Creating New Skills
 
-Patterns are reusable prompt templates stored in your workspace.
+Skills are reusable prompt templates stored in your workspace.
 
 ## Structure
 \`\`\`
@@ -146,13 +153,13 @@ patterns/
 \`\`\`
 
 ## Testing
-Test your pattern by using a trigger phrase in a conversation.`,
+Test your skill by using a trigger phrase in a conversation.`,
         triggerPhrases: ["create a pattern", "add a new pattern", "pattern template"],
       },
       {
         id: "inter-agent-comms",
         title: "Inter-Agent Communication",
-        description: "Patterns for agents communicating and collaborating across the tree hierarchy.",
+        description: "Skills for agents communicating and collaborating across the tree hierarchy.",
         prompt: `# Inter-Agent Communication
 
 You're part of a team. Use the agent tree to collaborate effectively.
@@ -178,7 +185,7 @@ Use \`agent_tree()\` to see:
       {
         id: "testing-workflow",
         title: "Testing Workflow Delegation",
-        description: "Pattern for delegating test writing to keep implementation context clean.",
+        description: "Skill for delegating test writing to keep implementation context clean.",
         prompt: `# Testing Workflow Delegation
 
 Keep implementation and testing concerns separate by delegating test writing.
@@ -208,7 +215,7 @@ Keep implementation and testing concerns separate by delegating test writing.
     name: "Git & GitHub",
     type: "marketplace",
     description:
-      "Comprehensive patterns for version control workflows. Includes commit message guidelines, pull request best practices, branch management strategies, and code review processes.",
+      "Comprehensive skills for version control workflows. Includes commit message guidelines, pull request best practices, branch management strategies, and code review processes.",
     installed: false,
     patternCount: 3,
     patterns: [
@@ -564,7 +571,7 @@ const Experiment01: Component = () => {
         <Button variant="primary" onClick={() => openModal("pattern-library", "demo")}>
           <span class="flex items-center gap-2 whitespace-nowrap">
             <LibraryBig size={16} />
-            Pattern Library
+            Skills Library
           </span>
         </Button>
       </div>
@@ -590,7 +597,7 @@ const Experiment01: Component = () => {
             <div class="flex items-center justify-between px-6 py-3 border-b border-border flex-shrink-0">
               <Dialog.Label class="text-lg font-semibold text-heading flex items-center gap-2">
                 <LibraryBig size={18} />
-                Pattern Library
+                Skills Library
               </Dialog.Label>
 
               <Dialog.Close class="text-text-muted hover:text-text-primary transition-colors">
@@ -647,7 +654,7 @@ const Experiment01: Component = () => {
                     <Search size={14} class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
                     <input
                       type="text"
-                      placeholder="Search patterns..."
+                      placeholder="Search skills..."
                       value={searchQuery()}
                       onInput={(e) => setSearchQuery(e.currentTarget.value)}
                       class="w-full pl-9 pr-3 py-2 text-sm bg-surface border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent text-text-primary placeholder-text-muted"
@@ -696,7 +703,9 @@ const Experiment01: Component = () => {
                             <div class="flex items-start justify-between gap-3 mb-2">
                               <h3 class="text-sm font-semibold text-heading">{bundle.name}</h3>
                               <div class="flex items-center gap-2 flex-shrink-0">
-                                <span class="text-xs text-text-muted">{bundle.patternCount} patterns</span>
+                                <span class="text-xs text-text-muted">
+                                  {bundle.patternCount} {bundle.patternCount === 1 ? "skill" : "skills"}
+                                </span>
                                 <Show when={bundle.installed}>
                                   <span class="text-xs text-green-500">✓</span>
                                 </Show>
@@ -731,7 +740,9 @@ const Experiment01: Component = () => {
                             <div class="flex items-start justify-between gap-3 mb-2">
                               <h3 class="text-sm font-semibold text-heading">{bundle.name}</h3>
                               <div class="flex items-center gap-2 flex-shrink-0">
-                                <span class="text-xs text-text-muted">{bundle.patternCount} patterns</span>
+                                <span class="text-xs text-text-muted">
+                                  {bundle.patternCount} {bundle.patternCount === 1 ? "skill" : "skills"}
+                                </span>
                                 <Show when={bundle.installed}>
                                   <span class="text-xs text-green-500">✓</span>
                                 </Show>
@@ -761,7 +772,7 @@ const Experiment01: Component = () => {
                     <div class="flex items-center justify-center h-full text-center px-4">
                       <div class="space-y-2">
                         <p class="text-lg text-text-primary">← Choose a bundle from the library</p>
-                        <p class="text-sm text-text-muted">Select a bundle to view its patterns</p>
+                        <p class="text-sm text-text-muted">Select a bundle to view its skills</p>
                       </div>
                     </div>
                   }
@@ -773,7 +784,9 @@ const Experiment01: Component = () => {
                         <div class="flex items-start justify-between gap-4">
                           <div class="flex-1">
                             <h2 class="text-xl font-semibold text-heading mb-1">{bundle().name}</h2>
-                            <p class="text-sm text-text-secondary">{bundle().patternCount} patterns</p>
+                            <p class="text-sm text-text-secondary">
+                              {bundle().patternCount} {bundle().patternCount === 1 ? "skill" : "skills"}
+                            </p>
                           </div>
 
                           {/* Install/Uninstall Button (Marketplace only) */}
@@ -805,7 +818,7 @@ const Experiment01: Component = () => {
 
                         {/* Patterns List */}
                         <section>
-                          <h3 class="text-sm font-semibold text-heading mb-3">Patterns</h3>
+                          <h3 class="text-sm font-semibold text-heading mb-3">Skills</h3>
                           <div class="space-y-2">
                             <For each={bundle().patterns}>
                               {(pattern) => (

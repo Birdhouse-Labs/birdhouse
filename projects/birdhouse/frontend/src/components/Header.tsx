@@ -201,8 +201,8 @@ const Header: Component<HeaderProps> = (props) => {
           type="button"
           onClick={() => openModal("pattern-library-v2", "main")}
           class="flex items-center justify-center p-2 rounded-lg transition-all hover:bg-surface-overlay text-text-secondary"
-          aria-label="Browse patterns"
-          title="Browse patterns"
+          aria-label="Browse skills"
+          title="Browse skills"
           data-ph-capture-attribute-button-type="open-patterns-dialog"
           data-ph-capture-attribute-workspace-id={workspaceId()}
         >

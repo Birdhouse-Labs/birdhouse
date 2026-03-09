@@ -325,12 +325,12 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
                     "text-accent": sidebarOpen(),
                     "text-text-secondary": !sidebarOpen(),
                   }}
-                  aria-label="Toggle pattern library"
+                  aria-label="Toggle skills library"
                 >
                   <Menu size={20} />
                 </button>
               </Show>
-              <Dialog.Label class="text-lg font-semibold text-heading">Pattern Library</Dialog.Label>
+              <Dialog.Label class="text-lg font-semibold text-heading">Skills Library</Dialog.Label>
             </div>
 
             {/* Right: Close */}
@@ -444,7 +444,7 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
 
                     {/* Resizable Handle */}
                     <Resizable.Handle
-                      aria-label="Resize pattern groups panel"
+                      aria-label="Resize skill groups panel"
                       class="w-4 cursor-col-resize flex items-center justify-center group"
                     >
                       <div class="w-1 h-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />

@@ -29,7 +29,7 @@ const PatternCard: Component<PatternCardProps> = (props) => {
             type="button"
             onClick={() => props.onPreview(props.pattern.id)}
             class="text-text-muted hover:text-accent transition-colors"
-            aria-label="Preview pattern"
+            aria-label="Preview skill"
           >
             <Eye size={16} />
           </button>

@@ -337,7 +337,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
           <Show when={patternIds().length > 0}>
             <div class="flex justify-end mt-2 mb-1">
               <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setPatternDialogOpen(true)}>
-                {patternIds().length} {patternIds().length === 1 ? "pattern" : "patterns"} attached
+                {patternIds().length} {patternIds().length === 1 ? "skill" : "skills"} attached
               </Button>
             </div>
           </Show>
@@ -401,7 +401,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
           <Show when={patternIds().length > 0}>
             <div class="flex justify-start mt-2 mb-1">
               <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setPatternDialogOpen(true)}>
-                {patternIds().length} {patternIds().length === 1 ? "pattern" : "patterns"} attached
+                {patternIds().length} {patternIds().length === 1 ? "skill" : "skills"} attached
               </Button>
             </div>
           </Show>

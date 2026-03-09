@@ -219,14 +219,14 @@ export const PatternReferencesDialog: Component<PatternReferencesDialogProps> = 
                     <Show when={selectedPatternData.loading}>
                       <div class="text-center space-y-2">
                         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
-                        <div class="text-text-muted text-sm">Loading pattern...</div>
+                        <div class="text-text-muted text-sm">Loading skill...</div>
                       </div>
                     </Show>
 
                     {/* Error State */}
                     <Show when={selectedPatternData.error}>
                       <div class="text-center space-y-4">
-                        <div class="text-red-500 font-medium text-lg">Pattern Not Found</div>
+                        <div class="text-red-500 font-medium text-lg">Skill Not Found</div>
                         <div class="text-text-muted">The skill "{selectedPatternId()}" could not be loaded.</div>
 
                         {/* Context-aware actions */}

@@ -49,7 +49,7 @@ const PatternFormModal: Component<PatternFormModalProps> = (props) => {
       await props.onDelete?.();
       props.onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete pattern");
+      setError(err instanceof Error ? err.message : "Failed to delete skill");
     } finally {
       setIsDeleting(false);
       setConfirmingDelete(false);
@@ -163,7 +163,7 @@ const PatternFormModal: Component<PatternFormModalProps> = (props) => {
       });
       props.onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save pattern");
+      setError(err instanceof Error ? err.message : "Failed to save skill");
     } finally {
       setIsSaving(false);
     }
@@ -221,7 +221,7 @@ const PatternFormModal: Component<PatternFormModalProps> = (props) => {
           {/* Header */}
           <div class="px-6 py-3 border-b bg-surface-raised border-border flex-shrink-0 flex items-center justify-between">
             <Dialog.Label class="text-lg font-semibold text-heading">
-              {props.mode === "create" ? "Create Pattern" : "Edit Pattern"}
+              {props.mode === "create" ? "Create Skill" : "Edit Skill"}
             </Dialog.Label>
             <Dialog.Close class="text-text-muted hover:text-text-primary transition-colors">
               <X size={20} />
@@ -244,7 +244,7 @@ const PatternFormModal: Component<PatternFormModalProps> = (props) => {
                 type="text"
                 value={title()}
                 onInput={(e) => setTitle(e.currentTarget.value)}
-                placeholder="Pattern title"
+                placeholder="Skill title"
                 disabled={isReadonly()}
                 class="w-full px-4 py-3 bg-surface text-text-primary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
@@ -346,7 +346,7 @@ const PatternFormModal: Component<PatternFormModalProps> = (props) => {
             {/* Readonly Notice */}
             <Show when={isReadonly()}>
               <div class="text-sm text-text-muted italic">
-                This is a bundled pattern. Only trigger phrases can be edited.
+                This is a bundled skill. Only trigger phrases can be edited.
               </div>
             </Show>
 
@@ -355,12 +355,12 @@ const PatternFormModal: Component<PatternFormModalProps> = (props) => {
               <div class="border border-danger/30 rounded-lg p-4 space-y-3">
                 <h3 class="text-sm font-semibold text-danger">Danger Zone</h3>
                 <div class="flex items-center justify-between gap-4">
-                  <p class="text-sm text-text-secondary">Permanently delete this pattern. This cannot be undone.</p>
+                  <p class="text-sm text-text-secondary">Permanently delete this skill. This cannot be undone.</p>
                   <Show
                     when={confirmingDelete()}
                     fallback={
                       <Button variant="danger" onClick={handleDelete} disabled={isDeleting()}>
-                        Delete Pattern
+                        Delete Skill
                       </Button>
                     }
                   >
@@ -386,7 +386,7 @@ const PatternFormModal: Component<PatternFormModalProps> = (props) => {
             </Button>
             <Show when={!isReadonly()}>
               <Button variant="primary" onClick={handleSave} disabled={isSaving()}>
-                {isSaving() ? "Saving..." : props.mode === "create" ? "Create Pattern" : "Save Changes"}
+                {isSaving() ? "Saving..." : props.mode === "create" ? "Create Skill" : "Save Changes"}
               </Button>
             </Show>
           </div>

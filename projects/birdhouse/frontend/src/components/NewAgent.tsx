@@ -275,7 +275,7 @@ const NewAgent: Component = () => {
             when={patternCount() > 0}
             fallback={
               <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} class="invisible">
-                Launching with 1 pattern
+                Launching with 1 skill
               </Button>
             }
           >
@@ -285,7 +285,7 @@ const NewAgent: Component = () => {
               onClick={() => setPatternDialogOpen(true)}
               data-ph-reveal
             >
-              Launching with {patternCount()} {patternCount() === 1 ? "pattern" : "patterns"}
+              Launching with {patternCount()} {patternCount() === 1 ? "skill" : "skills"}
             </Button>
           </Show>
         </div>

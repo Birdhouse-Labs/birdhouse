@@ -9,9 +9,9 @@ import PatternLibraryDialog from "./components/PatternLibraryDialog";
 
 export const metadata = {
   id: "02",
-  title: "Group-First Pattern Library (Production Structure)",
+  title: "Group-First Skills Library (Production Structure)",
   description:
-    "Patterns organized into groups and sections (user, workspace, bundled). Features collapsible sections, nested modals for view/edit, and full CRUD operations. Structured for production deployment.",
+    "Skills organized into groups and sections (user, workspace, bundled). Features collapsible sections, nested modals for view/edit, and full CRUD operations. Structured for production deployment.",
   date: "2025-02-23",
 };
 
@@ -30,7 +30,7 @@ const Experiment02: Component = () => {
         <Button variant="primary" onClick={handleOpenLibrary}>
           <span class="flex items-center gap-2 whitespace-nowrap">
             <LibraryBig size={16} />
-            Pattern Library
+            Skills Library
           </span>
         </Button>
       </div>
