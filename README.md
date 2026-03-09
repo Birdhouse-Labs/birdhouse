@@ -30,7 +30,7 @@ We don't have a built-in text editor. We don't have a built-in terminal. We have
 **macOS only** (Apple Silicon and Intel). Requires no runtime — just run the one-liner:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/birdhouselabs/birdhouse/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/birdhouse-labs/birdhouse/main/install.sh | bash
 ```
 
 This downloads the latest release from GitHub, verifies the SHA256 checksum, extracts to `~/.birdhouse/`, and adds `~/.birdhouse/bin` to your shell profile. You can [read the install script](install.sh) before running it.
