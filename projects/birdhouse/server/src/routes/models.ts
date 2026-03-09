@@ -35,6 +35,11 @@ export function createModelRoutes() {
       const data = (await response.json()) as { providers: Provider[] };
       const providers: Provider[] = data.providers || [];
 
+      // Sort providers so Anthropic and OpenAI appear first
+      const PROVIDER_PRIORITY: Record<string, number> = { anthropic: 0, openai: 1 };
+      const getPriority = (id: string) => PROVIDER_PRIORITY[id] ?? 2;
+      providers.sort((a, b) => getPriority(a.id) - getPriority(b.id));
+
       // Transform to simple model list
       const models: Model[] = [];
       for (const provider of providers) {
