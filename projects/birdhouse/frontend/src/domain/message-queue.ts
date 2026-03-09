@@ -6,24 +6,26 @@ import type { Message } from "../types/messages";
 /**
  * Find the ID of the pending (incomplete) assistant message, if any.
  *
- * A pending assistant message is one that:
- * - Has role "assistant"
- * - Does not have a completed timestamp (time.completed is undefined)
+ * A pending assistant message is the latest assistant message when it does not
+ * have a completed timestamp (time.completed is undefined).
  *
  * @param messages Array of messages (newest-first order expected)
  * @returns The ID of the pending assistant message, or undefined if none
  */
 export function findPendingAssistantId(messages: Message[]): string | undefined {
-  // Messages are newest-first, so find the first incomplete assistant message
-  const pending = messages.find((m) => {
+  // Messages are newest-first, so the first assistant message is the latest one.
+  const latestAssistant = messages.find((m) => {
     if (m.role !== "assistant") return false;
-    // Check if the OpenCode message has a completed timestamp
     const ocMessage = m.opencodeMessage;
     if (!ocMessage || ocMessage.role !== "assistant") return false;
-    return !ocMessage.time?.completed;
+    return true;
   });
 
-  return pending?.id;
+  if (!latestAssistant?.opencodeMessage || latestAssistant.opencodeMessage.role !== "assistant") {
+    return undefined;
+  }
+
+  return latestAssistant.opencodeMessage.time?.completed ? undefined : latestAssistant.id;
 }
 
 /**

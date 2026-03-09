@@ -99,14 +99,26 @@ describe("findPendingAssistantId", () => {
     expect(findPendingAssistantId(messages)).toBe("msg_004");
   });
 
-  it("ignores completed assistant messages and finds incomplete one", () => {
+  it("ignores older completed assistant messages and finds the latest incomplete one", () => {
     const messages = [
-      createAssistantMessage("msg_004", Date.now()), // Completed
+      createUserMessage("msg_004"),
+      createAssistantMessage("msg_003"), // Latest assistant incomplete
+      createUserMessage("msg_002"),
+      createAssistantMessage("msg_001", Date.now()), // Older completed assistant
+    ];
+
+    expect(findPendingAssistantId(messages)).toBe("msg_003");
+  });
+
+  it("returns undefined when the latest assistant is completed even if an older one is incomplete", () => {
+    const messages = [
+      createAssistantMessage("msg_004", Date.now()), // Latest assistant completed
       createUserMessage("msg_003"),
-      createAssistantMessage("msg_002"), // Incomplete
+      createAssistantMessage("msg_002"), // Older incomplete assistant is stale
       createUserMessage("msg_001"),
     ];
-    expect(findPendingAssistantId(messages)).toBe("msg_002");
+
+    expect(findPendingAssistantId(messages)).toBeUndefined();
   });
 });
 
