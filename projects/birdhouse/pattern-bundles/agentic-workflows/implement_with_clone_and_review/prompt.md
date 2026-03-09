@@ -2,7 +2,7 @@
 
 **CRITICAL:** This workflow creates a save point via cloning, then branches for implementation and review. This keeps your context clean while enabling parallel exploration and thorough review.
 
-## When to Use This Pattern
+## When to Use This Skill
 
 Use this workflow when:
 - You have a clear plan that needs implementation
