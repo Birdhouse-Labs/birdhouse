@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-REPO="birdhouselabs/birdhouse"
+REPO="birdhouse-labs/birdhouse"
 INSTALL_DIR="$HOME/.birdhouse"
 BIN_DIR="$HOME/.birdhouse/bin"
 BINARY_NAME="birdhouse"
