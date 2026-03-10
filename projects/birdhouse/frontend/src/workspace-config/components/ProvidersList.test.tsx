@@ -65,7 +65,7 @@ describe("ProvidersList", () => {
   });
 
   describe("Provider sorting", () => {
-    it("configured providers are sorted alphabetically", () => {
+    it("configured providers are sorted in registry order", () => {
       const providers = new Map<string, string>([
         ["anthropic", "sk-ant-test123"],
         ["groq", "gsk-test456"],
@@ -75,12 +75,12 @@ describe("ProvidersList", () => {
       const rows = container.querySelectorAll("tbody tr");
       const providerNames = Array.from(rows).map((row) => row.querySelector("td:first-child")?.textContent || "");
 
-      // Alphabetically sorted
+      // Registry order: Anthropic before Groq
       expect(providerNames[0]).toBe("Anthropic");
       expect(providerNames[1]).toBe("Groq");
     });
 
-    it("multiple providers are sorted alphabetically", () => {
+    it("multiple providers are sorted in registry order", () => {
       const providers = new Map<string, string>([
         ["openai", "sk-test123"],
         ["anthropic", "sk-ant-test456"],
@@ -91,10 +91,10 @@ describe("ProvidersList", () => {
       const rows = container.querySelectorAll("tbody tr");
       const providerNames = Array.from(rows).map((row) => row.querySelector("td:first-child")?.textContent || "");
 
-      // Should be alphabetically sorted: Anthropic, Google AI, OpenAI
+      // Registry order: Anthropic, OpenAI, Google AI
       expect(providerNames[0]).toBe("Anthropic");
-      expect(providerNames[1]).toBe("Google AI");
-      expect(providerNames[2]).toBe("OpenAI");
+      expect(providerNames[1]).toBe("OpenAI");
+      expect(providerNames[2]).toBe("Google AI");
     });
   });
 

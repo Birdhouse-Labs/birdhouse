@@ -26,18 +26,14 @@ const ProvidersList: Component<ProvidersListProps> = (props) => {
     return `${key.slice(0, 4)}...${key.slice(-6)}`;
   };
 
-  // Get only providers that have keys configured
+  // Get only providers that have keys configured, in registry order (Anthropic, OpenAI, Google first)
   const configuredProviders = () => {
-    return PROVIDERS.filter((provider) => props.providers.has(provider.id)).sort((a, b) =>
-      a.label.localeCompare(b.label),
-    );
+    return PROVIDERS.filter((provider) => props.providers.has(provider.id));
   };
 
-  // Get providers available to add (not yet configured)
+  // Get providers available to add, in registry order (Anthropic, OpenAI, Google first)
   const availableProviders = () => {
-    return PROVIDERS.filter((provider) => !props.providers.has(provider.id)).sort((a, b) =>
-      a.label.localeCompare(b.label),
-    );
+    return PROVIDERS.filter((provider) => !props.providers.has(provider.id));
   };
 
   const handleAddProvider = (providerId: string) => {
