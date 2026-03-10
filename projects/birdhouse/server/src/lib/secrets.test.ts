@@ -73,7 +73,7 @@ describe("providersToEnv", () => {
 
     expect(env.ANTHROPIC_API_KEY).toBe("sk-ant-123");
     expect(env.OPENAI_API_KEY).toBe("sk-openai-456");
-    expect(env.GOOGLE_API_KEY).toBe("google-789");
+    expect(env.GOOGLE_GENERATIVE_AI_API_KEY).toBe("google-789");
     expect(env.OPENROUTER_API_KEY).toBe("or-abc");
     expect(env.GROQ_API_KEY).toBe("groq-def");
     expect(env.PERPLEXITY_API_KEY).toBe("pplx-ghi");

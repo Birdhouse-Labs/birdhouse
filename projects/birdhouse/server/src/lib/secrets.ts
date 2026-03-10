@@ -116,7 +116,7 @@ export function providersToEnv(providers: ProviderCredentials): Record<string, s
     env.OPENAI_API_KEY = providers.openai.api_key;
   }
   if (providers.google?.api_key) {
-    env.GOOGLE_API_KEY = providers.google.api_key;
+    env.GOOGLE_GENERATIVE_AI_API_KEY = providers.google.api_key;
   }
   if (providers.openrouter?.api_key) {
     env.OPENROUTER_API_KEY = providers.openrouter.api_key;
