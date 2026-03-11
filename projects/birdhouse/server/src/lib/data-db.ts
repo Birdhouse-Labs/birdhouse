@@ -228,12 +228,19 @@ export class DataDB {
       ...existing,
     };
 
-    // Handle providers merge (deep merge for providers object)
+    // Handle providers merge — empty string api_key signals deletion, non-empty strings are upserts
     if (updates.providers !== undefined) {
-      merged.providers = {
-        ...existing.providers,
-        ...updates.providers,
+      const base: Record<string, { api_key: string }> = {
+        ...(existing.providers as Record<string, { api_key: string }>),
       };
+      for (const [id, creds] of Object.entries(updates.providers)) {
+        if (creds && creds.api_key === "") {
+          delete base[id];
+        } else if (creds) {
+          base[id] = creds;
+        }
+      }
+      merged.providers = base as ProviderCredentials;
       log.server.debug({ workspaceId, mergedProviders: Object.keys(merged.providers) }, "Merged providers");
     }
 
