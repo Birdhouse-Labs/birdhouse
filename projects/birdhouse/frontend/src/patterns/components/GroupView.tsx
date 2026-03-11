@@ -64,11 +64,13 @@ const GroupView: Component<GroupViewProps> = (props) => {
                       <Folder size={16} />
                     </button>
                   </div>
-                  <p class="text-sm text-text-secondary">{g().pattern_count} patterns</p>
+                  <p class="text-sm text-text-secondary">
+                    {g().pattern_count} {g().pattern_count === 1 ? "skill" : "skills"}
+                  </p>
                 </div>
                 <Show when={!g().readonly && g().patterns && g().patterns?.length > 0}>
                   <Button variant="primary" onClick={props.onAddPattern}>
-                    Add Pattern
+                    Add Skill
                   </Button>
                 </Show>
               </div>
@@ -82,18 +84,16 @@ const GroupView: Component<GroupViewProps> = (props) => {
                 fallback={
                   <Show
                     when={!g().readonly}
-                    fallback={
-                      <div class="text-sm text-text-muted text-center py-8">No patterns in this group yet.</div>
-                    }
+                    fallback={<div class="text-sm text-text-muted text-center py-8">No skills in this group yet.</div>}
                   >
                     {/* Empty state for editable groups */}
                     <div class="flex flex-col items-center justify-center py-16 px-8 text-center space-y-4">
-                      <p class="text-text-primary font-medium">No patterns here yet.</p>
+                      <p class="text-text-primary font-medium">No skills here yet.</p>
                       <Show
                         when={g().scope === "user"}
                         fallback={
                           <div class="text-sm text-text-muted max-w-sm space-y-3">
-                            <p>These patterns are specific to this workspace.</p>
+                            <p>These skills are specific to this workspace.</p>
                             <p>
                               Teach agents how your team works: PR formats, release processes, deployment steps, and
                               project conventions.
@@ -102,13 +102,13 @@ const GroupView: Component<GroupViewProps> = (props) => {
                         }
                       >
                         <p class="text-sm text-text-muted max-w-sm">
-                          Patterns in this group come with you to all your workspaces — great for techniques and
-                          workflows you use everywhere.
+                          Skills in this group come with you to all your workspaces — great for techniques and workflows
+                          you use everywhere.
                         </p>
                       </Show>
                       <div class="pt-2">
                         <Button variant="primary" onClick={props.onAddPattern}>
-                          Create your first pattern
+                          Create your first skill
                         </Button>
                       </div>
                     </div>
@@ -116,7 +116,7 @@ const GroupView: Component<GroupViewProps> = (props) => {
                 }
               >
                 <section>
-                  <h3 class="text-sm font-semibold text-heading mb-3">Patterns</h3>
+                  <h3 class="text-sm font-semibold text-heading mb-3">Skills</h3>
                   <div class="space-y-2">
                     <For each={g().patterns}>
                       {(pattern: PatternMetadata) => (

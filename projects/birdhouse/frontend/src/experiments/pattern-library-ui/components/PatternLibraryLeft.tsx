@@ -93,14 +93,14 @@ const SectionInfoPopover: Component<{ section: PatternSection }> = (props) => {
 
   const description = () => {
     if (props.section.id === "user") {
-      return "These patterns travel with you across all workspaces. Use them for your personal conventions, like how you like to write commits, your preferred PR style, or any workflow that is just you.";
+      return "These skills travel with you across all workspaces. Use them for your personal conventions, like how you like to write commits, your preferred PR style, or any workflow that is just you.";
     }
     if (props.section.id === "birdhouse") {
-      return "Patterns that ship with Birdhouse. These are general-purpose best practices to get you started. You can edit the trigger phrases to match how you naturally type.";
+      return "Skills that ship with Birdhouse. These are general-purpose best practices to get you started. You can edit the trigger phrases to match how you naturally type.";
     }
     // Workspace section
     const workspaceName = props.section.title;
-    return `Patterns specific to the "${workspaceName}" workspace. Your team's PR best practices, changelog format, linting rules, or anything unique to this workspace.`;
+    return `Skills specific to the "${workspaceName}" workspace. Your team's PR best practices, changelog format, linting rules, or anything unique to this workspace.`;
   };
 
   const path = () =>
@@ -149,7 +149,7 @@ const PatternLibraryLeft: Component<PatternLibraryLeftProps> = (props) => {
     <div class="flex flex-col h-full overflow-hidden">
       {/* Panel Header */}
       <div class="px-4 py-3 border-b border-border flex-shrink-0">
-        <h2 class="text-sm font-semibold text-heading">Pattern Groups</h2>
+        <h2 class="text-sm font-semibold text-heading">Skill Groups</h2>
         <p class="text-xs text-text-muted mt-0.5">Teach agents how you work</p>
         <p class="text-xs text-text-muted mt-0.5">Your conventions, organized by where they apply</p>
       </div>
@@ -193,7 +193,9 @@ const PatternLibraryLeft: Component<PatternLibraryLeftProps> = (props) => {
                           >
                             {group.title}
                           </h4>
-                          <p class="text-xs text-text-secondary mt-0.5">{group.pattern_count} patterns</p>
+                          <p class="text-xs text-text-secondary mt-0.5">
+                            {group.pattern_count} {group.pattern_count === 1 ? "skill" : "skills"}
+                          </p>
                         </div>
                       </div>
                     </button>

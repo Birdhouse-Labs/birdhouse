@@ -1,6 +1,6 @@
 # Generate Release Notes from Git Branch
 
-🚨 **CRITICAL:** This pattern analyzes ALL commits since a branch diverged from main and organizes them into user-facing and technical changes. Multiple commits often represent iterations on a single feature - your job is to group them coherently.
+🚨 **CRITICAL:** This skill analyzes ALL commits since a branch diverged from main and organizes them into user-facing and technical changes. Multiple commits often represent iterations on a single feature - your job is to group them coherently.
 
 ## Step 1: Identify the Branch and Check Status
 

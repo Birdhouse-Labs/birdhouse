@@ -1,6 +1,6 @@
 # How to Clean Up Local Branches with Deleted Remotes
 
-**CRITICAL:** When remote branches are deleted (e.g., merged PRs), their local tracking branches become stale. This pattern shows how to safely identify and remove them, including their associated worktrees.
+**CRITICAL:** When remote branches are deleted (e.g., merged PRs), their local tracking branches become stale. This skill shows how to safely identify and remove them, including their associated worktrees.
 
 ## Step 1: Update Remote References
 

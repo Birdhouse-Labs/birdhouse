@@ -2,6 +2,10 @@
 // ABOUTME: Wraps all pattern-groups endpoints with typed functions
 
 import { API_ENDPOINT_BASE } from "../../../config/api";
+import {
+  normalizeGroupWithPatternsResponse,
+  normalizePatternLibraryResponse,
+} from "../../../patterns/utils/patternUiCopy";
 import type {
   CreatePatternRequest,
   GroupWithPatternsResponse,
@@ -24,7 +28,7 @@ export async function fetchPatternLibrary(workspaceId: string): Promise<PatternL
     throw new Error(`Failed to fetch pattern library: ${response.statusText} - ${text}`);
   }
 
-  return response.json();
+  return normalizePatternLibraryResponse(await response.json());
 }
 
 /**
@@ -43,7 +47,7 @@ export async function fetchGroupWithPatterns(
     throw new Error(`Failed to fetch group: ${response.statusText} - ${text}`);
   }
 
-  return response.json();
+  return normalizeGroupWithPatternsResponse(await response.json());
 }
 
 /**

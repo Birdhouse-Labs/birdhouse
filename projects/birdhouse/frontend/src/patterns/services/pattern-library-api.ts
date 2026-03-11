@@ -10,6 +10,7 @@ import type {
   UpdatePatternRequest,
   UpdateTriggerPhrasesRequest,
 } from "../types/pattern-library-types";
+import { normalizeGroupWithPatternsResponse, normalizePatternLibraryResponse } from "../utils/patternUiCopy";
 
 /**
  * Fetch all pattern groups organized into sections
@@ -24,7 +25,7 @@ export async function fetchPatternLibrary(workspaceId: string): Promise<PatternL
     throw new Error(`Failed to fetch pattern library: ${response.statusText} - ${text}`);
   }
 
-  return response.json();
+  return normalizePatternLibraryResponse(await response.json());
 }
 
 /**
@@ -43,7 +44,7 @@ export async function fetchGroupWithPatterns(
     throw new Error(`Failed to fetch group: ${response.statusText} - ${text}`);
   }
 
-  return response.json();
+  return normalizeGroupWithPatternsResponse(await response.json());
 }
 
 /**

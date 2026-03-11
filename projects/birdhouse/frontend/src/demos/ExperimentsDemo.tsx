@@ -58,9 +58,9 @@ interface Exploration {
 const explorations: Exploration[] = [
   {
     id: "pattern-library-ui",
-    name: "Pattern Library UI",
+    name: "Skills Library UI",
     description:
-      "Install/browse UI designs for the pattern library feature. Exploring different approaches to organizing, discovering, and installing patterns.",
+      "Install and browse UI designs for the skills library feature. Exploring different approaches to organizing, discovering, and installing skills.",
     experiments: patternLibraryUiExperiments,
   },
   {
