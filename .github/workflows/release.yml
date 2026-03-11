@@ -97,7 +97,7 @@ jobs:
             ## Install
 
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/birdhouselabs/birdhouse/main/install.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/birdhouse-labs/birdhouse/main/install.sh | bash
             ```
 
             ## Assets

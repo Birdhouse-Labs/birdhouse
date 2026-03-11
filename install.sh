@@ -3,7 +3,7 @@
 # ABOUTME: Downloads the latest release from GitHub and installs to ~/.birdhouse/
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/birdhouselabs/birdhouse/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/birdhouse-labs/birdhouse/main/install.sh | bash
 #   install.sh                        # fetch latest release from GitHub
 #   install.sh /path/to/tarball.tar.gz  # install from a local tarball (skips download + checksum)
 
