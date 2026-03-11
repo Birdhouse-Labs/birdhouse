@@ -129,6 +129,41 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Analytics
+#
+# Hey — if you're reading this, you're exactly the kind of person we built
+# Birdhouse for. Thanks for taking the time to look.
+#
+# On install, we send one anonymous ping: your OS architecture and the version
+# you just installed. No IP address, no machine ID, nothing personal.
+# It helps us know Birdhouse is actually being used, which helps us keep
+# building it.
+# ---------------------------------------------------------------------------
+
+POSTHOG_KEY="phc_LwyUqyfUjlP28aI98eE2K7jA6mdTboPZYRuKotWsoYI"
+SUPABASE_URL="https://hzqxwcbohrtxyvmmamsn.supabase.co"
+SUPABASE_ANON_KEY="sb_publishable_qNuDf5Rh9PIh1hUvWT2GWA_PHi8V_QF"
+
+send_analytics() {
+  local distinct_id="$1" tag="$2" arch="$3"
+
+  curl --silent --max-time 5 --output /dev/null \
+    -X POST "https://us.i.posthog.com/i/v0/e" \
+    -H "Content-Type: application/json" \
+    -d "{\"api_key\":\"$POSTHOG_KEY\",\"event\":\"install\",\"distinct_id\":\"$distinct_id\",\"properties\":{\"version\":\"$tag\",\"arch\":\"$arch\"}}" \
+    &
+
+  curl --silent --max-time 5 --output /dev/null \
+    -X POST "$SUPABASE_URL/rest/v1/telemetry_installs" \
+    -H "Content-Type: application/json" \
+    -H "apikey: $SUPABASE_ANON_KEY" \
+    -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+    -H "Prefer: return=minimal" \
+    -d "{\"arch\":\"$arch\",\"version\":\"$tag\"}" \
+    &
+}
+
+# ---------------------------------------------------------------------------
 # Install
 # ---------------------------------------------------------------------------
 
@@ -197,6 +232,12 @@ esac
 printf "\n"
 success "Birdhouse $TAG installed to $BIN_DIR"
 printf "\n"
+
+ANALYTICS_DISTINCT_ID="install-script"
+if [ -n "$LOCAL_TARBALL" ]; then
+  ANALYTICS_DISTINCT_ID="local-tarball"
+fi
+send_analytics "$ANALYTICS_DISTINCT_ID" "$TAG" "$ARCH_SUFFIX"
 
 if [ "$ADDED_TO_PROFILE" = true ]; then
   info "Added $BIN_DIR to PATH in $PROFILE"
