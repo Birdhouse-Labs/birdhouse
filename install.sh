@@ -140,8 +140,10 @@ fi
 # building it.
 # ---------------------------------------------------------------------------
 
+# write-only public token, safe to be here
 POSTHOG_KEY="phc_LwyUqyfUjlP28aI98eE2K7jA6mdTboPZYRuKotWsoYI"
 SUPABASE_URL="https://hzqxwcbohrtxyvmmamsn.supabase.co"
+# write-only public token, safe to be here
 SUPABASE_ANON_KEY="sb_publishable_qNuDf5Rh9PIh1hUvWT2GWA_PHi8V_QF"
 
 send_analytics() {
