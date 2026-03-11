@@ -125,7 +125,7 @@ function openBrowser(url) {
 
 const UPDATE_CHECK_CACHE = join(CLI_ROOT, 'update-check.json');
 const UPDATE_CHECK_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-const GITHUB_RELEASES_API = 'https://api.github.com/repos/birdhouselabs/birdhouse/releases/latest';
+const GITHUB_RELEASES_API = 'https://api.github.com/repos/birdhouse-labs/birdhouse/releases/latest';
 
 /**
  * Compare two semver strings. Returns true if remote is strictly newer than local.
@@ -375,7 +375,7 @@ async function runUI(args = []) {
   if (updateResult && isNewerVersion(VERSION, updateResult.latestVersion)) {
     log('');
     log(`Update available: v${updateResult.latestVersion} (you have v${VERSION})`);
-    log('  curl -fsSL https://raw.githubusercontent.com/birdhouselabs/birdhouse/main/install.sh | bash');
+    log('  curl -fsSL https://raw.githubusercontent.com/birdhouse-labs/birdhouse/main/install.sh | bash');
   }
   
   if (shouldManageServer) {
