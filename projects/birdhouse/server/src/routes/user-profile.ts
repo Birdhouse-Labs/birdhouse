@@ -1,5 +1,5 @@
 // ABOUTME: User profile routes for Birdhouse — stores the user's display name locally
-// ABOUTME: GET returns current name, PATCH sets name; name is required before using the app
+// ABOUTME: GET returns current name and stable install ID, PATCH sets name; name is required before using the app
 
 import { Hono } from "hono";
 import type { DataDB } from "../lib/data-db";
@@ -7,6 +7,7 @@ import { log } from "../lib/logger";
 
 export interface UserProfileResponse {
   name: string | null;
+  installId: string;
 }
 
 export function createUserProfileRoutes(dataDb: DataDB) {
@@ -14,11 +15,12 @@ export function createUserProfileRoutes(dataDb: DataDB) {
 
   /**
    * GET /api/user-profile
-   * Returns the stored user name, or null if not yet set.
+   * Returns the stored user name (or null if not yet set) and the stable install ID.
    */
   app.get("/", (c) => {
     const name = dataDb.getUserName();
-    return c.json<UserProfileResponse>({ name });
+    const installId = dataDb.getOrCreateInstallId();
+    return c.json<UserProfileResponse>({ name, installId });
   });
 
   /**

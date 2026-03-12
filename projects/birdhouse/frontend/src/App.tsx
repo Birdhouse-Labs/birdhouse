@@ -9,6 +9,7 @@ import WorkspaceLayout from "./components/WorkspaceLayout";
 import WorkspaceSelector from "./components/WorkspaceSelector";
 import WorkspaceSetup from "./components/WorkspaceSetup";
 import { log } from "./lib/logger";
+import { identifyPosthogUser } from "./lib/posthog";
 import { fetchUserProfile } from "./services/user-profile-api";
 
 const REDIRECT_KEY = "birdhouse.setup.redirect";
@@ -29,7 +30,8 @@ const ProfileRedirect: Component<{ children: JSX.Element }> = (props) => {
 
     const isProfilePage = location.pathname === "/setup/profile";
     const profileLoaded = !profile.error && profile() !== undefined;
-    const hasName = profileLoaded && !!profile()?.name;
+    const data = profile();
+    const hasName = profileLoaded && !!data?.name;
 
     log.ui.info("ProfileRedirect effect running", {
       hasName,
@@ -37,6 +39,11 @@ const ProfileRedirect: Component<{ children: JSX.Element }> = (props) => {
       pathname: location.pathname,
       loading: profile.loading,
     });
+
+    // Identify the user in PostHog whenever we have both a name and install ID
+    if (hasName && data?.installId && data.name) {
+      identifyPosthogUser(data.installId, data.name);
+    }
 
     // Already on the profile page and name is now set — redirect back
     if (isProfilePage && hasName) {

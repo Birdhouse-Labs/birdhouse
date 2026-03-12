@@ -5,6 +5,7 @@ import { API_ENDPOINT_BASE } from "../config/api";
 
 export interface UserProfileResponse {
   name: string | null;
+  installId: string;
 }
 
 export async function fetchUserProfile(): Promise<UserProfileResponse> {

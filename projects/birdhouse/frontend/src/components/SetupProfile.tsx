@@ -2,8 +2,9 @@
 // ABOUTME: Shown once before accessing the app; redirects to workspace selector on submit
 
 import { useNavigate, useSearchParams } from "@solidjs/router";
-import { type Component, createSignal, Show } from "solid-js";
-import { submitUserName } from "../services/user-profile-api";
+import { type Component, createResource, createSignal, Show } from "solid-js";
+import { identifyPosthogUser } from "../lib/posthog";
+import { fetchUserProfile, submitUserName } from "../services/user-profile-api";
 import Button from "./ui/Button";
 
 const REDIRECT_KEY = "birdhouse.setup.redirect";
@@ -11,6 +12,7 @@ const REDIRECT_KEY = "birdhouse.setup.redirect";
 const SetupProfile: Component = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [profile] = createResource(fetchUserProfile);
 
   const [name, setName] = createSignal("");
   const [isSubmitting, setIsSubmitting] = createSignal(false);
@@ -31,6 +33,11 @@ const SetupProfile: Component = () => {
 
     try {
       await submitUserName(trimmedName);
+
+      const installId = profile()?.installId;
+      if (installId) {
+        identifyPosthogUser(installId, trimmedName);
+      }
 
       const redirect = redirectParam() ?? sessionStorage.getItem(REDIRECT_KEY);
       sessionStorage.removeItem(REDIRECT_KEY);
