@@ -4,6 +4,21 @@
 
 <h3 align="center">The Agentic Development Environment</h3>
 
+<p align="center">
+  <a href="https://github.com/Birdhouse-Labs/birdhouse">
+    <img src="https://img.shields.io/github/stars/Birdhouse-Labs/birdhouse?style=social" alt="Star on GitHub" />
+  </a>
+</p>
+
+<p align="center">If Birdhouse is useful to you, <a href="https://github.com/Birdhouse-Labs/birdhouse">give us a star ⭐</a> — it's a vote from the community that keeps us working on this.</p>
+
+<p align="center">
+  <a href="https://youtu.be/FosIwtyyaLY">
+    <img src="assets/demo-thumbnail.png" alt="Watch the Birdhouse demo" width="80%" />
+  </a>
+</p>
+<p align="center"><a href="https://youtu.be/FosIwtyyaLY"><em>▶ Watch the demo (3 min)</em></a></p>
+
 ---
 
 Birdhouse is built around a simple belief: **the agent is the unit of work.**
@@ -16,12 +31,6 @@ We don't have a built-in text editor. We don't have a built-in terminal. We have
 
 <p align="center"><em>"You will not lose your job to AI, but will lose it to someone who uses it."</em></p>
 <p align="center"><strong>Jensen Huang</strong> &nbsp;·&nbsp; Nvidia</p>
-
----
-
-<p align="center">
-  <img src="https://birdhouselabs.ai/assets/hero-screenshot.webp" alt="Birdhouse screenshot" width="80%" />
-</p>
 
 ---
 
@@ -200,3 +209,12 @@ Birdhouse wouldn't exist without [OpenCode](https://opencode.ai) — the open so
 ## License
 
 MIT — free to use, fork, and build on.
+
+---
+
+<p align="center">If Birdhouse is useful to you, <a href="https://github.com/Birdhouse-Labs/birdhouse">give us a star ⭐</a> — it's a vote from the community that keeps us working on this.</p>
+<p align="center">
+  <a href="https://github.com/Birdhouse-Labs/birdhouse">
+    <img src="https://img.shields.io/github/stars/Birdhouse-Labs/birdhouse?style=social" alt="Star on GitHub" />
+  </a>
+</p>
