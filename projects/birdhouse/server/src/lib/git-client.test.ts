@@ -228,17 +228,46 @@ describe("runCommand error classification", () => {
     );
   });
 
-  test("throws GhNotInstalledError for missing command", async () => {
+  test("throws GitRepoNotFoundError when stderr contains 'not a git repository'", async () => {
+    await expect(
+      runCommand(["bash", "-c", 'echo "fatal: not a git repository" >&2; exit 1'], process.cwd()),
+    ).rejects.toBeInstanceOf(GitRepoNotFoundError);
+  });
+
+  test("throws GhNotInstalledError for missing command (ENOENT)", async () => {
     await expect(runCommand(["nonexistent-command-xyz-12345"], process.cwd())).rejects.toBeInstanceOf(
       GhNotInstalledError,
     );
   });
 
+  test("throws GhNotInstalledError when stderr contains 'command not found'", async () => {
+    await expect(
+      runCommand(["bash", "-c", 'echo "command not found: gh" >&2; exit 1'], process.cwd()),
+    ).rejects.toBeInstanceOf(GhNotInstalledError);
+  });
+
+  test("throws GhNotInstalledError for exit code 127", async () => {
+    await expect(runCommand(["bash", "-c", "exit 127"], process.cwd())).rejects.toBeInstanceOf(GhNotInstalledError);
+  });
+
+  test("throws GhAuthError when stderr contains 'auth'", async () => {
+    await expect(
+      runCommand(["bash", "-c", 'echo "gh: auth token required" >&2; exit 1'], process.cwd()),
+    ).rejects.toBeInstanceOf(GhAuthError);
+  });
+
+  test("throws GhAuthError when stderr contains 'login'", async () => {
+    await expect(
+      runCommand(["bash", "-c", 'echo "please login first" >&2; exit 1'], process.cwd()),
+    ).rejects.toBeInstanceOf(GhAuthError);
+  });
+
   test("throws plain Error for unrecognized failures", async () => {
-    await expect(runCommand(["git", "log", "--invalid-flag-xyz"], process.cwd())).rejects.toThrow(Error);
     try {
-      await runCommand(["git", "log", "--invalid-flag-xyz"], process.cwd());
+      await runCommand(["bash", "-c", 'echo "something went wrong" >&2; exit 1'], process.cwd());
+      expect.unreachable("should have thrown");
     } catch (err) {
+      expect(err).toBeInstanceOf(Error);
       expect(err).not.toBeInstanceOf(GitClientError);
     }
   });
