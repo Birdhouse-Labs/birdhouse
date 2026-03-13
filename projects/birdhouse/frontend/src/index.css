@@ -52,6 +52,7 @@
   /* Status colors */
   --color-success: var(--theme-success);
   --color-danger: var(--theme-danger);
+  --color-warning: var(--theme-warning);
   
   /* Shadow color for glow effects */
   --color-glow: var(--theme-glow);

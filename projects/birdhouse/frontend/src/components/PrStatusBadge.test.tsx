@@ -1,9 +1,9 @@
 // ABOUTME: Unit tests for PrStatusBadge component
-// ABOUTME: Tests icon selection, PR link, working state styling, and multi-PR count badge
+// ABOUTME: Tests checks status icon, theme-accent pill color, working state styling, and multi-PR count badge
 
 import { render, screen } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
-import type { PullRequestInfo } from "../types/git";
+import type { ChecksStatus, PullRequestInfo } from "../types/git";
 import { PrStatusBadge } from "./PrStatusBadge";
 
 function makePr(overrides: Partial<PullRequestInfo> = {}): PullRequestInfo {
@@ -33,50 +33,90 @@ describe("PrStatusBadge", () => {
     expect(link).toHaveAttribute("target", "_blank");
   });
 
-  it("shows approved icon for approved PRs", () => {
-    render(() => <PrStatusBadge pullRequests={[makePr({ reviewDecision: "approved" })]} isWorking={false} />);
+  it("renders a single icon (not two)", () => {
+    render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: "success" })]} isWorking={false} />);
     const link = screen.getByRole("link");
-    // CircleCheck icon should be present as an SVG
-    expect(link.querySelector("svg")).toBeTruthy();
+    const svgs = link.querySelectorAll("svg");
+    expect(svgs.length).toBe(1);
   });
 
-  it("shows changes_requested icon for PRs needing changes", () => {
-    render(() => <PrStatusBadge pullRequests={[makePr({ reviewDecision: "changes_requested" })]} isWorking={false} />);
-    const link = screen.getByRole("link");
-    expect(link.querySelector("svg")).toBeTruthy();
+  // --- Checks status icon per state ---
+
+  it("shows CircleCheck icon for success status", () => {
+    render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: "success" })]} isWorking={false} />);
+    expect(screen.getByRole("link").querySelector("svg")).toBeTruthy();
   });
 
-  it("shows default circle icon for review_required PRs", () => {
-    render(() => <PrStatusBadge pullRequests={[makePr({ reviewDecision: "review_required" })]} isWorking={false} />);
-    const link = screen.getByRole("link");
-    expect(link.querySelector("svg")).toBeTruthy();
+  it("shows CircleX icon for failure status", () => {
+    render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: "failure" })]} isWorking={false} />);
+    expect(screen.getByRole("link").querySelector("svg")).toBeTruthy();
   });
 
-  it("shows draft icon for draft PRs", () => {
-    render(() => <PrStatusBadge pullRequests={[makePr({ isDraft: true })]} isWorking={false} />);
-    const link = screen.getByRole("link");
-    expect(link.querySelector("svg")).toBeTruthy();
+  it("shows spinning Loader2 icon for pending status", () => {
+    render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: "pending" })]} isWorking={false} />);
+    const spinner = screen.getByRole("link").querySelector("span.animate-spin");
+    expect(spinner).toBeTruthy();
+    expect(spinner?.querySelector("svg")).toBeTruthy();
   });
 
-  it("applies working state styling when isWorking is true", () => {
-    render(() => <PrStatusBadge pullRequests={[makePr()]} isWorking={true} />);
-    const link = screen.getByRole("link");
-    expect(link.className).toContain("text-text-on-accent");
-    expect(link.className).toContain("bg-white/15");
+  it("shows Circle icon for none status", () => {
+    render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: "none" })]} isWorking={false} />);
+    expect(screen.getByRole("link").querySelector("svg")).toBeTruthy();
   });
 
-  it("applies default styling when isWorking is false", () => {
-    render(() => <PrStatusBadge pullRequests={[makePr()]} isWorking={false} />);
+  // --- Pill uses theme accent for any active status ---
+
+  it.each(["success", "failure", "pending"] as ChecksStatus[])("applies accent pill for %s status", (status) => {
+    render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: status })]} isWorking={false} />);
+    const link = screen.getByRole("link");
+    expect(link.className).toContain("bg-accent/15");
+    expect(link.className).toContain("text-accent");
+  });
+
+  it("applies neutral pill for none status", () => {
+    render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: "none" })]} isWorking={false} />);
     const link = screen.getByRole("link");
     expect(link.className).toContain("bg-surface-overlay");
     expect(link.className).toContain("text-text-secondary");
   });
+
+  // --- Working state ---
+
+  it.each(["success", "failure", "pending"] as ChecksStatus[])(
+    "applies working-state accent pill for %s status",
+    (status) => {
+      render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: status })]} isWorking={true} />);
+      const link = screen.getByRole("link");
+      expect(link.className).toContain("bg-accent/20");
+      expect(link.className).toContain("text-accent");
+    },
+  );
+
+  it("applies working-state neutral pill for none", () => {
+    render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: "none" })]} isWorking={true} />);
+    const link = screen.getByRole("link");
+    expect(link.className).toContain("bg-white/15");
+    expect(link.className).toContain("text-text-on-accent");
+  });
+
+  // --- Multi-PR badges ---
 
   it("shows extra count badge when multiple PRs exist", () => {
     render(() => (
       <PrStatusBadge pullRequests={[makePr(), makePr({ number: 43 }), makePr({ number: 44 })]} isWorking={false} />
     ));
     expect(screen.getByText("+2")).toBeTruthy();
+  });
+
+  it("extra count badge matches pill color of first PR", () => {
+    render(() => (
+      <PrStatusBadge
+        pullRequests={[makePr({ checksStatus: "failure" }), makePr({ number: 43 })]}
+        isWorking={false}
+      />
+    ));
+    const extraBadge = screen.getByText("+1");
+    expect(extraBadge.className).toContain("bg-accent/15");
   });
 
   it("does not show extra count badge for a single PR", () => {

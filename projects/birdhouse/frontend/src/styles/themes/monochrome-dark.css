@@ -38,6 +38,7 @@
     /* Status colors - muted grays (no color) */
     --theme-success: #dedede;         /* neutral-300 */
     --theme-danger: #b6b6b6;          /* neutral-400 */
+    --theme-warning: #c8c8c8;          /* neutral-350 */
     
     /* Glow/shadow color - very subtle */
     --theme-glow: rgb(255, 255, 255, 0.1); /* minimal glow */

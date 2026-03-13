@@ -1,27 +1,39 @@
-// ABOUTME: PR status pill badge showing review state icon, PR number, and link.
-// ABOUTME: Adapts styling when agent is working (light-on-dark).
+// ABOUTME: PR status pill badge showing CI checks status icon, PR number, and link.
+// ABOUTME: Pill uses theme accent color; icon shape conveys status. Adapts styling when agent is working.
 
-import { Circle, CircleCheck, CircleX, GitPullRequestDraft } from "lucide-solid";
+import { Circle, CircleCheck, CircleX, Loader2 } from "lucide-solid";
 import { type Component, Show } from "solid-js";
-import type { PullRequestInfo } from "../types/git";
+import type { ChecksStatus, PullRequestInfo } from "../types/git";
 
 export interface PrStatusBadgeProps {
   pullRequests: PullRequestInfo[];
   isWorking: boolean;
 }
 
-function ReviewIcon(props: { pr: PullRequestInfo }) {
-  if (props.pr.isDraft) {
-    return <GitPullRequestDraft size={12} />;
-  }
-  switch (props.pr.reviewDecision) {
-    case "approved":
+function StatusIcon(props: { status: ChecksStatus }) {
+  switch (props.status) {
+    case "success":
       return <CircleCheck size={12} />;
-    case "changes_requested":
+    case "failure":
       return <CircleX size={12} />;
+    case "pending":
+      return (
+        <span class="inline-flex animate-spin">
+          <Loader2 size={12} />
+        </span>
+      );
     default:
       return <Circle size={12} />;
   }
+}
+
+function pillClasses(status: ChecksStatus, isWorking: boolean): string {
+  if (isWorking) {
+    if (status === "none") return "bg-white/15 text-text-on-accent";
+    return "bg-accent/20 text-accent";
+  }
+  if (status === "none") return "bg-surface-overlay text-text-secondary";
+  return "bg-accent/15 text-accent";
 }
 
 export const PrStatusBadge: Component<PrStatusBadgeProps> = (props) => {
@@ -36,18 +48,14 @@ export const PrStatusBadge: Component<PrStatusBadgeProps> = (props) => {
             href={pr().url}
             target="_blank"
             rel="noopener noreferrer"
-            class={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors ${
-              props.isWorking ? "text-text-on-accent bg-white/15" : "bg-surface-overlay text-text-secondary"
-            }`}
+            class={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors ${pillClasses(pr().checksStatus, props.isWorking)}`}
           >
-            <ReviewIcon pr={pr()} />
+            <StatusIcon status={pr().checksStatus} />
             <span>PR #{pr().number}</span>
           </a>
           <Show when={extraCount() > 0}>
             <span
-              class={`inline-flex items-center rounded-full px-1.5 py-0.5 text-xs transition-colors ${
-                props.isWorking ? "text-text-on-accent bg-white/15" : "bg-surface-overlay text-text-secondary"
-              }`}
+              class={`inline-flex items-center rounded-full px-1.5 py-0.5 text-xs transition-colors ${pillClasses(pr().checksStatus, props.isWorking)}`}
             >
               +{extraCount()}
             </span>

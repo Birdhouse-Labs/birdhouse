@@ -38,6 +38,7 @@
     /* Status colors - muted naturals */
     --theme-success: oklch(61.6% 0.045 166.7deg);         /* muted teal (reuse accent) */
     --theme-danger: oklch(55.7% 0.104 27deg);          /* muted red-brown */
+    --theme-warning: oklch(58.3% 0.085 75.8deg);          /* muted ochre */
     
     /* Glow/shadow color - subtle like pencil shadow */
     --theme-glow: oklch(57.1% 0.053 72.7deg / 0.35); /* soft brown glow */
