@@ -3,7 +3,8 @@
 
 import { render, screen } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
-import { PrStatusBadge, type PullRequestInfo } from "./PrStatusBadge";
+import type { PullRequestInfo } from "../types/git";
+import { PrStatusBadge } from "./PrStatusBadge";
 
 function makePr(overrides: Partial<PullRequestInfo> = {}): PullRequestInfo {
   return {

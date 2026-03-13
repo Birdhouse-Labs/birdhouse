@@ -3,20 +3,7 @@
 
 import { Circle, CircleCheck, CircleX, GitPullRequestDraft } from "lucide-solid";
 import { type Component, Show } from "solid-js";
-
-export type PullRequestState = "open" | "closed" | "merged";
-export type ReviewDecision = "approved" | "changes_requested" | "review_required" | "none";
-export type ChecksStatus = "pending" | "success" | "failure" | "none";
-
-export interface PullRequestInfo {
-  number: number;
-  title: string;
-  url: string;
-  state: PullRequestState;
-  isDraft: boolean;
-  reviewDecision: ReviewDecision;
-  checksStatus: ChecksStatus;
-}
+import type { PullRequestInfo } from "../types/git";
 
 export interface PrStatusBadgeProps {
   pullRequests: PullRequestInfo[];

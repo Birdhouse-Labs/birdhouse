@@ -11,11 +11,11 @@ import { useZIndex } from "../contexts/ZIndexContext";
 import { aggregateTokenStats } from "../domain/token-aggregation";
 
 import { borderColor } from "../styles/containerStyles";
+import type { PullRequestInfo } from "../types/git";
 import type { Message } from "../types/messages";
 import ArchiveAgentDialog from "./ArchiveAgentDialog";
 import ContextUsageIndicator from "./ContextUsageIndicator";
 import EditAgentDialog from "./EditAgentDialog";
-import type { PullRequestInfo } from "./PrStatusBadge";
 import { PrStatusBadge } from "./PrStatusBadge";
 import UnarchiveAgentDialog from "./UnarchiveAgentDialog";
 import { IconButton, MenuItemButton } from "./ui";
