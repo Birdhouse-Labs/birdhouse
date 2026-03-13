@@ -41,17 +41,13 @@ describe("PrStatusBadge", () => {
   });
 
   it("shows changes_requested icon for PRs needing changes", () => {
-    render(() => (
-      <PrStatusBadge pullRequests={[makePr({ reviewDecision: "changes_requested" })]} isWorking={false} />
-    ));
+    render(() => <PrStatusBadge pullRequests={[makePr({ reviewDecision: "changes_requested" })]} isWorking={false} />);
     const link = screen.getByRole("link");
     expect(link.querySelector("svg")).toBeTruthy();
   });
 
   it("shows default circle icon for review_required PRs", () => {
-    render(() => (
-      <PrStatusBadge pullRequests={[makePr({ reviewDecision: "review_required" })]} isWorking={false} />
-    ));
+    render(() => <PrStatusBadge pullRequests={[makePr({ reviewDecision: "review_required" })]} isWorking={false} />);
     const link = screen.getByRole("link");
     expect(link.querySelector("svg")).toBeTruthy();
   });
