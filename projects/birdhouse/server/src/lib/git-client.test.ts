@@ -2,7 +2,7 @@
 // ABOUTME: Validates test client defaults, overrides, and normalization helpers.
 
 import { describe, expect, test } from "bun:test";
-import type { GhPrResult, PullRequestInfo } from "./git-client.ts";
+import type { PullRequestInfo } from "./git-client.ts";
 import {
   createLiveGitClient,
   createTestGitClient,
@@ -119,8 +119,8 @@ describe("normalizeChecksStatus", () => {
 });
 
 describe("mapPrResult", () => {
-  test("maps a complete GhPrResult to PullRequestInfo", () => {
-    const input: GhPrResult = {
+  test("maps a complete gh PR result to PullRequestInfo", () => {
+    const input: Parameters<typeof mapPrResult>[0] = {
       number: 42,
       title: "Add feature",
       url: "https://github.com/org/repo/pull/42",
@@ -149,7 +149,7 @@ describe("mapPrResult", () => {
       isDraft: true,
       reviewDecision: undefined,
       statusCheckRollup: undefined,
-    } as unknown as GhPrResult;
+    } as unknown as Parameters<typeof mapPrResult>[0];
     const result = mapPrResult(input);
     expect(result.reviewDecision).toBe("none");
     expect(result.checksStatus).toBe("none");
@@ -178,7 +178,7 @@ describe("mapPrResult", () => {
         statusCheckRollup: [{ state: "SUCCESS" }, { state: "SUCCESS" }],
       },
     ]);
-    const results: GhPrResult[] = JSON.parse(ghJson);
+    const results: Parameters<typeof mapPrResult>[0][] = JSON.parse(ghJson);
     const mapped = results.map(mapPrResult);
     expect(mapped).toHaveLength(2);
     expect(mapped[0]?.state).toBe("open");
@@ -189,7 +189,7 @@ describe("mapPrResult", () => {
   });
 
   test("handles empty JSON array", () => {
-    const results: GhPrResult[] = JSON.parse("[]");
+    const results: Parameters<typeof mapPrResult>[0][] = JSON.parse("[]");
     expect(results.map(mapPrResult)).toEqual([]);
   });
 

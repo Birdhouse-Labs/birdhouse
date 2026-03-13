@@ -48,7 +48,7 @@ export interface GitClient {
   getPullRequests(dir: string, branch: string): Promise<PullRequestInfo[]>;
 }
 
-export interface GhPrResult {
+interface GhPrResult {
   number: number;
   title: string;
   url: string;
