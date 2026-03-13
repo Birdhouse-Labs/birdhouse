@@ -4,7 +4,12 @@
 import { describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
 import type { PullRequestInfo } from "../lib/git-client";
-import { createTestGitClient } from "../lib/git-client";
+import {
+  GhAuthError,
+  GhNotInstalledError,
+  GitRepoNotFoundError,
+  createTestGitClient,
+} from "../lib/git-client";
 import { withWorkspaceContext } from "../test-utils";
 import { createGitRoutes } from "./git";
 
@@ -75,7 +80,7 @@ describe("GET /pull-requests", () => {
     const deps = createTestDeps();
     deps.git = createTestGitClient({
       async getCurrentBranch() {
-        throw new Error("not a git repository");
+        throw new GitRepoNotFoundError("not a git repository");
       },
     });
 
@@ -96,7 +101,7 @@ describe("GET /pull-requests", () => {
         return "main";
       },
       async getPullRequests() {
-        throw new Error("gh: command not found");
+        throw new GhNotInstalledError("gh: command not found");
       },
     });
 
@@ -117,7 +122,7 @@ describe("GET /pull-requests", () => {
         return "main";
       },
       async getPullRequests() {
-        throw new Error("gh auth login required");
+        throw new GhAuthError("gh auth login required");
       },
     });
 
@@ -128,6 +133,24 @@ describe("GET /pull-requests", () => {
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body).toEqual({ available: false, reason: "not_authenticated" });
+    });
+  });
+
+  test("returns unknown and logs error for unexpected errors", async () => {
+    const deps = createTestDeps();
+    deps.git = createTestGitClient({
+      async getCurrentBranch() {
+        throw new Error("something unexpected");
+      },
+    });
+
+    await withDeps(deps, async () => {
+      const app = withWorkspaceContext(createGitRoutes);
+      const res = await app.fetch(new Request("http://localhost/pull-requests"));
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toEqual({ available: false, reason: "unknown" });
     });
   });
 });

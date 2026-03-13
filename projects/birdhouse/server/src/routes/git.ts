@@ -3,6 +3,11 @@
 
 import { Hono } from "hono";
 import { getDepsFromContext } from "../lib/context-deps";
+import {
+  GhAuthError,
+  GhNotInstalledError,
+  GitRepoNotFoundError,
+} from "../lib/git-client";
 import "../types/context";
 
 export function createGitRoutes() {
@@ -19,19 +24,18 @@ export function createGitRoutes() {
 
       return c.json({ available: true, branch, pullRequests });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-
-      if (message.includes("not a git repository") || message.includes("rev-parse")) {
+      if (error instanceof GitRepoNotFoundError) {
         return c.json({ available: false, reason: "not_a_git_repo" as const });
       }
-      if (message.includes("gh: command not found") || message.includes("not found")) {
+      if (error instanceof GhNotInstalledError) {
         return c.json({ available: false, reason: "gh_not_installed" as const });
       }
-      if (message.includes("auth") || message.includes("login")) {
+      if (error instanceof GhAuthError) {
         return c.json({ available: false, reason: "not_authenticated" as const });
       }
 
-      return c.json({ available: false, reason: "not_a_git_repo" as const });
+      deps.log.server.error({ error }, "Unexpected git error");
+      return c.json({ available: false, reason: "unknown" as const });
     }
   });
 
