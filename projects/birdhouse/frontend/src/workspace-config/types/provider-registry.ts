@@ -26,6 +26,7 @@ export const PROVIDERS: ProviderMetadata[] = [
   { id: "deepinfra", label: "DeepInfra", docUrl: "https://deepinfra.com/dash/api_keys" },
   { id: "cerebras", label: "Cerebras", docUrl: "https://cloud.cerebras.ai/api-keys" },
   { id: "together", label: "Together AI", docUrl: "https://api.together.xyz/settings/api-keys" },
+  { id: "zai", label: "Z.AI (GLM)", docUrl: "https://z.ai" },
 ];
 
 /**
