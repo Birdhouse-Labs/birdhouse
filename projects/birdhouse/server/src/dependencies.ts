@@ -5,6 +5,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import type { EventEmitter } from "node:events";
 import { type AgentsDB, createAgentsDB, getDefaultDatabasePath } from "./lib/agents-db";
 import { type DataDB, getDataDB } from "./lib/data-db";
+import { createLiveGitClient, createTestGitClient, type GitClient } from "./lib/git-client";
 import { type CapturedLog, createLiveLogger, createTestLogger, type LoggerDeps } from "./lib/logger";
 import {
   createLiveOpenCodeClient,
@@ -24,7 +25,17 @@ import { TestDataDB } from "./test-utils/data-db-test";
 // ============================================================================
 
 // Re-export types from implementations
-export type { AgentsDB, CapturedLog, DataDB, LoggerDeps, Message, ProvidersResponse, Session, TelemetryClient };
+export type {
+  AgentsDB,
+  CapturedLog,
+  DataDB,
+  GitClient,
+  LoggerDeps,
+  Message,
+  ProvidersResponse,
+  Session,
+  TelemetryClient,
+};
 
 // Dependencies interface - OpenCode client, logger, agents database, and stream factory
 export interface Deps {
@@ -34,6 +45,7 @@ export interface Deps {
   dataDb: DataDB;
   posthog: PosthogProxy;
   telemetry: TelemetryClient;
+  git: GitClient;
   getStream: (opencodeBase: string, workspaceDirectory: string) => OpenCodeStream;
 }
 
@@ -156,6 +168,7 @@ function getLiveDeps(): Deps {
       dataDb: getDataDB(),
       posthog: createLivePosthogProxy(),
       telemetry: createLiveTelemetryClient(getDataDB()),
+      git: createLiveGitClient(),
       getStream: (opencodeBase: string, workspaceDirectory: string) => {
         // Production: Create new stream per request for workspace isolation
         return new OpenCodeStream(opencodeBase, workspaceDirectory);
@@ -179,6 +192,7 @@ const testDeps: Deps = {
   dataDb: new TestDataDB(),
   posthog: createTestPosthogProxy(),
   telemetry: createTestTelemetryClient(),
+  git: createTestGitClient(),
   getStream: (_opencodeBase: string, _workspaceDirectory: string) => {
     // Tests: Return singleton so test events flow through to route
     return getOpenCodeStream();
@@ -215,6 +229,7 @@ export function createTestDeps(opencode?: Partial<Deps["opencode"]>): Deps {
     dataDb: new TestDataDB(),
     posthog: createTestPosthogProxy(),
     telemetry: createTestTelemetryClient(),
+    git: createTestGitClient(),
     getStream: (_opencodeBase: string, _workspaceDirectory: string) => {
       // Tests: Return singleton so test events flow through to route
       return getOpenCodeStream();
@@ -230,6 +245,7 @@ export function createPosthogDeps(): Deps {
     dataDb: new TestDataDB(),
     posthog: createLivePosthogProxy(),
     telemetry: createTestTelemetryClient(),
+    git: createTestGitClient(),
     getStream: (_opencodeBase: string, _workspaceDirectory: string) => getOpenCodeStream(),
   };
 }
