@@ -69,10 +69,10 @@ export async function runCommand(cmd: string[], cwd: string): Promise<string> {
     }
     throw err;
   }
-  const stdout = await new Response(proc.stdout).text();
+  const stdout = await new Response(proc.stdout as ReadableStream).text();
   const exitCode = await proc.exited;
   if (exitCode !== 0) {
-    const stderr = (await new Response(proc.stderr).text()).trim();
+    const stderr = (await new Response(proc.stderr as ReadableStream).text()).trim();
     const message = `Command failed (exit ${exitCode}): ${cmd.join(" ")}\n${stderr}`;
     if (/not a git repository/i.test(stderr)) {
       throw new GitRepoNotFoundError(message);

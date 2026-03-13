@@ -3,11 +3,7 @@
 
 import { Hono } from "hono";
 import { getDepsFromContext } from "../lib/context-deps";
-import {
-  GhAuthError,
-  GhNotInstalledError,
-  GitRepoNotFoundError,
-} from "../lib/git-client";
+import { GhAuthError, GhNotInstalledError, GitRepoNotFoundError } from "../lib/git-client";
 import "../types/context";
 
 export function createGitRoutes() {

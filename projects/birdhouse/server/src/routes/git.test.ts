@@ -4,12 +4,7 @@
 import { describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
 import type { PullRequestInfo } from "../lib/git-client";
-import {
-  GhAuthError,
-  GhNotInstalledError,
-  GitRepoNotFoundError,
-  createTestGitClient,
-} from "../lib/git-client";
+import { createTestGitClient, GhAuthError, GhNotInstalledError, GitRepoNotFoundError } from "../lib/git-client";
 import { withWorkspaceContext } from "../test-utils";
 import { createGitRoutes } from "./git";
 
