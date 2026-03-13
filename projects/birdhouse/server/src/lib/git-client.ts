@@ -20,7 +20,7 @@ export interface GitClient {
   getPullRequests(dir: string, branch: string): Promise<PullRequestInfo[]>;
 }
 
-interface GhPrResult {
+export interface GhPrResult {
   number: number;
   title: string;
   url: string;
@@ -41,14 +41,14 @@ async function runCommand(cmd: string[], cwd: string): Promise<string> {
   return stdout.trim();
 }
 
-function normalizeState(state: string): PullRequestState {
+export function normalizeState(state: string): PullRequestState {
   const lower = state.toLowerCase();
   if (lower === "merged") return "merged";
   if (lower === "closed") return "closed";
   return "open";
 }
 
-function normalizeReviewDecision(decision: string): ReviewDecision {
+export function normalizeReviewDecision(decision: string): ReviewDecision {
   const upper = decision.toUpperCase();
   if (upper === "APPROVED") return "approved";
   if (upper === "CHANGES_REQUESTED") return "changes_requested";
@@ -56,7 +56,7 @@ function normalizeReviewDecision(decision: string): ReviewDecision {
   return "none";
 }
 
-function normalizeChecksStatus(rollup: { state: string }[]): ChecksStatus {
+export function normalizeChecksStatus(rollup: { state: string }[]): ChecksStatus {
   if (!rollup || rollup.length === 0) return "none";
   const states = rollup.map((c) => c.state.toUpperCase());
   if (states.some((s) => s === "FAILURE" || s === "ERROR")) return "failure";
@@ -64,7 +64,7 @@ function normalizeChecksStatus(rollup: { state: string }[]): ChecksStatus {
   return "success";
 }
 
-function mapPrResult(pr: GhPrResult): PullRequestInfo {
+export function mapPrResult(pr: GhPrResult): PullRequestInfo {
   return {
     number: pr.number,
     title: pr.title,
