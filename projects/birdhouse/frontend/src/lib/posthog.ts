@@ -6,42 +6,11 @@ import "posthog-js/dist/recorder";
 import "posthog-js/dist/external-scripts-loader";
 import { log } from "./logger";
 
-/**
- * Minimal user shape needed for PostHog identification.
- * Compatible with Supabase User and other auth providers.
- */
-export interface AuthUser {
-  id: string;
-  email?: string;
-  user_metadata?: Record<string, unknown>;
-}
-
 const posthogKey = "phc_LwyUqyfUjlP28aI98eE2K7jA6mdTboPZYRuKotWsoYI";
 let initialized = false;
 
 const toolbarParamsKey = "_postHogToolbarParams";
 const maskedTextSelector = ".ph-mask-text";
-
-export type PosthogIdentity = {
-  distinctId: string;
-  properties: Record<string, string | boolean | number | null | undefined>;
-};
-
-export function buildPosthogIdentity(user: AuthUser): PosthogIdentity {
-  const displayName = (user.user_metadata?.["full_name"] ??
-    user.user_metadata?.["name"] ??
-    user.email ??
-    user.id) as string;
-
-  return {
-    distinctId: user.id,
-    properties: {
-      email: user.email,
-      name: displayName,
-      username: displayName,
-    },
-  };
-}
 
 export function initPosthog() {
   if (initialized) return;
@@ -86,11 +55,10 @@ export function initPosthog() {
   initialized = true;
 }
 
-export function identifyPosthogUser(user: AuthUser) {
+export function identifyPosthogUser(installId: string, name: string) {
   if (!initialized || !posthogKey) return;
 
-  const { distinctId, properties } = buildPosthogIdentity(user);
-  posthog.identify(distinctId, properties);
+  posthog.identify(installId, { name });
 }
 
 export function resetPosthogUser() {
