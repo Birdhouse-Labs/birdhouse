@@ -72,6 +72,13 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
     },
   );
 
+  // Safely narrow PR data to pull requests array
+  const pullRequests = createMemo(() => {
+    const data = prData();
+    if (data?.available && "pullRequests" in data) return data.pullRequests;
+    return [];
+  });
+
   // Fetch initial session status on load
   const [sessionStatus, { refetch: refetchStatus }] = createResource(
     () => ({ agentId: props.agentId, workspaceId: props.workspaceId }),
@@ -314,13 +321,8 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
             {props.modelName}
           </span>
 
-          <Show
-            when={prData()?.available && (prData() as { pullRequests: PullRequestInfo[] }).pullRequests?.length > 0}
-          >
-            <PrStatusBadge
-              pullRequests={(prData() as { pullRequests: PullRequestInfo[] }).pullRequests}
-              isWorking={isWorking()}
-            />
+          <Show when={pullRequests().length > 0}>
+            <PrStatusBadge pullRequests={pullRequests()} isWorking={isWorking()} />
           </Show>
 
           <button

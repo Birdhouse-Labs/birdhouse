@@ -18,6 +18,26 @@ vi.mock("@solidjs/router", () => ({
   Router: vi.fn(() => null),
 }));
 
+// Mock localStorage (may not work with --localstorage-file flag)
+if (!globalThis.localStorage || typeof globalThis.localStorage.getItem !== "function") {
+  const store: Record<string, string> = {};
+  Object.defineProperty(globalThis, "localStorage", {
+    value: {
+      getItem: (key: string) => store[key] ?? null,
+      setItem: (key: string, value: string) => {
+        store[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete store[key];
+      },
+      clear: () => {
+        for (const key of Object.keys(store)) delete store[key];
+      },
+    },
+    writable: true,
+  });
+}
+
 // Mock matchMedia (not available in jsdom)
 Object.defineProperty(window, "matchMedia", {
   writable: true,
