@@ -1,6 +1,34 @@
 // ABOUTME: Git client abstraction for fetching branch and PR info.
 // ABOUTME: Provides live (Bun.spawn + gh CLI) and test implementations.
 
+export class GitClientError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GitClientError";
+  }
+}
+
+export class GitRepoNotFoundError extends GitClientError {
+  constructor(message: string) {
+    super(message);
+    this.name = "GitRepoNotFoundError";
+  }
+}
+
+export class GhNotInstalledError extends GitClientError {
+  constructor(message: string) {
+    super(message);
+    this.name = "GhNotInstalledError";
+  }
+}
+
+export class GhAuthError extends GitClientError {
+  constructor(message: string) {
+    super(message);
+    this.name = "GhAuthError";
+  }
+}
+
 export type PullRequestState = "open" | "closed" | "merged";
 export type ReviewDecision = "approved" | "changes_requested" | "review_required" | "none";
 export type ChecksStatus = "pending" | "success" | "failure" | "none";
@@ -30,13 +58,32 @@ export interface GhPrResult {
   statusCheckRollup: { state: string }[];
 }
 
-async function runCommand(cmd: string[], cwd: string): Promise<string> {
-  const proc = Bun.spawn(cmd, { cwd, stdout: "pipe", stderr: "pipe" });
+export async function runCommand(cmd: string[], cwd: string): Promise<string> {
+  let proc: ReturnType<typeof Bun.spawn>;
+  try {
+    proc = Bun.spawn(cmd, { cwd, stdout: "pipe", stderr: "pipe" });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new GhNotInstalledError(`Command not found: ${cmd[0]}\n${msg}`);
+    }
+    throw err;
+  }
   const stdout = await new Response(proc.stdout).text();
   const exitCode = await proc.exited;
   if (exitCode !== 0) {
-    const stderr = await new Response(proc.stderr).text();
-    throw new Error(`Command failed (exit ${exitCode}): ${cmd.join(" ")}\n${stderr.trim()}`);
+    const stderr = (await new Response(proc.stderr).text()).trim();
+    const message = `Command failed (exit ${exitCode}): ${cmd.join(" ")}\n${stderr}`;
+    if (/not a git repository/i.test(stderr)) {
+      throw new GitRepoNotFoundError(message);
+    }
+    if (exitCode === 127 || /command not found/i.test(stderr)) {
+      throw new GhNotInstalledError(message);
+    }
+    if (/auth|login/i.test(stderr)) {
+      throw new GhAuthError(message);
+    }
+    throw new Error(message);
   }
   return stdout.trim();
 }

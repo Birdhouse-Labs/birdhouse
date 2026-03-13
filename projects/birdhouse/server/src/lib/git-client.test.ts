@@ -6,10 +6,15 @@ import type { GhPrResult, PullRequestInfo } from "./git-client.ts";
 import {
   createLiveGitClient,
   createTestGitClient,
+  GhAuthError,
+  GhNotInstalledError,
+  GitClientError,
+  GitRepoNotFoundError,
   mapPrResult,
   normalizeChecksStatus,
   normalizeReviewDecision,
   normalizeState,
+  runCommand,
 } from "./git-client.ts";
 
 describe("createTestGitClient", () => {
@@ -194,6 +199,51 @@ describe("mapPrResult", () => {
   });
 });
 
+describe("GitClientError hierarchy", () => {
+  test("GitRepoNotFoundError extends GitClientError", () => {
+    const err = new GitRepoNotFoundError("not found");
+    expect(err).toBeInstanceOf(GitClientError);
+    expect(err).toBeInstanceOf(Error);
+    expect(err.name).toBe("GitRepoNotFoundError");
+  });
+
+  test("GhNotInstalledError extends GitClientError", () => {
+    const err = new GhNotInstalledError("not installed");
+    expect(err).toBeInstanceOf(GitClientError);
+    expect(err.name).toBe("GhNotInstalledError");
+  });
+
+  test("GhAuthError extends GitClientError", () => {
+    const err = new GhAuthError("auth failed");
+    expect(err).toBeInstanceOf(GitClientError);
+    expect(err.name).toBe("GhAuthError");
+  });
+});
+
+describe("runCommand error classification", () => {
+  test("throws GitRepoNotFoundError for non-git directory", async () => {
+    const tmpDir = await import("node:os").then((os) => os.tmpdir());
+    await expect(runCommand(["git", "rev-parse", "--abbrev-ref", "HEAD"], tmpDir)).rejects.toBeInstanceOf(
+      GitRepoNotFoundError,
+    );
+  });
+
+  test("throws GhNotInstalledError for missing command", async () => {
+    await expect(runCommand(["nonexistent-command-xyz-12345"], process.cwd())).rejects.toBeInstanceOf(
+      GhNotInstalledError,
+    );
+  });
+
+  test("throws plain Error for unrecognized failures", async () => {
+    await expect(runCommand(["git", "log", "--invalid-flag-xyz"], process.cwd())).rejects.toThrow(Error);
+    try {
+      await runCommand(["git", "log", "--invalid-flag-xyz"], process.cwd());
+    } catch (err) {
+      expect(err).not.toBeInstanceOf(GitClientError);
+    }
+  });
+});
+
 describe("createLiveGitClient", () => {
   test("getCurrentBranch returns current branch name", async () => {
     const client = createLiveGitClient();
@@ -204,6 +254,6 @@ describe("createLiveGitClient", () => {
 
   test("getCurrentBranch rejects for invalid directory", async () => {
     const client = createLiveGitClient();
-    expect(client.getCurrentBranch("/nonexistent-dir-xyz")).rejects.toThrow();
+    await expect(client.getCurrentBranch("/nonexistent-dir-xyz")).rejects.toThrow();
   });
 });
