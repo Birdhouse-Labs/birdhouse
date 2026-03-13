@@ -22,6 +22,7 @@ import { createBundleRoutes } from "./routes/bundles";
 import { createConfigRoutes } from "./routes/config";
 import { createEventRoutes } from "./routes/events";
 import { createFileRoutes } from "./routes/files";
+import { createGitRoutes } from "./routes/git";
 import { createLogRoutes } from "./routes/logs";
 import { createModelRoutes } from "./routes/models";
 import { createPatternGroupRoutes } from "./routes/pattern-groups";
@@ -237,6 +238,7 @@ app.route("/api/workspace/:workspaceId/events", createEventRoutes());
 app.route("/api/workspace/:workspaceId/models", createModelRoutes());
 app.route("/api/workspace/:workspaceId/title", createTitleRoutes());
 app.route("/api/workspace/:workspaceId/files", createFileRoutes());
+app.route("/api/workspace/:workspaceId/git", createGitRoutes());
 
 // Agent API routes (plugin-optimized with filtering)
 app.route("/aapi/agents", createAAPIAgentRoutes());
