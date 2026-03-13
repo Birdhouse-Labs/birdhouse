@@ -105,7 +105,7 @@ export function normalizeReviewDecision(decision: string): ReviewDecision {
 
 export function normalizeChecksStatus(rollup: { state: string }[]): ChecksStatus {
   if (!rollup || rollup.length === 0) return "none";
-  const states = rollup.map((c) => c.state.toUpperCase());
+  const states = rollup.map((c) => (c.state ?? "").toUpperCase());
   if (states.some((s) => s === "FAILURE" || s === "ERROR")) return "failure";
   if (states.some((s) => s === "PENDING" || s === "EXPECTED")) return "pending";
   return "success";
