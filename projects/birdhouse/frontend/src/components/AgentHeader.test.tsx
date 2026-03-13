@@ -1,5 +1,5 @@
 // ABOUTME: Unit tests for AgentHeader component
-// ABOUTME: Tests rendering of menu items including Archive functionality
+// ABOUTME: Tests rendering, archive, export, and PR status badge functionality
 
 import { render, screen, waitFor } from "@solidjs/testing-library";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -788,5 +788,145 @@ describe("AgentHeader - Export functionality", () => {
 
     // Should use default filename
     expect(mockAnchor.download).toBe("export.md");
+  });
+});
+
+describe("AgentHeader - PR status badge", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders PrStatusBadge when pull requests are available", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes("/git/pull-requests")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            available: true,
+            branch: "feature/test",
+            pullRequests: [
+              {
+                number: 42,
+                title: "Test PR",
+                url: "https://github.com/test/repo/pull/42",
+                state: "open",
+                isDraft: false,
+                reviewDecision: "approved",
+                checksStatus: "success",
+              },
+            ],
+          }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ status: { type: "idle" } }),
+      });
+    });
+
+    renderWithProvider({
+      agentId: "agent-1",
+      title: "Test Agent",
+      modelName: "claude-sonnet-4",
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("PR #42")).toBeInTheDocument();
+    });
+  });
+
+  it("does not render PrStatusBadge when available is false", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes("/git/pull-requests")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            available: false,
+            reason: "not_a_git_repo",
+          }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ status: { type: "idle" } }),
+      });
+    });
+
+    renderWithProvider({
+      agentId: "agent-1",
+      title: "Test Agent",
+      modelName: "claude-sonnet-4",
+    });
+
+    // Wait for fetch to complete, then verify no badge
+    await waitFor(() => {
+      const fetchMock = globalThis.fetch as unknown as { mock: { calls: unknown[][] } };
+      expect(
+        fetchMock.mock.calls.some((c: unknown[]) => typeof c[0] === "string" && c[0].includes("/git/pull-requests")),
+      ).toBe(true);
+    });
+
+    expect(screen.queryByText(/PR #/)).not.toBeInTheDocument();
+  });
+
+  it("does not render PrStatusBadge when pullRequests array is empty", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes("/git/pull-requests")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            available: true,
+            branch: "main",
+            pullRequests: [],
+          }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ status: { type: "idle" } }),
+      });
+    });
+
+    renderWithProvider({
+      agentId: "agent-1",
+      title: "Test Agent",
+      modelName: "claude-sonnet-4",
+    });
+
+    await waitFor(() => {
+      const fetchMock = globalThis.fetch as unknown as { mock: { calls: unknown[][] } };
+      expect(
+        fetchMock.mock.calls.some((c: unknown[]) => typeof c[0] === "string" && c[0].includes("/git/pull-requests")),
+      ).toBe(true);
+    });
+
+    expect(screen.queryByText(/PR #/)).not.toBeInTheDocument();
+  });
+
+  it("does not render PrStatusBadge when fetch fails", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes("/git/pull-requests")) {
+        return Promise.resolve({ ok: false, status: 500 });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ status: { type: "idle" } }),
+      });
+    });
+
+    renderWithProvider({
+      agentId: "agent-1",
+      title: "Test Agent",
+      modelName: "claude-sonnet-4",
+    });
+
+    await waitFor(() => {
+      const fetchMock = globalThis.fetch as unknown as { mock: { calls: unknown[][] } };
+      expect(
+        fetchMock.mock.calls.some((c: unknown[]) => typeof c[0] === "string" && c[0].includes("/git/pull-requests")),
+      ).toBe(true);
+    });
+
+    expect(screen.queryByText(/PR #/)).not.toBeInTheDocument();
   });
 });
