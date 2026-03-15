@@ -70,11 +70,15 @@ const NewAgent: Component = () => {
     },
     (text) => previewSkillAttachments(workspaceId, text),
   );
-  const patternCount = createMemo(() => {
-    if (skillAttachments.error) {
-      return 0;
+  const visibleSkillAttachments = createMemo(() => {
+    if (linkedSkillNames().length === 0 || !messageText().trim() || skillAttachments.error) {
+      return [];
     }
-    return skillAttachments()?.length ?? 0;
+
+    return skillAttachments() ?? [];
+  });
+  const patternCount = createMemo(() => {
+    return visibleSkillAttachments().length;
   });
   const [patternDialogOpen, setPatternDialogOpen] = createSignal(false);
 
@@ -322,7 +326,7 @@ const NewAgent: Component = () => {
 
       {/* Pattern references dialog */}
       <PatternReferencesDialog
-        attachments={skillAttachments.error ? [] : (skillAttachments() ?? [])}
+        attachments={visibleSkillAttachments()}
         open={patternDialogOpen()}
         onClose={() => setPatternDialogOpen(false)}
       />

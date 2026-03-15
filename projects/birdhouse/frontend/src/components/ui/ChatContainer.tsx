@@ -57,11 +57,15 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
     },
     (text) => previewSkillAttachments(workspaceId, text),
   );
-  const patternCount = createMemo(() => {
-    if (skillAttachments.error) {
-      return 0;
+  const visibleSkillAttachments = createMemo(() => {
+    if (linkedSkillNames().length === 0 || !props.inputValue.trim() || skillAttachments.error) {
+      return [];
     }
-    return skillAttachments()?.length ?? 0;
+
+    return skillAttachments() ?? [];
+  });
+  const patternCount = createMemo(() => {
+    return visibleSkillAttachments().length;
   });
   const [dialogOpen, setDialogOpen] = createSignal(false);
 
@@ -157,7 +161,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
 
       {/* Pattern References Dialog */}
       <PatternReferencesDialog
-        attachments={skillAttachments.error ? [] : (skillAttachments() ?? [])}
+        attachments={visibleSkillAttachments()}
         open={dialogOpen()}
         onClose={() => setDialogOpen(false)}
       />
