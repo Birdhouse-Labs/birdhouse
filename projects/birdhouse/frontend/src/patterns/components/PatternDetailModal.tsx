@@ -9,8 +9,8 @@ import { CodeBlock } from "../../components/ui/CodeBlock";
 import IconButton from "../../components/ui/IconButton";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
 import { resolvedCodeTheme } from "../../theme";
-import type { Pattern } from "../types/pattern-library-types";
 import { revealSkillLocation } from "../services/pattern-library-api";
+import type { Pattern } from "../types/pattern-library-types";
 import TriggerPhraseEditor from "./TriggerPhraseEditor";
 
 function formatMetadataValue(value: unknown): string {
@@ -39,6 +39,10 @@ export interface PatternDetailModalProps {
 
 function isStructuredMetadataValue(value: unknown): boolean {
   return typeof value === "object" && value !== null;
+}
+
+function isMultilineText(value: string): boolean {
+  return value.includes("\n");
 }
 
 const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
@@ -121,12 +125,21 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
                     <For each={metadataEntries()}>
                       {([key, value]) => (
                         <div class="space-y-1">
-                          <dt class="text-xs font-semibold uppercase tracking-wide text-text-muted">{key}</dt>
+                          <dt class="text-sm font-medium text-text-secondary">{key}</dt>
                           <Show
                             when={isStructuredMetadataValue(value)}
                             fallback={
-                              <dd class="whitespace-pre-wrap break-words font-mono text-sm text-text-primary">
-                                {formatMetadataValue(value)}
+                              <dd
+                                classList={{
+                                  "whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed": true,
+                                  "font-mono": typeof value !== "string",
+                                }}
+                              >
+                                {typeof value === "string" && isMultilineText(value) ? (
+                                  <MarkdownRenderer content={value} />
+                                ) : (
+                                  formatMetadataValue(value)
+                                )}
                               </dd>
                             }
                           >
@@ -142,7 +155,7 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
                       )}
                     </For>
                     <div class="space-y-1 pt-2 border-t border-border-muted/60">
-                      <dt class="text-xs font-semibold uppercase tracking-wide text-text-muted">Location</dt>
+                      <dt class="text-sm font-medium text-text-secondary">Location</dt>
                       <dd class="flex items-center gap-2 text-xs text-text-muted">
                         <span class="font-mono break-all flex-1">{locationDisplay()}</span>
                         <IconButton
