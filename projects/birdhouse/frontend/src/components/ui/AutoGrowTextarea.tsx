@@ -186,16 +186,14 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
   });
 
   const handlePatternSelect = (
-    pattern: { id: string },
+    _pattern: { id: string },
     matchedPhrase: string,
     matchedText: string,
     matchStartIndex: number,
   ) => {
     if (!textareaRef) return;
 
-    // Use execCommand or document.execCommand to preserve undo stack
-    // This is the recommended way to programmatically edit while preserving undo
-    const replacement = `[${matchedPhrase}](birdhouse:pattern/${pattern.id})`;
+    const replacement = matchedPhrase;
 
     // Focus first
     textareaRef.focus();

@@ -1,5 +1,5 @@
-// ABOUTME: Pattern card component displaying title, description, trigger phrases preview
-// ABOUTME: Shows View button for opening pattern details
+// ABOUTME: Skill card component displaying title, description, and trigger phrase preview.
+// ABOUTME: Uses the existing card layout while keeping skills read-only except for trigger phrases in detail.
 
 import { Eye } from "lucide-solid";
 import { type Component, For, Show } from "solid-js";
@@ -36,7 +36,7 @@ const PatternCard: Component<PatternCardProps> = (props) => {
             </button>
           </Show>
           <Button variant="tertiary" onClick={() => props.onView(props.pattern.id)}>
-            {props.readonly ? "View" : "Edit"}
+            View
           </Button>
         </div>
       </div>

@@ -2,12 +2,13 @@
 // ABOUTME: Orchestrates message rendering and input handling
 
 import { LibraryBig, Split, X } from "lucide-solid";
-import { type Accessor, type Component, createMemo, createSignal, For, Show } from "solid-js";
+import { type Accessor, type Component, createMemo, createResource, createSignal, For, Show } from "solid-js";
+import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { findPendingAssistantId, isMessageQueued } from "../../domain/message-queue";
+import { previewSkillAttachments } from "../../services/skill-attachments-api";
 import { uiSize } from "../../theme";
 import type { Message } from "../../types/messages";
 import type { QuestionRequest } from "../../types/question";
-import { countPatternReferences, extractPatternReferences } from "../../utils/patternReferences";
 import AutoGrowTextarea from "./AutoGrowTextarea";
 import Button from "./Button";
 import MessageBubble from "./MessageBubble";
@@ -33,6 +34,7 @@ export interface ChatContainerProps {
 }
 
 export const ChatContainer: Component<ChatContainerProps> = (props) => {
+  const { workspaceId } = useWorkspace();
   const sizeClasses = createMemo(() => {
     const size = uiSize();
     return {
@@ -41,8 +43,16 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
     };
   });
 
-  const patternCount = createMemo(() => countPatternReferences(props.inputValue));
-  const patternIds = createMemo(() => extractPatternReferences(props.inputValue));
+  const [skillAttachments] = createResource(
+    () => props.inputValue.trim(),
+    (text) => previewSkillAttachments(workspaceId, text),
+  );
+  const patternCount = createMemo(() => {
+    if (skillAttachments.error) {
+      return 0;
+    }
+    return skillAttachments()?.length ?? 0;
+  });
   const [dialogOpen, setDialogOpen] = createSignal(false);
 
   // Find the pending assistant message ID for queue detection
@@ -136,7 +146,11 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
       </div>
 
       {/* Pattern References Dialog */}
-      <PatternReferencesDialog patternIds={patternIds()} open={dialogOpen()} onClose={() => setDialogOpen(false)} />
+      <PatternReferencesDialog
+        attachments={skillAttachments.error ? [] : (skillAttachments() ?? [])}
+        open={dialogOpen()}
+        onClose={() => setDialogOpen(false)}
+      />
 
       {/* Messages area - newest at top (scrollable) */}
       <div

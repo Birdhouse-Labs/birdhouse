@@ -296,6 +296,52 @@ export class DataDB {
     });
   }
 
+  // ==================== Skill Trigger Phrase Operations ====================
+
+  getSkillTriggerPhrases(skillName: string): string[] {
+    const row = this.db
+      .query<{ trigger_phrases_json: string }, [string]>(
+        "SELECT trigger_phrases_json FROM skill_trigger_phrases WHERE skill_name = ?",
+      )
+      .get(skillName);
+
+    if (!row) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(row.trigger_phrases_json) as unknown;
+      if (Array.isArray(parsed) && parsed.every((value) => typeof value === "string")) {
+        return parsed;
+      }
+    } catch {
+      log.server.warn({ skillName }, "Failed to parse skill trigger phrases JSON");
+    }
+
+    return [];
+  }
+
+  setSkillTriggerPhrases(skillName: string, triggerPhrases: string[]): void {
+    if (triggerPhrases.length === 0) {
+      this.db.prepare("DELETE FROM skill_trigger_phrases WHERE skill_name = ?").run(skillName);
+      log.server.debug({ skillName }, "Deleted skill trigger phrases");
+      return;
+    }
+
+    const updatedAt = new Date().toISOString();
+    this.db
+      .prepare(
+        `INSERT INTO skill_trigger_phrases (skill_name, trigger_phrases_json, updated_at)
+         VALUES (?, ?, ?)
+         ON CONFLICT(skill_name) DO UPDATE SET
+           trigger_phrases_json = excluded.trigger_phrases_json,
+           updated_at = excluded.updated_at`,
+      )
+      .run(skillName, JSON.stringify(triggerPhrases), updatedAt);
+
+    log.server.debug({ skillName, triggerPhrasesCount: triggerPhrases.length }, "Stored skill trigger phrases");
+  }
+
   // ==================== User Profile Operations ====================
 
   getUserProfile(): UserProfile | null {

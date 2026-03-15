@@ -1,22 +1,22 @@
-// ABOUTME: Type definitions for Pattern Library UI (Experiment 2)
-// ABOUTME: Defines patterns, groups, sections, and API response shapes
+// ABOUTME: Type definitions for the skills-backed library UI shell.
+// ABOUTME: Keeps the existing shell contracts while mapping them to read-only skill data.
 
-export type PatternScope = "user" | "workspace" | "birdhouse";
+export type PatternScope = "workspace" | "global";
 
 /**
- * Pattern metadata from group list endpoint
+ * Skill metadata shown in the library list
  */
 export interface PatternMetadata {
   id: string;
   title: string;
   description?: string;
   trigger_phrases: string[];
-  created_at: string;
-  updated_at: string;
+  scope?: PatternScope;
+  location?: string;
 }
 
 /**
- * Full pattern with content (from detail endpoint)
+ * Full skill detail shown in the detail dialog
  */
 export interface Pattern {
   id: string;
@@ -25,27 +25,28 @@ export interface Pattern {
   description?: string;
   prompt: string;
   trigger_phrases: string[];
+  files: string[];
   readonly: boolean;
-  created_at: string;
-  updated_at: string;
+  scope: PatternScope;
+  location: string;
 }
 
 /**
- * Pattern group with patterns
+ * Skill group used by the reused library shell
  */
 export interface PatternGroup {
-  id: string; // Encoded group ID from API
+  id: string;
   title: string;
   description: string;
   scope: PatternScope;
   workspace_id: string | null;
   pattern_count: number;
   readonly: boolean;
-  patterns?: PatternMetadata[]; // Only present when group is fetched with patterns
+  patterns?: PatternMetadata[];
 }
 
 /**
- * Section organizing groups
+ * Section organizing groups in the left navigation
  */
 export interface PatternSection {
   id: string;
@@ -56,36 +57,17 @@ export interface PatternSection {
 }
 
 /**
- * API response for list all groups
+ * Library response for the current workspace's visible skills
  */
 export interface PatternLibraryResponse {
   sections: PatternSection[];
 }
 
 /**
- * API response for get group with patterns
+ * Group detail response for the right-hand library pane
  */
 export interface GroupWithPatternsResponse extends PatternGroup {
   patterns: PatternMetadata[];
-}
-
-/**
- * Create pattern request
- */
-export interface CreatePatternRequest {
-  title: string;
-  description?: string;
-  prompt: string;
-  trigger_phrases?: string[];
-}
-
-/**
- * Update pattern content request
- */
-export interface UpdatePatternRequest {
-  title?: string;
-  description?: string;
-  prompt?: string;
 }
 
 /**

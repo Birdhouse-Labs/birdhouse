@@ -14,7 +14,7 @@ import { isAgentEventBlock, isReasoningBlock, isSystemMessage, isToolBlock } fro
 import type { QuestionRequest } from "../../types/question";
 import { recordAgentView } from "../../utils/agent-navigation";
 import { copyToClipboard } from "../../utils/clipboard";
-import { extractPatternsFromXML, stripPatternXML } from "../../utils/patternParsing";
+import { extractSkillsFromXML, stripSkillXML } from "../../utils/patternParsing";
 import MarkdownRenderer from "../MarkdownRenderer";
 import AgentButton from "./AgentButton";
 import AgentToolCard from "./AgentToolCard";
@@ -70,7 +70,6 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
   const isUser = () => props.message.role === "user";
   const [errorDialogOpen, setErrorDialogOpen] = createSignal(false);
   const [patternDialogOpen, setPatternDialogOpen] = createSignal(false);
-  const [clickedPatternId, setClickedPatternId] = createSignal<string | undefined>(undefined);
   const [isMenuOpen, setIsMenuOpen] = createSignal(false);
   const [showCopySuccess, setShowCopySuccess] = createSignal(false);
   const [showCopyJSONSuccess, setShowCopyJSONSuccess] = createSignal(false);
@@ -91,16 +90,14 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
   // Check if this is an agent-sent message (vs human-sent)
   const isAgentSent = createMemo(() => !!senderInfo()?.agentTitle);
 
-  // Extract patterns from XML tags (only for user messages)
-  const patternIds = createMemo(() => {
+  const attachedSkills = createMemo(() => {
     if (props.message.role !== "user") return [];
-    return extractPatternsFromXML(props.message.content);
+    return extractSkillsFromXML(props.message.content);
   });
 
-  // Strip XML from content (only for user messages)
   const cleanedContent = createMemo(() => {
     if (props.message.role !== "user") return props.message.content;
-    return stripPatternXML(props.message.content);
+    return stripSkillXML(props.message.content);
   });
 
   const sizeClasses = createMemo(() => {
@@ -321,10 +318,6 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
           <MarkdownRenderer
             content={cleanedContent()}
             workspaceId={workspaceId}
-            onPatternLinkClick={(patternId) => {
-              setClickedPatternId(patternId);
-              setPatternDialogOpen(true);
-            }}
             onReferenceLinkClick={(reference) => {
               if (reference.type === "agent") {
                 recordAgentView(reference.identifier);
@@ -334,10 +327,10 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
           />
 
           {/* Attached Patterns Button */}
-          <Show when={patternIds().length > 0}>
+          <Show when={attachedSkills().length > 0}>
             <div class="flex justify-end mt-2 mb-1">
               <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setPatternDialogOpen(true)}>
-                {patternIds().length} {patternIds().length === 1 ? "skill" : "skills"} attached
+                {attachedSkills().length} {attachedSkills().length === 1 ? "skill" : "skills"} attached
               </Button>
             </div>
           </Show>
@@ -384,10 +377,6 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
           <MarkdownRenderer
             content={cleanedContent()}
             workspaceId={workspaceId}
-            onPatternLinkClick={(patternId) => {
-              setClickedPatternId(patternId);
-              setPatternDialogOpen(true);
-            }}
             onReferenceLinkClick={(reference) => {
               if (reference.type === "agent") {
                 recordAgentView(reference.identifier);
@@ -398,10 +387,10 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
           />
 
           {/* Pattern attachments button - only show for user messages with patterns */}
-          <Show when={patternIds().length > 0}>
+          <Show when={attachedSkills().length > 0}>
             <div class="flex justify-start mt-2 mb-1">
               <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setPatternDialogOpen(true)}>
-                {patternIds().length} {patternIds().length === 1 ? "skill" : "skills"} attached
+                {attachedSkills().length} {attachedSkills().length === 1 ? "skill" : "skills"} attached
               </Button>
             </div>
           </Show>
@@ -475,10 +464,6 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
               {...(props.message.isStreaming !== undefined && {
                 isStreaming: props.message.isStreaming,
               })}
-              onPatternLinkClick={(patternId) => {
-                setClickedPatternId(patternId);
-                setPatternDialogOpen(true);
-              }}
               onReferenceLinkClick={(reference) => {
                 if (reference.type === "agent") {
                   recordAgentView(reference.identifier);
@@ -569,21 +554,11 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
         </MessageBubbleContent>
       )}
 
-      {/* Pattern references dialog */}
+      {/* Skill attachments dialog */}
       <PatternReferencesDialog
-        patternIds={(() => {
-          const id = clickedPatternId();
-          return id ? [id] : patternIds();
-        })()}
+        attachments={attachedSkills()}
         open={patternDialogOpen()}
-        onClose={() => {
-          setPatternDialogOpen(false);
-          setClickedPatternId(undefined);
-        }}
-        {...(() => {
-          const id = clickedPatternId();
-          return id ? { initialPatternId: id } : {};
-        })()}
+        onClose={() => setPatternDialogOpen(false)}
       />
 
       {/* Error details dialog */}

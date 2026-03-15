@@ -6,8 +6,7 @@ import { Hammer, LibraryBig, Lightbulb } from "lucide-solid";
 import { type Component, createEffect, createMemo, createResource, createSignal, onMount, Show } from "solid-js";
 import { useWorkspace } from "../contexts/WorkspaceContext";
 import { createAgent, fetchModels, type Model } from "../services/messages-api";
-import { prepareMessageForSending } from "../utils/messageEnrichment";
-import { countPatternReferences, extractPatternReferences } from "../utils/patternReferences";
+import { previewSkillAttachments } from "../services/skill-attachments-api";
 import AutoGrowTextarea from "./ui/AutoGrowTextarea";
 import Button from "./ui/Button";
 import { Combobox, type ComboboxOption, type ComboboxRenderFn } from "./ui/Combobox";
@@ -57,9 +56,16 @@ const NewAgent: Component = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Pattern detection
-  const patternCount = createMemo(() => countPatternReferences(messageText()));
-  const patternIds = createMemo(() => extractPatternReferences(messageText()));
+  const [skillAttachments] = createResource(
+    () => messageText().trim(),
+    (text) => previewSkillAttachments(workspaceId, text),
+  );
+  const patternCount = createMemo(() => {
+    if (skillAttachments.error) {
+      return 0;
+    }
+    return skillAttachments()?.length ?? 0;
+  });
   const [patternDialogOpen, setPatternDialogOpen] = createSignal(false);
 
   // Handle URL param pre-fill with timestamped draft backup
@@ -173,12 +179,9 @@ const NewAgent: Component = () => {
       const modelId = selectedModelId();
       const message = messageText().trim();
 
-      // Enrich message with pattern XML blocks if patterns are referenced
-      const enrichedMessage = await prepareMessageForSending(message, workspaceId);
-
       // Create the agent with optional first message
       // If message provided, server sends it and injects Birdhouse system prompt
-      const agent = await createAgent(workspaceId, undefined, modelId, enrichedMessage || undefined, agentForMode());
+      const agent = await createAgent(workspaceId, undefined, modelId, message || undefined, agentForMode());
 
       // Clear draft after successful creation
       localStorage.removeItem(NEW_AGENT_DRAFT_KEY);
@@ -309,7 +312,7 @@ const NewAgent: Component = () => {
 
       {/* Pattern references dialog */}
       <PatternReferencesDialog
-        patternIds={patternIds()}
+        attachments={skillAttachments.error ? [] : (skillAttachments() ?? [])}
         open={patternDialogOpen()}
         onClose={() => setPatternDialogOpen(false)}
       />

@@ -37,6 +37,12 @@ export function createTestDataDB(): DataDB {
       config_updated_at INTEGER,
       FOREIGN KEY (workspace_id) REFERENCES workspaces(workspace_id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS skill_trigger_phrases (
+      skill_name TEXT PRIMARY KEY,
+      trigger_phrases_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   db.close();
@@ -90,10 +96,16 @@ export class TestDataDB extends DataDB {
         created_at TEXT NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS installation (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        install_id TEXT NOT NULL,
-        created_at TEXT NOT NULL
+    CREATE TABLE IF NOT EXISTS installation (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      install_id TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+      CREATE TABLE IF NOT EXISTS skill_trigger_phrases (
+        skill_name TEXT PRIMARY KEY,
+        trigger_phrases_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL
       );
     `);
   }

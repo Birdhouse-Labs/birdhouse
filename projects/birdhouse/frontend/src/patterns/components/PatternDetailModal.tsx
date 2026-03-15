@@ -1,9 +1,9 @@
-// ABOUTME: Nested modal for viewing full pattern details
-// ABOUTME: Shows description, trigger phrases (editable), and LLM prompt content
+// ABOUTME: Nested modal for viewing skill detail from the reused library shell.
+// ABOUTME: Shows SKILL.md content, trigger phrase scope, and the XML block preview for runtime attachment.
 
 import Dialog from "corvu/dialog";
 import { X } from "lucide-solid";
-import { type Component, createSignal, Show } from "solid-js";
+import { type Component, createSignal, For, Show } from "solid-js";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
 import type { Pattern } from "../types/pattern-library-types";
@@ -20,6 +20,13 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
   const [isSaving, setIsSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
+  const scopeTitle = () =>
+    props.pattern.scope === "workspace" ? "Workspace trigger phrases" : "Shared trigger phrases";
+  const scopeDescription = () =>
+    props.pattern.scope === "workspace"
+      ? "Applies only in this workspace because this skill resolves inside the current workspace directory."
+      : "Applies across all workspaces because this skill resolves outside the current workspace directory.";
+
   const handleSaveTriggerPhrases = async (phrases: string[]) => {
     setIsSaving(true);
     setError(null);
@@ -33,6 +40,7 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
       setIsSaving(false);
     }
   };
+
   return (
     <Dialog
       open={props.open}
@@ -48,7 +56,6 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
           class="fixed rounded-2xl shadow-2xl w-[90vw] h-[90dvh] max-w-[1200px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col overflow-hidden bg-surface"
           style={{ "z-index": "117" }}
         >
-          {/* Header */}
           <div class="px-6 py-3 border-b bg-surface-raised border-border flex-shrink-0 flex items-center justify-between">
             <Dialog.Label class="text-lg font-semibold text-heading">{props.pattern.title}</Dialog.Label>
             <Dialog.Close class="text-text-muted hover:text-text-primary transition-colors">
@@ -56,19 +63,15 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
             </Dialog.Close>
           </div>
 
-          {/* Scrollable Content */}
           <div class="flex-1 overflow-y-auto p-8 space-y-8">
-            {/* Error Display */}
             <Show when={error()}>
               <div class="p-3 bg-danger/10 border border-danger rounded text-sm text-danger">{error()}</div>
             </Show>
 
-            {/* Saving Indicator */}
             <Show when={isSaving()}>
               <div class="text-xs text-text-muted px-2">Saving changes...</div>
             </Show>
 
-            {/* Description Section */}
             <Show when={props.pattern.description}>
               <section class="space-y-4">
                 <h3 class="text-lg font-semibold text-heading">Description</h3>
@@ -78,29 +81,47 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
               </section>
             </Show>
 
-            {/* Trigger Phrases Section */}
             <section class="space-y-4">
-              <h3 class="text-lg font-semibold text-heading">Trigger Phrases</h3>
+              <div class="space-y-1">
+                <h3 class="text-lg font-semibold text-heading">{scopeTitle()}</h3>
+                <p class="text-sm text-text-secondary">{scopeDescription()}</p>
+              </div>
               <TriggerPhraseEditor phrases={props.pattern.trigger_phrases} onSave={handleSaveTriggerPhrases} />
             </section>
 
-            {/* Prompt Content Section */}
+            <section class="space-y-4">
+              <h3 class="text-lg font-semibold text-heading">Resolved Skill File</h3>
+              <div class={`rounded-xl ${cardSurfaceFlat} px-6 py-4`}>
+                <p class="text-sm font-mono text-text-primary break-all">{props.pattern.location}</p>
+              </div>
+            </section>
+
+            <Show when={props.pattern.files.length > 0}>
+              <section class="space-y-4">
+                <h3 class="text-lg font-semibold text-heading">Other Files in Skill Directory</h3>
+                <div class={`rounded-xl ${cardSurfaceFlat} px-6 py-4`}>
+                  <div class="flex flex-wrap gap-2">
+                    <For each={props.pattern.files}>
+                      {(file) => <span class="text-sm font-mono text-text-primary break-all">{file}</span>}
+                    </For>
+                  </div>
+                </div>
+              </section>
+            </Show>
+
             <section class="space-y-4">
               <h3 class="text-lg font-semibold text-heading">What Gets Sent to the LLM</h3>
               <div class={`rounded-xl ${cardSurfaceFlat} overflow-hidden`}>
-                {/* XML Wrapper Header */}
                 <div class="px-4 py-2 bg-surface-overlay border-b border-border-muted font-mono text-xs text-text-muted">
-                  &lt;birdhouse-pattern id="{props.pattern.id}"&gt;
+                  &lt;skill name="{props.pattern.title}"&gt;
                 </div>
 
-                {/* Prompt Content */}
                 <div class="p-6">
                   <MarkdownRenderer content={props.pattern.prompt} />
                 </div>
 
-                {/* XML Wrapper Footer */}
                 <div class="px-4 py-2 bg-surface-overlay border-t border-border-muted font-mono text-xs text-text-muted">
-                  &lt;/birdhouse-pattern&gt;
+                  &lt;/skill&gt;
                 </div>
               </div>
             </section>

@@ -26,6 +26,7 @@ import { createLogRoutes } from "./routes/logs";
 import { createModelRoutes } from "./routes/models";
 import { createPatternGroupRoutes } from "./routes/pattern-groups";
 import { createPosthogRoutes } from "./routes/posthog-ingest";
+import { createSkillRoutes } from "./routes/skills";
 import { createTitleRoutes } from "./routes/title";
 import { createUserProfileRoutes } from "./routes/user-profile";
 import { createWorkspaceRoutes } from "./routes/workspaces";
@@ -235,6 +236,7 @@ app.route("/api/pattern-groups", createPatternGroupRoutes(dataDb, patternGroupsP
 app.route("/api/workspace/:workspaceId/agents", createAgentRoutes());
 app.route("/api/workspace/:workspaceId/events", createEventRoutes());
 app.route("/api/workspace/:workspaceId/models", createModelRoutes());
+app.route("/api/workspace/:workspaceId/skills", createSkillRoutes(dataDb));
 app.route("/api/workspace/:workspaceId/title", createTitleRoutes());
 app.route("/api/workspace/:workspaceId/files", createFileRoutes());
 
@@ -259,6 +261,7 @@ if (FRONTEND_STATIC) {
         workspaces: "/api/workspaces",
         patternGroups: "/api/pattern-groups",
         agents: "/api/workspace/:workspaceId/agents",
+        skills: "/api/workspace/:workspaceId/skills",
         title: "/api/workspace/:workspaceId/title",
         events: "/api/workspace/:workspaceId/events (SSE)",
         files: "/api/workspace/:workspaceId/files",

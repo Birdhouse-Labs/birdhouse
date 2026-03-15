@@ -1,43 +1,42 @@
-// ABOUTME: Utilities for parsing and extracting pattern XML tags from message content
-// ABOUTME: Extracts pattern IDs and strips XML blocks while preserving markdown links
+// ABOUTME: Utilities for parsing and extracting attached skill XML from message content.
+// ABOUTME: Extracts snapshotted skill payloads and strips XML blocks while preserving visible text.
 
-/**
- * Extracts pattern IDs from XML tags in message content
- * Matches: <birdhouse-pattern id="PATTERN_ID">...</birdhouse-pattern>
- * Returns: ['pattern_debug001', 'pattern_tdd002']
- *
- * Handles attributes in any order and both quote styles
- *
- * @param content Message content with potential pattern XML tags
- * @returns Array of unique pattern IDs found in XML tags
- */
-export function extractPatternsFromXML(content: string): string[] {
-  // Step 1: Find all <birdhouse-pattern> blocks
-  const blockRegex = /<birdhouse-pattern\s+[^>]*>[\s\S]*?<\/birdhouse-pattern>/g;
-  const blocks = content.match(blockRegex) || [];
-
-  // Step 2: Extract id attribute from each block
-  const idRegex = /\bid=["']([^"']+)["']/;
-  const ids = new Set<string>();
-
-  for (const block of blocks) {
-    const idMatch = block.match(idRegex);
-    if (idMatch?.[1]) {
-      ids.add(idMatch[1]);
-    }
-  }
-
-  return Array.from(ids);
+export interface SkillAttachmentSnapshot {
+  name: string;
+  content: string;
 }
 
 /**
- * Strips all pattern XML tags from content
- * Leaves markdown links intact
- * Returns: Clean content without XML blocks
- *
- * @param content Message content with potential pattern XML tags
- * @returns Content with XML blocks removed and trimmed
+ * Extracts skill snapshots from XML tags in message content.
  */
-export function stripPatternXML(content: string): string {
-  return content.replace(/<birdhouse-pattern\s+[^>]*>[\s\S]*?<\/birdhouse-pattern>/g, "").trim();
+export function extractSkillsFromXML(content: string): SkillAttachmentSnapshot[] {
+  const blockRegex = /<skill\s+[^>]*>[\s\S]*?<\/skill>/g;
+  const blocks = content.match(blockRegex) || [];
+  const nameRegex = /\bname=["']([^"']+)["']/;
+  const snapshots: SkillAttachmentSnapshot[] = [];
+  const seenNames = new Set<string>();
+
+  for (const block of blocks) {
+    const nameMatch = block.match(nameRegex);
+    const name = nameMatch?.[1];
+    if (!name || seenNames.has(name)) {
+      continue;
+    }
+
+    const contentStart = block.indexOf(">") + 1;
+    const contentEnd = block.lastIndexOf("</skill>");
+    const snapshotContent = block.slice(contentStart, contentEnd).trim();
+
+    snapshots.push({ name, content: snapshotContent });
+    seenNames.add(name);
+  }
+
+  return snapshots;
+}
+
+/**
+ * Strips all attached skill XML tags from content.
+ */
+export function stripSkillXML(content: string): string {
+  return content.replace(/<skill\s+[^>]*>[\s\S]*?<\/skill>/g, "").trim();
 }
