@@ -1,5 +1,5 @@
-// ABOUTME: Main full-screen dialog for the reused skills library shell.
-// ABOUTME: Manages modal routing, skills API calls, and the read-only detail flow.
+// ABOUTME: Main full-screen dialog for the flat skills library shell.
+// ABOUTME: Preserves the outer library dialog while replacing grouped navigation with flat list search and filtering.
 
 import { useSearchParams } from "@solidjs/router";
 import Dialog from "corvu/dialog";
@@ -12,24 +12,24 @@ import { serializeModalStack, useModalRoute } from "../../lib/routing";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
 import { createMediaQuery } from "../../theme/createMediaQuery";
 import { fetchPattern, fetchPatternLibrary, updateTriggerPhrases } from "../services/pattern-library-api";
-import type { Pattern } from "../types/pattern-library-types";
-import GroupView from "./GroupView";
-import PatternDetailModal from "./PatternDetailModal";
-import PatternLibraryLeft from "./PatternLibraryLeft";
+import type { SkillListScopeFilter } from "../types/pattern-library-types";
+import { filterSkills } from "../utils/skill-library-filtering";
+import SkillDetailPane from "./SkillDetailPane";
+import SkillListPane from "./SkillListPane";
 
 const MODAL_TYPE_LIBRARY = "pattern-library-v2";
-const MODAL_TYPE_PATTERN = "pattern-v2";
 
 export interface PatternLibraryDialogProps {
   workspaceId: string;
 }
 
 const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
-  const { openModal, closeModal, modalStack } = useModalRoute();
+  const { closeModal, modalStack } = useModalRoute();
   const [_searchParams, setSearchParams] = useSearchParams<{ modals?: string }>();
   const isDesktop = createMediaQuery("(min-width: 768px)");
   const [sidebarOpen, setSidebarOpen] = createSignal(true);
-  const [groupRefetchTrigger, setGroupRefetchTrigger] = createSignal(0);
+  const [searchQuery, setSearchQuery] = createSignal("");
+  const [scopeFilter, setScopeFilter] = createSignal<SkillListScopeFilter>("all");
 
   const isLibraryOpen = createMemo(() => modalStack().some((modal) => modal.type === MODAL_TYPE_LIBRARY));
 
@@ -38,7 +38,7 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
     async (workspaceId) => fetchPatternLibrary(workspaceId),
   );
 
-  const selectedGroupId = createMemo(() => {
+  const selectedSkillId = createMemo(() => {
     const libraryModal = modalStack().find((modal) => modal.type === MODAL_TYPE_LIBRARY);
     if (libraryModal && libraryModal.id !== "main") {
       return libraryModal.id;
@@ -46,29 +46,18 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
     return null;
   });
 
-  const selectedPatternId = createMemo(() => {
-    const patternModal = modalStack().find((modal) => modal.type === MODAL_TYPE_PATTERN);
-    return patternModal?.id || null;
-  });
+  const skills = createMemo(() => libraryData()?.skills ?? []);
+
+  const filteredSkills = createMemo(() => filterSkills(skills(), searchQuery(), scopeFilter()));
 
   const [patternData, { refetch: refetchPattern }] = createResource(
     () => {
-      const patternId = selectedPatternId();
-      const groupId = selectedGroupId();
-      if (!patternId || !groupId) return null;
-      return { patternId, groupId, workspaceId: props.workspaceId };
+      const skillId = selectedSkillId();
+      if (!skillId) return null;
+      return { skillId, workspaceId: props.workspaceId };
     },
-    async ({ patternId, groupId, workspaceId }) => fetchPattern(groupId, patternId, workspaceId),
+    async ({ skillId, workspaceId }) => fetchPattern(skillId, workspaceId),
   );
-
-  const [lastPattern, setLastPattern] = createSignal<Pattern | null>(null);
-  createEffect(() => {
-    if (patternData.error) return;
-    const pattern = patternData();
-    if (pattern && !patternData.loading) {
-      setLastPattern(pattern);
-    }
-  });
 
   createEffect(() => {
     if (isLibraryOpen()) {
@@ -76,10 +65,11 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
     }
   });
 
-  const selectGroup = (groupId: string) => {
+  const selectSkill = (skillId: string | null) => {
+    const nextId = skillId || "main";
     const updatedStack = modalStack()
       .filter((modal) => modal.type === MODAL_TYPE_LIBRARY)
-      .map(() => ({ type: MODAL_TYPE_LIBRARY, id: groupId }));
+      .map(() => ({ type: MODAL_TYPE_LIBRARY, id: nextId }));
     setSearchParams({ modals: serializeModalStack(updatedStack) });
 
     if (!isDesktop()) {
@@ -87,26 +77,16 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
     }
   };
 
-  const viewPattern = (patternId: string) => {
-    openModal(MODAL_TYPE_PATTERN, patternId);
-  };
-
-  const previewPattern = (patternId: string) => {
-    openModal(MODAL_TYPE_PATTERN, patternId);
-  };
-
   const handleUpdateTriggerPhrases = async (phrases: string[]) => {
-    const pattern = lastPattern();
-    const groupId = selectedGroupId();
-    if (!pattern || !groupId) return;
+    const pattern = patternData();
+    if (!pattern) return;
 
-    await updateTriggerPhrases(groupId, pattern.id, props.workspaceId, {
+    await updateTriggerPhrases(pattern.id, props.workspaceId, {
       trigger_phrases: phrases,
     });
 
     refetchPattern();
     refetchLibrary();
-    setGroupRefetchTrigger((previous) => previous + 1);
   };
 
   const handleDialogChange = (open: boolean) => {
@@ -117,16 +97,37 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
 
   createEffect(() => {
     if (libraryData.error) return;
-    const data = libraryData();
-    const currentGroupId = selectedGroupId();
 
-    if (data && !currentGroupId) {
-      const firstGroup = data.sections.flatMap((section) => section.groups).find((group) => group.pattern_count > 0);
-      if (firstGroup) {
-        selectGroup(firstGroup.id);
+    const visibleSkills = filteredSkills();
+    const currentSkillId = selectedSkillId();
+
+    if (visibleSkills.length === 0) {
+      if (currentSkillId) {
+        selectSkill(null);
+      }
+      return;
+    }
+
+    if (!currentSkillId || !visibleSkills.some((skill) => skill.id === currentSkillId)) {
+      const firstSkill = visibleSkills[0];
+      if (firstSkill) {
+        selectSkill(firstSkill.id);
       }
     }
   });
+
+  const listPane = () => (
+    <SkillListPane
+      skills={skills()}
+      filteredSkills={filteredSkills()}
+      searchQuery={searchQuery()}
+      scopeFilter={scopeFilter()}
+      selectedSkillId={selectedSkillId()}
+      onSearchQueryChange={setSearchQuery}
+      onScopeFilterChange={setScopeFilter}
+      onSelectSkill={selectSkill}
+    />
+  );
 
   return (
     <Dialog
@@ -184,15 +185,7 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
                     zIndex={110}
                   >
                     <div class="h-full bg-surface-raised overflow-hidden flex flex-col">
-                      <Show when={!libraryData.loading && !libraryData.error && libraryData()}>
-                        {(data) => (
-                          <PatternLibraryLeft
-                            sections={data().sections}
-                            selectedGroupId={selectedGroupId()}
-                            onSelectGroup={selectGroup}
-                          />
-                        )}
-                      </Show>
+                      <Show when={!libraryData.loading && !libraryData.error}>{listPane()}</Show>
 
                       <Show when={libraryData.loading}>
                         <div class="flex items-center justify-center p-8">
@@ -213,19 +206,14 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
                     </div>
                   </MobileNavDrawer>
 
-                  <div class="h-full bg-surface rounded-lg overflow-hidden">
-                    <Show when={selectedGroupId()}>
-                      {(groupId) => (
-                        <GroupView
-                          groupId={groupId()}
-                          workspaceId={props.workspaceId}
-                          onViewPattern={viewPattern}
-                          onPreviewPattern={previewPattern}
-                          refetchTrigger={groupRefetchTrigger()}
-                        />
-                      )}
-                    </Show>
-                  </div>
+                  <SkillDetailPane
+                    pattern={patternData.error ? null : (patternData() ?? null)}
+                    loading={patternData.loading}
+                    error={patternData.error ?? null}
+                    workspaceId={props.workspaceId}
+                    onRetry={() => refetchPattern()}
+                    onUpdateTriggerPhrases={handleUpdateTriggerPhrases}
+                  />
                 </>
               }
             >
@@ -234,19 +222,11 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
                   <>
                     <Resizable.Panel
                       initialSize={0.382}
-                      minSize={0.2}
+                      minSize={0.25}
                       maxSize={0.5}
                       class="h-full bg-surface-raised rounded-lg overflow-hidden flex flex-col"
                     >
-                      <Show when={!libraryData.loading && !libraryData.error && libraryData()}>
-                        {(data) => (
-                          <PatternLibraryLeft
-                            sections={data().sections}
-                            selectedGroupId={selectedGroupId()}
-                            onSelectGroup={selectGroup}
-                          />
-                        )}
-                      </Show>
+                      <Show when={!libraryData.loading && !libraryData.error}>{listPane()}</Show>
 
                       <Show when={libraryData.loading}>
                         <div class="flex items-center justify-center p-8">
@@ -267,51 +247,27 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
                     </Resizable.Panel>
 
                     <Resizable.Handle
-                      aria-label="Resize skill groups panel"
+                      aria-label="Resize skill list panel"
                       class="w-4 cursor-col-resize flex items-center justify-center group"
                     >
                       <div class="w-1 h-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />
                     </Resizable.Handle>
 
-                    <Resizable.Panel
-                      initialSize={0.618}
-                      minSize={0.5}
-                      class="h-full bg-surface rounded-lg overflow-hidden"
-                    >
-                      <Show when={selectedGroupId()}>
-                        {(groupId) => (
-                          <GroupView
-                            groupId={groupId()}
-                            workspaceId={props.workspaceId}
-                            onViewPattern={viewPattern}
-                            onPreviewPattern={previewPattern}
-                            refetchTrigger={groupRefetchTrigger()}
-                          />
-                        )}
-                      </Show>
+                    <Resizable.Panel initialSize={0.618} minSize={0.5} class="h-full rounded-lg overflow-hidden">
+                      <SkillDetailPane
+                        pattern={patternData.error ? null : (patternData() ?? null)}
+                        loading={patternData.loading}
+                        error={patternData.error ?? null}
+                        workspaceId={props.workspaceId}
+                        onRetry={() => refetchPattern()}
+                        onUpdateTriggerPhrases={handleUpdateTriggerPhrases}
+                      />
                     </Resizable.Panel>
                   </>
                 )}
               </Resizable>
             </Show>
           </div>
-
-          <Show when={lastPattern()}>
-            {(pattern) => (
-              <PatternDetailModal
-                open={true}
-                onOpenChange={(open) => {
-                  if (!open) {
-                    closeModal();
-                    setLastPattern(null);
-                  }
-                }}
-                pattern={pattern()}
-                workspaceId={props.workspaceId}
-                onUpdateTriggerPhrases={handleUpdateTriggerPhrases}
-              />
-            )}
-          </Show>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog>

@@ -1,11 +1,9 @@
-// ABOUTME: Skills library API service for the reused frontend shell.
-// ABOUTME: Adapts workspace-scoped /skills endpoints into the existing list/detail contracts.
+// ABOUTME: Skills library API service for the flat frontend shell.
+// ABOUTME: Keeps the backend contract stable while adapting it into flat list and detail models.
 
 import { API_ENDPOINT_BASE } from "../../config/api";
 import type {
-  GroupWithPatternsResponse,
   Pattern,
-  PatternGroup,
   PatternLibraryResponse,
   PatternMetadata,
   PatternScope,
@@ -37,6 +35,10 @@ interface SkillDetailResponse {
   metadata: Record<string, unknown>;
 }
 
+function compareSkills(a: PatternMetadata, b: PatternMetadata): number {
+  return a.title.localeCompare(b.title);
+}
+
 function toPatternMetadata(skill: SkillsListResponse["skills"][number]): PatternMetadata {
   return {
     id: skill.name,
@@ -44,61 +46,12 @@ function toPatternMetadata(skill: SkillsListResponse["skills"][number]): Pattern
     description: skill.description,
     trigger_phrases: skill.trigger_phrases,
     scope: skill.scope,
-  };
-}
-
-function buildGroup(scope: PatternScope, workspaceId: string, patterns: PatternMetadata[]): PatternGroup {
-  if (scope === "workspace") {
-    return {
-      id: "workspace",
-      title: "Workspace Skills",
-      description: "Skills resolved from inside the current workspace directory.",
-      scope,
-      workspace_id: workspaceId,
-      pattern_count: patterns.length,
-      readonly: true,
-      patterns,
-    };
-  }
-
-  return {
-    id: "global",
-    title: "Shared Skills",
-    description: "Skills resolved from outside the current workspace directory.",
-    scope,
-    workspace_id: null,
-    pattern_count: patterns.length,
-    readonly: true,
-    patterns,
-  };
-}
-
-function toPatternLibraryResponse(data: SkillsListResponse, workspaceId: string): PatternLibraryResponse {
-  const workspacePatterns = data.skills.filter((skill) => skill.scope === "workspace").map(toPatternMetadata);
-  const globalPatterns = data.skills.filter((skill) => skill.scope === "global").map(toPatternMetadata);
-
-  return {
-    sections: [
-      {
-        id: "workspace",
-        title: "Workspace Skills",
-        subtitle: "Installed in this workspace's OpenCode runtime",
-        is_current: true,
-        groups: [buildGroup("workspace", workspaceId, workspacePatterns)],
-      },
-      {
-        id: "global",
-        title: "Shared Skills",
-        subtitle: "Installed outside this workspace but visible to its OpenCode runtime",
-        is_current: false,
-        groups: [buildGroup("global", workspaceId, globalPatterns)],
-      },
-    ],
+    readonly: skill.readonly,
   };
 }
 
 /**
- * Fetch all visible skills organized into sections for the existing shell
+ * Fetch all visible skills as one flat list for the library UI
  */
 export async function fetchPatternLibrary(workspaceId: string): Promise<PatternLibraryResponse> {
   const url = `${API_ENDPOINT_BASE}/workspace/${encodeURIComponent(workspaceId)}/skills`;
@@ -110,32 +63,17 @@ export async function fetchPatternLibrary(workspaceId: string): Promise<PatternL
     throw new Error(`Failed to fetch skills library: ${response.statusText} - ${text}`);
   }
 
-  return toPatternLibraryResponse((await response.json()) as SkillsListResponse, workspaceId);
+  const data = (await response.json()) as SkillsListResponse;
+
+  return {
+    skills: data.skills.map(toPatternMetadata).sort(compareSkills),
+  };
 }
 
 /**
- * Fetch a single library group by reusing the list endpoint
+ * Fetch full skill details for the detail pane
  */
-export async function fetchGroupWithPatterns(groupId: string, workspaceId: string): Promise<GroupWithPatternsResponse> {
-  const library = await fetchPatternLibrary(workspaceId);
-
-  for (const section of library.sections) {
-    const group = section.groups.find((candidate) => candidate.id === groupId);
-    if (group?.patterns) {
-      return {
-        ...group,
-        patterns: group.patterns,
-      };
-    }
-  }
-
-  throw new Error(`Failed to fetch group: Unknown group ${groupId}`);
-}
-
-/**
- * Fetch full skill details for the detail dialog
- */
-export async function fetchPattern(groupId: string, patternId: string, workspaceId: string): Promise<Pattern> {
+export async function fetchPattern(patternId: string, workspaceId: string): Promise<Pattern> {
   const url = `${API_ENDPOINT_BASE}/workspace/${encodeURIComponent(workspaceId)}/skills/${encodeURIComponent(patternId)}`;
 
   const response = await fetch(url);
@@ -149,7 +87,6 @@ export async function fetchPattern(groupId: string, patternId: string, workspace
 
   return {
     id: skill.name,
-    group_id: groupId,
     title: skill.name,
     description: skill.description,
     metadata: skill.metadata,
@@ -167,7 +104,6 @@ export async function fetchPattern(groupId: string, patternId: string, workspace
  * Update trigger phrases for a visible skill
  */
 export async function updateTriggerPhrases(
-  _groupId: string,
   patternId: string,
   workspaceId: string,
   data: UpdateTriggerPhrasesRequest,

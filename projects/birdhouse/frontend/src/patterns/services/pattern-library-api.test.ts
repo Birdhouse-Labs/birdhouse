@@ -1,5 +1,5 @@
 // ABOUTME: Tests the skills-backed library API adapter used by the frontend shell.
-// ABOUTME: Verifies scope grouping, skill detail loading, and trigger phrase updates.
+// ABOUTME: Verifies flat list loading, detail loading, trigger phrase updates, and location reveal.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchPattern, fetchPatternLibrary, revealSkillLocation, updateTriggerPhrases } from "./pattern-library-api";
@@ -10,25 +10,25 @@ beforeEach(() => {
 });
 
 describe("fetchPatternLibrary", () => {
-  it("groups workspace and shared skills for the existing library shell", async () => {
+  it("returns a flat alphabetized skill list for the library UI", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         skills: [
-          {
-            id: "find-docs",
-            name: "find-docs",
-            description: "Retrieve current library docs.",
-            scope: "global",
-            trigger_phrases: ["docs please"],
-            readonly: true,
-          },
           {
             id: "git/spotlight-worktree",
             name: "git/spotlight-worktree",
             description: "Keep a main clone aligned with a worktree.",
             scope: "workspace",
             trigger_phrases: ["spotlight this branch"],
+            readonly: true,
+          },
+          {
+            id: "find-docs",
+            name: "find-docs",
+            description: "Retrieve current library docs.",
+            scope: "global",
+            trigger_phrases: ["docs please"],
             readonly: true,
           },
         ],
@@ -39,58 +39,22 @@ describe("fetchPatternLibrary", () => {
 
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/workspace/ws_test/skills"));
     expect(result).toEqual({
-      sections: [
+      skills: [
         {
-          id: "workspace",
-          title: "Workspace Skills",
-          subtitle: "Installed in this workspace's OpenCode runtime",
-          is_current: true,
-          groups: [
-            {
-              id: "workspace",
-              title: "Workspace Skills",
-              description: "Skills resolved from inside the current workspace directory.",
-              scope: "workspace",
-              workspace_id: "ws_test",
-              pattern_count: 1,
-              readonly: true,
-              patterns: [
-                {
-                  id: "git/spotlight-worktree",
-                  title: "git/spotlight-worktree",
-                  description: "Keep a main clone aligned with a worktree.",
-                  trigger_phrases: ["spotlight this branch"],
-                  scope: "workspace",
-                },
-              ],
-            },
-          ],
+          id: "find-docs",
+          title: "find-docs",
+          description: "Retrieve current library docs.",
+          trigger_phrases: ["docs please"],
+          scope: "global",
+          readonly: true,
         },
         {
-          id: "global",
-          title: "Shared Skills",
-          subtitle: "Installed outside this workspace but visible to its OpenCode runtime",
-          is_current: false,
-          groups: [
-            {
-              id: "global",
-              title: "Shared Skills",
-              description: "Skills resolved from outside the current workspace directory.",
-              scope: "global",
-              workspace_id: null,
-              pattern_count: 1,
-              readonly: true,
-              patterns: [
-                {
-                  id: "find-docs",
-                  title: "find-docs",
-                  description: "Retrieve current library docs.",
-                  trigger_phrases: ["docs please"],
-                  scope: "global",
-                },
-              ],
-            },
-          ],
+          id: "git/spotlight-worktree",
+          title: "git/spotlight-worktree",
+          description: "Keep a main clone aligned with a worktree.",
+          trigger_phrases: ["spotlight this branch"],
+          scope: "workspace",
+          readonly: true,
         },
       ],
     });
@@ -132,14 +96,13 @@ describe("fetchPattern", () => {
       }),
     } as Response);
 
-    const result = await fetchPattern("workspace", "git/spotlight-worktree", "ws_test");
+    const result = await fetchPattern("git/spotlight-worktree", "ws_test");
 
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/workspace/ws_test/skills/git%2Fspotlight-worktree"),
     );
     expect(result).toEqual({
       id: "git/spotlight-worktree",
-      group_id: "workspace",
       title: "git/spotlight-worktree",
       description: "Keep a main clone aligned with a worktree.",
       metadata: {
@@ -168,7 +131,7 @@ describe("updateTriggerPhrases", () => {
       }),
     } as Response);
 
-    const result = await updateTriggerPhrases("global", "find-docs", "ws_test", {
+    const result = await updateTriggerPhrases("find-docs", "ws_test", {
       trigger_phrases: ["docs please", "reference the docs"],
     });
 

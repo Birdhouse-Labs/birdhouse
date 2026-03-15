@@ -1,26 +1,33 @@
-// ABOUTME: Type definitions for the skills-backed library UI shell.
-// ABOUTME: Keeps the existing shell contracts while mapping them to read-only skill data.
+// ABOUTME: Type definitions for the flat skills-backed library UI shell.
+// ABOUTME: Keeps detail behavior intact while simplifying the list side around one visible skills list.
 
 export type PatternScope = "workspace" | "global";
+export type SkillListScopeFilter = "all" | PatternScope;
 
 /**
- * Skill metadata shown in the library list
+ * Skill metadata shown in the flat library list
  */
 export interface PatternMetadata {
   id: string;
   title: string;
   description?: string;
   trigger_phrases: string[];
-  scope?: PatternScope;
-  location?: string;
+  scope: PatternScope;
+  readonly: boolean;
 }
 
 /**
- * Full skill detail shown in the detail dialog
+ * Flat list response for the current workspace's visible skills
+ */
+export interface PatternLibraryResponse {
+  skills: PatternMetadata[];
+}
+
+/**
+ * Full skill detail shown in the detail pane
  */
 export interface Pattern {
   id: string;
-  group_id: string;
   title: string;
   description?: string;
   metadata: Record<string, unknown>;
@@ -31,45 +38,6 @@ export interface Pattern {
   scope: PatternScope;
   location: string;
   display_location: string;
-}
-
-/**
- * Skill group used by the reused library shell
- */
-export interface PatternGroup {
-  id: string;
-  title: string;
-  description: string;
-  scope: PatternScope;
-  workspace_id: string | null;
-  pattern_count: number;
-  readonly: boolean;
-  patterns?: PatternMetadata[];
-}
-
-/**
- * Section organizing groups in the left navigation
- */
-export interface PatternSection {
-  id: string;
-  title: string;
-  subtitle?: string;
-  is_current: boolean;
-  groups: PatternGroup[];
-}
-
-/**
- * Library response for the current workspace's visible skills
- */
-export interface PatternLibraryResponse {
-  sections: PatternSection[];
-}
-
-/**
- * Group detail response for the right-hand library pane
- */
-export interface GroupWithPatternsResponse extends PatternGroup {
-  patterns: PatternMetadata[];
 }
 
 /**

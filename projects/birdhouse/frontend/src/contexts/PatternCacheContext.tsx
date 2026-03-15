@@ -67,15 +67,11 @@ export const PatternCacheProvider: ParentComponent = (props) => {
 
   const fetchVisibleSkills = async (currentWorkspaceId: string): Promise<CachedSkillMetadata[]> => {
     const library = await fetchPatternLibrary(currentWorkspaceId);
-    return library.sections.flatMap((section) =>
-      section.groups.flatMap((group) =>
-        (group.patterns || []).map((pattern) => ({
-          id: pattern.id,
-          title: pattern.title,
-          triggerPhrases: pattern.trigger_phrases,
-        })),
-      ),
-    );
+    return library.skills.map((pattern) => ({
+      id: pattern.id,
+      title: pattern.title,
+      triggerPhrases: pattern.trigger_phrases,
+    }));
   };
 
   const [patternsResource, { refetch: resourceRefetch }] = createResource(workspaceId, fetchVisibleSkills);
