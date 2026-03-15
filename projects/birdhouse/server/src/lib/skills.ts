@@ -1,7 +1,9 @@
 // ABOUTME: Normalizes OpenCode skills into Birdhouse API-ready skill records.
 // ABOUTME: Handles v1 scope inference and skill lookup by name for workspace requests.
 
+import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { load } from "js-yaml";
 import type { Skill as OpenCodeSkill } from "./opencode-client";
@@ -20,8 +22,13 @@ export interface BirdhouseSkillSummary {
 export interface BirdhouseSkillDetail extends BirdhouseSkillSummary {
   content: string;
   location: string;
+  display_location: string;
   files: string[];
   metadata: Record<string, unknown>;
+}
+
+interface SpawnLike {
+  (command: string, args: string[], options: { detached: true; stdio: "ignore" }): Pick<ChildProcess, "unref">;
 }
 
 function parseSkillMetadata(skillFilePath: string): Record<string, unknown> {
@@ -76,6 +83,44 @@ export function inferSkillScope(location: string, workspaceDirectory: string): S
   return !relativePath.startsWith("..") && relativePath !== "" ? "workspace" : "global";
 }
 
+export function shortenHomePath(location: string, homeDirectory: string): string {
+  const resolvedLocation = resolve(location);
+  const resolvedHomeDirectory = resolve(homeDirectory);
+  const relativePath = relative(resolvedHomeDirectory, resolvedLocation);
+
+  if (!relativePath.startsWith("..") && relativePath !== "") {
+    return `~/${relativePath.split(sep).join("/")}`;
+  }
+
+  return location;
+}
+
+export function revealDirectoryInFileManager(
+  directory: string,
+  platform: NodeJS.Platform = process.platform,
+  spawnProcess: SpawnLike = spawn,
+): void {
+  let command: string;
+  let args: string[];
+
+  if (platform === "darwin") {
+    command = "open";
+    args = [directory];
+  } else if (platform === "win32") {
+    command = "explorer";
+    args = [directory];
+  } else {
+    command = "xdg-open";
+    args = [directory];
+  }
+
+  const child = spawnProcess(command, args, {
+    detached: true,
+    stdio: "ignore",
+  });
+  child.unref();
+}
+
 export function toBirdhouseSkillSummary(
   skill: OpenCodeSkill,
   workspaceDirectory: string,
@@ -103,6 +148,7 @@ export async function toBirdhouseSkillDetail(
     ...toBirdhouseSkillSummary(skill, workspaceDirectory, triggerPhrases),
     content: skill.content,
     location: skill.location,
+    display_location: shortenHomePath(skill.location, homedir()),
     files: existsSync(skillDirectory) ? collectSkillFiles(skillDirectory, skillDirectory) : [],
     metadata,
   };

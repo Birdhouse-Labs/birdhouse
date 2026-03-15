@@ -307,6 +307,7 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
                   }
                 }}
                 pattern={pattern()}
+                workspaceId={props.workspaceId}
                 onUpdateTriggerPhrases={handleUpdateTriggerPhrases}
               />
             )}

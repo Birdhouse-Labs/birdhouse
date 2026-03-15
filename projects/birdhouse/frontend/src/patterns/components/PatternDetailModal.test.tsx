@@ -22,6 +22,7 @@ describe("PatternDetailModal", () => {
     readonly: true,
     scope: "global" as const,
     location: "/Users/test/.claude/skills/find-docs/SKILL.md",
+    display_location: "~/.claude/skills/find-docs/SKILL.md",
     files: ["examples/basic.md", "templates/query.txt"],
   };
 
@@ -31,6 +32,7 @@ describe("PatternDetailModal", () => {
         open={true}
         onOpenChange={() => {}}
         pattern={basePattern}
+        workspaceId="ws_test"
         onUpdateTriggerPhrases={vi.fn().mockResolvedValue(undefined)}
       />
     ));
@@ -41,13 +43,14 @@ describe("PatternDetailModal", () => {
     expect(screen.getByText("Retrieve current library docs.")).toBeInTheDocument();
     expect(screen.getByText("license")).toBeInTheDocument();
     expect(screen.getByText("MIT")).toBeInTheDocument();
+    expect(screen.getByText("Location")).toBeInTheDocument();
+    expect(screen.getByText("~/.claude/skills/find-docs/SKILL.md")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Applies across all workspaces because this skill resolves outside the current workspace directory.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText('<skill name="find-docs">')).toBeInTheDocument();
-    expect(screen.getByText("/Users/test/.claude/skills/find-docs/SKILL.md")).toBeInTheDocument();
     expect(screen.getByText("Other Files in Skill Directory")).toBeInTheDocument();
     expect(screen.getByText("examples/basic.md")).toBeInTheDocument();
     expect(screen.getByText("templates/query.txt")).toBeInTheDocument();
@@ -60,7 +63,13 @@ describe("PatternDetailModal", () => {
       <PatternDetailModal
         open={true}
         onOpenChange={() => {}}
-        pattern={{ ...basePattern, scope: "workspace", location: "/repo/current/.agents/skills/find-docs/SKILL.md" }}
+        pattern={{
+          ...basePattern,
+          scope: "workspace",
+          location: "/repo/current/.agents/skills/find-docs/SKILL.md",
+          display_location: "/repo/current/.agents/skills/find-docs/SKILL.md",
+        }}
+        workspaceId="ws_test"
         onUpdateTriggerPhrases={onUpdateTriggerPhrases}
       />
     ));

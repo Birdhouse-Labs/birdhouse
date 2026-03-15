@@ -2,7 +2,7 @@
 // ABOUTME: Verifies scope grouping, skill detail loading, and trigger phrase updates.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchPattern, fetchPatternLibrary, updateTriggerPhrases } from "./pattern-library-api";
+import { fetchPattern, fetchPatternLibrary, revealSkillLocation, updateTriggerPhrases } from "./pattern-library-api";
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -122,6 +122,7 @@ describe("fetchPattern", () => {
         readonly: true,
         content: "# Git Spotlight",
         location: "/repo/current/.agents/skills/git/spotlight-worktree/SKILL.md",
+        display_location: "/repo/current/.agents/skills/git/spotlight-worktree/SKILL.md",
         files: ["helpers.ts", "templates/commit.md"],
         metadata: {
           description: "Keep a main clone aligned with a worktree.",
@@ -151,6 +152,7 @@ describe("fetchPattern", () => {
       readonly: true,
       scope: "workspace",
       location: "/repo/current/.agents/skills/git/spotlight-worktree/SKILL.md",
+      display_location: "/repo/current/.agents/skills/git/spotlight-worktree/SKILL.md",
       files: ["helpers.ts", "templates/commit.md"],
     });
   });
@@ -182,5 +184,18 @@ describe("updateTriggerPhrases", () => {
       name: "find-docs",
       trigger_phrases: ["docs please", "reference the docs"],
     });
+  });
+});
+
+describe("revealSkillLocation", () => {
+  it("posts to the reveal endpoint for a skill", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) } as Response);
+
+    await revealSkillLocation("git/spotlight-worktree", "ws_test");
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/workspace/ws_test/skills/git%2Fspotlight-worktree/reveal"),
+      { method: "POST" },
+    );
   });
 });

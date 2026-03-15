@@ -34,6 +34,7 @@ interface SkillDetailResponse {
   readonly: boolean;
   content: string;
   location: string;
+  display_location: string;
   files: string[];
   metadata: Record<string, unknown>;
 }
@@ -205,6 +206,7 @@ metadata:
         readonly: true,
         content: "# Git Spotlight",
         location: join(skillDir, "SKILL.md"),
+        display_location: join(skillDir, "SKILL.md"),
         files: ["examples/demo.txt", "reference/notes.md", "scripts/spotlight.sh"],
         metadata: {
           name: "git/spotlight-worktree",
@@ -246,6 +248,7 @@ metadata:
       expect(response.status).toBe(200);
       const data = (await response.json()) as SkillDetailResponse;
       expect(data.files).toEqual([]);
+      expect(data.display_location).toBe(join(skillDir, "SKILL.md"));
     });
   });
 

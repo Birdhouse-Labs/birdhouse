@@ -30,6 +30,7 @@ export interface Pattern {
   readonly: boolean;
   scope: PatternScope;
   location: string;
+  display_location: string;
 }
 
 /**

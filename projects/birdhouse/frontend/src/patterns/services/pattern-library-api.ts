@@ -33,6 +33,7 @@ interface SkillDetailResponse {
   content: string;
   files: string[];
   location: string;
+  display_location: string;
   metadata: Record<string, unknown>;
 }
 
@@ -158,6 +159,7 @@ export async function fetchPattern(groupId: string, patternId: string, workspace
     readonly: skill.readonly,
     scope: skill.scope,
     location: skill.location,
+    display_location: skill.display_location,
   };
 }
 
@@ -184,4 +186,17 @@ export async function updateTriggerPhrases(
   }
 
   return response.json();
+}
+
+export async function revealSkillLocation(patternId: string, workspaceId: string): Promise<void> {
+  const url = `${API_ENDPOINT_BASE}/workspace/${encodeURIComponent(workspaceId)}/skills/${encodeURIComponent(patternId)}/reveal`;
+
+  const response = await fetch(url, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to reveal skill location: ${response.statusText} - ${text}`);
+  }
 }

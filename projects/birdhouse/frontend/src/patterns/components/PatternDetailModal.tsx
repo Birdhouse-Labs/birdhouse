@@ -2,11 +2,15 @@
 // ABOUTME: Shows SKILL.md content, trigger phrase scope, and the XML block preview for runtime attachment.
 
 import Dialog from "corvu/dialog";
-import { X } from "lucide-solid";
+import { FolderOpen, X } from "lucide-solid";
 import { type Component, createSignal, For, Show } from "solid-js";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
+import { CodeBlock } from "../../components/ui/CodeBlock";
+import IconButton from "../../components/ui/IconButton";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
+import { resolvedCodeTheme } from "../../theme";
 import type { Pattern } from "../types/pattern-library-types";
+import { revealSkillLocation } from "../services/pattern-library-api";
 import TriggerPhraseEditor from "./TriggerPhraseEditor";
 
 function formatMetadataValue(value: unknown): string {
@@ -29,12 +33,18 @@ export interface PatternDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   pattern: Pattern;
+  workspaceId: string;
   onUpdateTriggerPhrases: (phrases: string[]) => Promise<void>;
+}
+
+function isStructuredMetadataValue(value: unknown): boolean {
+  return typeof value === "object" && value !== null;
 }
 
 const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
   const [isSaving, setIsSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  const [isRevealing, setIsRevealing] = createSignal(false);
 
   const scopeTitle = () =>
     props.pattern.scope === "workspace" ? "Workspace trigger phrases" : "Shared trigger phrases";
@@ -43,6 +53,7 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
       ? "Applies only in this workspace because this skill resolves inside the current workspace directory."
       : "Applies across all workspaces because this skill resolves outside the current workspace directory.";
   const metadataEntries = () => Object.entries(props.pattern.metadata).filter(([key]) => key !== "name");
+  const locationDisplay = () => props.pattern.display_location;
 
   const handleSaveTriggerPhrases = async (phrases: string[]) => {
     setIsSaving(true);
@@ -55,6 +66,19 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
       throw err;
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRevealLocation = async () => {
+    setIsRevealing(true);
+    setError(null);
+
+    try {
+      await revealSkillLocation(props.pattern.id, props.workspaceId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reveal skill location");
+    } finally {
+      setIsRevealing(false);
     }
   };
 
@@ -89,7 +113,7 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
               <div class="text-xs text-text-muted px-2">Saving changes...</div>
             </Show>
 
-            <Show when={metadataEntries().length > 0}>
+            <Show when={metadataEntries().length > 0 || props.pattern.display_location}>
               <section class="space-y-4">
                 <h3 class="text-lg font-semibold text-heading">Metadata</h3>
                 <div class={`rounded-xl ${cardSurfaceFlat} px-6 py-4`}>
@@ -98,12 +122,39 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
                       {([key, value]) => (
                         <div class="space-y-1">
                           <dt class="text-xs font-semibold uppercase tracking-wide text-text-muted">{key}</dt>
-                          <dd class="whitespace-pre-wrap break-words font-mono text-sm text-text-primary">
-                            {formatMetadataValue(value)}
-                          </dd>
+                          <Show
+                            when={isStructuredMetadataValue(value)}
+                            fallback={
+                              <dd class="whitespace-pre-wrap break-words font-mono text-sm text-text-primary">
+                                {formatMetadataValue(value)}
+                              </dd>
+                            }
+                          >
+                            <dd class="overflow-hidden rounded-lg border border-border-muted bg-surface-overlay/60">
+                              <CodeBlock
+                                code={formatMetadataValue(value)}
+                                language="json"
+                                theme={resolvedCodeTheme()}
+                              />
+                            </dd>
+                          </Show>
                         </div>
                       )}
                     </For>
+                    <div class="space-y-1 pt-2 border-t border-border-muted/60">
+                      <dt class="text-xs font-semibold uppercase tracking-wide text-text-muted">Location</dt>
+                      <dd class="flex items-center gap-2 text-xs text-text-muted">
+                        <span class="font-mono break-all flex-1">{locationDisplay()}</span>
+                        <IconButton
+                          icon={<FolderOpen size={16} />}
+                          variant="ghost"
+                          fixedSize={true}
+                          disabled={isRevealing()}
+                          aria-label="Reveal skill folder in Finder"
+                          onClick={() => void handleRevealLocation()}
+                        />
+                      </dd>
+                    </div>
                   </dl>
                 </div>
               </section>
@@ -115,13 +166,6 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
                 <p class="text-sm text-text-secondary">{scopeDescription()}</p>
               </div>
               <TriggerPhraseEditor phrases={props.pattern.trigger_phrases} onSave={handleSaveTriggerPhrases} />
-            </section>
-
-            <section class="space-y-4">
-              <h3 class="text-lg font-semibold text-heading">Resolved Skill File</h3>
-              <div class={`rounded-xl ${cardSurfaceFlat} px-6 py-4`}>
-                <p class="text-sm font-mono text-text-primary break-all">{props.pattern.location}</p>
-              </div>
             </section>
 
             <Show when={props.pattern.files.length > 0}>

@@ -1,11 +1,12 @@
 // ABOUTME: Workspace-scoped API routes for listing visible OpenCode skills and Birdhouse trigger phrases.
 // ABOUTME: Normalizes OpenCode skill data into Birdhouse responses and stores trigger phrases by skill name.
 
+import { dirname } from "node:path";
 import { Hono } from "hono";
 import { getDepsFromContext } from "../lib/context-deps";
 import type { DataDB } from "../lib/data-db";
 import { buildSkillAttachmentPreview } from "../lib/skill-attachments";
-import { findSkillByName, toBirdhouseSkillDetail, toBirdhouseSkillSummary } from "../lib/skills";
+import { findSkillByName, revealDirectoryInFileManager, toBirdhouseSkillDetail, toBirdhouseSkillSummary } from "../lib/skills";
 import "../types/context";
 
 function validateTriggerPhrases(value: unknown): { ok: true; triggerPhrases: string[] } | { ok: false; error: string } {
@@ -102,6 +103,22 @@ export function createSkillRoutes(dataDb: DataDB) {
       name: skill.name,
       trigger_phrases: validated.triggerPhrases,
     });
+  });
+
+  app.post("/:skillName/reveal", async (c) => {
+    const { opencode } = getDepsFromContext(c);
+    const skillName = c.req.param("skillName");
+    const skills = await opencode.listSkills();
+    const skill = findSkillByName(skills, skillName);
+
+    if (!skill) {
+      return c.json({ error: `Skill ${skillName} not found` }, 404);
+    }
+
+    const directory = dirname(skill.location);
+    revealDirectoryInFileManager(directory);
+
+    return c.json({ success: true, path: directory });
   });
 
   return app;
