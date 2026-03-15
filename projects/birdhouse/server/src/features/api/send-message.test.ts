@@ -38,7 +38,7 @@ describe("API send-message with clone_and_send", () => {
   });
 
   describe("clone_and_send events", () => {
-    test("attaches matching skills on send using the server-owned matcher", async () => {
+    test("attaches only explicitly linked skills on send", async () => {
       const sourceAgent = createRootAgent(agentsDB, {
         id: "agent_skill_send",
         session_id: "ses_skill_send",
@@ -115,6 +115,97 @@ describe("API send-message with clone_and_send", () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            text: "Use [docs helper](birdhouse:skill/find-docs) before replying",
+          }),
+        });
+
+        expect(response.status).toBe(200);
+      });
+
+      expect(capturedPrompt).toBe(`Use [docs helper](birdhouse:skill/find-docs) before replying
+
+<skill name="find-docs">
+# Find Docs
+</skill>`);
+    });
+
+    test("does not attach raw trigger phrase text without an explicit skill link", async () => {
+      const sourceAgent = createRootAgent(agentsDB, {
+        id: "agent_skill_send_raw_text",
+        session_id: "ses_skill_send_raw_text",
+        title: "Skill Send Raw Text Agent",
+      });
+
+      const visibleSkills: Skill[] = [
+        {
+          name: "find-docs",
+          description: "Retrieve current docs.",
+          location: "/Users/test/.claude/skills/find-docs/SKILL.md",
+          content: "# Find Docs",
+        },
+      ];
+
+      let capturedPrompt = "";
+      const mockMessage: Message = {
+        info: {
+          id: "msg_response_raw_text",
+          sessionID: "ses_skill_send_raw_text",
+          role: "assistant",
+          time: { created: Date.now(), completed: Date.now() },
+          parentID: "msg_user",
+          modelID: "claude-sonnet-4",
+          providerID: "anthropic",
+          mode: "build",
+          cost: 0,
+          tokens: {
+            input: 100,
+            output: 50,
+            reasoning: 0,
+            cache: { read: 0, write: 0 },
+          },
+          path: { cwd: "/test", root: "/" },
+        },
+        parts: [
+          {
+            type: "text",
+            text: "Response",
+            id: "part_raw_text",
+            sessionID: "ses_skill_send_raw_text",
+            messageID: "msg_raw_text",
+          },
+        ],
+      };
+
+      const mockClient = {
+        session: {
+          prompt: async ({ body }: { body: { parts: Array<{ text: string }> } }) => {
+            capturedPrompt = body.parts[0]?.text ?? "";
+            return { data: mockMessage };
+          },
+        },
+      };
+
+      const deps = createTestDeps({ listSkills: async () => visibleSkills });
+      deps.agentsDB = agentsDB;
+      deps.opencode.client = mockClient as never;
+      deps.dataDb.setSkillTriggerPhrases("find-docs", ["docs please"]);
+
+      await withDeps(deps, async () => {
+        const app = withWorkspaceContext(
+          () => {
+            const hono = new Hono();
+            hono.post("/:id/messages", (c) => sendMessage(c, deps));
+            return hono;
+          },
+          { agentsDb: agentsDB },
+        );
+
+        const response = await app.request(`/${sourceAgent.id}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
             text: "docs please before replying",
           }),
         });
@@ -122,11 +213,7 @@ describe("API send-message with clone_and_send", () => {
         expect(response.status).toBe(200);
       });
 
-      expect(capturedPrompt).toBe(`docs please before replying
-
-<skill name="find-docs">
-# Find Docs
-</skill>`);
+      expect(capturedPrompt).toBe("docs please before replying");
     });
 
     test("inserts timeline events and emits SSE when clone_and_send is true", async () => {

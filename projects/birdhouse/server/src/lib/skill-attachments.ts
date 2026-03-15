@@ -1,10 +1,9 @@
-// ABOUTME: Server-owned skill attachment matching and XML enrichment helpers.
-// ABOUTME: Resolves trigger phrase matches into snapshotted skill attachments for prompts and previews.
+// ABOUTME: Server-owned skill link parsing and XML enrichment helpers.
+// ABOUTME: Resolves explicit birdhouse:skill markdown links into snapshotted skill attachments.
 
 export interface SkillAttachmentCandidate {
   name: string;
   content: string;
-  trigger_phrases: string[];
 }
 
 export interface SkillAttachmentPreview {
@@ -12,66 +11,53 @@ export interface SkillAttachmentPreview {
   content: string;
 }
 
-interface SkillMatch {
-  attachment: SkillAttachmentPreview;
-  start: number;
-}
+const SKILL_LINK_REGEX = /\[[^\]]+\]\(birdhouse:skill\/([^)]+)\)/g;
 
-function findBestMatch(text: string, candidate: SkillAttachmentCandidate): SkillMatch | null {
-  const normalizedText = text.toLocaleLowerCase();
-  let bestMatch: { start: number; phraseLength: number } | null = null;
-
-  for (const phrase of candidate.trigger_phrases) {
-    const normalizedPhrase = phrase.trim().toLocaleLowerCase();
-    if (!normalizedPhrase) {
-      continue;
-    }
-
-    const start = normalizedText.indexOf(normalizedPhrase);
-    if (start === -1) {
-      continue;
-    }
-
-    if (
-      bestMatch === null ||
-      start < bestMatch.start ||
-      (start === bestMatch.start && normalizedPhrase.length > bestMatch.phraseLength)
-    ) {
-      bestMatch = {
-        start,
-        phraseLength: normalizedPhrase.length,
-      };
-    }
+export function extractLinkedSkillNames(text: string): string[] {
+  if (!text.trim()) {
+    return [];
   }
 
-  if (bestMatch === null) {
-    return null;
+  const linkedSkillNames: string[] = [];
+  const seenSkillNames = new Set<string>();
+
+  let match = SKILL_LINK_REGEX.exec(text);
+  while (match !== null) {
+    const encodedSkillName = match[1];
+    if (encodedSkillName) {
+      try {
+        const skillName = decodeURIComponent(encodedSkillName);
+        if (!seenSkillNames.has(skillName)) {
+          linkedSkillNames.push(skillName);
+          seenSkillNames.add(skillName);
+        }
+      } catch {
+        // Fail safe: skip malformed or undecodable links.
+      }
+    }
+    match = SKILL_LINK_REGEX.exec(text);
   }
 
-  return {
-    attachment: {
-      name: candidate.name,
-      content: candidate.content,
-    },
-    start: bestMatch.start,
-  };
+  return linkedSkillNames;
 }
 
 export function buildSkillAttachmentPreview(
   text: string,
   candidates: SkillAttachmentCandidate[],
 ): SkillAttachmentPreview[] {
-  if (!text.trim()) {
-    return [];
-  }
+  const candidateByName = new Map(candidates.map((candidate) => [candidate.name, candidate]));
 
-  return candidates
-    .flatMap((candidate) => {
-      const match = findBestMatch(text, candidate);
-      return match ? [match] : [];
-    })
-    .sort((left, right) => left.start - right.start || left.attachment.name.localeCompare(right.attachment.name))
-    .map((match) => match.attachment);
+  return extractLinkedSkillNames(text).flatMap((skillName) => {
+    const candidate = candidateByName.get(skillName);
+    return candidate
+      ? [
+          {
+            name: candidate.name,
+            content: candidate.content,
+          },
+        ]
+      : [];
+  });
 }
 
 export function generateSkillXML(name: string, content: string): string {

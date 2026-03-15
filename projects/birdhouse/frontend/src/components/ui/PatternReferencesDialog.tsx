@@ -18,7 +18,7 @@ export interface PatternReferencesDialogProps {
   attachments: SkillAttachmentSnapshot[];
   open: boolean;
   onClose: () => void;
-  initialSkillName?: string;
+  initialSkillName?: string | undefined;
 }
 
 export const PatternReferencesDialog: Component<PatternReferencesDialogProps> = (props) => {

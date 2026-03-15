@@ -34,11 +34,11 @@ export interface SendFirstMessageResult {
  */
 
 export async function sendFirstMessage(
-  deps: Pick<Deps, "opencode" | "agentsDB" | "dataDb" | "log" | "telemetry">,
+  deps: Pick<Deps, "opencode" | "agentsDB" | "log" | "telemetry">,
   options: SendFirstMessageOptions,
 ): Promise<SendFirstMessageResult> {
   const { agentId, sessionId, model, prompt, wait, agent, senderMetadata } = options;
-  const { opencode, agentsDB, dataDb, log, telemetry } = deps;
+  const { opencode, agentsDB, log, telemetry } = deps;
 
   const visibleSkills = await opencode.listSkills();
   const enrichedPrompt = enrichMessageWithSkillAttachments(
@@ -48,7 +48,6 @@ export async function sendFirstMessage(
       visibleSkills.map((skill) => ({
         name: skill.name,
         content: skill.content,
-        trigger_phrases: dataDb.getSkillTriggerPhrases(skill.name),
       })),
     ),
   );

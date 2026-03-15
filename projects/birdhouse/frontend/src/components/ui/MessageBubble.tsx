@@ -70,6 +70,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
   const isUser = () => props.message.role === "user";
   const [errorDialogOpen, setErrorDialogOpen] = createSignal(false);
   const [patternDialogOpen, setPatternDialogOpen] = createSignal(false);
+  const [selectedSkillName, setSelectedSkillName] = createSignal<string | undefined>(undefined);
   const [isMenuOpen, setIsMenuOpen] = createSignal(false);
   const [showCopySuccess, setShowCopySuccess] = createSignal(false);
   const [showCopyJSONSuccess, setShowCopyJSONSuccess] = createSignal(false);
@@ -318,6 +319,12 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
           <MarkdownRenderer
             content={cleanedContent()}
             workspaceId={workspaceId}
+            onSkillLinkClick={(skillName) => {
+              if (attachedSkills().some((attachment) => attachment.name === skillName)) {
+                setSelectedSkillName(skillName);
+                setPatternDialogOpen(true);
+              }
+            }}
             onReferenceLinkClick={(reference) => {
               if (reference.type === "agent") {
                 recordAgentView(reference.identifier);
@@ -377,6 +384,12 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
           <MarkdownRenderer
             content={cleanedContent()}
             workspaceId={workspaceId}
+            onSkillLinkClick={(skillName) => {
+              if (attachedSkills().some((attachment) => attachment.name === skillName)) {
+                setSelectedSkillName(skillName);
+                setPatternDialogOpen(true);
+              }
+            }}
             onReferenceLinkClick={(reference) => {
               if (reference.type === "agent") {
                 recordAgentView(reference.identifier);
@@ -558,7 +571,11 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
       <PatternReferencesDialog
         attachments={attachedSkills()}
         open={patternDialogOpen()}
-        onClose={() => setPatternDialogOpen(false)}
+        onClose={() => {
+          setPatternDialogOpen(false);
+          setSelectedSkillName(undefined);
+        }}
+        {...(selectedSkillName() ? { initialSkillName: selectedSkillName() } : {})}
       />
 
       {/* Error details dialog */}

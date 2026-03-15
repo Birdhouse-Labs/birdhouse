@@ -7,6 +7,7 @@ import { type Component, createEffect, createMemo, createResource, createSignal,
 import { useWorkspace } from "../contexts/WorkspaceContext";
 import { createAgent, fetchModels, type Model } from "../services/messages-api";
 import { previewSkillAttachments } from "../services/skill-attachments-api";
+import { extractSkillLinkNames } from "../utils/skillLinks";
 import AutoGrowTextarea from "./ui/AutoGrowTextarea";
 import Button from "./ui/Button";
 import { Combobox, type ComboboxOption, type ComboboxRenderFn } from "./ui/Combobox";
@@ -56,8 +57,17 @@ const NewAgent: Component = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const linkedSkillNames = createMemo(() => extractSkillLinkNames(messageText().trim()));
+
   const [skillAttachments] = createResource(
-    () => messageText().trim(),
+    () => {
+      const text = messageText().trim();
+      if (!text || linkedSkillNames().length === 0) {
+        return null;
+      }
+
+      return text;
+    },
     (text) => previewSkillAttachments(workspaceId, text),
   );
   const patternCount = createMemo(() => {

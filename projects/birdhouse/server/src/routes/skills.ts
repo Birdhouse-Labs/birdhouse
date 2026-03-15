@@ -48,7 +48,6 @@ export function createSkillRoutes(dataDb: DataDB) {
       skills.map((skill) => ({
         name: skill.name,
         content: skill.content,
-        trigger_phrases: dataDb.getSkillTriggerPhrases(skill.name),
       })),
     );
 

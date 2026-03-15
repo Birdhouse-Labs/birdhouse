@@ -49,7 +49,6 @@ export async function sendMessage(
       visibleSkills.map((skill) => ({
         name: skill.name,
         content: skill.content,
-        trigger_phrases: deps.dataDb.getSkillTriggerPhrases(skill.name),
       })),
     ),
   );

@@ -12,6 +12,7 @@ import { aggregateTokenStats } from "../domain/token-aggregation";
 
 import { borderColor } from "../styles/containerStyles";
 import type { Message } from "../types/messages";
+import { buildSkillMarkdownLink } from "../utils/skillLinks";
 import ArchiveAgentDialog from "./ArchiveAgentDialog";
 import ContextUsageIndicator from "./ContextUsageIndicator";
 import EditAgentDialog from "./EditAgentDialog";
@@ -208,7 +209,7 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
     setIsPopoverOpen(false);
 
     // Build the pre-filled message with Birdhouse links
-    const message = `Please [export the tree](birdhouse:pattern/export_agent_tree) for [${props.title}](birdhouse:agent/${props.agentId})`;
+    const message = `Please ${buildSkillMarkdownLink("export the tree", "export_agent_tree")} for [${props.title}](birdhouse:agent/${props.agentId})`;
 
     // Navigate to new agent view with message as URL parameter
     navigate(`/workspace/${props.workspaceId}/agents?message=${encodeURIComponent(message)}`);

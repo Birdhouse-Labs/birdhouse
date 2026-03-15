@@ -1,24 +1,45 @@
-// ABOUTME: Tests the server-owned skill attachment matcher and XML enrichment.
-// ABOUTME: Verifies trigger phrase matching, deduplication, ordering, and payload formatting.
+// ABOUTME: Tests the server-owned skill link parser and XML enrichment.
+// ABOUTME: Verifies explicit markdown link parsing, deduplication, and payload formatting.
 
 import { describe, expect, it } from "bun:test";
-import { buildSkillAttachmentPreview, enrichMessageWithSkillAttachments, generateSkillXML } from "./skill-attachments";
+import {
+  buildSkillAttachmentPreview,
+  enrichMessageWithSkillAttachments,
+  extractLinkedSkillNames,
+  generateSkillXML,
+} from "./skill-attachments";
 
 describe("skill-attachments", () => {
+  describe("extractLinkedSkillNames", () => {
+    it("extracts linked skill names in first-link order and deduplicates repeated links", () => {
+      const linkedSkillNames = extractLinkedSkillNames(
+        "Use [docs helper](birdhouse:skill/find-docs), then [spotlight](birdhouse:skill/git%2Fspotlight-worktree), then [docs again](birdhouse:skill/find-docs).",
+      );
+
+      expect(linkedSkillNames).toEqual(["find-docs", "git/spotlight-worktree"]);
+    });
+
+    it("fails safe for malformed or undecodable skill links", () => {
+      const linkedSkillNames = extractLinkedSkillNames(
+        "Use [broken](birdhouse:skill/%E0%A4%A) and [plain text](https://example.com) and [missing close](birdhouse:skill/find-docs.",
+      );
+
+      expect(linkedSkillNames).toEqual([]);
+    });
+  });
+
   describe("buildSkillAttachmentPreview", () => {
-    it("matches trigger phrases case-insensitively and keeps attachment order by first occurrence", () => {
+    it("resolves only explicitly linked skills and keeps first-link order", () => {
       const attachments = buildSkillAttachmentPreview(
-        "Please docs please, then spotlight this branch, then DOCS PLEASE again.",
+        "Please use [docs helper](birdhouse:skill/find-docs), then [spotlight](birdhouse:skill/git%2Fspotlight-worktree).",
         [
           {
             name: "find-docs",
             content: "# Find Docs",
-            trigger_phrases: ["docs please"],
           },
           {
             name: "git/spotlight-worktree",
             content: "# Spotlight",
-            trigger_phrases: ["spotlight this branch"],
           },
         ],
       );
@@ -29,16 +50,26 @@ describe("skill-attachments", () => {
       ]);
     });
 
-    it("prefers the longest trigger phrase for a skill and deduplicates repeated matches", () => {
-      const attachments = buildSkillAttachmentPreview("Please use docs and then look up framework docs.", [
+    it("does not attach raw trigger phrase text without an explicit skill link", () => {
+      const attachments = buildSkillAttachmentPreview("Please docs please before you start.", [
         {
           name: "find-docs",
           content: "# Find Docs",
-          trigger_phrases: ["docs", "look up framework docs"],
         },
       ]);
 
-      expect(attachments).toEqual([{ name: "find-docs", content: "# Find Docs" }]);
+      expect(attachments).toEqual([]);
+    });
+
+    it("fails safe when a linked skill is stale or missing from the visible skill list", () => {
+      const attachments = buildSkillAttachmentPreview("Please use [docs helper](birdhouse:skill/find-docs).", [
+        {
+          name: "git/spotlight-worktree",
+          content: "# Spotlight",
+        },
+      ]);
+
+      expect(attachments).toEqual([]);
     });
   });
 

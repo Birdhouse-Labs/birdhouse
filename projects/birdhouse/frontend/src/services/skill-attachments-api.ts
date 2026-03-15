@@ -12,6 +12,18 @@ interface SkillAttachmentsPreviewResponse {
   attachments: SkillAttachmentPreview[];
 }
 
+export function dedupeSkillAttachmentPreviews(attachments: SkillAttachmentPreview[]): SkillAttachmentPreview[] {
+  const seenNames = new Set<string>();
+
+  return attachments.filter((attachment) => {
+    if (seenNames.has(attachment.name)) {
+      return false;
+    }
+    seenNames.add(attachment.name);
+    return true;
+  });
+}
+
 export async function previewSkillAttachments(workspaceId: string, text: string): Promise<SkillAttachmentPreview[]> {
   if (!text.trim()) {
     return [];
@@ -30,5 +42,5 @@ export async function previewSkillAttachments(workspaceId: string, text: string)
   }
 
   const data = (await response.json()) as SkillAttachmentsPreviewResponse;
-  return data.attachments;
+  return dedupeSkillAttachmentPreviews(data.attachments);
 }

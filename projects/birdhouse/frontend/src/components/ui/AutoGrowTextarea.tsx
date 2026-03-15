@@ -7,6 +7,7 @@ import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useWorkspaceAgentId } from "../../lib/routing";
 import { fetchAgentsForTypeahead } from "../../services/agents-api";
 import { uiSize } from "../../theme";
+import { buildSkillMarkdownLink } from "../../utils/skillLinks";
 import AgentTypeahead from "./AgentTypeahead";
 import FileTypeahead from "./FileTypeahead";
 import PatternTypeahead from "./PatternTypeahead";
@@ -186,14 +187,14 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
   });
 
   const handlePatternSelect = (
-    _pattern: { id: string },
+    pattern: { id: string },
     matchedPhrase: string,
     matchedText: string,
     matchStartIndex: number,
   ) => {
     if (!textareaRef) return;
 
-    const replacement = matchedPhrase;
+    const replacement = buildSkillMarkdownLink(matchedPhrase, pattern.id);
 
     // Focus first
     textareaRef.focus();

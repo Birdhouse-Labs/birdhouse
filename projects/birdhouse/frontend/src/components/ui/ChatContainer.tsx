@@ -9,6 +9,7 @@ import { previewSkillAttachments } from "../../services/skill-attachments-api";
 import { uiSize } from "../../theme";
 import type { Message } from "../../types/messages";
 import type { QuestionRequest } from "../../types/question";
+import { extractSkillLinkNames } from "../../utils/skillLinks";
 import AutoGrowTextarea from "./AutoGrowTextarea";
 import Button from "./Button";
 import MessageBubble from "./MessageBubble";
@@ -43,8 +44,17 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
     };
   });
 
+  const linkedSkillNames = createMemo(() => extractSkillLinkNames(props.inputValue.trim()));
+
   const [skillAttachments] = createResource(
-    () => props.inputValue.trim(),
+    () => {
+      const text = props.inputValue.trim();
+      if (!text || linkedSkillNames().length === 0) {
+        return null;
+      }
+
+      return text;
+    },
     (text) => previewSkillAttachments(workspaceId, text),
   );
   const patternCount = createMemo(() => {

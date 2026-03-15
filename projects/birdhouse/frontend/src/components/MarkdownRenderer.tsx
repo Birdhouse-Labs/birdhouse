@@ -21,7 +21,7 @@ interface MarkdownPart {
 }
 
 export interface GlobalReference {
-  type: "agent" | "pattern";
+  type: "agent" | "skill";
   identifier: string;
 }
 
@@ -31,7 +31,7 @@ export interface MarkdownRendererProps {
   isStreaming?: boolean;
   /** Workspace ID for agent links. If not provided, agent links won't work. */
   workspaceId?: string;
-  onPatternLinkClick?: (patternId: string) => void;
+  onSkillLinkClick?: (skillName: string) => void;
   onReferenceLinkClick?: (
     reference: GlobalReference,
     modifiers?: {
@@ -135,19 +135,16 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
       return id;
     };
 
-    // Override link renderer to detect pattern links
+    // Override link renderer to detect skill and agent links
     const originalLink = renderer.link.bind(renderer);
     renderer.link = (token: { href: string; text: string; tokens?: unknown[]; type?: string; raw?: string }) => {
-      // Check if it's a pattern link - render as tertiary button with icon
-      if (token.href.startsWith("birdhouse:pattern/")) {
-        const patternId = token.href.replace("birdhouse:pattern/", "");
+      if (token.href.startsWith("birdhouse:skill/")) {
+        const skillName = token.href.replace("birdhouse:skill/", "");
         const escapedText = escapeHtml(token.text);
 
-        // LibraryBig icon SVG (from lucide-solid)
         const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="lucide lucide-library-big"><rect width="8" height="18" x="3" y="3" rx="1"></rect><path d="M7 3v18"></path><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"></path></svg>`;
 
-        // Cursor-controlled gradient effect
-        return `<button data-pattern-link="${patternId}" class="agent-btn inline-flex items-center gap-1 rounded font-medium cursor-pointer" style="transition: transform 100ms ease-in-out;" onmousemove="const rect = this.getBoundingClientRect(); const x = event.clientX - rect.left; const percent = (x / rect.width * 100); this.style.setProperty('--mouse-x', percent + '%');" onmouseleave="this.style.removeProperty('--mouse-x');">${icon}${escapedText}</button>`;
+        return `<button data-skill-link="${skillName}" class="agent-btn inline-flex items-center gap-1 rounded font-medium cursor-pointer" style="transition: transform 100ms ease-in-out;" onmousemove="const rect = this.getBoundingClientRect(); const x = event.clientX - rect.left; const percent = (x / rect.width * 100); this.style.setProperty('--mouse-x', percent + '%');" onmouseleave="this.style.removeProperty('--mouse-x');">${icon}${escapedText}</button>`;
       }
 
       if (token.href.startsWith("birdhouse:agent/")) {
@@ -218,19 +215,19 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
   const handleReferenceClick = (e: Event) => {
     const target = e.target as HTMLElement;
 
-    if (target.hasAttribute("data-pattern-link")) {
+    if (target.hasAttribute("data-skill-link")) {
       e.preventDefault();
-      const patternId = target.getAttribute("data-pattern-link");
+      const skillName = target.getAttribute("data-skill-link");
 
-      if (patternId && props.onPatternLinkClick) {
-        props.onPatternLinkClick(patternId);
+      if (skillName && props.onSkillLinkClick) {
+        props.onSkillLinkClick(skillName);
         return;
       }
 
-      if (patternId && props.onReferenceLinkClick) {
+      if (skillName && props.onReferenceLinkClick) {
         props.onReferenceLinkClick({
-          type: "pattern",
-          identifier: patternId,
+          type: "skill",
+          identifier: skillName,
         });
       }
     }
@@ -307,7 +304,7 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
         }
       `}</style>
 
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: Event delegation for dynamically generated pattern links in markdown */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: Event delegation for dynamically generated skill links in markdown */}
       <div
         class={`prose max-w-none ${props.class || ""}`}
         classList={{
