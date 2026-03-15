@@ -2,7 +2,7 @@
 // ABOUTME: Verifies link generation plus safe parsing and deduplication of attached skills.
 
 import { describe, expect, it } from "vitest";
-import { buildSkillMarkdownLink, extractSkillLinkNames } from "./skillLinks";
+import { buildSkillMarkdownLink, buildSkillVisibleText, extractSkillLinkNames } from "./skillLinks";
 
 describe("buildSkillMarkdownLink", () => {
   it("creates a canonical birdhouse skill link", () => {
@@ -32,5 +32,15 @@ describe("extractSkillLinkNames", () => {
     ].join("\n");
 
     expect(extractSkillLinkNames(text)).toEqual([]);
+  });
+});
+
+describe("buildSkillVisibleText", () => {
+  it("preserves the user-typed capitalization for the matched prefix", () => {
+    expect(buildSkillVisibleText("Search", "search for skills")).toBe("Search for skills");
+  });
+
+  it("falls back to the trigger phrase when the typed text is not a prefix match", () => {
+    expect(buildSkillVisibleText("skills search", "search for skills")).toBe("search for skills");
   });
 });

@@ -14,6 +14,11 @@ vi.mock("../../contexts/PatternCacheContext", () => ({
         title: "release-notes-from-branch",
         triggerPhrases: ["generate release notes"],
       },
+      {
+        id: "find-skills",
+        title: "find-skills",
+        triggerPhrases: ["search for skills"],
+      },
     ],
     loading: () => false,
     error: () => null,
@@ -76,6 +81,28 @@ describe("AutoGrowTextarea", () => {
       expect((textarea as HTMLTextAreaElement).value).toBe(
         "[generate release notes](birdhouse:skill/release-notes-from-branch)",
       );
+    });
+  });
+
+  it("preserves the user typed capitalization when completing a trigger phrase", async () => {
+    const Wrapper = () => {
+      const [value, setValue] = createSignal("");
+      return <AutoGrowTextarea value={value()} onInput={setValue} onSend={() => {}} />;
+    };
+
+    render(() => <Wrapper />);
+
+    const textarea = screen.getByRole("textbox");
+    fireEvent.input(textarea, { target: { value: "Search" } });
+
+    await waitFor(() => {
+      expect(screen.getByText("find-skills")).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(document, { key: "Enter" });
+
+    await waitFor(() => {
+      expect((textarea as HTMLTextAreaElement).value).toBe("[Search for skills](birdhouse:skill/find-skills)");
     });
   });
 });

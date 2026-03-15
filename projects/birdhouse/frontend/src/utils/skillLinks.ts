@@ -5,6 +5,18 @@ export function buildSkillMarkdownLink(visibleText: string, skillName: string): 
   return `[${visibleText}](birdhouse:skill/${skillName})`;
 }
 
+export function buildSkillVisibleText(matchedText: string, triggerPhrase: string): string {
+  if (!matchedText) {
+    return triggerPhrase;
+  }
+
+  if (triggerPhrase.toLocaleLowerCase().startsWith(matchedText.toLocaleLowerCase())) {
+    return `${matchedText}${triggerPhrase.slice(matchedText.length)}`;
+  }
+
+  return triggerPhrase;
+}
+
 export function extractSkillLinkNames(text: string): string[] {
   const skillLink = /\[[^\]]+\]\(birdhouse:skill\/([^\s)]+)\)/g;
   const names = new Set<string>();
