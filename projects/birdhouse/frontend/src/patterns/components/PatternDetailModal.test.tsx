@@ -11,6 +11,12 @@ describe("PatternDetailModal", () => {
     group_id: "global",
     title: "find-docs",
     description: "Retrieve current library docs.",
+    metadata: {
+      description: "Retrieve current library docs.",
+      license: "MIT",
+      compatibility: "opencode",
+      metadata: { audience: "maintainers" },
+    },
     prompt: "# Find Docs\n\nUse Context7 first.",
     trigger_phrases: ["docs please"],
     readonly: true,
@@ -30,6 +36,11 @@ describe("PatternDetailModal", () => {
     ));
 
     expect(screen.getByText("Shared trigger phrases")).toBeInTheDocument();
+    expect(screen.getByText("Metadata")).toBeInTheDocument();
+    expect(screen.getByText("description")).toBeInTheDocument();
+    expect(screen.getByText("Retrieve current library docs.")).toBeInTheDocument();
+    expect(screen.getByText("license")).toBeInTheDocument();
+    expect(screen.getByText("MIT")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Applies across all workspaces because this skill resolves outside the current workspace directory.",

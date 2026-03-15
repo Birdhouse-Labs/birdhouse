@@ -23,6 +23,7 @@ export interface Pattern {
   group_id: string;
   title: string;
   description?: string;
+  metadata: Record<string, unknown>;
   prompt: string;
   trigger_phrases: string[];
   files: string[];

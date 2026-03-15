@@ -33,6 +33,7 @@ interface SkillDetailResponse {
   content: string;
   files: string[];
   location: string;
+  metadata: Record<string, unknown>;
 }
 
 function toPatternMetadata(skill: SkillsListResponse["skills"][number]): PatternMetadata {
@@ -150,6 +151,7 @@ export async function fetchPattern(groupId: string, patternId: string, workspace
     group_id: groupId,
     title: skill.name,
     description: skill.description,
+    metadata: skill.metadata,
     prompt: skill.content,
     trigger_phrases: skill.trigger_phrases,
     files: skill.files,

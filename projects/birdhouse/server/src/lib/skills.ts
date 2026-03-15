@@ -1,8 +1,9 @@
 // ABOUTME: Normalizes OpenCode skills into Birdhouse API-ready skill records.
 // ABOUTME: Handles v1 scope inference and skill lookup by name for workspace requests.
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
+import { load } from "js-yaml";
 import type { Skill as OpenCodeSkill } from "./opencode-client";
 
 export type SkillScope = "workspace" | "global";
@@ -20,6 +21,26 @@ export interface BirdhouseSkillDetail extends BirdhouseSkillSummary {
   content: string;
   location: string;
   files: string[];
+  metadata: Record<string, unknown>;
+}
+
+function parseSkillMetadata(skillFilePath: string): Record<string, unknown> {
+  if (!existsSync(skillFilePath)) {
+    return {};
+  }
+
+  const content = readFileSync(skillFilePath, "utf-8");
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!match) {
+    return {};
+  }
+
+  try {
+    const parsed = load(match[1]);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
 }
 
 function collectSkillFiles(rootDirectory: string, currentDirectory: string): string[] {
@@ -70,17 +91,20 @@ export function toBirdhouseSkillSummary(
   };
 }
 
-export function toBirdhouseSkillDetail(
+export async function toBirdhouseSkillDetail(
   skill: OpenCodeSkill,
   workspaceDirectory: string,
   triggerPhrases: string[],
-): BirdhouseSkillDetail {
+): Promise<BirdhouseSkillDetail> {
   const skillDirectory = dirname(skill.location);
+  const metadata = await parseSkillMetadata(skill.location);
+
   return {
     ...toBirdhouseSkillSummary(skill, workspaceDirectory, triggerPhrases),
     content: skill.content,
     location: skill.location,
     files: existsSync(skillDirectory) ? collectSkillFiles(skillDirectory, skillDirectory) : [],
+    metadata,
   };
 }
 

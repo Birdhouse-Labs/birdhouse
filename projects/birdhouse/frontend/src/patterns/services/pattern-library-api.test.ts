@@ -123,6 +123,11 @@ describe("fetchPattern", () => {
         content: "# Git Spotlight",
         location: "/repo/current/.agents/skills/git/spotlight-worktree/SKILL.md",
         files: ["helpers.ts", "templates/commit.md"],
+        metadata: {
+          description: "Keep a main clone aligned with a worktree.",
+          license: "MIT",
+          compatibility: "opencode",
+        },
       }),
     } as Response);
 
@@ -136,6 +141,11 @@ describe("fetchPattern", () => {
       group_id: "workspace",
       title: "git/spotlight-worktree",
       description: "Keep a main clone aligned with a worktree.",
+      metadata: {
+        description: "Keep a main clone aligned with a worktree.",
+        license: "MIT",
+        compatibility: "opencode",
+      },
       prompt: "# Git Spotlight",
       trigger_phrases: ["spotlight this branch"],
       readonly: true,

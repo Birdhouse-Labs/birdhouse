@@ -9,6 +9,22 @@ import { cardSurfaceFlat } from "../../styles/containerStyles";
 import type { Pattern } from "../types/pattern-library-types";
 import TriggerPhraseEditor from "./TriggerPhraseEditor";
 
+function formatMetadataValue(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (value === null) {
+    return "null";
+  }
+
+  return JSON.stringify(value, null, 2);
+}
+
 export interface PatternDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -26,6 +42,7 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
     props.pattern.scope === "workspace"
       ? "Applies only in this workspace because this skill resolves inside the current workspace directory."
       : "Applies across all workspaces because this skill resolves outside the current workspace directory.";
+  const metadataEntries = () => Object.entries(props.pattern.metadata).filter(([key]) => key !== "name");
 
   const handleSaveTriggerPhrases = async (phrases: string[]) => {
     setIsSaving(true);
@@ -72,11 +89,22 @@ const PatternDetailModal: Component<PatternDetailModalProps> = (props) => {
               <div class="text-xs text-text-muted px-2">Saving changes...</div>
             </Show>
 
-            <Show when={props.pattern.description}>
+            <Show when={metadataEntries().length > 0}>
               <section class="space-y-4">
-                <h3 class="text-lg font-semibold text-heading">Description</h3>
+                <h3 class="text-lg font-semibold text-heading">Metadata</h3>
                 <div class={`rounded-xl ${cardSurfaceFlat} px-6 py-4`}>
-                  <MarkdownRenderer content={props.pattern.description || ""} />
+                  <dl class="space-y-4">
+                    <For each={metadataEntries()}>
+                      {([key, value]) => (
+                        <div class="space-y-1">
+                          <dt class="text-xs font-semibold uppercase tracking-wide text-text-muted">{key}</dt>
+                          <dd class="whitespace-pre-wrap break-words font-mono text-sm text-text-primary">
+                            {formatMetadataValue(value)}
+                          </dd>
+                        </div>
+                      )}
+                    </For>
+                  </dl>
                 </div>
               </section>
             </Show>

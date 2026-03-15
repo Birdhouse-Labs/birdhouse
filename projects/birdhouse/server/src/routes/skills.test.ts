@@ -35,6 +35,7 @@ interface SkillDetailResponse {
   content: string;
   location: string;
   files: string[];
+  metadata: Record<string, unknown>;
 }
 
 interface SkillAttachmentsPreviewResponse {
@@ -158,7 +159,17 @@ describe("workspace skills routes", () => {
 
   test("loads a single skill detail using an encoded skill name", async () => {
     const skillDir = createSkillDirectory({
-      "SKILL.md": "# Git Spotlight",
+      "SKILL.md": `---
+name: git/spotlight-worktree
+description: Keep a main clone aligned with a worktree.
+license: MIT
+compatibility: opencode
+metadata:
+  audience: maintainers
+  workflow: git
+---
+
+# Git Spotlight`,
       "scripts/spotlight.sh": "echo spotlight",
       "reference/notes.md": "notes",
       "examples/demo.txt": "demo",
@@ -195,6 +206,16 @@ describe("workspace skills routes", () => {
         content: "# Git Spotlight",
         location: join(skillDir, "SKILL.md"),
         files: ["examples/demo.txt", "reference/notes.md", "scripts/spotlight.sh"],
+        metadata: {
+          name: "git/spotlight-worktree",
+          description: "Keep a main clone aligned with a worktree.",
+          license: "MIT",
+          compatibility: "opencode",
+          metadata: {
+            audience: "maintainers",
+            workflow: "git",
+          },
+        },
       });
     });
   });

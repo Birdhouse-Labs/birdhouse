@@ -77,7 +77,7 @@ export function createSkillRoutes(dataDb: DataDB) {
       return c.json({ error: `Skill ${skillName} not found` }, 404);
     }
 
-    return c.json(toBirdhouseSkillDetail(skill, workspace.directory, dataDb.getSkillTriggerPhrases(skill.name)));
+    return c.json(await toBirdhouseSkillDetail(skill, workspace.directory, dataDb.getSkillTriggerPhrases(skill.name)));
   });
 
   app.patch("/:skillName/trigger-phrases", async (c) => {
