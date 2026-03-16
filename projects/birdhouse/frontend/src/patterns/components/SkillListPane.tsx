@@ -66,10 +66,10 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
                       <button
                         type="button"
                         onClick={() => props.onScopeFilterChange(option.value)}
-                        class={`w-full rounded-lg px-3 py-2 transition-colors ${cardSurfaceFlat}`}
+                        class="w-full rounded-lg px-1 py-2 transition-colors"
                         classList={{
-                          "bg-surface-overlay": props.scopeFilter === option.value,
-                          "hover:bg-surface-overlay": props.scopeFilter !== option.value,
+                          "bg-surface-overlay/60": props.scopeFilter === option.value,
+                          "hover:bg-surface-overlay/40": props.scopeFilter !== option.value,
                         }}
                       >
                         <div class="flex items-center gap-3">
