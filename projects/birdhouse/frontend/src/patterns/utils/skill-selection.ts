@@ -9,6 +9,18 @@ export function resolveSelectedSkillId(currentSkillId: string | null, visibleSki
   return visibleSkillIds.includes(currentSkillId) ? currentSkillId : null;
 }
 
+export function resolveSelectedSkillIdAfterLoad(
+  currentSkillId: string | null,
+  visibleSkillIds: string[],
+  hasLoaded: boolean,
+): string | null {
+  if (!hasLoaded) {
+    return currentSkillId;
+  }
+
+  return resolveSelectedSkillId(currentSkillId, visibleSkillIds);
+}
+
 export function resolveVisibleSkillDetail<T>(selectedSkillId: string | null, detail: T | null): T | null {
   return selectedSkillId ? detail : null;
 }
