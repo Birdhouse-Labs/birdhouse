@@ -52,7 +52,7 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
             <Popover.Portal>
               <Popover.Content
                 class="w-64 rounded-xl p-4 border shadow-2xl bg-surface-raised border-border space-y-3"
-                style={{ "z-index": baseZIndex }}
+                style={{ "z-index": baseZIndex + 60 }}
               >
                 <Popover.Label class="text-sm font-semibold text-heading block">Install location</Popover.Label>
                 <ButtonGroup
