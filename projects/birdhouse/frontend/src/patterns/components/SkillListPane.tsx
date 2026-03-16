@@ -116,7 +116,7 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto px-3">
+      <div class="flex-1 overflow-y-auto px-4">
         <Show
           when={props.filteredSkills.length > 0}
           fallback={
@@ -130,7 +130,7 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
               <button
                 type="button"
                 onClick={() => props.onSelectSkill(skill.id)}
-                class="w-full text-left px-3 py-4 transition-colors border-b border-border-muted/40 last:border-b-0"
+                class="w-full text-left px-4 py-4 transition-colors border-b border-border-muted/40 last:border-b-0"
                 classList={{
                   "bg-gradient-to-r from-gradient-from/10 via-gradient-via/10 to-gradient-to/10 rounded-lg":
                     props.selectedSkillId === skill.id,
