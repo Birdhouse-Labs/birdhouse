@@ -1,7 +1,7 @@
 // ABOUTME: Normalizes OpenCode skills into Birdhouse API-ready skill records.
 // ABOUTME: Handles v1 scope inference and skill lookup by name for workspace requests.
 
-import { spawn, type ChildProcess } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
@@ -28,9 +28,11 @@ export interface BirdhouseSkillDetail extends BirdhouseSkillSummary {
   metadata: Record<string, unknown>;
 }
 
-interface SpawnLike {
-  (command: string, args: string[], options: { detached: true; stdio: "ignore" }): Pick<ChildProcess, "unref">;
-}
+type SpawnLike = (
+  command: string,
+  args: string[],
+  options: { detached: true; stdio: "ignore" },
+) => Pick<ChildProcess, "unref">;
 
 function parseSkillMetadata(skillFilePath: string): Record<string, unknown> {
   if (!existsSync(skillFilePath)) {
@@ -78,7 +80,7 @@ function collectSkillFiles(rootDirectory: string, currentDirectory: string): str
 }
 
 function extractSkillTags(metadata: Record<string, unknown>): string[] {
-  const tags = metadata["tags"];
+  const tags = metadata.tags;
   if (!Array.isArray(tags)) {
     return [];
   }

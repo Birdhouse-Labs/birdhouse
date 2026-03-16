@@ -165,7 +165,9 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
                           )}
                         </For>
                         <Show when={skill.trigger_phrases.length > 3}>
-                          <span class="px-2 py-0.5 text-xs text-text-muted">+{skill.trigger_phrases.length - 3} more</span>
+                          <span class="px-2 py-0.5 text-xs text-text-muted">
+                            +{skill.trigger_phrases.length - 3} more
+                          </span>
                         </Show>
                       </div>
                     </Show>
