@@ -1,7 +1,7 @@
 // ABOUTME: Shared skill detail content for both the library detail pane and any nested detail dialogs.
 // ABOUTME: Renders metadata, trigger phrases, supporting files, and XML preview for one selected skill.
 
-import { FolderOpen } from "lucide-solid";
+import { ChevronDown, FolderOpen } from "lucide-solid";
 import { type Component, createSignal, For, Show } from "solid-js";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
 import { CodeBlock } from "../../components/ui/CodeBlock";
@@ -63,6 +63,47 @@ export interface SkillDetailContentProps {
   onUpdateTriggerPhrases: (phrases: string[]) => Promise<void>;
 }
 
+interface DetailSectionProps {
+  title: string;
+  defaultExpanded?: boolean;
+  description?: string;
+  children: import("solid-js").JSX.Element;
+}
+
+const DetailSection: Component<DetailSectionProps> = (props) => {
+  const [expanded, setExpanded] = createSignal(props.defaultExpanded ?? false);
+
+  return (
+    <section class="space-y-3">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded())}
+        class={`w-full rounded-xl ${cardSurfaceFlat} px-5 py-4 text-left transition-colors hover:bg-surface-overlay/50`}
+        aria-expanded={expanded()}
+      >
+        <div class="flex items-center justify-between gap-4">
+          <div class="space-y-1">
+            <h3 class="text-lg font-semibold text-heading">{props.title}</h3>
+            <Show when={props.description}>
+              <p class="text-sm text-text-secondary">{props.description}</p>
+            </Show>
+          </div>
+          <ChevronDown
+            size={18}
+            class="text-text-muted transition-transform duration-200"
+            classList={{
+              "rotate-180": expanded(),
+            }}
+          />
+        </div>
+      </button>
+      <Show when={expanded()}>
+        <div class={`rounded-xl ${cardSurfaceFlat} px-6 py-4`}>{props.children}</div>
+      </Show>
+    </section>
+  );
+};
+
 const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
   const [isSaving, setIsSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -116,10 +157,8 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
       </Show>
 
       <Show when={metadataEntries().length > 0 || props.pattern.display_location}>
-              <section class="space-y-4">
-          <h3 class="text-lg font-semibold text-heading">Details</h3>
-                <div class={`rounded-xl ${cardSurfaceFlat} px-6 py-4`}>
-                  <dl class="space-y-4">
+        <DetailSection title="Details" defaultExpanded={true}>
+          <dl class="space-y-4">
                     <Show when={descriptionValue()}>
                       <div class="space-y-1">
                         <dt class="text-sm font-semibold text-heading">Description</dt>
@@ -184,34 +223,25 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
                   />
                 </dd>
               </div>
-            </dl>
-          </div>
-        </section>
+          </dl>
+        </DetailSection>
       </Show>
 
-      <section class="space-y-4">
-        <div class="space-y-1">
-          <h3 class="text-lg font-semibold text-heading">{scopeTitle()}</h3>
-          <p class="text-sm text-text-secondary">{scopeDescription()}</p>
-        </div>
+      <DetailSection title={scopeTitle()} description={scopeDescription()} defaultExpanded={true}>
         <TriggerPhraseEditor phrases={props.pattern.trigger_phrases} onSave={handleSaveTriggerPhrases} />
-      </section>
+      </DetailSection>
 
       <Show when={props.pattern.files.length > 0}>
-        <section class="space-y-4">
-          <h3 class="text-lg font-semibold text-heading">Other Files in Skill Directory</h3>
-          <div class={`rounded-xl ${cardSurfaceFlat} px-6 py-4`}>
-            <div class="flex flex-wrap gap-2">
-              <For each={props.pattern.files}>
-                {(file) => <span class="text-sm font-mono text-text-primary break-all">{file}</span>}
-              </For>
-            </div>
+        <DetailSection title="Other Files in Skill Directory" defaultExpanded={false}>
+          <div class="flex flex-wrap gap-2">
+            <For each={props.pattern.files}>
+              {(file) => <span class="text-sm font-mono text-text-primary break-all">{file}</span>}
+            </For>
           </div>
-        </section>
+        </DetailSection>
       </Show>
 
-      <section class="space-y-4">
-        <h3 class="text-lg font-semibold text-heading">What Gets Sent to the LLM</h3>
+      <DetailSection title="What Gets Sent to the LLM" defaultExpanded={false}>
         <div class={`rounded-xl ${cardSurfaceFlat} overflow-hidden`}>
           <div class="px-4 py-2 bg-surface-overlay border-b border-border-muted font-mono text-xs text-text-muted">
             &lt;skill name="{props.pattern.title}"&gt;
@@ -225,7 +255,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
             &lt;/skill&gt;
           </div>
         </div>
-      </section>
+      </DetailSection>
     </div>
   );
 };
