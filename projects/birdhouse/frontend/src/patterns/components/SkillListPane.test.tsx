@@ -1,7 +1,7 @@
 // ABOUTME: Tests the flat list pane used by the skills library dialog.
 // ABOUTME: Verifies search input, install location filter, and visible skill selection callbacks.
 
-import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
+import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
 import { createMemo, createSignal } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 import { filterSkills } from "../utils/skill-library-filtering";
@@ -68,7 +68,8 @@ describe("SkillListPane", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Filter skills" }));
-    fireEvent.click(screen.getByRole("button", { name: "Workspace" }));
+    const filterDialog = screen.getByRole("dialog", { name: "Install location" });
+    fireEvent.click(within(filterDialog).getByText("Workspace"));
 
     await waitFor(() => {
       expect(screen.getByText("1 skill")).toBeInTheDocument();

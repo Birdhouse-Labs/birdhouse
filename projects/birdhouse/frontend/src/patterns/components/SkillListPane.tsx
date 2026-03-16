@@ -4,7 +4,8 @@
 import Popover from "corvu/popover";
 import { Filter, Search } from "lucide-solid";
 import { type Component, For, Show } from "solid-js";
-import { Button, ButtonGroup } from "../../components/ui";
+import { Button } from "../../components/ui";
+import Checkbox from "../../components/ui/Checkbox";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
 import type { PatternMetadata, SkillListScopeFilter } from "../types/pattern-library-types";
@@ -29,6 +30,11 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
   };
 
   const scopeLabel = (scope: PatternMetadata["scope"]) => (scope === "workspace" ? "Workspace" : "Global");
+  const filterOptions: Array<{ value: SkillListScopeFilter; label: string }> = [
+    { value: "all", label: "All" },
+    { value: "workspace", label: "Workspace" },
+    { value: "global", label: "Global" },
+  ];
 
   return (
     <div class="flex flex-col h-full overflow-hidden">
@@ -51,20 +57,23 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
             </Popover.Trigger>
             <Popover.Portal>
               <Popover.Content
-                class="w-80 rounded-xl p-4 border shadow-2xl bg-surface-raised border-border space-y-3"
+                class="w-72 rounded-xl p-4 border shadow-2xl bg-surface-raised border-border space-y-3"
                 style={{ "z-index": baseZIndex + 60 }}
               >
                 <Popover.Label class="text-sm font-semibold text-heading block">Install location</Popover.Label>
-                <ButtonGroup
-                  items={[
-                    { value: "all", label: "All" },
-                    { value: "workspace", label: "Workspace" },
-                    { value: "global", label: "Global" },
-                  ]}
-                  value={props.scopeFilter}
-                  onChange={(value) => props.onScopeFilterChange(value as SkillListScopeFilter)}
-                  class="w-full"
-                />
+                <div class="space-y-2">
+                  <For each={filterOptions}>
+                    {(option) => (
+                      <div class={`rounded-lg ${cardSurfaceFlat} px-3 py-2`}>
+                        <Checkbox
+                          checked={props.scopeFilter === option.value}
+                          onChange={() => props.onScopeFilterChange(option.value)}
+                          label={option.label}
+                        />
+                      </div>
+                    )}
+                  </For>
+                </div>
               </Popover.Content>
             </Popover.Portal>
           </Popover>
