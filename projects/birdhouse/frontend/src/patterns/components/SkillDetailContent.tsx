@@ -88,7 +88,7 @@ const DetailSection: Component<DetailSectionProps> = (props) => {
             classList={{
               "rotate-90": expanded(),
             }}
-            />
+          />
           <div class="space-y-1 flex-1 min-w-0">
             <h3 class="text-lg font-semibold text-heading">{props.title}</h3>
             <Show when={props.description}>
