@@ -81,20 +81,20 @@ const DetailSection: Component<DetailSectionProps> = (props) => {
         class="w-full px-5 py-4 text-left transition-colors hover:bg-surface-overlay/50"
         aria-expanded={expanded()}
       >
-        <div class="flex items-center justify-between gap-4">
-          <div class="space-y-1">
+        <div class="flex items-center gap-3">
+          <ChevronDown
+            size={18}
+            class="text-heading transition-transform duration-200 flex-shrink-0 mt-0.5"
+            classList={{
+              "rotate-180": expanded(),
+            }}
+          />
+          <div class="space-y-1 flex-1 min-w-0">
             <h3 class="text-lg font-semibold text-heading">{props.title}</h3>
             <Show when={props.description}>
               <p class="text-sm text-text-secondary">{props.description}</p>
             </Show>
           </div>
-          <ChevronDown
-            size={18}
-            class="text-text-muted transition-transform duration-200"
-            classList={{
-              "rotate-180": expanded(),
-            }}
-          />
         </div>
       </button>
       <Show when={expanded()}>
