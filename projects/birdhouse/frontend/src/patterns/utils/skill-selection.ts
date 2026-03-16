@@ -8,3 +8,7 @@ export function resolveSelectedSkillId(currentSkillId: string | null, visibleSki
 
   return visibleSkillIds.includes(currentSkillId) ? currentSkillId : null;
 }
+
+export function resolveVisibleSkillDetail<T>(selectedSkillId: string | null, detail: T | null): T | null {
+  return selectedSkillId ? detail : null;
+}

@@ -14,7 +14,7 @@ import { createMediaQuery } from "../../theme/createMediaQuery";
 import { fetchPattern, fetchPatternLibrary, updateTriggerPhrases } from "../services/pattern-library-api";
 import type { SkillListScopeFilter } from "../types/pattern-library-types";
 import { filterSkills } from "../utils/skill-library-filtering";
-import { resolveSelectedSkillId } from "../utils/skill-selection";
+import { resolveSelectedSkillId, resolveVisibleSkillDetail } from "../utils/skill-selection";
 import SkillDetailPane from "./SkillDetailPane";
 import SkillListPane from "./SkillListPane";
 
@@ -58,6 +58,9 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
       return { skillId, workspaceId: props.workspaceId };
     },
     async ({ skillId, workspaceId }) => fetchPattern(skillId, workspaceId),
+  );
+  const visiblePattern = createMemo(() =>
+    resolveVisibleSkillDetail(selectedSkillId(), patternData.error ? null : (patternData() ?? null)),
   );
 
   createEffect(() => {
@@ -200,7 +203,7 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
                   </MobileNavDrawer>
 
                   <SkillDetailPane
-                    pattern={patternData.error ? null : (patternData() ?? null)}
+                    pattern={visiblePattern()}
                     loading={patternData.loading}
                     error={patternData.error ?? null}
                     workspaceId={props.workspaceId}
@@ -248,7 +251,7 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
 
                     <Resizable.Panel initialSize={0.618} minSize={0.5} class="h-full rounded-lg overflow-hidden">
                       <SkillDetailPane
-                        pattern={patternData.error ? null : (patternData() ?? null)}
+                        pattern={visiblePattern()}
                         loading={patternData.loading}
                         error={patternData.error ?? null}
                         workspaceId={props.workspaceId}
