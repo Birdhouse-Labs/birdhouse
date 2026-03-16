@@ -14,6 +14,7 @@ import { createMediaQuery } from "../../theme/createMediaQuery";
 import { fetchPattern, fetchPatternLibrary, updateTriggerPhrases } from "../services/pattern-library-api";
 import type { SkillListScopeFilter } from "../types/pattern-library-types";
 import { filterSkills } from "../utils/skill-library-filtering";
+import { resolveSelectedSkillId } from "../utils/skill-selection";
 import SkillDetailPane from "./SkillDetailPane";
 import SkillListPane from "./SkillListPane";
 
@@ -98,21 +99,13 @@ const PatternLibraryDialog: Component<PatternLibraryDialogProps> = (props) => {
   createEffect(() => {
     if (libraryData.error) return;
 
-    const visibleSkills = filteredSkills();
-    const currentSkillId = selectedSkillId();
+    const nextSelectedSkillId = resolveSelectedSkillId(
+      selectedSkillId(),
+      filteredSkills().map((skill) => skill.id),
+    );
 
-    if (visibleSkills.length === 0) {
-      if (currentSkillId) {
-        selectSkill(null);
-      }
-      return;
-    }
-
-    if (!currentSkillId || !visibleSkills.some((skill) => skill.id === currentSkillId)) {
-      const firstSkill = visibleSkills[0];
-      if (firstSkill) {
-        selectSkill(firstSkill.id);
-      }
+    if (selectedSkillId() !== nextSelectedSkillId) {
+      selectSkill(nextSelectedSkillId);
     }
   });
 
