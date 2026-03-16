@@ -12,6 +12,7 @@ const skills = [
     id: "find-docs",
     title: "find-docs",
     description: "Retrieve current library docs.",
+    tags: ["docs", "research"],
     trigger_phrases: ["docs please"],
     scope: "global" as const,
     readonly: true,
@@ -20,6 +21,7 @@ const skills = [
     id: "release-notes-from-branch",
     title: "release-notes-from-branch",
     description: "Generate release notes from git history.",
+    tags: ["git", "release"],
     trigger_phrases: ["generate release notes"],
     scope: "workspace" as const,
     readonly: true,
@@ -57,6 +59,8 @@ describe("SkillListPane", () => {
 
     expect(screen.getByText("find-docs")).toBeInTheDocument();
     expect(screen.getByText("release-notes-from-branch")).toBeInTheDocument();
+    expect(screen.getByText("docs")).toBeInTheDocument();
+    expect(screen.getByText("research")).toBeInTheDocument();
 
     fireEvent.input(screen.getByPlaceholderText("Search skills"), {
       target: { value: "release" },

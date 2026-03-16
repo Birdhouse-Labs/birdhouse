@@ -1,5 +1,5 @@
 // ABOUTME: Filters the flat visible-skill list for the library search and scope controls.
-// ABOUTME: Matches by name, description, and trigger phrases while preserving stable display order.
+// ABOUTME: Matches by name, tags, description, and trigger phrases while preserving stable display order.
 
 import type { PatternMetadata, SkillListScopeFilter } from "../types/pattern-library-types";
 
@@ -19,7 +19,7 @@ export function filterSkills(
       return true;
     }
 
-    const haystacks = [skill.title, skill.description || "", ...skill.trigger_phrases].map((value) =>
+    const haystacks = [skill.title, skill.description || "", ...skill.tags, ...skill.trigger_phrases].map((value) =>
       value.toLowerCase(),
     );
     return haystacks.some((value) => value.includes(normalizedQuery));

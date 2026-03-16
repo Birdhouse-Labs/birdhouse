@@ -14,6 +14,7 @@ export interface BirdhouseSkillSummary {
   id: string;
   name: string;
   description: string;
+  tags: string[];
   scope: SkillScope;
   trigger_phrases: string[];
   readonly: true;
@@ -76,6 +77,15 @@ function collectSkillFiles(rootDirectory: string, currentDirectory: string): str
   return files;
 }
 
+function extractSkillTags(metadata: Record<string, unknown>): string[] {
+  const tags = metadata["tags"];
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+
+  return tags.filter((tag): tag is string => typeof tag === "string");
+}
+
 export function inferSkillScope(location: string, workspaceDirectory: string): SkillScope {
   const resolvedLocation = resolve(location);
   const resolvedWorkspaceDirectory = resolve(workspaceDirectory);
@@ -126,10 +136,13 @@ export function toBirdhouseSkillSummary(
   workspaceDirectory: string,
   triggerPhrases: string[],
 ): BirdhouseSkillSummary {
+  const metadata = parseSkillMetadata(skill.location);
+
   return {
     id: skill.name,
     name: skill.name,
     description: skill.description,
+    tags: extractSkillTags(metadata),
     scope: inferSkillScope(skill.location, workspaceDirectory),
     trigger_phrases: triggerPhrases,
     readonly: true,

@@ -11,6 +11,7 @@ describe("PatternDetailModal", () => {
     group_id: "global",
     title: "find-docs",
     description: "Retrieve current library docs.",
+    tags: ["docs", "research"],
     metadata: {
       description: "Retrieve current library docs.",
       license: "MIT",

@@ -19,6 +19,7 @@ interface SkillsListResponse {
     id: string;
     name: string;
     description: string;
+    tags: string[];
     scope: "workspace" | "global";
     trigger_phrases: string[];
     readonly: boolean;
@@ -29,6 +30,7 @@ interface SkillDetailResponse {
   id: string;
   name: string;
   description: string;
+  tags: string[];
   scope: "workspace" | "global";
   trigger_phrases: string[];
   readonly: boolean;
@@ -141,6 +143,7 @@ describe("workspace skills routes", () => {
             id: "find-docs",
             name: "find-docs",
             description: "Retrieve current library docs.",
+            tags: [],
             scope: "global",
             trigger_phrases: ["look up framework docs"],
             readonly: true,
@@ -149,6 +152,7 @@ describe("workspace skills routes", () => {
             id: "git/spotlight-worktree",
             name: "git/spotlight-worktree",
             description: "Keep a main clone aligned with a worktree.",
+            tags: [],
             scope: "workspace",
             trigger_phrases: [],
             readonly: true,
@@ -165,6 +169,9 @@ name: git/spotlight-worktree
 description: Keep a main clone aligned with a worktree.
 license: MIT
 compatibility: opencode
+tags:
+  - git
+  - release
 metadata:
   audience: maintainers
   workflow: git
@@ -201,6 +208,7 @@ metadata:
         id: "git/spotlight-worktree",
         name: "git/spotlight-worktree",
         description: "Keep a main clone aligned with a worktree.",
+        tags: ["git", "release"],
         scope: "workspace",
         trigger_phrases: ["spotlight this branch"],
         readonly: true,
@@ -213,6 +221,7 @@ metadata:
           description: "Keep a main clone aligned with a worktree.",
           license: "MIT",
           compatibility: "opencode",
+          tags: ["git", "release"],
           metadata: {
             audience: "maintainers",
             workflow: "git",

@@ -11,6 +11,7 @@ export interface PatternMetadata {
   id: string;
   title: string;
   description?: string;
+  tags: string[];
   trigger_phrases: string[];
   scope: PatternScope;
   readonly: boolean;
@@ -30,6 +31,7 @@ export interface Pattern {
   id: string;
   title: string;
   description?: string;
+  tags: string[];
   metadata: Record<string, unknown>;
   prompt: string;
   trigger_phrases: string[];

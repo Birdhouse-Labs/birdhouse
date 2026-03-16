@@ -128,29 +128,44 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
                 aria-label={`View ${skill.title}`}
               >
                 <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0 flex-1">
+                  <div class="min-w-0 flex-1 space-y-2">
                     <div class="flex items-center gap-2 flex-wrap">
                       <h3 class="text-sm font-semibold text-heading break-all">{skill.title}</h3>
-                      <span class="px-2 py-0.5 text-[11px] rounded-full bg-surface-overlay text-text-muted">
+                      <span class="px-2 py-0.5 text-[11px] rounded-full bg-accent/12 text-accent border border-accent/25">
                         {scopeLabel(skill.scope)}
                       </span>
                     </div>
-                    <Show when={skill.description}>
-                      <p class="text-xs text-text-secondary line-clamp-2 mt-1">{skill.description}</p>
+
+                    <Show when={skill.tags.length > 0}>
+                      <div class="flex flex-wrap gap-1">
+                        <For each={skill.tags.slice(0, 4)}>
+                          {(tag) => (
+                            <span class="px-2 py-0.5 text-xs rounded-full bg-surface-overlay text-text-primary border border-border-muted/70">
+                              {tag}
+                            </span>
+                          )}
+                        </For>
+                        <Show when={skill.tags.length > 4}>
+                          <span class="px-2 py-0.5 text-xs text-text-muted">+{skill.tags.length - 4} more</span>
+                        </Show>
+                      </div>
                     </Show>
+
+                    <Show when={skill.description}>
+                      <p class="text-xs text-text-secondary line-clamp-2">{skill.description}</p>
+                    </Show>
+
                     <Show when={skill.trigger_phrases.length > 0}>
-                      <div class="flex flex-wrap gap-1 mt-2">
+                      <div class="flex flex-wrap gap-1">
                         <For each={skill.trigger_phrases.slice(0, 3)}>
                           {(phrase) => (
-                            <span class="px-2 py-0.5 text-xs bg-surface-overlay text-text-muted rounded font-mono">
+                            <span class="px-2 py-0.5 text-xs rounded text-text-primary bg-surface-overlay/80 border border-border-muted/70 font-mono">
                               {phrase}
                             </span>
                           )}
                         </For>
                         <Show when={skill.trigger_phrases.length > 3}>
-                          <span class="px-2 py-0.5 text-xs text-text-muted">
-                            +{skill.trigger_phrases.length - 3} more
-                          </span>
+                          <span class="px-2 py-0.5 text-xs text-text-muted">+{skill.trigger_phrases.length - 3} more</span>
                         </Show>
                       </div>
                     </Show>

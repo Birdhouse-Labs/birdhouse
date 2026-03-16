@@ -15,6 +15,7 @@ interface SkillsListResponse {
     id: string;
     name: string;
     description: string;
+    tags: string[];
     scope: PatternScope;
     trigger_phrases: string[];
     readonly: boolean;
@@ -25,6 +26,7 @@ interface SkillDetailResponse {
   id: string;
   name: string;
   description: string;
+  tags: string[];
   scope: PatternScope;
   trigger_phrases: string[];
   readonly: boolean;
@@ -44,6 +46,7 @@ function toPatternMetadata(skill: SkillsListResponse["skills"][number]): Pattern
     id: skill.name,
     title: skill.name,
     description: skill.description,
+    tags: skill.tags,
     trigger_phrases: skill.trigger_phrases,
     scope: skill.scope,
     readonly: skill.readonly,
@@ -89,6 +92,7 @@ export async function fetchPattern(patternId: string, workspaceId: string): Prom
     id: skill.name,
     title: skill.name,
     description: skill.description,
+    tags: skill.tags,
     metadata: skill.metadata,
     prompt: skill.content,
     trigger_phrases: skill.trigger_phrases,
