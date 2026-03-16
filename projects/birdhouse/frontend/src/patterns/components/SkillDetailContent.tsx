@@ -122,7 +122,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
                   <dl class="space-y-4">
                     <Show when={descriptionValue()}>
                       <div class="space-y-1">
-                        <dt class="text-sm font-medium text-text-secondary">Description</dt>
+                        <dt class="text-sm font-semibold text-heading">Description</dt>
                         <dd class="whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed">
                           {isMultilineText(descriptionValue() ?? "") ? (
                             <MarkdownRenderer content={descriptionValue() ?? ""} />
@@ -135,7 +135,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
 
                     <Show when={props.pattern.tags.length > 0}>
                       <div class="space-y-1">
-                        <dt class="text-sm font-medium text-text-secondary">Tags</dt>
+                        <dt class="text-sm font-semibold text-heading">Tags</dt>
                         <dd>
                           <SkillTagList tags={props.pattern.tags} />
                         </dd>
@@ -145,7 +145,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
                     <For each={metadataEntries()}>
                       {([key, value]) => (
                         <div class="space-y-1">
-                          <dt class="text-sm font-medium text-text-secondary">{formatMetadataLabel(key)}</dt>
+                          <dt class="text-sm font-semibold text-heading">{formatMetadataLabel(key)}</dt>
                           <Show
                             when={isStructuredMetadataValue(value)}
                             fallback={
@@ -171,7 +171,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
                 )}
               </For>
               <div class="space-y-1 pt-2 border-t border-border-muted/60">
-                <dt class="text-sm font-medium text-text-secondary">Location</dt>
+                <dt class="text-sm font-semibold text-heading">Location</dt>
                 <dd class="flex items-center gap-2 text-xs text-text-muted">
                   <span class="font-mono break-all flex-1">{locationDisplay()}</span>
                   <IconButton
