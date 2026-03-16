@@ -8,7 +8,8 @@ export interface SkillTagListProps {
   maxVisible?: number;
 }
 
-const tagChipClass = "px-2 py-0.5 text-xs rounded-full bg-surface-overlay text-text-primary border border-border-muted/70";
+const tagChipClass =
+  "px-2 py-0.5 text-xs rounded-full bg-surface-overlay text-text-primary border border-border-muted/70";
 
 const SkillTagList: Component<SkillTagListProps> = (props) => {
   const visibleTags = () => props.tags.slice(0, props.maxVisible ?? props.tags.length);

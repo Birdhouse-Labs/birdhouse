@@ -159,70 +159,71 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
       <Show when={metadataEntries().length > 0 || props.pattern.display_location}>
         <DetailSection title="Details" defaultExpanded={true}>
           <dl class="space-y-4">
-                    <Show when={descriptionValue()}>
-                      <div class="space-y-1">
-                        <dt class="text-sm font-semibold text-heading">Description</dt>
-                        <dd class="whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed">
-                          {isMultilineText(descriptionValue() ?? "") ? (
-                            <MarkdownRenderer content={descriptionValue() ?? ""} />
-                          ) : (
-                            descriptionValue()
-                          )}
-                        </dd>
-                      </div>
-                    </Show>
-
-                    <Show when={props.pattern.tags.length > 0}>
-                      <div class="space-y-1">
-                        <dt class="text-sm font-semibold text-heading">Tags</dt>
-                        <dd>
-                          <SkillTagList tags={props.pattern.tags} />
-                        </dd>
-                      </div>
-                    </Show>
-
-                    <For each={metadataEntries()}>
-                      {([key, value]) => (
-                        <div class="space-y-1">
-                          <dt class="text-sm font-semibold text-heading">{formatMetadataLabel(key)}</dt>
-                          <Show
-                            when={isStructuredMetadataValue(value)}
-                            fallback={
-                        <dd
-                          classList={{
-                            "whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed": true,
-                            "font-mono": typeof value !== "string",
-                          }}
-                        >
-                          {typeof value === "string" && isMultilineText(value) ? (
-                            <MarkdownRenderer content={value} />
-                          ) : (
-                            formatMetadataValue(value)
-                          )}
-                        </dd>
-                      }
-                    >
-                      <dd class="overflow-hidden rounded-lg border border-border-muted bg-surface-overlay/60">
-                        <CodeBlock code={formatMetadataValue(value)} language="json" theme={resolvedCodeTheme()} />
-                      </dd>
-                    </Show>
-                  </div>
-                )}
-              </For>
-              <div class="space-y-1 pt-2 border-t border-border-muted/60">
-                <dt class="text-sm font-semibold text-heading">Location</dt>
-                <dd class="flex items-center gap-2 text-sm text-text-primary">
-                  <span class="font-mono break-all flex-1">{locationDisplay()}</span>
-                  <IconButton
-                    icon={<FolderOpen size={16} />}
-                    variant="ghost"
-                    fixedSize={true}
-                    disabled={isRevealing()}
-                    aria-label="Reveal skill folder in Finder"
-                    onClick={() => void handleRevealLocation()}
-                  />
+            <Show when={descriptionValue()}>
+              <div class="space-y-1">
+                <dt class="text-sm font-semibold text-heading">Description</dt>
+                <dd class="whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed">
+                  {isMultilineText(descriptionValue() ?? "") ? (
+                    <MarkdownRenderer content={descriptionValue() ?? ""} />
+                  ) : (
+                    descriptionValue()
+                  )}
                 </dd>
               </div>
+            </Show>
+
+            <Show when={props.pattern.tags.length > 0}>
+              <div class="space-y-1">
+                <dt class="text-sm font-semibold text-heading">Tags</dt>
+                <dd>
+                  <SkillTagList tags={props.pattern.tags} />
+                </dd>
+              </div>
+            </Show>
+
+            <For each={metadataEntries()}>
+              {([key, value]) => (
+                <div class="space-y-1">
+                  <dt class="text-sm font-semibold text-heading">{formatMetadataLabel(key)}</dt>
+                  <Show
+                    when={isStructuredMetadataValue(value)}
+                    fallback={
+                      <dd
+                        classList={{
+                          "whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed": true,
+                          "font-mono": typeof value !== "string",
+                        }}
+                      >
+                        {typeof value === "string" && isMultilineText(value) ? (
+                          <MarkdownRenderer content={value} />
+                        ) : (
+                          formatMetadataValue(value)
+                        )}
+                      </dd>
+                    }
+                  >
+                    <dd class="overflow-hidden rounded-lg border border-border-muted bg-surface-overlay/60">
+                      <CodeBlock code={formatMetadataValue(value)} language="json" theme={resolvedCodeTheme()} />
+                    </dd>
+                  </Show>
+                </div>
+              )}
+            </For>
+
+            <div class="space-y-1 pt-2 border-t border-border-muted/60">
+              <dt class="text-sm font-semibold text-heading">Location</dt>
+              <dd class="flex items-center gap-2 text-sm text-text-primary">
+                <span class="font-mono break-all flex-1">{locationDisplay()}</span>
+                <IconButton
+                  icon={<FolderOpen size={16} />}
+                  variant="ghost"
+                  fixedSize={true}
+                  disabled={isRevealing()}
+                  aria-label="Reveal skill folder in Finder"
+                  onClick={() => void handleRevealLocation()}
+                />
+              </dd>
+            </div>
           </dl>
         </DetailSection>
       </Show>
