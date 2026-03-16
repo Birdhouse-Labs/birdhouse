@@ -14,6 +14,7 @@ import {
   normalizeChecksStatus,
   normalizeReviewDecision,
   normalizeState,
+  resolveCheckState,
   runCommand,
 } from "./git-client.ts";
 
@@ -98,23 +99,84 @@ describe("normalizeReviewDecision", () => {
   });
 });
 
+describe("resolveCheckState", () => {
+  test("returns state for StatusContext items", () => {
+    expect(resolveCheckState({ state: "SUCCESS" })).toBe("SUCCESS");
+    expect(resolveCheckState({ state: "FAILURE" })).toBe("FAILURE");
+    expect(resolveCheckState({ state: "PENDING" })).toBe("PENDING");
+  });
+
+  test("returns conclusion for completed CheckRun items", () => {
+    expect(resolveCheckState({ __typename: "CheckRun", status: "COMPLETED", conclusion: "SUCCESS" })).toBe("SUCCESS");
+    expect(resolveCheckState({ __typename: "CheckRun", status: "COMPLETED", conclusion: "FAILURE" })).toBe("FAILURE");
+    expect(resolveCheckState({ __typename: "CheckRun", status: "COMPLETED", conclusion: "CANCELLED" })).toBe(
+      "CANCELLED",
+    );
+  });
+
+  test("returns PENDING for in-progress CheckRun items", () => {
+    expect(resolveCheckState({ __typename: "CheckRun", status: "IN_PROGRESS" })).toBe("PENDING");
+    expect(resolveCheckState({ __typename: "CheckRun", status: "QUEUED" })).toBe("PENDING");
+    expect(resolveCheckState({ __typename: "CheckRun", status: "WAITING" })).toBe("PENDING");
+    expect(resolveCheckState({ __typename: "CheckRun", status: "REQUESTED" })).toBe("PENDING");
+  });
+});
+
 describe("normalizeChecksStatus", () => {
   test("returns none for empty or missing rollup", () => {
     expect(normalizeChecksStatus([])).toBe("none");
   });
 
-  test("returns failure when any check is FAILURE or ERROR", () => {
+  // StatusContext style (state field)
+  test("returns failure when any StatusContext check is FAILURE or ERROR", () => {
     expect(normalizeChecksStatus([{ state: "SUCCESS" }, { state: "FAILURE" }])).toBe("failure");
     expect(normalizeChecksStatus([{ state: "ERROR" }])).toBe("failure");
   });
 
-  test("returns pending when any check is PENDING or EXPECTED", () => {
+  test("returns pending when any StatusContext check is PENDING or EXPECTED", () => {
     expect(normalizeChecksStatus([{ state: "SUCCESS" }, { state: "PENDING" }])).toBe("pending");
     expect(normalizeChecksStatus([{ state: "EXPECTED" }])).toBe("pending");
   });
 
-  test("returns success when all checks succeed", () => {
+  test("returns success when all StatusContext checks succeed", () => {
     expect(normalizeChecksStatus([{ state: "SUCCESS" }, { state: "SUCCESS" }])).toBe("success");
+  });
+
+  // CheckRun style (status + conclusion fields)
+  test("returns failure when any CheckRun has FAILURE conclusion", () => {
+    expect(
+      normalizeChecksStatus([
+        { status: "COMPLETED", conclusion: "SUCCESS" },
+        { status: "COMPLETED", conclusion: "FAILURE" },
+      ]),
+    ).toBe("failure");
+  });
+
+  test("returns failure when any CheckRun is CANCELLED or TIMED_OUT", () => {
+    expect(normalizeChecksStatus([{ status: "COMPLETED", conclusion: "CANCELLED" }])).toBe("failure");
+    expect(normalizeChecksStatus([{ status: "COMPLETED", conclusion: "TIMED_OUT" }])).toBe("failure");
+  });
+
+  test("returns pending when any CheckRun is IN_PROGRESS", () => {
+    expect(
+      normalizeChecksStatus([{ status: "COMPLETED", conclusion: "SUCCESS" }, { status: "IN_PROGRESS" }]),
+    ).toBe("pending");
+  });
+
+  test("returns success when all CheckRuns completed successfully", () => {
+    expect(
+      normalizeChecksStatus([
+        { status: "COMPLETED", conclusion: "SUCCESS" },
+        { status: "COMPLETED", conclusion: "SUCCESS" },
+      ]),
+    ).toBe("success");
+  });
+
+  // Mixed StatusContext and CheckRun items
+  test("handles mixed StatusContext and CheckRun items", () => {
+    expect(
+      normalizeChecksStatus([{ state: "SUCCESS" }, { status: "COMPLETED", conclusion: "FAILURE" }]),
+    ).toBe("failure");
   });
 });
 

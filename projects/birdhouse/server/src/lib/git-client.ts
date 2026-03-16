@@ -48,6 +48,16 @@ export interface GitClient {
   getPullRequests(dir: string, branch: string): Promise<PullRequestInfo[]>;
 }
 
+interface GhCheckRollupItem {
+  __typename?: string;
+  /** StatusContext items use `state` (e.g. "SUCCESS", "PENDING", "FAILURE") */
+  state?: string;
+  /** CheckRun items use `status` (e.g. "COMPLETED", "IN_PROGRESS") */
+  status?: string;
+  /** CheckRun items use `conclusion` when completed (e.g. "SUCCESS", "FAILURE") */
+  conclusion?: string;
+}
+
 interface GhPrResult {
   number: number;
   title: string;
@@ -55,7 +65,7 @@ interface GhPrResult {
   state: string;
   isDraft: boolean;
   reviewDecision: string;
-  statusCheckRollup: { state: string }[];
+  statusCheckRollup: GhCheckRollupItem[];
 }
 
 export async function runCommand(cmd: string[], cwd: string): Promise<string> {
@@ -103,10 +113,38 @@ export function normalizeReviewDecision(decision: string): ReviewDecision {
   return "none";
 }
 
-export function normalizeChecksStatus(rollup: { state: string }[]): ChecksStatus {
+/**
+ * Derives a single effective state from a check rollup item.
+ *
+ * GitHub's GraphQL API returns two shapes inside `statusCheckRollup`:
+ * - **StatusContext** has a `state` field ("SUCCESS", "PENDING", "FAILURE", "ERROR", "EXPECTED").
+ * - **CheckRun** has `status` ("COMPLETED", "IN_PROGRESS", "QUEUED", …) and, when
+ *   completed, a `conclusion` ("SUCCESS", "FAILURE", "CANCELLED", …).
+ *
+ * We normalise both into a single uppercase string that downstream code can
+ * compare uniformly.
+ */
+export function resolveCheckState(item: GhCheckRollupItem): string {
+  // StatusContext – has `state` directly
+  if (item.state) return item.state.toUpperCase();
+
+  // CheckRun – use `conclusion` when completed, otherwise fall back to `status`
+  const status = (item.status ?? "").toUpperCase();
+  if (status === "COMPLETED") {
+    return (item.conclusion ?? "").toUpperCase();
+  }
+  // Still running / queued → treat as pending
+  if (status === "IN_PROGRESS" || status === "QUEUED" || status === "WAITING" || status === "REQUESTED") {
+    return "PENDING";
+  }
+
+  return status || "PENDING";
+}
+
+export function normalizeChecksStatus(rollup: GhCheckRollupItem[]): ChecksStatus {
   if (!rollup || rollup.length === 0) return "none";
-  const states = rollup.map((c) => (c.state ?? "").toUpperCase());
-  if (states.some((s) => s === "FAILURE" || s === "ERROR")) return "failure";
+  const states = rollup.map(resolveCheckState);
+  if (states.some((s) => s === "FAILURE" || s === "ERROR" || s === "CANCELLED" || s === "TIMED_OUT")) return "failure";
   if (states.some((s) => s === "PENDING" || s === "EXPECTED")) return "pending";
   return "success";
 }

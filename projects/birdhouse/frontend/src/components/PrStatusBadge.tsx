@@ -30,9 +30,11 @@ function StatusIcon(props: { status: ChecksStatus }) {
 function pillClasses(status: ChecksStatus, isWorking: boolean): string {
   if (isWorking) {
     if (status === "none") return "bg-white/15 text-text-on-accent";
+    if (status === "failure") return "bg-danger/20 text-danger";
     return "bg-accent/20 text-accent";
   }
   if (status === "none") return "bg-surface-overlay text-text-secondary";
+  if (status === "failure") return "bg-danger/15 text-danger";
   return "bg-accent/15 text-accent";
 }
 

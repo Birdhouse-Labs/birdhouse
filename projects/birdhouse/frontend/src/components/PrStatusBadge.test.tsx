@@ -66,11 +66,18 @@ describe("PrStatusBadge", () => {
 
   // --- Pill uses theme accent for any active status ---
 
-  it.each(["success", "failure", "pending"] as ChecksStatus[])("applies accent pill for %s status", (status) => {
+  it.each(["success", "pending"] as ChecksStatus[])("applies accent pill for %s status", (status) => {
     render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: status })]} isWorking={false} />);
     const link = screen.getByRole("link");
     expect(link.className).toContain("bg-accent/15");
     expect(link.className).toContain("text-accent");
+  });
+
+  it("applies danger pill for failure status", () => {
+    render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: "failure" })]} isWorking={false} />);
+    const link = screen.getByRole("link");
+    expect(link.className).toContain("bg-danger/15");
+    expect(link.className).toContain("text-danger");
   });
 
   it("applies neutral pill for none status", () => {
@@ -82,7 +89,7 @@ describe("PrStatusBadge", () => {
 
   // --- Working state ---
 
-  it.each(["success", "failure", "pending"] as ChecksStatus[])(
+  it.each(["success", "pending"] as ChecksStatus[])(
     "applies working-state accent pill for %s status",
     (status) => {
       render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: status })]} isWorking={true} />);
@@ -91,6 +98,13 @@ describe("PrStatusBadge", () => {
       expect(link.className).toContain("text-accent");
     },
   );
+
+  it("applies working-state danger pill for failure status", () => {
+    render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: "failure" })]} isWorking={true} />);
+    const link = screen.getByRole("link");
+    expect(link.className).toContain("bg-danger/20");
+    expect(link.className).toContain("text-danger");
+  });
 
   it("applies working-state neutral pill for none", () => {
     render(() => <PrStatusBadge pullRequests={[makePr({ checksStatus: "none" })]} isWorking={true} />);
@@ -116,7 +130,7 @@ describe("PrStatusBadge", () => {
       />
     ));
     const extraBadge = screen.getByText("+1");
-    expect(extraBadge.className).toContain("bg-accent/15");
+    expect(extraBadge.className).toContain("bg-danger/15");
   });
 
   it("does not show extra count badge for a single PR", () => {
