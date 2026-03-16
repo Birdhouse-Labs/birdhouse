@@ -74,11 +74,11 @@ const DetailSection: Component<DetailSectionProps> = (props) => {
   const [expanded, setExpanded] = createSignal(props.defaultExpanded ?? false);
 
   return (
-    <section class="space-y-3">
+    <section class={`rounded-xl ${cardSurfaceFlat} overflow-hidden`}>
       <button
         type="button"
         onClick={() => setExpanded(!expanded())}
-        class={`w-full rounded-xl ${cardSurfaceFlat} px-5 py-4 text-left transition-colors hover:bg-surface-overlay/50`}
+        class="w-full px-5 py-4 text-left transition-colors hover:bg-surface-overlay/50"
         aria-expanded={expanded()}
       >
         <div class="flex items-center justify-between gap-4">
@@ -98,7 +98,7 @@ const DetailSection: Component<DetailSectionProps> = (props) => {
         </div>
       </button>
       <Show when={expanded()}>
-        <div class={`rounded-xl ${cardSurfaceFlat} px-6 py-4`}>{props.children}</div>
+        <div class="border-t border-border-muted/60 px-6 py-4">{props.children}</div>
       </Show>
     </section>
   );
