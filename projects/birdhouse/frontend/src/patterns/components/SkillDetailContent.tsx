@@ -117,7 +117,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
 
       <Show when={metadataEntries().length > 0 || props.pattern.display_location}>
               <section class="space-y-4">
-                <h3 class="text-lg font-semibold text-heading">Metadata</h3>
+          <h3 class="text-lg font-semibold text-heading">Details</h3>
                 <div class={`rounded-xl ${cardSurfaceFlat} px-6 py-4`}>
                   <dl class="space-y-4">
                     <Show when={descriptionValue()}>

@@ -39,7 +39,7 @@ describe("PatternDetailModal", () => {
     ));
 
     expect(screen.getByText("Trigger Phrases")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Metadata" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Details" })).toBeInTheDocument();
     expect(screen.getByText("Description")).toBeInTheDocument();
     expect(screen.getByText("Retrieve current library docs.")).toBeInTheDocument();
     expect(screen.getByText("Tags")).toBeInTheDocument();
