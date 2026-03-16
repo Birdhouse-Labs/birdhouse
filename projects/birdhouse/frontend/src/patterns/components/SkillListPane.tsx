@@ -30,6 +30,13 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
   };
 
   const scopeLabel = (scope: PatternMetadata["scope"]) => (scope === "workspace" ? "Workspace" : "Global");
+  const scopeCount = (scope: SkillListScopeFilter) => {
+    if (scope === "all") {
+      return props.skills.length;
+    }
+
+    return props.skills.filter((skill) => skill.scope === scope).length;
+  };
   const filterOptions: Array<{ value: SkillListScopeFilter; label: string }> = [
     { value: "all", label: "All" },
     { value: "workspace", label: "Workspace" },
@@ -73,7 +80,8 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
                           "hover:bg-surface-overlay/40": props.scopeFilter !== option.value,
                         }}
                       >
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center justify-between gap-3">
+                          <div class="flex items-center gap-3 min-w-0">
                           <span
                             class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
                             classList={{
@@ -87,7 +95,9 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
                               <span class="w-2.5 h-2.5 rounded-full bg-accent" />
                             </Show>
                           </span>
-                          <span class="text-sm text-text-primary">{option.label}</span>
+                            <span class="text-sm text-text-primary">{option.label}</span>
+                          </div>
+                          <span class="text-xs text-text-muted">{scopeCount(option.value)}</span>
                         </div>
                       </button>
                     )}
