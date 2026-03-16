@@ -5,7 +5,6 @@ import Popover from "corvu/popover";
 import { Filter, Search } from "lucide-solid";
 import { type Component, For, Show } from "solid-js";
 import { Button } from "../../components/ui";
-import Checkbox from "../../components/ui/Checkbox";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
 import type { PatternMetadata, SkillListScopeFilter } from "../types/pattern-library-types";
@@ -64,13 +63,32 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
                 <div class="space-y-2">
                   <For each={filterOptions}>
                     {(option) => (
-                      <div class={`rounded-lg ${cardSurfaceFlat} px-3 py-2`}>
-                        <Checkbox
-                          checked={props.scopeFilter === option.value}
-                          onChange={() => props.onScopeFilterChange(option.value)}
-                          label={option.label}
-                        />
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => props.onScopeFilterChange(option.value)}
+                        class={`w-full rounded-lg px-3 py-2 transition-colors ${cardSurfaceFlat}`}
+                        classList={{
+                          "bg-surface-overlay": props.scopeFilter === option.value,
+                          "hover:bg-surface-overlay": props.scopeFilter !== option.value,
+                        }}
+                      >
+                        <div class="flex items-center gap-3">
+                          <span
+                            class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                            classList={{
+                              "border-accent": props.scopeFilter === option.value,
+                              "border-border": props.scopeFilter !== option.value,
+                              "bg-surface": props.scopeFilter !== option.value,
+                            }}
+                            aria-hidden="true"
+                          >
+                            <Show when={props.scopeFilter === option.value}>
+                              <span class="w-2.5 h-2.5 rounded-full bg-accent" />
+                            </Show>
+                          </span>
+                          <span class="text-sm text-text-primary">{option.label}</span>
+                        </div>
+                      </button>
                     )}
                   </For>
                 </div>
@@ -87,7 +105,7 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-3 space-y-2">
+      <div class="flex-1 overflow-y-auto px-3">
         <Show
           when={props.filteredSkills.length > 0}
           fallback={
@@ -101,11 +119,11 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
               <button
                 type="button"
                 onClick={() => props.onSelectSkill(skill.id)}
-                class={`w-full rounded-lg text-left p-4 transition-colors ${cardSurfaceFlat}`}
+                class="w-full text-left px-3 py-4 transition-colors border-b border-border-muted/40 last:border-b-0"
                 classList={{
-                  "ring-1 ring-accent bg-gradient-to-r from-gradient-from/10 via-gradient-via/10 to-gradient-to/10":
+                  "bg-gradient-to-r from-gradient-from/10 via-gradient-via/10 to-gradient-to/10 rounded-lg":
                     props.selectedSkillId === skill.id,
-                  "hover:bg-surface-overlay": props.selectedSkillId !== skill.id,
+                  "hover:bg-surface-overlay/70 rounded-lg": props.selectedSkillId !== skill.id,
                 }}
                 aria-label={`View ${skill.title}`}
               >
