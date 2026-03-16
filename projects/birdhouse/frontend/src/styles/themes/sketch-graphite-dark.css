@@ -38,6 +38,7 @@
     /* Status colors */
     --theme-success: oklch(79.8% 0.036 166.6deg);         /* soft sage (reuse accent) */
     --theme-danger: oklch(74.5% 0.076 31.4deg);          /* muted salmon */
+    --theme-warning: oklch(77.2% 0.065 75.8deg);          /* muted gold */
     
     /* Glow/shadow color */
     --theme-glow: oklch(75.4% 0.085 67.1deg / 0.35); /* soft tan glow */

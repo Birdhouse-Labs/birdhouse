@@ -11,10 +11,12 @@ import { useZIndex } from "../contexts/ZIndexContext";
 import { aggregateTokenStats } from "../domain/token-aggregation";
 
 import { borderColor } from "../styles/containerStyles";
+import type { PullRequestInfo } from "../types/git";
 import type { Message } from "../types/messages";
 import ArchiveAgentDialog from "./ArchiveAgentDialog";
 import ContextUsageIndicator from "./ContextUsageIndicator";
 import EditAgentDialog from "./EditAgentDialog";
+import { PrStatusBadge } from "./PrStatusBadge";
 import UnarchiveAgentDialog from "./UnarchiveAgentDialog";
 import { IconButton, MenuItemButton } from "./ui";
 
@@ -53,6 +55,29 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
   const tokenStats = createMemo(() => aggregateTokenStats(props.messages, props.modelName));
 
   const percentage = createMemo(() => (tokenStats().limit > 0 ? (tokenStats().used / tokenStats().limit) * 100 : 0));
+
+  // Fetch PR status for the workspace
+  const [prData, { refetch: refetchPrs }] = createResource(
+    () => props.workspaceId,
+    async (workspaceId) => {
+      try {
+        const response = await fetch(buildWorkspaceUrl(workspaceId, "/git/pull-requests"));
+        if (!response.ok) return { available: false as const };
+        return (await response.json()) as
+          | { available: true; branch: string; pullRequests: PullRequestInfo[] }
+          | { available: false; reason: string };
+      } catch {
+        return { available: false as const };
+      }
+    },
+  );
+
+  // Safely narrow PR data to pull requests array
+  const pullRequests = createMemo(() => {
+    const data = prData();
+    if (data?.available && "pullRequests" in data) return data.pullRequests;
+    return [];
+  });
 
   // Fetch initial session status on load
   const [sessionStatus, { refetch: refetchStatus }] = createResource(
@@ -98,6 +123,7 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
   createEffect(() => {
     const unsubscribe = streaming.subscribeToConnectionEstablished(() => {
       refetchStatus();
+      refetchPrs();
     });
 
     onCleanup(unsubscribe);
@@ -294,6 +320,10 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
           >
             {props.modelName}
           </span>
+
+          <Show when={pullRequests().length > 0}>
+            <PrStatusBadge pullRequests={pullRequests()} isWorking={isWorking()} />
+          </Show>
 
           <button
             type="button"

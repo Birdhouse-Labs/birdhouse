@@ -38,6 +38,7 @@
     /* Status colors */
     --theme-success: oklch(69.6% 0.149 162.5deg);         /* emerald-500 */
     --theme-danger: oklch(63.7% 0.208 25.3deg);          /* red-500 */
+    --theme-warning: oklch(79.5% 0.155 86.1deg);         /* amber-400 */
     
     /* Glow/shadow color */
     --theme-glow: oklch(76.9% 0.165 70.1deg / 0.35); /* amber-500/25 */

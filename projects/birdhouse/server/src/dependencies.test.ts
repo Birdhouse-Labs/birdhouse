@@ -111,6 +111,21 @@ describe("Dependencies", () => {
     expect(received).toEqual(["hello", "world"]);
   });
 
+  test("createTestDeps includes git client", () => {
+    const deps = createTestDeps();
+    expect(deps.git).toBeDefined();
+    expect(deps.git.getCurrentBranch).toBeInstanceOf(Function);
+    expect(deps.git.getPullRequests).toBeInstanceOf(Function);
+  });
+
+  test("git client returns test defaults", async () => {
+    const deps = createTestDeps();
+    const branch = await deps.git.getCurrentBranch("/any");
+    expect(branch).toBe("main");
+    const prs = await deps.git.getPullRequests("/any", "main");
+    expect(prs).toEqual([]);
+  });
+
   test("automatically uses test deps in test environment", async () => {
     await withDeps(undefined, async () => {
       const {

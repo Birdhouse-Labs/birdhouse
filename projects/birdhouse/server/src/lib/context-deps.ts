@@ -4,6 +4,7 @@
 import type { Context } from "hono";
 import { type Deps, depsContext } from "../dependencies";
 import { getDataDB } from "./data-db";
+import { createLiveGitClient } from "./git-client";
 import { log } from "./logger";
 import { createLiveOpenCodeClient } from "./opencode-client";
 import { getWorkspaceStream } from "./opencode-stream";
@@ -45,6 +46,7 @@ export function getDepsFromContext(c: Context): Deps {
     dataDb,
     posthog: createLivePosthogProxy(),
     telemetry: createLiveTelemetryClient(dataDb),
+    git: createLiveGitClient(),
     getStream: (streamOpencodeBase: string, workspaceDirectory: string) => {
       // Production: Return workspace-scoped singleton stream
       // This ensures the same stream instance is used for both emitting and listening
