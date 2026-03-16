@@ -39,10 +39,13 @@ describe("PatternDetailModal", () => {
     ));
 
     expect(screen.getByText("Shared trigger phrases")).toBeInTheDocument();
-    expect(screen.getByText("Metadata")).toBeInTheDocument();
-    expect(screen.getByText("description")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Metadata" })).toBeInTheDocument();
+    expect(screen.getByText("Description")).toBeInTheDocument();
     expect(screen.getByText("Retrieve current library docs.")).toBeInTheDocument();
-    expect(screen.getByText("license")).toBeInTheDocument();
+    expect(screen.getByText("Tags")).toBeInTheDocument();
+    expect(screen.getByText("docs")).toBeInTheDocument();
+    expect(screen.getByText("research")).toBeInTheDocument();
+    expect(screen.getByText("License")).toBeInTheDocument();
     expect(screen.getByText("MIT")).toBeInTheDocument();
     expect(screen.getByText("Location")).toBeInTheDocument();
     expect(screen.getByText("~/.claude/skills/find-docs/SKILL.md")).toBeInTheDocument();

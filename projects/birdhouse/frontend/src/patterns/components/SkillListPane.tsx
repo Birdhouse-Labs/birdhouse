@@ -8,6 +8,7 @@ import { Button } from "../../components/ui";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
 import type { PatternMetadata, SkillListScopeFilter } from "../types/pattern-library-types";
+import SkillTagList from "./SkillTagList";
 
 export interface SkillListPaneProps {
   skills: PatternMetadata[];
@@ -137,18 +138,7 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
                     </div>
 
                     <Show when={skill.tags.length > 0}>
-                      <div class="flex flex-wrap gap-1">
-                        <For each={skill.tags.slice(0, 4)}>
-                          {(tag) => (
-                            <span class="px-2 py-0.5 text-xs rounded-full bg-surface-overlay text-text-primary border border-border-muted/70">
-                              {tag}
-                            </span>
-                          )}
-                        </For>
-                        <Show when={skill.tags.length > 4}>
-                          <span class="px-2 py-0.5 text-xs text-text-muted">+{skill.tags.length - 4} more</span>
-                        </Show>
-                      </div>
+                      <SkillTagList tags={skill.tags} maxVisible={4} />
                     </Show>
 
                     <Show when={skill.description}>

@@ -10,6 +10,7 @@ import { cardSurfaceFlat } from "../../styles/containerStyles";
 import { resolvedCodeTheme } from "../../theme";
 import { revealSkillLocation } from "../services/pattern-library-api";
 import type { Pattern } from "../types/pattern-library-types";
+import SkillTagList from "./SkillTagList";
 import TriggerPhraseEditor from "./TriggerPhraseEditor";
 
 function formatMetadataValue(value: unknown): string {
@@ -36,6 +37,26 @@ function isMultilineText(value: string): boolean {
   return value.includes("\n");
 }
 
+const FRONTMATTER_LABELS: Record<string, string> = {
+  description: "Description",
+  license: "License",
+  compatibility: "Compatibility",
+  version: "Version",
+  author: "Author",
+  tags: "Tags",
+  metadata: "Metadata",
+};
+
+function formatMetadataLabel(key: string): string {
+  return (
+    FRONTMATTER_LABELS[key] ??
+    key
+      .split(/[-_]/g)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ")
+  );
+}
+
 export interface SkillDetailContentProps {
   pattern: Pattern;
   workspaceId: string;
@@ -53,7 +74,12 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
     props.pattern.scope === "workspace"
       ? "Applies only in this workspace because this skill resolves inside the current workspace directory."
       : "Applies across all workspaces because this skill resolves outside the current workspace directory.";
-  const metadataEntries = () => Object.entries(props.pattern.metadata).filter(([key]) => key !== "name");
+  const descriptionValue = () => {
+    const value = props.pattern.metadata["description"];
+    return typeof value === "string" ? value : null;
+  };
+  const metadataEntries = () =>
+    Object.entries(props.pattern.metadata).filter(([key]) => !["name", "description", "tags"].includes(key));
   const locationDisplay = () => props.pattern.display_location;
 
   const handleSaveTriggerPhrases = async (phrases: string[]) => {
@@ -94,17 +120,39 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
       </Show>
 
       <Show when={metadataEntries().length > 0 || props.pattern.display_location}>
-        <section class="space-y-4">
-          <h3 class="text-lg font-semibold text-heading">Metadata</h3>
-          <div class={`rounded-xl ${cardSurfaceFlat} px-6 py-4`}>
-            <dl class="space-y-4">
-              <For each={metadataEntries()}>
-                {([key, value]) => (
-                  <div class="space-y-1">
-                    <dt class="text-sm font-medium text-text-secondary">{key}</dt>
-                    <Show
-                      when={isStructuredMetadataValue(value)}
-                      fallback={
+              <section class="space-y-4">
+                <h3 class="text-lg font-semibold text-heading">Metadata</h3>
+                <div class={`rounded-xl ${cardSurfaceFlat} px-6 py-4`}>
+                  <dl class="space-y-4">
+                    <Show when={descriptionValue()}>
+                      <div class="space-y-1">
+                        <dt class="text-sm font-medium text-text-secondary">Description</dt>
+                        <dd class="whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed">
+                          {isMultilineText(descriptionValue() ?? "") ? (
+                            <MarkdownRenderer content={descriptionValue() ?? ""} />
+                          ) : (
+                            descriptionValue()
+                          )}
+                        </dd>
+                      </div>
+                    </Show>
+
+                    <Show when={props.pattern.tags.length > 0}>
+                      <div class="space-y-1">
+                        <dt class="text-sm font-medium text-text-secondary">Tags</dt>
+                        <dd>
+                          <SkillTagList tags={props.pattern.tags} />
+                        </dd>
+                      </div>
+                    </Show>
+
+                    <For each={metadataEntries()}>
+                      {([key, value]) => (
+                        <div class="space-y-1">
+                          <dt class="text-sm font-medium text-text-secondary">{formatMetadataLabel(key)}</dt>
+                          <Show
+                            when={isStructuredMetadataValue(value)}
+                            fallback={
                         <dd
                           classList={{
                             "whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed": true,
