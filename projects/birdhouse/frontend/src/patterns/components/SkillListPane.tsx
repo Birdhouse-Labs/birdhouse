@@ -33,11 +33,6 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
   return (
     <div class="flex flex-col h-full overflow-hidden">
       <div class="px-4 py-3 border-b border-border flex-shrink-0 space-y-3">
-        <div>
-          <h2 class="text-sm font-semibold text-heading">Skills</h2>
-          <p class="text-xs text-text-muted mt-0.5">Visible skills from this workspace&apos;s OpenCode runtime</p>
-        </div>
-
         <div class="flex items-center gap-2">
           <label class={`flex-1 flex items-center gap-2 rounded-lg ${cardSurfaceFlat} px-3 py-2`}>
             <Search size={16} class="text-text-muted flex-shrink-0" />
