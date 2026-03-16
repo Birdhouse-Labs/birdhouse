@@ -82,13 +82,13 @@ const DetailSection: Component<DetailSectionProps> = (props) => {
         aria-expanded={expanded()}
       >
         <div class="flex items-center gap-3">
-          <ChevronDown
-            size={18}
-            class="text-heading transition-transform duration-200 flex-shrink-0 mt-0.5"
-            classList={{
-              "rotate-180": expanded(),
-            }}
-          />
+            <ChevronDown
+              size={18}
+              class="text-heading transition-transform duration-200 flex-shrink-0 mt-0.5"
+              classList={{
+                "rotate-90": expanded(),
+              }}
+            />
           <div class="space-y-1 flex-1 min-w-0">
             <h3 class="text-lg font-semibold text-heading">{props.title}</h3>
             <Show when={props.description}>
