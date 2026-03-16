@@ -68,12 +68,8 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
   const [error, setError] = createSignal<string | null>(null);
   const [isRevealing, setIsRevealing] = createSignal(false);
 
-  const scopeTitle = () =>
-    props.pattern.scope === "workspace" ? "Workspace trigger phrases" : "Shared trigger phrases";
-  const scopeDescription = () =>
-    props.pattern.scope === "workspace"
-      ? "Applies only in this workspace because this skill resolves inside the current workspace directory."
-      : "Applies across all workspaces because this skill resolves outside the current workspace directory.";
+  const scopeTitle = () => "Trigger Phrases";
+  const scopeDescription = () => "Choose the phrases that suggest this skill while you type.";
   const descriptionValue = () => {
     const value = props.pattern.metadata["description"];
     return typeof value === "string" ? value : null;

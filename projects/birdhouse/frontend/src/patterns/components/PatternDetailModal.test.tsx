@@ -38,7 +38,7 @@ describe("PatternDetailModal", () => {
       />
     ));
 
-    expect(screen.getByText("Shared trigger phrases")).toBeInTheDocument();
+    expect(screen.getByText("Trigger Phrases")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Metadata" })).toBeInTheDocument();
     expect(screen.getByText("Description")).toBeInTheDocument();
     expect(screen.getByText("Retrieve current library docs.")).toBeInTheDocument();
@@ -49,11 +49,7 @@ describe("PatternDetailModal", () => {
     expect(screen.getByText("MIT")).toBeInTheDocument();
     expect(screen.getByText("Location")).toBeInTheDocument();
     expect(screen.getByText("~/.claude/skills/find-docs/SKILL.md")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Applies across all workspaces because this skill resolves outside the current workspace directory.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Choose the phrases that suggest this skill while you type.")).toBeInTheDocument();
     expect(screen.getByText('<skill name="find-docs">')).toBeInTheDocument();
     expect(screen.getByText("Other Files in Skill Directory")).toBeInTheDocument();
     expect(screen.getByText("examples/basic.md")).toBeInTheDocument();
@@ -87,6 +83,6 @@ describe("PatternDetailModal", () => {
     await waitFor(() => {
       expect(onUpdateTriggerPhrases).toHaveBeenCalledWith(["docs please", "reference the docs"]);
     });
-    expect(screen.getByText("Workspace trigger phrases")).toBeInTheDocument();
+    expect(screen.getByText("Trigger Phrases")).toBeInTheDocument();
   });
 });
