@@ -172,7 +172,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
               </For>
               <div class="space-y-1 pt-2 border-t border-border-muted/60">
                 <dt class="text-sm font-semibold text-heading">Location</dt>
-                <dd class="flex items-center gap-2 text-xs text-text-muted">
+                <dd class="flex items-center gap-2 text-sm text-text-primary">
                   <span class="font-mono break-all flex-1">{locationDisplay()}</span>
                   <IconButton
                     icon={<FolderOpen size={16} />}
