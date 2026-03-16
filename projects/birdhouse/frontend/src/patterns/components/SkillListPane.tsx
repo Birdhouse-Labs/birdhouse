@@ -74,7 +74,7 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
                       <button
                         type="button"
                         onClick={() => props.onScopeFilterChange(option.value)}
-                        class="w-full rounded-lg px-1 py-2 transition-colors"
+                        class="w-full rounded-lg px-3 py-2 transition-colors"
                         classList={{
                           "bg-surface-overlay/60": props.scopeFilter === option.value,
                           "hover:bg-surface-overlay/40": props.scopeFilter !== option.value,
@@ -82,19 +82,19 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
                       >
                         <div class="flex items-center justify-between gap-3">
                           <div class="flex items-center gap-3 min-w-0">
-                          <span
-                            class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
-                            classList={{
-                              "border-accent": props.scopeFilter === option.value,
-                              "border-border": props.scopeFilter !== option.value,
-                              "bg-surface": props.scopeFilter !== option.value,
-                            }}
-                            aria-hidden="true"
-                          >
-                            <Show when={props.scopeFilter === option.value}>
-                              <span class="w-2.5 h-2.5 rounded-full bg-accent" />
-                            </Show>
-                          </span>
+                            <span
+                              class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                              classList={{
+                                "border-accent": props.scopeFilter === option.value,
+                                "border-border": props.scopeFilter !== option.value,
+                                "bg-surface": props.scopeFilter !== option.value,
+                              }}
+                              aria-hidden="true"
+                            >
+                              <Show when={props.scopeFilter === option.value}>
+                                <span class="w-2.5 h-2.5 rounded-full bg-accent" />
+                              </Show>
+                            </span>
                             <span class="text-sm text-text-primary">{option.label}</span>
                           </div>
                           <span class="text-xs text-text-muted">{scopeCount(option.value)}</span>
@@ -116,7 +116,7 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto px-4">
+      <div class="flex-1 overflow-y-auto px-3">
         <Show
           when={props.filteredSkills.length > 0}
           fallback={
@@ -130,7 +130,7 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
               <button
                 type="button"
                 onClick={() => props.onSelectSkill(skill.id)}
-                class="w-full text-left px-4 py-4 transition-colors border-b border-border-muted/40 last:border-b-0"
+                class="w-full text-left px-3 py-4 transition-colors border-b border-border-muted/40 last:border-b-0"
                 classList={{
                   "bg-gradient-to-r from-gradient-from/10 via-gradient-via/10 to-gradient-to/10 rounded-lg":
                     props.selectedSkillId === skill.id,
