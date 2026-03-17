@@ -2,7 +2,7 @@
 // ABOUTME: Validates snapshot extraction and XML stripping for attached skills.
 
 import { describe, expect, it } from "vitest";
-import { extractSkillsFromXML, stripSkillXML } from "./patternParsing";
+import { extractSkillsFromXML, stripSkillXML } from "./skillAttachmentXml";
 
 describe("extractSkillsFromXML", () => {
   it("extracts skill snapshots from message content", () => {

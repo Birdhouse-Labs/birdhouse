@@ -22,8 +22,8 @@ vi.mock("../../contexts/WorkspaceContext", () => ({
   useWorkspace: () => ({ workspaceId: "ws_test" }),
 }));
 
-vi.mock("../../contexts/PatternCacheContext", () => ({
-  usePatternCache: () => ({
+vi.mock("../../contexts/SkillCacheContext", () => ({
+  useSkillCache: () => ({
     patterns: () => [],
     loading: () => false,
     error: () => null,

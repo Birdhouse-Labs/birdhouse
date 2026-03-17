@@ -14,14 +14,14 @@ export interface SkillAttachmentSnapshot {
   content: string;
 }
 
-export interface PatternReferencesDialogProps {
+export interface SkillAttachmentsDialogProps {
   attachments: SkillAttachmentSnapshot[];
   open: boolean;
   onClose: () => void;
   initialSkillName?: string | undefined;
 }
 
-export const PatternReferencesDialog: Component<PatternReferencesDialogProps> = (props) => {
+export const SkillAttachmentsDialog: Component<SkillAttachmentsDialogProps> = (props) => {
   const baseZIndex = useZIndex();
   const [selectedSkillName, setSelectedSkillName] = createSignal<string | undefined>(
     props.initialSkillName || props.attachments[0]?.name,
@@ -112,4 +112,4 @@ export const PatternReferencesDialog: Component<PatternReferencesDialogProps> = 
   );
 };
 
-export default PatternReferencesDialog;
+export default SkillAttachmentsDialog;

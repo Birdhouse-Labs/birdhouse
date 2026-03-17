@@ -22,7 +22,7 @@ interface CachedSkillMetadata {
   triggerPhrases: string[];
 }
 
-interface PatternCacheContextValue {
+interface SkillCacheContextValue {
   /**
    * Cached visible skills with trigger phrases for the current workspace
    */
@@ -49,17 +49,17 @@ interface PatternCacheContextValue {
   getPattern: (id: string) => CachedSkillMetadata | undefined;
 }
 
-const PatternCacheContext = createContext<PatternCacheContextValue>();
+const SkillCacheContext = createContext<SkillCacheContextValue>();
 
-export function usePatternCache(): PatternCacheContextValue {
-  const ctx = useContext(PatternCacheContext);
+export function useSkillCache(): SkillCacheContextValue {
+  const ctx = useContext(SkillCacheContext);
   if (!ctx) {
-    throw new Error("usePatternCache must be used within PatternCacheProvider");
+    throw new Error("useSkillCache must be used within SkillCacheProvider");
   }
   return ctx;
 }
 
-export const PatternCacheProvider: ParentComponent = (props) => {
+export const SkillCacheProvider: ParentComponent = (props) => {
   const { workspaceId } = useWorkspace();
   const streaming = useStreaming();
 
@@ -105,7 +105,7 @@ export const PatternCacheProvider: ParentComponent = (props) => {
     return patternsStore.find((p) => p.id === id);
   };
 
-  const value: PatternCacheContextValue = {
+  const value: SkillCacheContextValue = {
     patterns: () => patternsStore,
     loading: () => patternsResource.loading,
     error: () => patternsResource.error ?? null,
@@ -113,5 +113,5 @@ export const PatternCacheProvider: ParentComponent = (props) => {
     getPattern,
   };
 
-  return <PatternCacheContext.Provider value={value}>{props.children}</PatternCacheContext.Provider>;
+  return <SkillCacheContext.Provider value={value}>{props.children}</SkillCacheContext.Provider>;
 };

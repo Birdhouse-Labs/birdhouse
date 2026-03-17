@@ -2,7 +2,7 @@
 // ABOUTME: Handles Cmd/Ctrl+Enter to send, regular Enter for new lines
 
 import { type Component, createEffect, createMemo, createResource, createSignal } from "solid-js";
-import { usePatternCache } from "../../contexts/PatternCacheContext";
+import { useSkillCache } from "../../contexts/SkillCacheContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useWorkspaceAgentId } from "../../lib/routing";
 import { fetchAgentsForTypeahead } from "../../services/agents-api";
@@ -10,7 +10,7 @@ import { uiSize } from "../../theme";
 import { buildSkillMarkdownLink, buildSkillVisibleText } from "../../utils/skillLinks";
 import AgentTypeahead from "./AgentTypeahead";
 import FileTypeahead from "./FileTypeahead";
-import PatternTypeahead from "./PatternTypeahead";
+import SkillTypeahead from "./SkillTypeahead";
 
 export interface AutoGrowTextareaProps {
   value: string;
@@ -33,7 +33,7 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
   const currentAgentId = useWorkspaceAgentId();
 
   // Get patterns from cache (always up-to-date via SSE)
-  const { patterns: patternsData } = usePatternCache();
+  const { patterns: patternsData } = useSkillCache();
 
   // Load agents once on mount
   const [agentsData] = createResource(() => fetchAgentsForTypeahead(workspaceId));
@@ -283,12 +283,12 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
         }}
         style={textareaStyles()}
       />
-      <PatternTypeahead
+      <SkillTypeahead
         referenceElement={textareaRef}
         inputValue={props.value}
         cursorPosition={cursorPosition()}
         visible={showPatternTypeahead()}
-        patterns={typeaheadPatterns()}
+        skills={typeaheadPatterns()}
         onSelect={handlePatternSelect}
         onClose={() => setShowPatternTypeahead(false)}
       />

@@ -6,8 +6,8 @@ import { createSignal } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AutoGrowTextarea from "./AutoGrowTextarea";
 
-vi.mock("../../contexts/PatternCacheContext", () => ({
-  usePatternCache: () => ({
+vi.mock("../../contexts/SkillCacheContext", () => ({
+  useSkillCache: () => ({
     patterns: () => [
       {
         id: "release-notes-from-branch",

@@ -13,7 +13,7 @@ import { extractSkillLinkNames } from "../../utils/skillLinks";
 import AutoGrowTextarea from "./AutoGrowTextarea";
 import Button from "./Button";
 import MessageBubble from "./MessageBubble";
-import PatternReferencesDialog from "./PatternReferencesDialog";
+import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
 
 export interface ChatContainerProps {
   messages: Message[];
@@ -160,7 +160,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
       </div>
 
       {/* Pattern References Dialog */}
-      <PatternReferencesDialog
+      <SkillAttachmentsDialog
         attachments={visibleSkillAttachments()}
         open={dialogOpen()}
         onClose={() => setDialogOpen(false)}

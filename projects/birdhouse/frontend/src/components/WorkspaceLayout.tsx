@@ -3,7 +3,7 @@
 
 import { Navigate, useMatch } from "@solidjs/router";
 import { type Component, createEffect, createSignal, Match, Switch } from "solid-js";
-import { PatternCacheProvider } from "../contexts/PatternCacheContext";
+import { SkillCacheProvider } from "../contexts/SkillCacheContext";
 import { StreamingProvider } from "../contexts/StreamingContext";
 import { WorkspaceProvider } from "../contexts/WorkspaceContext";
 import LiveApp from "../LiveApp";
@@ -56,7 +56,7 @@ const WorkspaceLayout: Component = () => {
             {(id) => (
               <WorkspaceProvider>
                 <StreamingProvider workspaceId={id}>
-                  <PatternCacheProvider>
+                  <SkillCacheProvider>
                     <Switch fallback={<Navigate href={`/workspace/${id}/agents`} />}>
                       <Match when={isSettings()}>
                         <WorkspaceSettings />
@@ -68,7 +68,7 @@ const WorkspaceLayout: Component = () => {
                         <LiveApp sidebarOpen={sidebarOpen()} setSidebarOpen={setSidebarOpen} />
                       </Match>
                     </Switch>
-                  </PatternCacheProvider>
+                  </SkillCacheProvider>
                 </StreamingProvider>
               </WorkspaceProvider>
             )}

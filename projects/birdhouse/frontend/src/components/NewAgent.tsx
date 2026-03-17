@@ -11,7 +11,7 @@ import { extractSkillLinkNames } from "../utils/skillLinks";
 import AutoGrowTextarea from "./ui/AutoGrowTextarea";
 import Button from "./ui/Button";
 import { Combobox, type ComboboxOption, type ComboboxRenderFn } from "./ui/Combobox";
-import PatternReferencesDialog from "./ui/PatternReferencesDialog";
+import SkillAttachmentsDialog from "./ui/SkillAttachmentsDialog";
 
 const STORAGE_KEY = "birdhouse:last-selected-model";
 const NEW_AGENT_DRAFT_KEY = "birdhouse:new-agent-draft";
@@ -325,7 +325,7 @@ const NewAgent: Component = () => {
       </Show>
 
       {/* Pattern references dialog */}
-      <PatternReferencesDialog
+      <SkillAttachmentsDialog
         attachments={visibleSkillAttachments()}
         open={patternDialogOpen()}
         onClose={() => setPatternDialogOpen(false)}

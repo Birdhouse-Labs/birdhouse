@@ -1,5 +1,5 @@
-// ABOUTME: Pattern typeahead dropdown for message input with keyboard navigation
-// ABOUTME: Shows pattern suggestions as user types, supports instant arrow key selection
+// ABOUTME: Skill typeahead dropdown for message input with keyboard navigation.
+// ABOUTME: Shows skill suggestions as user types and supports instant arrow key selection.
 
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
@@ -7,13 +7,13 @@ import { type Component, createEffect, createSignal, For, onCleanup, Show } from
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { uiSize } from "../../theme";
 
-interface Pattern {
+interface SkillSuggestion {
   id: string;
   triggerPhrases: string[]; // Multiple ways to trigger this pattern
   title: string;
 }
 
-export interface PatternTypeaheadProps {
+export interface SkillTypeaheadProps {
   /** Reference element to position dropdown relative to */
   referenceElement: HTMLElement | undefined;
   /** Current input value to match against */
@@ -22,17 +22,17 @@ export interface PatternTypeaheadProps {
   cursorPosition: number;
   /** Whether the dropdown should be visible */
   visible: boolean;
-  /** Array of patterns to match against */
-  patterns: Pattern[];
-  /** Callback when user selects a pattern */
-  onSelect: (pattern: Pattern, matchedPhrase: string, matchedText: string, matchStartIndex: number) => void;
+  /** Array of skills to match against */
+  skills: SkillSuggestion[];
+  /** Callback when user selects a skill */
+  onSelect: (skill: SkillSuggestion, matchedPhrase: string, matchedText: string, matchStartIndex: number) => void;
   /** Callback to close the dropdown */
   onClose: () => void;
   /** Callback when highlighted index changes (for external keyboard handling) */
   onHighlightChange?: (index: number) => void;
 }
 
-export const PatternTypeahead: Component<PatternTypeaheadProps> = (props) => {
+export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
   const baseZIndex = useZIndex();
   const [highlightedIndex, setHighlightedIndex] = createSignal(0);
   let listRef: HTMLElement | undefined;
@@ -40,7 +40,7 @@ export const PatternTypeahead: Component<PatternTypeaheadProps> = (props) => {
   // Find the longest prefix match by looking backwards from cursor
   // Returns patterns that match + the matched text and its position
   interface MatchResult {
-    pattern: Pattern;
+      skill: SkillSuggestion;
     matchedPhrase: string; // Which trigger phrase matched
     matchedText: string; // What the user actually typed
     startIndex: number; // Where the match starts in the input
@@ -62,9 +62,9 @@ export const PatternTypeahead: Component<PatternTypeaheadProps> = (props) => {
 
     const results: MatchResult[] = [];
 
-    // For each pattern, check if any trigger phrase is being typed
-    for (const pattern of props.patterns) {
-      for (const phrase of pattern.triggerPhrases) {
+    // For each skill, check if any trigger phrase is being typed
+    for (const skill of props.skills) {
+      for (const phrase of skill.triggerPhrases) {
         const phraseLower = phrase.toLowerCase();
 
         // Try each possible starting position in the lookback window
@@ -74,7 +74,7 @@ export const PatternTypeahead: Component<PatternTypeaheadProps> = (props) => {
           // Check if this trigger phrase starts with what user typed
           if (phraseLower.startsWith(substring) && substring.length >= 2) {
             results.push({
-              pattern,
+              skill,
               matchedPhrase: phrase,
               matchedText: textBeforeCursor.substring(start), // Original case
               startIndex: start,
@@ -88,34 +88,33 @@ export const PatternTypeahead: Component<PatternTypeaheadProps> = (props) => {
     return results;
   };
 
-  // Get unique patterns from match results (longest match per pattern)
-  const filteredPatterns = (): Pattern[] => {
+  // Get unique skills from match results (longest match per skill)
+  const filteredSkills = (): SkillSuggestion[] => {
     const matches = findMatches();
 
     if (matches.length === 0) {
       return [];
     }
 
-    // Group by pattern ID and take longest match for each
-    const patternMap = new Map<string, MatchResult>();
+    // Group by skill ID and take longest match for each
+    const skillMap = new Map<string, MatchResult>();
     for (const match of matches) {
-      const existing = patternMap.get(match.pattern.id);
+      const existing = skillMap.get(match.skill.id);
       if (!existing || match.matchedText.length > existing.matchedText.length) {
-        patternMap.set(match.pattern.id, match);
+        skillMap.set(match.skill.id, match);
       }
     }
 
-    const patterns = Array.from(patternMap.values()).map((m) => m.pattern);
-    return patterns;
+    return Array.from(skillMap.values()).map((m) => m.skill);
   };
 
-  // Get the best match for the currently highlighted pattern (for text replacement)
-  const getBestMatch = (pattern: Pattern): MatchResult | undefined => {
+  // Get the best match for the currently highlighted skill (for text replacement)
+  const getBestMatch = (skill: SkillSuggestion): MatchResult | undefined => {
     const matches = findMatches();
-    const patternMatches = matches.filter((m) => m.pattern.id === pattern.id);
+    const skillMatches = matches.filter((m) => m.skill.id === skill.id);
 
     // Return longest match
-    return patternMatches.sort((a, b) => b.matchedText.length - a.matchedText.length)[0];
+    return skillMatches.sort((a, b) => b.matchedText.length - a.matchedText.length)[0];
   };
 
   // Setup floating UI for dropdown positioning
@@ -129,7 +128,7 @@ export const PatternTypeahead: Component<PatternTypeaheadProps> = (props) => {
 
   // Reset highlight when filtered results change
   createEffect(() => {
-    filteredPatterns();
+    filteredSkills();
     setHighlightedIndex(0);
   });
 
@@ -150,7 +149,7 @@ export const PatternTypeahead: Component<PatternTypeaheadProps> = (props) => {
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!props.visible) return;
 
-    const filtered = filteredPatterns();
+    const filtered = filteredSkills();
     if (filtered.length === 0) return;
 
     switch (e.key) {
@@ -201,7 +200,7 @@ export const PatternTypeahead: Component<PatternTypeaheadProps> = (props) => {
   };
 
   const shouldShow = () => {
-    const filtered = filteredPatterns();
+    const filtered = filteredSkills();
     return props.visible && filtered.length > 0;
   };
 
@@ -222,8 +221,8 @@ export const PatternTypeahead: Component<PatternTypeaheadProps> = (props) => {
           "z-index": baseZIndex,
         }}
       >
-        <For each={filteredPatterns()}>
-          {(pattern, index) => (
+        <For each={filteredSkills()}>
+          {(skill, index) => (
             <div
               role="option"
               tabIndex={-1}
@@ -239,17 +238,17 @@ export const PatternTypeahead: Component<PatternTypeaheadProps> = (props) => {
                 e.stopPropagation();
               }}
               onClick={() => {
-                const match = getBestMatch(pattern);
+                const match = getBestMatch(skill);
                 if (match) {
-                  props.onSelect(pattern, match.matchedPhrase, match.matchedText, match.startIndex);
+                  props.onSelect(skill, match.matchedPhrase, match.matchedText, match.startIndex);
                 }
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  const match = getBestMatch(pattern);
+                  const match = getBestMatch(skill);
                   if (match) {
-                    props.onSelect(pattern, match.matchedPhrase, match.matchedText, match.startIndex);
+                    props.onSelect(skill, match.matchedPhrase, match.matchedText, match.startIndex);
                   }
                 }
               }}
@@ -258,11 +257,11 @@ export const PatternTypeahead: Component<PatternTypeaheadProps> = (props) => {
               }}
             >
               <div>
-                <div class="font-medium text-text-primary">{pattern.title}</div>
+                <div class="font-medium text-text-primary">{skill.title}</div>
                 <div class="text-text-secondary text-xs mt-0.5">
                   {(() => {
-                    const match = getBestMatch(pattern);
-                    return match ? match.matchedPhrase : pattern.triggerPhrases[0];
+                    const match = getBestMatch(skill);
+                    return match ? match.matchedPhrase : skill.triggerPhrases[0];
                   })()}
                 </div>
               </div>
@@ -274,4 +273,4 @@ export const PatternTypeahead: Component<PatternTypeaheadProps> = (props) => {
   );
 };
 
-export default PatternTypeahead;
+export default SkillTypeahead;

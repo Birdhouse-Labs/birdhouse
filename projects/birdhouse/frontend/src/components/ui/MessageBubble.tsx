@@ -14,7 +14,7 @@ import { isAgentEventBlock, isReasoningBlock, isSystemMessage, isToolBlock } fro
 import type { QuestionRequest } from "../../types/question";
 import { recordAgentView } from "../../utils/agent-navigation";
 import { copyToClipboard } from "../../utils/clipboard";
-import { extractSkillsFromXML, stripSkillXML } from "../../utils/patternParsing";
+import { extractSkillsFromXML, stripSkillXML } from "../../utils/skillAttachmentXml";
 import MarkdownRenderer from "../MarkdownRenderer";
 import AgentButton from "./AgentButton";
 import AgentToolCard from "./AgentToolCard";
@@ -24,7 +24,7 @@ import EventDivider from "./EventDivider";
 import IconButton from "./IconButton";
 import MenuItemButton from "./MenuItemButton";
 import MessageBubbleContent from "./MessageBubbleContent";
-import PatternReferencesDialog from "./PatternReferencesDialog";
+import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
 import QuestionToolCard from "./QuestionToolCard";
 import ReasoningBlock from "./ReasoningBlock";
 import ToolCallCard from "./ToolCallCard";
@@ -568,7 +568,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
       )}
 
       {/* Skill attachments dialog */}
-      <PatternReferencesDialog
+      <SkillAttachmentsDialog
         attachments={attachedSkills()}
         open={patternDialogOpen()}
         onClose={() => {
