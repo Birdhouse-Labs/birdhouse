@@ -1,8 +1,0 @@
-title: Reply to GitHub PR Review Comments
-trigger_phrases:
-  - reply to the pr comment
-  - reply to the github comment
-  - reply in the github thread
-  - gh api replies
-  - respond to the github thread
-  - respond in the github thread
