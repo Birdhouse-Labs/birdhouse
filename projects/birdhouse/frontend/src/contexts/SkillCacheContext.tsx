@@ -95,7 +95,7 @@ export const SkillCacheProvider: ParentComponent = (props) => {
   createEffect(() => {
     const unsubscribe = streaming.subscribeToConnectionEstablished(() => {
       log.ui.info("Connection re-established, refreshing visible skill cache");
-      refetch();
+      void refetch();
     });
 
     onCleanup(unsubscribe);
@@ -104,7 +104,7 @@ export const SkillCacheProvider: ParentComponent = (props) => {
   createEffect(() => {
     const unsubscribe = streaming.subscribeToSkillUpdated(() => {
       log.ui.info("Skill updated, refreshing visible skill cache");
-      refetch();
+      void refetch();
     });
 
     onCleanup(unsubscribe);
