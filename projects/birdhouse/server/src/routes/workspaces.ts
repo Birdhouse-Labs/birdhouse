@@ -8,11 +8,7 @@ import { log } from "../lib/logger";
 import type { OpenCodeManager } from "../lib/opencode-manager";
 import { generateWorkspaceId } from "../lib/workspace";
 
-export function createWorkspaceRoutes(
-  dataDb: DataDB,
-  opencodeManager: OpenCodeManager,
-  _patternGroupsPersistence?: unknown,
-) {
+export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeManager) {
   const app = new Hono();
 
   /**

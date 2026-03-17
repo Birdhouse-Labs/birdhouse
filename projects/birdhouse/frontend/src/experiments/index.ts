@@ -310,22 +310,3 @@ export const headerTitleExperiments = [
     metadata: metadataHeaderTitle01,
   },
 ];
-
-import ExperimentPatternLibraryUi01, {
-  metadata as metadataPatternLibraryUi01,
-} from "./pattern-library-ui/experiment-01";
-import ExperimentPatternLibraryUi02, {
-  metadata as metadataPatternLibraryUi02,
-} from "./pattern-library-ui/experiment-02";
-export const patternLibraryUiExperiments = [
-  {
-    id: "02",
-    component: ExperimentPatternLibraryUi02,
-    metadata: metadataPatternLibraryUi02,
-  },
-  {
-    id: "01",
-    component: ExperimentPatternLibraryUi01,
-    metadata: metadataPatternLibraryUi01,
-  },
-];

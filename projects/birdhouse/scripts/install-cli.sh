@@ -25,7 +25,6 @@ tar -czf "$TARBALL" \
   "dist/server-darwin-${ARCH_SUFFIX}" \
   "dist/opencode/darwin-${ARCH_SUFFIX}" \
   dist/frontend \
-  dist/pattern-bundles \
   version.json
 
 echo "Running install.sh with local tarball..."

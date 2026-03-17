@@ -5,7 +5,6 @@ import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import type { DataDB, Workspace } from "../lib/data-db";
 import type { OpenCodeManager } from "../lib/opencode-manager";
-import type { PatternGroupsPersistence } from "../lib/pattern-groups-db";
 import { createWorkspaceRoutes } from "./workspaces";
 
 // Type definitions for health responses
@@ -66,19 +65,12 @@ function createMockOpenCodeManager(
   } as OpenCodeManager;
 }
 
-function createMockPatternGroupsPersistence(): Partial<PatternGroupsPersistence> {
-  return {
-    ensureWorkspaceDefaultGroup: async () => {},
-  };
-}
-
 describe("GET /api/workspace/:id/health", () => {
   test("returns 404 when workspace doesn't exist", async () => {
     const dataDb = createMockDataDB();
     const opencodeManager = createMockOpenCodeManager();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
     const app = new Hono();
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/nonexistent-workspace/health");
 
@@ -101,8 +93,7 @@ describe("GET /api/workspace/:id/health", () => {
 
     const opencodeManager = createMockOpenCodeManager();
     const app = new Hono();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/test-workspace/health");
 
@@ -131,8 +122,7 @@ describe("GET /api/workspace/:id/health", () => {
 
     const opencodeManager = createMockOpenCodeManager(async () => true);
     const app = new Hono();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/test-workspace/health");
 
@@ -161,8 +151,7 @@ describe("GET /api/workspace/:id/health", () => {
 
     const opencodeManager = createMockOpenCodeManager(async () => false);
     const app = new Hono();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/test-workspace/health");
 
@@ -193,8 +182,7 @@ describe("GET /api/workspace/:id/health", () => {
       throw new Error("Network timeout");
     });
     const app = new Hono();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/test-workspace/health");
 
@@ -214,9 +202,8 @@ describe("GET /api/workspaces/health", () => {
   test("returns empty array when no workspaces exist", async () => {
     const dataDb = createMockDataDB();
     const opencodeManager = createMockOpenCodeManager();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
     const app = new Hono();
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/health");
 
@@ -239,8 +226,7 @@ describe("GET /api/workspaces/health", () => {
 
     const opencodeManager = createMockOpenCodeManager(async () => true);
     const app = new Hono();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/health");
 
@@ -300,8 +286,7 @@ describe("GET /api/workspaces/health", () => {
     });
 
     const app = new Hono();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/health");
 
@@ -372,8 +357,7 @@ describe("GET /api/workspaces/health", () => {
     });
 
     const app = new Hono();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/health");
 
@@ -406,9 +390,8 @@ describe("POST /api/workspace/:id/restart", () => {
   test("returns 404 when workspace doesn't exist", async () => {
     const dataDb = createMockDataDB();
     const opencodeManager = createMockOpenCodeManager();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
     const app = new Hono();
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/nonexistent-workspace/restart", { method: "POST" });
 
@@ -437,8 +420,7 @@ describe("POST /api/workspace/:id/restart", () => {
     });
 
     const app = new Hono();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/test-workspace/restart", { method: "POST" });
 
@@ -472,8 +454,7 @@ describe("POST /api/workspace/:id/restart", () => {
     });
 
     const app = new Hono();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/test-workspace/restart", { method: "POST" });
 
@@ -505,8 +486,7 @@ describe("POST /api/workspace/:id/restart", () => {
     });
 
     const app = new Hono();
-    const patternGroupsPersistence = createMockPatternGroupsPersistence() as PatternGroupsPersistence;
-    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
     const res = await app.request("/test-workspace/restart", { method: "POST" });
 

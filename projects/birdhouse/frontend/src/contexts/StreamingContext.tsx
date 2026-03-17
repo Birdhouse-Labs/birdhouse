@@ -151,41 +151,6 @@ export type ConnectionEstablishedHandler = () => void;
 export type QuestionAskedHandler = (question: QuestionRequest) => void;
 
 /**
- * Handler function for pattern created events (Birdhouse custom event)
- * Fires when a new pattern is created
- */
-export type PatternCreatedHandler = (payload: {
-  patternId: string;
-  groupId: string;
-  scope: string;
-  workspaceId: string;
-  pattern: Record<string, unknown>;
-}) => void;
-
-/**
- * Handler function for pattern updated events (Birdhouse custom event)
- * Fires when a pattern's metadata or trigger phrases are updated
- */
-export type PatternUpdatedHandler = (payload: {
-  patternId: string;
-  groupId: string;
-  scope: string;
-  workspaceId: string;
-  pattern: Record<string, unknown>;
-}) => void;
-
-/**
- * Handler function for pattern deleted events (Birdhouse custom event)
- * Fires when a pattern is deleted
- */
-export type PatternDeletedHandler = (payload: {
-  patternId: string;
-  groupId: string;
-  scope: string;
-  workspaceId: string;
-}) => void;
-
-/**
  * Connection status
  */
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
@@ -307,27 +272,6 @@ interface StreamingContextValue {
   subscribeToConnectionEstablished: (handler: ConnectionEstablishedHandler) => () => void;
 
   /**
-   * Subscribe to pattern created events (Birdhouse custom event)
-   * Fires when a new pattern is created
-   * @returns Cleanup function to unsubscribe
-   */
-  subscribeToPatternCreated: (handler: PatternCreatedHandler) => () => void;
-
-  /**
-   * Subscribe to pattern updated events (Birdhouse custom event)
-   * Fires when a pattern's metadata or trigger phrases are updated
-   * @returns Cleanup function to unsubscribe
-   */
-  subscribeToPatternUpdated: (handler: PatternUpdatedHandler) => () => void;
-
-  /**
-   * Subscribe to pattern deleted events (Birdhouse custom event)
-   * Fires when a pattern is deleted
-   * @returns Cleanup function to unsubscribe
-   */
-  subscribeToPatternDeleted: (handler: PatternDeletedHandler) => () => void;
-
-  /**
    * Subscribe to question asked events for a specific agent
    * Fires when an AI agent pauses to ask the human a question via the question tool
    * @returns Cleanup function to unsubscribe
@@ -380,9 +324,6 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
   const agentArchivedHandlers = new Set<AgentArchivedHandler>();
   const agentUnarchivedHandlers = new Set<AgentUnarchivedHandler>();
   const connectionEstablishedHandlers = new Set<ConnectionEstablishedHandler>();
-  const patternCreatedHandlers = new Set<PatternCreatedHandler>();
-  const patternUpdatedHandlers = new Set<PatternUpdatedHandler>();
-  const patternDeletedHandlers = new Set<PatternDeletedHandler>();
 
   // EventSource connection (managed by visibility and workspace switching)
   let eventSource: EventSource | null = null;
@@ -714,84 +655,6 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     }
   };
 
-  const handlePatternCreated = (properties: Record<string, unknown>) => {
-    const createData = properties as {
-      patternId?: string;
-      groupId?: string;
-      scope?: string;
-      workspaceId?: string;
-      pattern?: Record<string, unknown>;
-    };
-
-    if (!createData.patternId || !createData.groupId || !createData.pattern) {
-      log.api.warn("Invalid pattern.created event", properties);
-      return;
-    }
-
-    // Notify all pattern created subscribers
-    for (const handler of patternCreatedHandlers) {
-      handler({
-        patternId: createData.patternId,
-        groupId: createData.groupId,
-        scope: createData.scope || "",
-        workspaceId: createData.workspaceId || "",
-        pattern: createData.pattern,
-      });
-    }
-  };
-
-  const handlePatternUpdated = (properties: Record<string, unknown>) => {
-    const updateData = properties as {
-      patternId?: string;
-      groupId?: string;
-      scope?: string;
-      workspaceId?: string;
-      pattern?: Record<string, unknown>;
-    };
-
-    if (!updateData.patternId || !updateData.groupId || !updateData.pattern) {
-      log.api.warn("Invalid pattern.updated event", properties);
-      return;
-    }
-
-    log.api.info(`Pattern updated: ${updateData.patternId}, notifying ${patternUpdatedHandlers.size} subscribers`);
-
-    // Notify all pattern updated subscribers
-    for (const handler of patternUpdatedHandlers) {
-      handler({
-        patternId: updateData.patternId,
-        groupId: updateData.groupId,
-        scope: updateData.scope || "",
-        workspaceId: updateData.workspaceId || "",
-        pattern: updateData.pattern,
-      });
-    }
-  };
-
-  const handlePatternDeleted = (properties: Record<string, unknown>) => {
-    const deleteData = properties as {
-      patternId?: string;
-      groupId?: string;
-      scope?: string;
-      workspaceId?: string;
-    };
-
-    if (!deleteData.patternId || !deleteData.groupId) {
-      log.api.warn("Invalid pattern.deleted event", properties);
-      return;
-    }
-
-    // Notify all pattern deleted subscribers
-    for (const handler of patternDeletedHandlers) {
-      handler({
-        patternId: deleteData.patternId,
-        groupId: deleteData.groupId,
-        scope: deleteData.scope || "",
-        workspaceId: deleteData.workspaceId || "",
-      });
-    }
-  };
-
   const handleQuestionAsked = (properties: Record<string, unknown>) => {
     const questionData = properties as {
       agentId?: string;
@@ -876,15 +739,6 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
         case "birdhouse.agent.unarchived":
           handleAgentUnarchived(serverEvent.properties);
           break;
-        case "birdhouse.pattern.created":
-          handlePatternCreated(serverEvent.properties);
-          break;
-        case "birdhouse.pattern.updated":
-          handlePatternUpdated(serverEvent.properties);
-          break;
-        case "birdhouse.pattern.deleted":
-          handlePatternDeleted(serverEvent.properties);
-          break;
         case "question.asked":
           handleQuestionAsked(serverEvent.properties);
           break;
@@ -960,9 +814,6 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     agentArchivedHandlers.clear();
     agentUnarchivedHandlers.clear();
     connectionEstablishedHandlers.clear();
-    patternCreatedHandlers.clear();
-    patternUpdatedHandlers.clear();
-    patternDeletedHandlers.clear();
     questionAskedHandlers.clear();
   });
 
@@ -1230,39 +1081,6 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
   };
 
   /**
-   * Subscribe to pattern created events (Birdhouse custom event)
-   */
-  const subscribeToPatternCreated = (handler: PatternCreatedHandler): (() => void) => {
-    patternCreatedHandlers.add(handler);
-
-    return () => {
-      patternCreatedHandlers.delete(handler);
-    };
-  };
-
-  /**
-   * Subscribe to pattern updated events (Birdhouse custom event)
-   */
-  const subscribeToPatternUpdated = (handler: PatternUpdatedHandler): (() => void) => {
-    patternUpdatedHandlers.add(handler);
-
-    return () => {
-      patternUpdatedHandlers.delete(handler);
-    };
-  };
-
-  /**
-   * Subscribe to pattern deleted events (Birdhouse custom event)
-   */
-  const subscribeToPatternDeleted = (handler: PatternDeletedHandler): (() => void) => {
-    patternDeletedHandlers.add(handler);
-
-    return () => {
-      patternDeletedHandlers.delete(handler);
-    };
-  };
-
-  /**
    * Subscribe to question asked events for a specific agent
    */
   const subscribeToQuestionAsked = (agentId: string, handler: QuestionAskedHandler): (() => void) => {
@@ -1300,9 +1118,6 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     subscribeToAgentArchived,
     subscribeToAgentUnarchived,
     subscribeToConnectionEstablished,
-    subscribeToPatternCreated,
-    subscribeToPatternUpdated,
-    subscribeToPatternDeleted,
     subscribeToQuestionAsked,
     connectionStatus,
   };
