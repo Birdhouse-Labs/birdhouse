@@ -77,10 +77,10 @@ const NewAgent: Component = () => {
 
     return skillAttachments() ?? [];
   });
-  const patternCount = createMemo(() => {
+  const skillCount = createMemo(() => {
     return visibleSkillAttachments().length;
   });
-  const [patternDialogOpen, setPatternDialogOpen] = createSignal(false);
+  const [skillDialogOpen, setSkillDialogOpen] = createSignal(false);
 
   // Handle URL param pre-fill with timestamped draft backup
   onMount(() => {
@@ -297,7 +297,7 @@ const NewAgent: Component = () => {
         {/* Skill indicator - spacer button prevents layout jump */}
         <div class="flex justify-center">
           <Show
-            when={patternCount() > 0}
+            when={skillCount() > 0}
             fallback={
               <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} class="invisible">
                 Launching with 1 skill
@@ -307,10 +307,10 @@ const NewAgent: Component = () => {
             <Button
               variant="tertiary"
               leftIcon={<LibraryBig size={16} />}
-              onClick={() => setPatternDialogOpen(true)}
+              onClick={() => setSkillDialogOpen(true)}
               data-ph-reveal
             >
-              Launching with {patternCount()} {patternCount() === 1 ? "skill" : "skills"}
+              Launching with {skillCount()} {skillCount() === 1 ? "skill" : "skills"}
             </Button>
           </Show>
         </div>
@@ -327,8 +327,8 @@ const NewAgent: Component = () => {
       {/* Skill attachments dialog */}
       <SkillAttachmentsDialog
         attachments={visibleSkillAttachments()}
-        open={patternDialogOpen()}
-        onClose={() => setPatternDialogOpen(false)}
+        open={skillDialogOpen()}
+        onClose={() => setSkillDialogOpen(false)}
       />
     </div>
   );

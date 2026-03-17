@@ -58,7 +58,7 @@ function formatMetadataLabel(key: string): string {
 }
 
 export interface SkillDetailContentProps {
-  pattern: SkillDetail;
+  skill: SkillDetail;
   workspaceId: string;
   onUpdateTriggerPhrases: (phrases: string[]) => Promise<void>;
 }
@@ -112,12 +112,12 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
   const scopeTitle = () => "Trigger Phrases";
   const scopeDescription = () => "Choose the phrases that suggest this skill while you type.";
   const descriptionValue = () => {
-    const value = props.pattern.metadata["description"];
+    const value = props.skill.metadata["description"];
     return typeof value === "string" ? value : null;
   };
   const metadataEntries = () =>
-    Object.entries(props.pattern.metadata).filter(([key]) => !["name", "description", "tags"].includes(key));
-  const locationDisplay = () => props.pattern.display_location;
+    Object.entries(props.skill.metadata).filter(([key]) => !["name", "description", "tags"].includes(key));
+  const locationDisplay = () => props.skill.display_location;
 
   const handleSaveTriggerPhrases = async (phrases: string[]) => {
     setIsSaving(true);
@@ -138,7 +138,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
     setError(null);
 
     try {
-      await revealSkillLocation(props.pattern.id, props.workspaceId);
+      await revealSkillLocation(props.skill.id, props.workspaceId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to reveal skill location");
     } finally {
@@ -156,7 +156,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
         <div class="text-xs text-text-muted px-2">Saving changes...</div>
       </Show>
 
-      <Show when={metadataEntries().length > 0 || props.pattern.display_location}>
+      <Show when={metadataEntries().length > 0 || props.skill.display_location}>
         <DetailSection title="Details" defaultExpanded={true}>
           <dl class="space-y-4">
             <Show when={descriptionValue()}>
@@ -172,11 +172,11 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
               </div>
             </Show>
 
-            <Show when={props.pattern.tags.length > 0}>
+            <Show when={props.skill.tags.length > 0}>
               <div class="space-y-1">
                 <dt class="text-sm font-semibold text-heading">Tags</dt>
                 <dd>
-                  <SkillTagList tags={props.pattern.tags} />
+                  <SkillTagList tags={props.skill.tags} />
                 </dd>
               </div>
             </Show>
@@ -229,13 +229,13 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
       </Show>
 
       <DetailSection title={scopeTitle()} description={scopeDescription()} defaultExpanded={true}>
-        <TriggerPhraseEditor phrases={props.pattern.trigger_phrases} onSave={handleSaveTriggerPhrases} />
+        <TriggerPhraseEditor phrases={props.skill.trigger_phrases} onSave={handleSaveTriggerPhrases} />
       </DetailSection>
 
-      <Show when={props.pattern.files.length > 0}>
+      <Show when={props.skill.files.length > 0}>
         <DetailSection title="Other Files in Skill Directory" defaultExpanded={false}>
           <div class="flex flex-wrap gap-2">
-            <For each={props.pattern.files}>
+            <For each={props.skill.files}>
               {(file) => <span class="text-sm font-mono text-text-primary break-all">{file}</span>}
             </For>
           </div>
@@ -245,7 +245,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
       <DetailSection title="SKILL.md Content" defaultExpanded={false}>
         <div class={`rounded-xl ${cardSurfaceFlat} overflow-hidden`}>
           <div class="p-6">
-            <MarkdownRenderer content={props.pattern.prompt} />
+            <MarkdownRenderer content={props.skill.prompt} />
           </div>
         </div>
       </DetailSection>

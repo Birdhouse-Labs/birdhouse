@@ -69,7 +69,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
   const baseZIndex = useZIndex();
   const isUser = () => props.message.role === "user";
   const [errorDialogOpen, setErrorDialogOpen] = createSignal(false);
-  const [patternDialogOpen, setPatternDialogOpen] = createSignal(false);
+  const [skillDialogOpen, setSkillDialogOpen] = createSignal(false);
   const [selectedSkillName, setSelectedSkillName] = createSignal<string | undefined>(undefined);
   const [isMenuOpen, setIsMenuOpen] = createSignal(false);
   const [showCopySuccess, setShowCopySuccess] = createSignal(false);
@@ -322,7 +322,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
             onSkillLinkClick={(skillName) => {
               if (attachedSkills().some((attachment) => attachment.name === skillName)) {
                 setSelectedSkillName(skillName);
-                setPatternDialogOpen(true);
+                setSkillDialogOpen(true);
               }
             }}
             onReferenceLinkClick={(reference) => {
@@ -333,10 +333,10 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
             }}
           />
 
-          {/* Attached Patterns Button */}
+          {/* Attached Skills Button */}
           <Show when={attachedSkills().length > 0}>
             <div class="flex justify-end mt-2 mb-1">
-              <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setPatternDialogOpen(true)}>
+              <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setSkillDialogOpen(true)}>
                 {attachedSkills().length} {attachedSkills().length === 1 ? "skill" : "skills"} attached
               </Button>
             </div>
@@ -387,7 +387,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
             onSkillLinkClick={(skillName) => {
               if (attachedSkills().some((attachment) => attachment.name === skillName)) {
                 setSelectedSkillName(skillName);
-                setPatternDialogOpen(true);
+                setSkillDialogOpen(true);
               }
             }}
             onReferenceLinkClick={(reference) => {
@@ -402,7 +402,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
           {/* Skill attachments button - only show for user messages with attached skills */}
           <Show when={attachedSkills().length > 0}>
             <div class="flex justify-start mt-2 mb-1">
-              <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setPatternDialogOpen(true)}>
+              <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setSkillDialogOpen(true)}>
                 {attachedSkills().length} {attachedSkills().length === 1 ? "skill" : "skills"} attached
               </Button>
             </div>
@@ -570,9 +570,9 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
       {/* Skill attachments dialog */}
       <SkillAttachmentsDialog
         attachments={attachedSkills()}
-        open={patternDialogOpen()}
+        open={skillDialogOpen()}
         onClose={() => {
-          setPatternDialogOpen(false);
+          setSkillDialogOpen(false);
           setSelectedSkillName(undefined);
         }}
         {...(selectedSkillName() ? { initialSkillName: selectedSkillName() } : {})}

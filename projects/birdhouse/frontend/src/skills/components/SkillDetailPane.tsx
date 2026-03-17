@@ -7,7 +7,7 @@ import type { SkillDetail } from "../types/skill-library-types";
 import SkillDetailContent from "./SkillDetailContent";
 
 export interface SkillDetailPaneProps {
-  pattern: SkillDetail | null;
+  skill: SkillDetail | null;
   loading: boolean;
   error: Error | null;
   workspaceId: string;
@@ -19,7 +19,7 @@ const SkillDetailPane: Component<SkillDetailPaneProps> = (props) => {
   return (
     <div class="flex flex-col h-full bg-surface rounded-lg overflow-hidden">
       <Show
-        when={props.pattern}
+        when={props.skill}
         fallback={
           <Show
             when={props.loading}
@@ -48,13 +48,13 @@ const SkillDetailPane: Component<SkillDetailPaneProps> = (props) => {
           </Show>
         }
       >
-        {(pattern) => (
+        {(skill) => (
           <>
             <div class="px-6 py-4 border-b border-border flex-shrink-0 bg-surface-raised">
-              <h2 class="text-xl font-semibold text-heading break-all">{pattern().title}</h2>
+              <h2 class="text-xl font-semibold text-heading break-all">{skill().title}</h2>
             </div>
             <SkillDetailContent
-              pattern={pattern()}
+              skill={skill()}
               workspaceId={props.workspaceId}
               onUpdateTriggerPhrases={props.onUpdateTriggerPhrases}
             />

@@ -10,7 +10,7 @@ import SkillDetailContent from "./SkillDetailContent";
 export interface SkillDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  pattern: SkillDetail;
+  skill: SkillDetail;
   workspaceId: string;
   onUpdateTriggerPhrases: (phrases: string[]) => Promise<void>;
 }
@@ -32,14 +32,14 @@ const SkillDetailModal: Component<SkillDetailModalProps> = (props) => {
           style={{ "z-index": "117" }}
         >
           <div class="px-6 py-3 border-b bg-surface-raised border-border flex-shrink-0 flex items-center justify-between">
-            <Dialog.Label class="text-lg font-semibold text-heading">{props.pattern.title}</Dialog.Label>
+            <Dialog.Label class="text-lg font-semibold text-heading">{props.skill.title}</Dialog.Label>
             <Dialog.Close class="text-text-muted hover:text-text-primary transition-colors">
               <X size={20} />
             </Dialog.Close>
           </div>
 
           <SkillDetailContent
-            pattern={props.pattern}
+            skill={props.skill}
             workspaceId={props.workspaceId}
             onUpdateTriggerPhrases={props.onUpdateTriggerPhrases}
           />

@@ -64,7 +64,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
 
     return skillAttachments() ?? [];
   });
-  const patternCount = createMemo(() => {
+  const skillCount = createMemo(() => {
     return visibleSkillAttachments().length;
   });
   const [dialogOpen, setDialogOpen] = createSignal(false);
@@ -150,10 +150,10 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
         </div>
 
         {/* Skill count button - appears below input in the padding area */}
-        <Show when={patternCount() > 0}>
+        <Show when={skillCount() > 0}>
           <div class="flex justify-end mt-2 -mb-1">
             <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setDialogOpen(true)}>
-              {patternCount()} {patternCount() === 1 ? "skill" : "skills"}
+              {skillCount()} {skillCount() === 1 ? "skill" : "skills"}
             </Button>
           </div>
         </Show>

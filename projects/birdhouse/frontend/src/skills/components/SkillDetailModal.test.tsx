@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import SkillDetailModal from "./SkillDetailModal";
 
 describe("SkillDetailModal", () => {
-  const basePattern = {
+  const baseSkill = {
     id: "find-docs",
     group_id: "global",
     title: "find-docs",
@@ -32,7 +32,7 @@ describe("SkillDetailModal", () => {
       <SkillDetailModal
         open={true}
         onOpenChange={() => {}}
-        pattern={basePattern}
+        skill={baseSkill}
         workspaceId="ws_test"
         onUpdateTriggerPhrases={vi.fn().mockResolvedValue(undefined)}
       />
@@ -70,8 +70,8 @@ describe("SkillDetailModal", () => {
       <SkillDetailModal
         open={true}
         onOpenChange={() => {}}
-        pattern={{
-          ...basePattern,
+        skill={{
+          ...baseSkill,
           scope: "workspace",
           location: "/repo/current/.agents/skills/find-docs/SKILL.md",
           display_location: "/repo/current/.agents/skills/find-docs/SKILL.md",

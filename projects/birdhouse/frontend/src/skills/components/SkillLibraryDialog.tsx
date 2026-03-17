@@ -204,7 +204,7 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
                   </MobileNavDrawer>
 
                   <SkillDetailPane
-                    pattern={visibleSkill()}
+                    skill={visibleSkill()}
                     loading={skillData.loading}
                     error={skillData.error ?? null}
                     workspaceId={props.workspaceId}
@@ -252,7 +252,7 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
 
                     <Resizable.Panel initialSize={0.618} minSize={0.5} class="h-full rounded-lg overflow-hidden">
                       <SkillDetailPane
-                        pattern={visibleSkill()}
+                        skill={visibleSkill()}
                         loading={skillData.loading}
                         error={skillData.error ?? null}
                         workspaceId={props.workspaceId}
