@@ -87,23 +87,9 @@ await initDataDB();
 const dataDb = getDataDB();
 const opencodeManager = new OpenCodeManager(dataDb, OPENCODE_BINARY, PORT);
 
-// Initialize pattern groups persistence
+// Initialize pattern groups persistence for legacy routes and experiments.
 const patternsBasePath = join(DATA_DIR, "patterns");
 const patternGroupsPersistence = initPatternGroupsPersistence(patternsBasePath);
-
-// Seed pattern groups
-log.server.info("Seeding pattern groups...");
-
-// 1. Seed user default group
-await patternGroupsPersistence.ensureUserDefaultGroup();
-
-// 2. Seed workspace default groups for all existing workspaces
-const workspaces = dataDb.getAllWorkspaces();
-await patternGroupsPersistence.ensureAllWorkspaceDefaultGroups(workspaces);
-
-// 3. Seed Birdhouse patterns
-const { seeded, updated } = await patternGroupsPersistence.seedBirdhousePatterns();
-log.server.info({ seeded, updated }, "Birdhouse patterns seeded");
 
 // Dev mode: Ensure plugin source is available for running OpenCode from source
 // In dev, OPENCODE_PATH points to OpenCode source and we run from TypeScript

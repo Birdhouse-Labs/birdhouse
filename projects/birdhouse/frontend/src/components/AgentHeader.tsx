@@ -1,9 +1,8 @@
 // ABOUTME: Agent top bar component with context usage indicator and gradient pulse
 // ABOUTME: Shows agent title, model, context donut, and working state with gradient pulse
 
-import { useNavigate } from "@solidjs/router";
 import Popover from "corvu/popover";
-import { Archive, Bot, Download, Edit, Hammer, Lightbulb, MoreVertical, X } from "lucide-solid";
+import { Archive, Download, Edit, Hammer, Lightbulb, MoreVertical, X } from "lucide-solid";
 import { type Component, createEffect, createMemo, createResource, createSignal, onCleanup, Show } from "solid-js";
 import { API_ENDPOINT_BASE, buildWorkspaceUrl } from "../config/api";
 import { useStreaming } from "../contexts/StreamingContext";
@@ -12,7 +11,6 @@ import { aggregateTokenStats } from "../domain/token-aggregation";
 
 import { borderColor } from "../styles/containerStyles";
 import type { Message } from "../types/messages";
-import { buildSkillMarkdownLink } from "../utils/skillLinks";
 import ArchiveAgentDialog from "./ArchiveAgentDialog";
 import ContextUsageIndicator from "./ContextUsageIndicator";
 import EditAgentDialog from "./EditAgentDialog";
@@ -35,7 +33,6 @@ export interface AgentHeaderProps {
 
 export const AgentHeader: Component<AgentHeaderProps> = (props) => {
   const streaming = useStreaming();
-  const navigate = useNavigate();
   const baseZIndex = useZIndex();
   const [isWorking, setIsWorking] = createSignal(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = createSignal(false);
@@ -205,16 +202,6 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
     }
   };
 
-  const handleExportTreeClick = () => {
-    setIsPopoverOpen(false);
-
-    // Build the pre-filled message with Birdhouse links
-    const message = `Please ${buildSkillMarkdownLink("export the tree", "export_agent_tree")} for [${props.title}](birdhouse:agent/${props.agentId})`;
-
-    // Navigate to new agent view with message as URL parameter
-    navigate(`/workspace/${props.workspaceId}/agents?message=${encodeURIComponent(message)}`);
-  };
-
   const handleEditSuccess = (newTitle: string) => {
     setCurrentTitle(newTitle);
   };
@@ -349,15 +336,6 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
                   data-ph-capture-attribute-is-exporting={isExporting() ? "true" : "false"}
                 >
                   {isExporting() ? "Exporting..." : "Export"}
-                </MenuItemButton>
-                <MenuItemButton
-                  icon={<Bot size={16} />}
-                  onClick={handleExportTreeClick}
-                  variant="gradient"
-                  data-ph-capture-attribute-button-type="export-agent-tree"
-                  data-ph-capture-attribute-agent-id={props.agentId}
-                >
-                  Export tree...
                 </MenuItemButton>
                 {isArchived() ? (
                   <MenuItemButton

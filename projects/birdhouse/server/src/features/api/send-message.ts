@@ -395,7 +395,6 @@ async function generateAndUpdateTitleForClone(
     // Call title generation service directly (no HTTP request needed)
     const result = await generateTitleService(deps, {
       message: contextMessage.trim(),
-      patternId: "title_generation_default",
     });
 
     const generatedTitle = result.title;

@@ -483,6 +483,23 @@ describe("AgentHeader - Export functionality", () => {
     });
   });
 
+  it("does not render Export tree menu item", async () => {
+    renderWithProvider({
+      agentId: "agent-1",
+      title: "Test Agent",
+      modelName: "claude-sonnet-4",
+    });
+
+    const menuButton = screen.getByLabelText("Actions menu");
+    menuButton.click();
+
+    await waitFor(() => {
+      expect(screen.getByText("Export")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Export tree...")).not.toBeInTheDocument();
+  });
+
   it("triggers download when Export is clicked successfully", async () => {
     const mockMarkdown = "# Test Agent\n\nThis is a test export.";
     const mockFilename = "test-agent-2026-02-02-1430.md";

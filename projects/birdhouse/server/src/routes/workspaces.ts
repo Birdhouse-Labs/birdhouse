@@ -6,13 +6,12 @@ import { Hono } from "hono";
 import type { DataDB } from "../lib/data-db";
 import { log } from "../lib/logger";
 import type { OpenCodeManager } from "../lib/opencode-manager";
-import type { PatternGroupsPersistence } from "../lib/pattern-groups-db";
 import { generateWorkspaceId } from "../lib/workspace";
 
 export function createWorkspaceRoutes(
   dataDb: DataDB,
   opencodeManager: OpenCodeManager,
-  patternGroupsPersistence: PatternGroupsPersistence,
+  _patternGroupsPersistence?: unknown,
 ) {
   const app = new Hono();
 
@@ -137,9 +136,6 @@ export function createWorkspaceRoutes(
 
       dataDb.insertWorkspace(workspace);
 
-      // Create default pattern group for the workspace
-      await patternGroupsPersistence.ensureWorkspaceDefaultGroup(workspace);
-
       // Store API keys if provided
       if (api_keys && Object.keys(api_keys).length > 0) {
         // Convert old format to new provider format
@@ -226,9 +222,6 @@ export function createWorkspaceRoutes(
       };
 
       dataDb.insertWorkspace(workspace);
-
-      // Create default pattern group for the workspace
-      await patternGroupsPersistence.ensureWorkspaceDefaultGroup(workspace);
 
       log.server.info({ workspaceId: workspace.workspace_id, directory }, "Workspace registered");
 

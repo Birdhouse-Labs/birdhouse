@@ -1,5 +1,5 @@
-// ABOUTME: Title generation routes for creating agent titles from messages
-// ABOUTME: Namespace: /api/title/* - Uses pattern-based prompts via OpenCode
+// ABOUTME: Title generation routes for creating agent titles from messages.
+// ABOUTME: Namespace: /api/title/* - Uses the Birdhouse-owned title prompt via OpenCode.
 
 import { Hono } from "hono";
 import * as handlers from "../features/api";

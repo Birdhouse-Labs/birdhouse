@@ -49,23 +49,16 @@ export async function fetchAgent(workspaceId: string, agentId: string) {
  * Generate a title based on a message
  * @param workspaceId The workspace ID
  * @param message The message content to generate a title from
- * @param patternId Optional pattern ID (defaults to title_generation_default)
  * @param sourceAgentTitle Optional source agent title for context
  * @returns The generated title
  */
-export async function generateTitle(
-  workspaceId: string,
-  message: string,
-  patternId?: string,
-  sourceAgentTitle?: string,
-): Promise<string> {
+export async function generateTitle(workspaceId: string, message: string, sourceAgentTitle?: string): Promise<string> {
   const url = buildWorkspaceUrl(workspaceId, "/title/generate");
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       message,
-      pattern_id: patternId,
       source_agent_title: sourceAgentTitle,
     }),
   });
