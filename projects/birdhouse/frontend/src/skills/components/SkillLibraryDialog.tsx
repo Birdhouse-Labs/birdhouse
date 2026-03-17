@@ -19,6 +19,50 @@ import SkillDetailPane from "./SkillDetailPane";
 import SkillListPane from "./SkillListPane";
 
 const MODAL_TYPE_LIBRARY = "skill-library-v2";
+const SKILL_LIBRARY_UI_STATE_STORAGE_PREFIX = "birdhouse:skill-library-ui:";
+
+interface SkillLibraryUIState {
+  searchQuery: string;
+  scopeFilter: SkillListScopeFilter;
+  selectedSkillId: string | null;
+}
+
+function isSkillListScopeFilter(value: unknown): value is SkillListScopeFilter {
+  return value === "all" || value === "workspace" || value === "global";
+}
+
+function loadSkillLibraryUIState(workspaceId: string): SkillLibraryUIState {
+  const fallbackState: SkillLibraryUIState = {
+    searchQuery: "",
+    scopeFilter: "all",
+    selectedSkillId: null,
+  };
+
+  const rawState = sessionStorage.getItem(`${SKILL_LIBRARY_UI_STATE_STORAGE_PREFIX}${workspaceId}`);
+  if (!rawState) {
+    return fallbackState;
+  }
+
+  try {
+    const parsed = JSON.parse(rawState) as unknown;
+    if (!parsed || typeof parsed !== "object") {
+      return fallbackState;
+    }
+
+    const state = parsed as Record<string, unknown>;
+    return {
+      searchQuery: typeof state["searchQuery"] === "string" ? state["searchQuery"] : "",
+      scopeFilter: isSkillListScopeFilter(state["scopeFilter"]) ? state["scopeFilter"] : "all",
+      selectedSkillId: typeof state["selectedSkillId"] === "string" ? state["selectedSkillId"] : null,
+    };
+  } catch {
+    return fallbackState;
+  }
+}
+
+function saveSkillLibraryUIState(workspaceId: string, state: SkillLibraryUIState): void {
+  sessionStorage.setItem(`${SKILL_LIBRARY_UI_STATE_STORAGE_PREFIX}${workspaceId}`, JSON.stringify(state));
+}
 
 export interface SkillLibraryDialogProps {
   workspaceId: string;
@@ -31,6 +75,7 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
   const [sidebarOpen, setSidebarOpen] = createSignal(true);
   const [searchQuery, setSearchQuery] = createSignal("");
   const [scopeFilter, setScopeFilter] = createSignal<SkillListScopeFilter>("all");
+  const [storedSelectedSkillId, setStoredSelectedSkillId] = createSignal<string | null>(null);
 
   const isLibraryOpen = createMemo(() => modalStack().some((modal) => modal.type === MODAL_TYPE_LIBRARY));
 
@@ -64,13 +109,38 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
   );
 
   createEffect(() => {
+    const persistedState = loadSkillLibraryUIState(props.workspaceId);
+    setSearchQuery(persistedState.searchQuery);
+    setScopeFilter(persistedState.scopeFilter);
+    setStoredSelectedSkillId(persistedState.selectedSkillId);
+  });
+
+  createEffect(() => {
     if (isLibraryOpen()) {
       setSidebarOpen(isDesktop());
     }
   });
 
+  createEffect(() => {
+    const currentSelectedSkillId = selectedSkillId();
+    if (currentSelectedSkillId) {
+      setStoredSelectedSkillId(currentSelectedSkillId);
+    }
+  });
+
+  createEffect(() => {
+    saveSkillLibraryUIState(props.workspaceId, {
+      searchQuery: searchQuery(),
+      scopeFilter: scopeFilter(),
+      selectedSkillId: storedSelectedSkillId(),
+    });
+  });
+
   const selectSkill = (skillId: string | null) => {
     const nextId = skillId || "main";
+    if (skillId) {
+      setStoredSelectedSkillId(skillId);
+    }
     const updatedStack = modalStack()
       .filter((modal) => modal.type === MODAL_TYPE_LIBRARY)
       .map(() => ({ type: MODAL_TYPE_LIBRARY, id: nextId }));
@@ -103,7 +173,7 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
     if (libraryData.error) return;
 
     const nextSelectedSkillId = resolveSelectedSkillIdAfterLoad(
-      selectedSkillId(),
+      selectedSkillId() ?? storedSelectedSkillId(),
       filteredSkills().map((skill) => skill.id),
       !!libraryData(),
     );
