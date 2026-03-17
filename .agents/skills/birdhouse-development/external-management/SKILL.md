@@ -1,5 +1,5 @@
 ---
-name: birdhouse/external-management
+name: external-management
 description: Use this skill when you need to test Birdhouse, AAPI, or plugin behavior in a separate Birdhouse server that you control via curl. Best for isolated read-mode testing, plugin changes, and real end-to-end agent workflows.
 ---
 
