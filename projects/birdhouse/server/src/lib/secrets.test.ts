@@ -68,6 +68,7 @@ describe("providersToEnv", () => {
       cerebras: { api_key: "cerebras-vwx" },
       together: { api_key: "together-yz" },
       zai: { api_key: "zai-abc" },
+      fireworks: { api_key: "fw-xyz" },
     };
 
     const env = providersToEnv(providers);
@@ -85,6 +86,7 @@ describe("providersToEnv", () => {
     expect(env.CEREBRAS_API_KEY).toBe("cerebras-vwx");
     expect(env.TOGETHER_API_KEY).toBe("together-yz");
     expect(env.ZHIPU_API_KEY).toBe("zai-abc");
+    expect(env.FIREWORKS_API_KEY).toBe("fw-xyz");
   });
 
   test("maps zAI provider correctly", () => {
@@ -95,6 +97,16 @@ describe("providersToEnv", () => {
     const env = providersToEnv(providers);
 
     expect(env.ZHIPU_API_KEY).toBe("zhipu-key-123");
+  });
+
+  test("maps Fireworks provider correctly", () => {
+    const providers: ProviderCredentials = {
+      fireworks: { api_key: "fw-key-123" },
+    };
+
+    const env = providersToEnv(providers);
+
+    expect(env.FIREWORKS_API_KEY).toBe("fw-key-123");
   });
 
   test("maps AWS provider correctly", () => {

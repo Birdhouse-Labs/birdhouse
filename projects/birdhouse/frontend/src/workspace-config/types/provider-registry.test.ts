@@ -20,6 +20,21 @@ describe("PROVIDERS registry", () => {
     expect(zai?.docUrl).toBe("https://z.ai");
   });
 
+  it("includes Fireworks provider with correct id", () => {
+    const fireworks = PROVIDERS.find((p) => p.id === "fireworks");
+    expect(fireworks).toBeDefined();
+  });
+
+  it("includes Fireworks provider with correct label", () => {
+    const fireworks = PROVIDERS.find((p) => p.id === "fireworks");
+    expect(fireworks?.label).toBe("Fireworks");
+  });
+
+  it("includes Fireworks provider with correct docUrl", () => {
+    const fireworks = PROVIDERS.find((p) => p.id === "fireworks");
+    expect(fireworks?.docUrl).toBe("https://fireworks.ai");
+  });
+
   it("contains all expected Tier 1 providers", () => {
     const ids = PROVIDERS.map((p) => p.id);
     expect(ids).toContain("anthropic");
@@ -35,5 +50,6 @@ describe("PROVIDERS registry", () => {
     expect(ids).toContain("cerebras");
     expect(ids).toContain("together");
     expect(ids).toContain("zai");
+    expect(ids).toContain("fireworks");
   });
 });

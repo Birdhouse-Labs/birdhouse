@@ -37,6 +37,7 @@ export interface ProviderCredentials {
   cerebras?: { api_key: string };
   together?: { api_key: string };
   zai?: { api_key: string };
+  fireworks?: { api_key: string };
 
   // Tier 2: Complex multi-key providers
   aws?: {
@@ -148,6 +149,9 @@ export function providersToEnv(providers: ProviderCredentials): Record<string, s
   }
   if (providers.zai?.api_key) {
     env.ZHIPU_API_KEY = providers.zai.api_key;
+  }
+  if (providers.fireworks?.api_key) {
+    env.FIREWORKS_API_KEY = providers.fireworks.api_key;
   }
 
   // Tier 2: Complex multi-key providers

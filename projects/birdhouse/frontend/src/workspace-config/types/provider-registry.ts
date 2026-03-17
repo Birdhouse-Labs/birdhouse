@@ -27,6 +27,7 @@ export const PROVIDERS: ProviderMetadata[] = [
   { id: "cerebras", label: "Cerebras", docUrl: "https://cloud.cerebras.ai/api-keys" },
   { id: "together", label: "Together AI", docUrl: "https://api.together.xyz/settings/api-keys" },
   { id: "zai", label: "Z.AI (GLM)", docUrl: "https://z.ai" },
+  { id: "fireworks", label: "Fireworks", docUrl: "https://fireworks.ai" },
 ];
 
 /**
