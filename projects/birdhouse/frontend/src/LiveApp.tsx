@@ -23,9 +23,9 @@ import { loadCollapseState, saveCollapseState } from "./lib/collapse-state";
 import { log } from "./lib/logger";
 import { keepAgentInView } from "./lib/preferences";
 import { useModalRoute, useNavigateToWorkspaceAgent, useWorkspaceAgentId } from "./lib/routing";
-import PatternLibraryDialog from "./patterns/components/PatternLibraryDialog";
 import { searchAgents } from "./services/agents-api";
 import { fetchAgentTrees } from "./services/messages-api";
+import SkillLibraryDialog from "./skills/components/SkillLibraryDialog";
 import { createMediaQuery } from "./theme/createMediaQuery";
 
 // Loading spinner component
@@ -713,8 +713,8 @@ const LiveApp: Component<LiveAppProps> = (props) => {
         )}
       </For>
 
-      {/* Pattern Library Dialog */}
-      <PatternLibraryDialog workspaceId={workspaceId} />
+      {/* Skills Library Dialog */}
+      <SkillLibraryDialog workspaceId={workspaceId} />
     </div>
   );
 };

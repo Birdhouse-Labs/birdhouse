@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
 import { sendFirstMessage } from "./agent-messaging";
-import type { Message } from "./opencode-client";
+import type { Message, Skill } from "./opencode-client";
 import type { TelemetryClient } from "./telemetry";
 
 function makeAssistantMessage(tokens: {
@@ -59,6 +59,88 @@ describe("agent-messaging token recording", () => {
   });
 
   describe("sendFirstMessage — token recording (blocking mode)", () => {
+    it("attaches only explicitly linked skills before sending the first message", async () => {
+      let capturedPrompt = "";
+      const visibleSkills: Skill[] = [
+        {
+          name: "find-docs",
+          description: "Retrieve current docs.",
+          location: "/Users/test/.claude/skills/find-docs/SKILL.md",
+          content: "# Find Docs",
+        },
+      ];
+
+      const deps = createTestDeps({
+        listSkills: async () => visibleSkills,
+        sendMessage: async (_sessionId, text) => {
+          capturedPrompt = text;
+          return makeAssistantMessage({
+            input: 100,
+            output: 50,
+            reasoning: 0,
+            cache: { read: 0, write: 0 },
+          });
+        },
+      });
+      deps.dataDb.setSkillTriggerPhrases("find-docs", ["docs please"]);
+      deps.telemetry = mockTelemetry;
+
+      await withDeps(deps, () =>
+        sendFirstMessage(deps, {
+          agentId: "agent_first_skill",
+          sessionId: "ses_test",
+          model: "anthropic/claude-sonnet-4",
+          prompt: "Use [docs helper](birdhouse:skill/find-docs) before you start",
+          wait: true,
+        }),
+      );
+
+      expect(capturedPrompt).toBe(`Use [docs helper](birdhouse:skill/find-docs) before you start
+
+<skill name="find-docs">
+# Find Docs
+</skill>`);
+    });
+
+    it("does not attach raw trigger phrase text without an explicit skill link", async () => {
+      let capturedPrompt = "";
+      const visibleSkills: Skill[] = [
+        {
+          name: "find-docs",
+          description: "Retrieve current docs.",
+          location: "/Users/test/.claude/skills/find-docs/SKILL.md",
+          content: "# Find Docs",
+        },
+      ];
+
+      const deps = createTestDeps({
+        listSkills: async () => visibleSkills,
+        sendMessage: async (_sessionId, text) => {
+          capturedPrompt = text;
+          return makeAssistantMessage({
+            input: 100,
+            output: 50,
+            reasoning: 0,
+            cache: { read: 0, write: 0 },
+          });
+        },
+      });
+      deps.dataDb.setSkillTriggerPhrases("find-docs", ["docs please"]);
+      deps.telemetry = mockTelemetry;
+
+      await withDeps(deps, () =>
+        sendFirstMessage(deps, {
+          agentId: "agent_first_skill_raw_text",
+          sessionId: "ses_test",
+          model: "anthropic/claude-sonnet-4",
+          prompt: "docs please before you start",
+          wait: true,
+        }),
+      );
+
+      expect(capturedPrompt).toBe("docs please before you start");
+    });
+
     it("calls recordMessageTokens with the agent ID and message", async () => {
       const message = makeAssistantMessage({
         input: 100,

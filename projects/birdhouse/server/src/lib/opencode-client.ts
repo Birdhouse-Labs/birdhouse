@@ -69,6 +69,13 @@ export interface ProvidersResponse {
   providers: Provider[];
 }
 
+export interface Skill {
+  name: string;
+  description: string;
+  location: string;
+  content: string;
+}
+
 /**
  * OpenCode client interface - defines all methods available on client
  */
@@ -92,6 +99,7 @@ export interface OpenCodeClient {
   getSessionStatus(): Promise<SessionStatusMap>;
   waitForSessionCompletion(sessionId: string): Promise<Message>;
   getProviders(): Promise<ProvidersResponse>;
+  listSkills(): Promise<Skill[]>;
   generate(options: {
     prompt?: string;
     system?: string[];
@@ -236,6 +244,14 @@ export function createLiveOpenCodeClient(baseUrl: string, workspaceRoot: string)
         throw new Error(`Failed to get providers: ${response.statusText}`);
       }
       return response.json() as Promise<ProvidersResponse>;
+    },
+
+    async listSkills(): Promise<Skill[]> {
+      const response = await fetch(`${baseUrl}/skill?directory=${encodeURIComponent(workspaceRoot)}`);
+      if (!response.ok) {
+        throw new Error(`Failed to list skills: ${response.statusText}`);
+      }
+      return response.json() as Promise<Skill[]>;
     },
 
     async generate(options: {
@@ -555,6 +571,10 @@ export function createTestOpenCodeClient(): OpenCodeClient {
           },
         ],
       };
+    },
+
+    async listSkills(): Promise<Skill[]> {
+      return [];
     },
 
     async generate(_options: {

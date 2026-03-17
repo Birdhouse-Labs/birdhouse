@@ -2,16 +2,18 @@
 // ABOUTME: Orchestrates message rendering and input handling
 
 import { LibraryBig, Split, X } from "lucide-solid";
-import { type Accessor, type Component, createMemo, createSignal, For, Show } from "solid-js";
+import { type Accessor, type Component, createMemo, createResource, createSignal, For, Show } from "solid-js";
+import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { findPendingAssistantId, isMessageQueued } from "../../domain/message-queue";
+import { previewSkillAttachments } from "../../services/skill-attachments-api";
 import { uiSize } from "../../theme";
 import type { Message } from "../../types/messages";
 import type { QuestionRequest } from "../../types/question";
-import { countPatternReferences, extractPatternReferences } from "../../utils/patternReferences";
+import { extractSkillLinkNames } from "../../utils/skillLinks";
 import AutoGrowTextarea from "./AutoGrowTextarea";
 import Button from "./Button";
 import MessageBubble from "./MessageBubble";
-import PatternReferencesDialog from "./PatternReferencesDialog";
+import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
 
 export interface ChatContainerProps {
   messages: Message[];
@@ -33,6 +35,7 @@ export interface ChatContainerProps {
 }
 
 export const ChatContainer: Component<ChatContainerProps> = (props) => {
+  const { workspaceId } = useWorkspace();
   const sizeClasses = createMemo(() => {
     const size = uiSize();
     return {
@@ -41,8 +44,29 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
     };
   });
 
-  const patternCount = createMemo(() => countPatternReferences(props.inputValue));
-  const patternIds = createMemo(() => extractPatternReferences(props.inputValue));
+  const linkedSkillNames = createMemo(() => extractSkillLinkNames(props.inputValue.trim()));
+
+  const [skillAttachments] = createResource(
+    () => {
+      const text = props.inputValue.trim();
+      if (!text || linkedSkillNames().length === 0) {
+        return null;
+      }
+
+      return text;
+    },
+    (text) => previewSkillAttachments(workspaceId, text),
+  );
+  const visibleSkillAttachments = createMemo(() => {
+    if (linkedSkillNames().length === 0 || !props.inputValue.trim() || skillAttachments.error) {
+      return [];
+    }
+
+    return skillAttachments() ?? [];
+  });
+  const skillCount = createMemo(() => {
+    return visibleSkillAttachments().length;
+  });
   const [dialogOpen, setDialogOpen] = createSignal(false);
 
   // Find the pending assistant message ID for queue detection
@@ -125,18 +149,22 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
           </Show>
         </div>
 
-        {/* Pattern count button - appears below input in the padding area */}
-        <Show when={patternCount() > 0}>
+        {/* Skill count button - appears below input in the padding area */}
+        <Show when={skillCount() > 0}>
           <div class="flex justify-end mt-2 -mb-1">
             <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setDialogOpen(true)}>
-              {patternCount()} {patternCount() === 1 ? "skill" : "skills"}
+              {skillCount()} {skillCount() === 1 ? "skill" : "skills"}
             </Button>
           </div>
         </Show>
       </div>
 
-      {/* Pattern References Dialog */}
-      <PatternReferencesDialog patternIds={patternIds()} open={dialogOpen()} onClose={() => setDialogOpen(false)} />
+      {/* Skill Attachments Dialog */}
+      <SkillAttachmentsDialog
+        attachments={visibleSkillAttachments()}
+        open={dialogOpen()}
+        onClose={() => setDialogOpen(false)}
+      />
 
       {/* Messages area - newest at top (scrollable) */}
       <div

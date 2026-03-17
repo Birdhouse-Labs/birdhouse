@@ -2,14 +2,15 @@
 // ABOUTME: Handles Cmd/Ctrl+Enter to send, regular Enter for new lines
 
 import { type Component, createEffect, createMemo, createResource, createSignal } from "solid-js";
-import { usePatternCache } from "../../contexts/PatternCacheContext";
+import { useSkillCache } from "../../contexts/SkillCacheContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useWorkspaceAgentId } from "../../lib/routing";
 import { fetchAgentsForTypeahead } from "../../services/agents-api";
 import { uiSize } from "../../theme";
+import { buildSkillMarkdownLink, buildSkillVisibleText } from "../../utils/skillLinks";
 import AgentTypeahead from "./AgentTypeahead";
 import FileTypeahead from "./FileTypeahead";
-import PatternTypeahead from "./PatternTypeahead";
+import SkillTypeahead from "./SkillTypeahead";
 
 export interface AutoGrowTextareaProps {
   value: string;
@@ -22,7 +23,7 @@ export interface AutoGrowTextareaProps {
 
 export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
   let textareaRef: HTMLTextAreaElement | undefined;
-  const [showPatternTypeahead, setShowPatternTypeahead] = createSignal(false);
+  const [showSkillTypeahead, setShowSkillTypeahead] = createSignal(false);
   const [showAgentTypeahead, setShowAgentTypeahead] = createSignal(false);
   const [showFileTypeahead, setShowFileTypeahead] = createSignal(false);
   const [cursorPosition, setCursorPosition] = createSignal(0);
@@ -31,21 +32,21 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
   const { workspaceId } = useWorkspace();
   const currentAgentId = useWorkspaceAgentId();
 
-  // Get patterns from cache (always up-to-date via SSE)
-  const { patterns: patternsData } = usePatternCache();
+  // Get skills from cache (always up-to-date via SSE)
+  const { skills: skillsData } = useSkillCache();
 
   // Load agents once on mount
   const [agentsData] = createResource(() => fetchAgentsForTypeahead(workspaceId));
 
-  // Transform to Pattern shape for typeahead
-  const typeaheadPatterns = () => {
-    const patterns = patternsData();
-    if (!patterns) return [];
+  // Transform to the skill typeahead shape
+  const typeaheadSkills = () => {
+    const skills = skillsData();
+    if (!skills) return [];
 
-    return patterns.map((p) => ({
-      id: p.id,
-      triggerPhrases: p.triggerPhrases,
-      title: p.title,
+    return skills.map((skill) => ({
+      id: skill.id,
+      triggerPhrases: skill.triggerPhrases,
+      title: skill.title,
     }));
   };
 
@@ -96,7 +97,7 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
    * Trigger priority order (only one typeahead shows at a time):
    * 1. @@ → Agent typeahead (highest priority)
    * 2. @  → File typeahead (medium priority)
-   * 3. text → Pattern typeahead (lowest priority, shown when no @ triggers)
+   * 3. text → Skill typeahead (lowest priority, shown when no @ triggers)
    *
    * Why @@ is checked before @:
    * - Prevents @@ from triggering file typeahead
@@ -123,18 +124,18 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
       // Priority 1: @@ triggers agent typeahead
       setShowAgentTypeahead(true);
       setShowFileTypeahead(false);
-      setShowPatternTypeahead(false);
+      setShowSkillTypeahead(false);
     } else if (hasFileTrigger) {
       // Priority 2: @ triggers file typeahead (only when @@ not present)
       setShowFileTypeahead(true);
       setShowAgentTypeahead(false);
-      setShowPatternTypeahead(false);
+      setShowSkillTypeahead(false);
     } else {
-      // Priority 3: No @ triggers - show pattern typeahead if there's content
+      // Priority 3: No @ triggers - show skill typeahead if there's content
       setShowAgentTypeahead(false);
       setShowFileTypeahead(false);
-      const shouldShowPattern = newValue.length > 0;
-      setShowPatternTypeahead(shouldShowPattern);
+      const shouldShowSkill = newValue.length > 0;
+      setShowSkillTypeahead(shouldShowSkill);
     }
   };
 
@@ -151,7 +152,7 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
     }
 
     // When any typeahead is visible, let it handle arrow keys and Escape
-    const anyTypeaheadVisible = showPatternTypeahead() || showAgentTypeahead() || showFileTypeahead();
+    const anyTypeaheadVisible = showSkillTypeahead() || showAgentTypeahead() || showFileTypeahead();
     if (anyTypeaheadVisible && ["ArrowUp", "ArrowDown", "Escape"].includes(e.key)) {
       // Typeahead components will handle these
       return;
@@ -185,17 +186,15 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
     }
   });
 
-  const handlePatternSelect = (
-    pattern: { id: string },
+  const handleSkillSelect = (
+    skill: { id: string },
     matchedPhrase: string,
     matchedText: string,
     matchStartIndex: number,
   ) => {
     if (!textareaRef) return;
 
-    // Use execCommand or document.execCommand to preserve undo stack
-    // This is the recommended way to programmatically edit while preserving undo
-    const replacement = `[${matchedPhrase}](birdhouse:pattern/${pattern.id})`;
+    const replacement = buildSkillMarkdownLink(buildSkillVisibleText(matchedText, matchedPhrase), skill.id);
 
     // Focus first
     textareaRef.focus();
@@ -206,7 +205,7 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
     // Replace using document.execCommand (preserves undo stack)
     document.execCommand("insertText", false, replacement);
 
-    setShowPatternTypeahead(false);
+    setShowSkillTypeahead(false);
 
     // Cursor is automatically positioned after the replacement by insertText
   };
@@ -284,14 +283,14 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
         }}
         style={textareaStyles()}
       />
-      <PatternTypeahead
+      <SkillTypeahead
         referenceElement={textareaRef}
         inputValue={props.value}
         cursorPosition={cursorPosition()}
-        visible={showPatternTypeahead()}
-        patterns={typeaheadPatterns()}
-        onSelect={handlePatternSelect}
-        onClose={() => setShowPatternTypeahead(false)}
+        visible={showSkillTypeahead()}
+        skills={typeaheadSkills()}
+        onSelect={handleSkillSelect}
+        onClose={() => setShowSkillTypeahead(false)}
       />
       <AgentTypeahead
         referenceElement={textareaRef}

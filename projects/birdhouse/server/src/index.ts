@@ -8,24 +8,22 @@ import { serveStatic } from "hono/bun";
 import { cors } from "hono/cors";
 import { pinoLogger } from "hono-pino";
 import { createPosthogDeps, withDeps } from "./dependencies";
-import { DATA_DIR, getDataDB, initDataDB } from "./lib/data-db";
+import { getDataDB, initDataDB } from "./lib/data-db";
 import { syncDevPluginSource } from "./lib/dev-plugin-sync";
 import { log, rootLogger } from "./lib/logger";
 import { OpenCodeManager } from "./lib/opencode-manager";
-import { initPatternGroupsPersistence } from "./lib/pattern-groups-db";
 import { warmRecentWorkspacesInBackground } from "./lib/startup-warmup";
 import { createAAPIMiddleware } from "./middleware/aapi";
 import { createWorkspaceMiddleware } from "./middleware/workspace";
 import { createAAPIAgentRoutes } from "./routes/aapi-agents";
 import { createAgentRoutes } from "./routes/agents";
-import { createBundleRoutes } from "./routes/bundles";
 import { createConfigRoutes } from "./routes/config";
 import { createEventRoutes } from "./routes/events";
 import { createFileRoutes } from "./routes/files";
 import { createLogRoutes } from "./routes/logs";
 import { createModelRoutes } from "./routes/models";
-import { createPatternGroupRoutes } from "./routes/pattern-groups";
 import { createPosthogRoutes } from "./routes/posthog-ingest";
+import { createSkillRoutes } from "./routes/skills";
 import { createTitleRoutes } from "./routes/title";
 import { createUserProfileRoutes } from "./routes/user-profile";
 import { createWorkspaceRoutes } from "./routes/workspaces";
@@ -85,24 +83,6 @@ const OPENCODE_BINARY = process.env.BIRDHOUSE_OPENCODE_BIN || "";
 await initDataDB();
 const dataDb = getDataDB();
 const opencodeManager = new OpenCodeManager(dataDb, OPENCODE_BINARY, PORT);
-
-// Initialize pattern groups persistence
-const patternsBasePath = join(DATA_DIR, "patterns");
-const patternGroupsPersistence = initPatternGroupsPersistence(patternsBasePath);
-
-// Seed pattern groups
-log.server.info("Seeding pattern groups...");
-
-// 1. Seed user default group
-await patternGroupsPersistence.ensureUserDefaultGroup();
-
-// 2. Seed workspace default groups for all existing workspaces
-const workspaces = dataDb.getAllWorkspaces();
-await patternGroupsPersistence.ensureAllWorkspaceDefaultGroups(workspaces);
-
-// 3. Seed Birdhouse patterns
-const { seeded, updated } = await patternGroupsPersistence.seedBirdhousePatterns();
-log.server.info({ seeded, updated }, "Birdhouse patterns seeded");
 
 // Dev mode: Ensure plugin source is available for running OpenCode from source
 // In dev, OPENCODE_PATH points to OpenCode source and we run from TypeScript
@@ -205,36 +185,13 @@ app.route("/api/config", createConfigRoutes());
 app.route("/api/user-profile", createUserProfileRoutes(dataDb));
 
 // Workspace management routes (plural - not workspace-scoped)
-app.route("/api/workspaces", createWorkspaceRoutes(dataDb, opencodeManager, patternGroupsPersistence));
-
-// Global routes (not workspace-scoped)
-app.route("/api/bundles", createBundleRoutes(dataDb));
-
-// Pattern groups route (uses workspaceId query param - needs workspace context for SSE)
-app.use("/api/pattern-groups/*", async (c, next) => {
-  const workspaceId = c.req.query("workspaceId");
-  if (workspaceId) {
-    // Load workspace context for SSE event emission
-    const workspace = dataDb.getWorkspaceById(workspaceId);
-    if (workspace) {
-      c.set("workspace", workspace);
-      try {
-        const opencode = await opencodeManager.getOrSpawnOpenCode(workspaceId);
-        c.set("opencodePort", opencode.port);
-        c.set("opencodeBase", `http://127.0.0.1:${opencode.port}`);
-      } catch (error) {
-        log.server.warn({ workspaceId, error }, "Failed to load OpenCode for pattern-groups SSE");
-      }
-    }
-  }
-  await next();
-});
-app.route("/api/pattern-groups", createPatternGroupRoutes(dataDb, patternGroupsPersistence));
+app.route("/api/workspaces", createWorkspaceRoutes(dataDb, opencodeManager));
 
 // Workspace-scoped routes (with middleware)
 app.route("/api/workspace/:workspaceId/agents", createAgentRoutes());
 app.route("/api/workspace/:workspaceId/events", createEventRoutes());
 app.route("/api/workspace/:workspaceId/models", createModelRoutes());
+app.route("/api/workspace/:workspaceId/skills", createSkillRoutes(dataDb));
 app.route("/api/workspace/:workspaceId/title", createTitleRoutes());
 app.route("/api/workspace/:workspaceId/files", createFileRoutes());
 
@@ -257,8 +214,8 @@ if (FRONTEND_STATIC) {
       endpoints: {
         health: "/api/health",
         workspaces: "/api/workspaces",
-        patternGroups: "/api/pattern-groups",
         agents: "/api/workspace/:workspaceId/agents",
+        skills: "/api/workspace/:workspaceId/skills",
         title: "/api/workspace/:workspaceId/title",
         events: "/api/workspace/:workspaceId/events (SSE)",
         files: "/api/workspace/:workspaceId/files",

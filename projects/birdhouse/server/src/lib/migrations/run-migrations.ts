@@ -10,6 +10,7 @@ import { log } from "../logger";
 // Import migrations directly so they're bundled into the compiled binary
 import * as migration_000 from "./migrations/2026-02-28_000_initial_schema";
 import * as migration_001 from "./migrations/2026-03-03_001_plaintext_secrets";
+import * as migration_002 from "./migrations/2026-03-14_002_skill_trigger_phrases";
 
 /**
  * Run all pending migrations on the data database
@@ -29,6 +30,7 @@ export async function runMigrations(dbPath: string): Promise<void> {
   const allMigrations: Record<string, Migration> = {
     "2026-02-28_000_initial_schema": migration_000,
     "2026-03-03_001_plaintext_secrets": migration_001,
+    "2026-03-14_002_skill_trigger_phrases": migration_002,
   };
 
   // When there is exactly one migration, reset Kysely's tracking tables so it

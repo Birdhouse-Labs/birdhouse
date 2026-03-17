@@ -234,7 +234,6 @@ async function generateAndUpdateTitle(
     // Call title generation service directly (no HTTP request needed)
     const result = await generateTitleService(deps, {
       message: message.trim(),
-      patternId: "title_generation_default",
     });
 
     const generatedTitle = result.title;

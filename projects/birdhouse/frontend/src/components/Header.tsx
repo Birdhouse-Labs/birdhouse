@@ -5,7 +5,7 @@ import Popover from "corvu/popover";
 import { Menu, Settings } from "lucide-solid";
 import { type Component, type JSX, Show } from "solid-js";
 import { useZIndex } from "../contexts/ZIndexContext";
-import { AgentIcon, PatternIcon } from "../design-system";
+import { AgentIcon, SkillIcon } from "../design-system";
 import { keepAgentInView, setKeepAgentInViewPreference } from "../lib/preferences";
 import { useModalRoute, useWorkspaceId } from "../lib/routing";
 import {
@@ -191,22 +191,22 @@ const Header: Component<HeaderProps> = (props) => {
         <span class="hidden sm:inline">New Agent</span>
       </Button>
 
-      {/* Right Side: Workspace Context + Patterns + Settings */}
+      {/* Right Side: Workspace Context + Skills + Settings */}
       <div class="flex items-center gap-2 flex-1 justify-end">
         {/* Workspace Context Popover */}
         <WorkspaceContextPopover />
 
-        {/* Patterns Button */}
+        {/* Skills Button */}
         <button
           type="button"
-          onClick={() => openModal("pattern-library-v2", "main")}
+          onClick={() => openModal("skill-library-v2", "main")}
           class="flex items-center justify-center p-2 rounded-lg transition-all hover:bg-surface-overlay text-text-secondary"
           aria-label="Browse skills"
           title="Browse skills"
-          data-ph-capture-attribute-button-type="open-patterns-dialog"
+          data-ph-capture-attribute-button-type="open-skills-dialog"
           data-ph-capture-attribute-workspace-id={workspaceId()}
         >
-          <PatternIcon size={18} />
+          <SkillIcon size={18} />
         </button>
 
         {/* Settings Popover */}

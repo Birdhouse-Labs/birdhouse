@@ -107,25 +107,11 @@ describe("generateTitle", () => {
         method: "POST",
         body: JSON.stringify({
           message: mockMessage,
-          pattern_id: undefined,
           source_agent_title: undefined,
         }),
       }),
     );
     expect(result).toBe("Array sorting function");
-  });
-
-  it("should include pattern_id when provided", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ title: "Custom title" }),
-    } as Response);
-
-    await generateTitle(mockWorkspaceId, mockMessage, "custom_pattern");
-
-    const call = vi.mocked(fetch).mock.calls[0]!;
-    const body = JSON.parse(call[1]?.body as string);
-    expect(body.pattern_id).toBe("custom_pattern");
   });
 
   it("should include source_agent_title when provided", async () => {
@@ -134,7 +120,7 @@ describe("generateTitle", () => {
       json: async () => ({ title: "Cloned title" }),
     } as Response);
 
-    await generateTitle(mockWorkspaceId, mockMessage, undefined, "Original Agent");
+    await generateTitle(mockWorkspaceId, mockMessage, "Original Agent");
 
     const call = vi.mocked(fetch).mock.calls[0]!;
     const body = JSON.parse(call[1]?.body as string);
@@ -146,10 +132,10 @@ describe("generateTitle", () => {
       ok: false,
       status: 400,
       statusText: "Bad Request",
-      text: async () => JSON.stringify({ error: "Invalid pattern ID" }),
+      text: async () => JSON.stringify({ error: "Invalid title request" }),
     } as Response);
 
-    await expect(generateTitle(mockWorkspaceId, mockMessage)).rejects.toThrow("Invalid pattern ID");
+    await expect(generateTitle(mockWorkspaceId, mockMessage)).rejects.toThrow("Invalid title request");
   });
 
   it("should fall back to statusText when error is not JSON", async () => {

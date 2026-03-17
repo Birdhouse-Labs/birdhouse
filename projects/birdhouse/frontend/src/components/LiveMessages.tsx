@@ -24,7 +24,6 @@ import {
 import { fetchPendingQuestions } from "../services/questions-api";
 import type { Message } from "../types/messages";
 import type { QuestionRequest } from "../types/question";
-import { prepareMessageForSending } from "../utils/messageEnrichment";
 import AgentHeader from "./AgentHeader";
 import Button from "./ui/Button";
 import ChatContainer from "./ui/ChatContainer";
@@ -456,11 +455,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     setSendError(null);
 
     try {
-      // Enrich message with pattern XML blocks
-      const enrichedContent = await prepareMessageForSending(content, workspaceId);
-
-      // Send enriched message to API (with wait=false for async operation)
-      await sendMessage(workspaceId, props.agentId, enrichedContent, {
+      await sendMessage(workspaceId, props.agentId, content, {
         agent: selectedAgent(),
         cloneAndSend: cloneMode(),
       });

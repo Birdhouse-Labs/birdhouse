@@ -145,45 +145,16 @@ export type AgentUnarchivedHandler = (payload: {
 export type ConnectionEstablishedHandler = () => void;
 
 /**
+ * Handler function for skill updated events (Birdhouse custom event)
+ * Fires when skill trigger phrases change and cache should refresh
+ */
+export type SkillUpdatedHandler = (payload: { skillName: string }) => void;
+
+/**
  * Handler function for question asked events (OpenCode question tool)
  * Fires when an AI agent pauses to ask the human a question
  */
 export type QuestionAskedHandler = (question: QuestionRequest) => void;
-
-/**
- * Handler function for pattern created events (Birdhouse custom event)
- * Fires when a new pattern is created
- */
-export type PatternCreatedHandler = (payload: {
-  patternId: string;
-  groupId: string;
-  scope: string;
-  workspaceId: string;
-  pattern: Record<string, unknown>;
-}) => void;
-
-/**
- * Handler function for pattern updated events (Birdhouse custom event)
- * Fires when a pattern's metadata or trigger phrases are updated
- */
-export type PatternUpdatedHandler = (payload: {
-  patternId: string;
-  groupId: string;
-  scope: string;
-  workspaceId: string;
-  pattern: Record<string, unknown>;
-}) => void;
-
-/**
- * Handler function for pattern deleted events (Birdhouse custom event)
- * Fires when a pattern is deleted
- */
-export type PatternDeletedHandler = (payload: {
-  patternId: string;
-  groupId: string;
-  scope: string;
-  workspaceId: string;
-}) => void;
 
 /**
  * Connection status
@@ -307,25 +278,11 @@ interface StreamingContextValue {
   subscribeToConnectionEstablished: (handler: ConnectionEstablishedHandler) => () => void;
 
   /**
-   * Subscribe to pattern created events (Birdhouse custom event)
-   * Fires when a new pattern is created
+   * Subscribe to skill updated events
+   * Fires when skill metadata changes and cache should refresh
    * @returns Cleanup function to unsubscribe
    */
-  subscribeToPatternCreated: (handler: PatternCreatedHandler) => () => void;
-
-  /**
-   * Subscribe to pattern updated events (Birdhouse custom event)
-   * Fires when a pattern's metadata or trigger phrases are updated
-   * @returns Cleanup function to unsubscribe
-   */
-  subscribeToPatternUpdated: (handler: PatternUpdatedHandler) => () => void;
-
-  /**
-   * Subscribe to pattern deleted events (Birdhouse custom event)
-   * Fires when a pattern is deleted
-   * @returns Cleanup function to unsubscribe
-   */
-  subscribeToPatternDeleted: (handler: PatternDeletedHandler) => () => void;
+  subscribeToSkillUpdated: (handler: SkillUpdatedHandler) => () => void;
 
   /**
    * Subscribe to question asked events for a specific agent
@@ -380,9 +337,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
   const agentArchivedHandlers = new Set<AgentArchivedHandler>();
   const agentUnarchivedHandlers = new Set<AgentUnarchivedHandler>();
   const connectionEstablishedHandlers = new Set<ConnectionEstablishedHandler>();
-  const patternCreatedHandlers = new Set<PatternCreatedHandler>();
-  const patternUpdatedHandlers = new Set<PatternUpdatedHandler>();
-  const patternDeletedHandlers = new Set<PatternDeletedHandler>();
+  const skillUpdatedHandlers = new Set<SkillUpdatedHandler>();
 
   // EventSource connection (managed by visibility and workspace switching)
   let eventSource: EventSource | null = null;
@@ -714,84 +669,6 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     }
   };
 
-  const handlePatternCreated = (properties: Record<string, unknown>) => {
-    const createData = properties as {
-      patternId?: string;
-      groupId?: string;
-      scope?: string;
-      workspaceId?: string;
-      pattern?: Record<string, unknown>;
-    };
-
-    if (!createData.patternId || !createData.groupId || !createData.pattern) {
-      log.api.warn("Invalid pattern.created event", properties);
-      return;
-    }
-
-    // Notify all pattern created subscribers
-    for (const handler of patternCreatedHandlers) {
-      handler({
-        patternId: createData.patternId,
-        groupId: createData.groupId,
-        scope: createData.scope || "",
-        workspaceId: createData.workspaceId || "",
-        pattern: createData.pattern,
-      });
-    }
-  };
-
-  const handlePatternUpdated = (properties: Record<string, unknown>) => {
-    const updateData = properties as {
-      patternId?: string;
-      groupId?: string;
-      scope?: string;
-      workspaceId?: string;
-      pattern?: Record<string, unknown>;
-    };
-
-    if (!updateData.patternId || !updateData.groupId || !updateData.pattern) {
-      log.api.warn("Invalid pattern.updated event", properties);
-      return;
-    }
-
-    log.api.info(`Pattern updated: ${updateData.patternId}, notifying ${patternUpdatedHandlers.size} subscribers`);
-
-    // Notify all pattern updated subscribers
-    for (const handler of patternUpdatedHandlers) {
-      handler({
-        patternId: updateData.patternId,
-        groupId: updateData.groupId,
-        scope: updateData.scope || "",
-        workspaceId: updateData.workspaceId || "",
-        pattern: updateData.pattern,
-      });
-    }
-  };
-
-  const handlePatternDeleted = (properties: Record<string, unknown>) => {
-    const deleteData = properties as {
-      patternId?: string;
-      groupId?: string;
-      scope?: string;
-      workspaceId?: string;
-    };
-
-    if (!deleteData.patternId || !deleteData.groupId) {
-      log.api.warn("Invalid pattern.deleted event", properties);
-      return;
-    }
-
-    // Notify all pattern deleted subscribers
-    for (const handler of patternDeletedHandlers) {
-      handler({
-        patternId: deleteData.patternId,
-        groupId: deleteData.groupId,
-        scope: deleteData.scope || "",
-        workspaceId: deleteData.workspaceId || "",
-      });
-    }
-  };
-
   const handleQuestionAsked = (properties: Record<string, unknown>) => {
     const questionData = properties as {
       agentId?: string;
@@ -825,6 +702,21 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
       for (const handler of handlers) {
         handler(question);
       }
+    }
+  };
+
+  const handleSkillUpdated = (properties: Record<string, unknown>) => {
+    const skillUpdate = properties as {
+      skillName?: string;
+    };
+
+    if (!skillUpdate.skillName) {
+      log.api.warn("Invalid skill.updated event", properties);
+      return;
+    }
+
+    for (const handler of skillUpdatedHandlers) {
+      handler({ skillName: skillUpdate.skillName });
     }
   };
 
@@ -876,17 +768,11 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
         case "birdhouse.agent.unarchived":
           handleAgentUnarchived(serverEvent.properties);
           break;
-        case "birdhouse.pattern.created":
-          handlePatternCreated(serverEvent.properties);
-          break;
-        case "birdhouse.pattern.updated":
-          handlePatternUpdated(serverEvent.properties);
-          break;
-        case "birdhouse.pattern.deleted":
-          handlePatternDeleted(serverEvent.properties);
-          break;
         case "question.asked":
           handleQuestionAsked(serverEvent.properties);
+          break;
+        case "birdhouse.skill.updated":
+          handleSkillUpdated(serverEvent.properties);
           break;
         case "birdhouse.connection.established":
           // Connection established - notify subscribers to refresh stale data
@@ -960,9 +846,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     agentArchivedHandlers.clear();
     agentUnarchivedHandlers.clear();
     connectionEstablishedHandlers.clear();
-    patternCreatedHandlers.clear();
-    patternUpdatedHandlers.clear();
-    patternDeletedHandlers.clear();
+    skillUpdatedHandlers.clear();
     questionAskedHandlers.clear();
   });
 
@@ -1230,35 +1114,13 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
   };
 
   /**
-   * Subscribe to pattern created events (Birdhouse custom event)
+   * Subscribe to skill updated events
    */
-  const subscribeToPatternCreated = (handler: PatternCreatedHandler): (() => void) => {
-    patternCreatedHandlers.add(handler);
+  const subscribeToSkillUpdated = (handler: SkillUpdatedHandler): (() => void) => {
+    skillUpdatedHandlers.add(handler);
 
     return () => {
-      patternCreatedHandlers.delete(handler);
-    };
-  };
-
-  /**
-   * Subscribe to pattern updated events (Birdhouse custom event)
-   */
-  const subscribeToPatternUpdated = (handler: PatternUpdatedHandler): (() => void) => {
-    patternUpdatedHandlers.add(handler);
-
-    return () => {
-      patternUpdatedHandlers.delete(handler);
-    };
-  };
-
-  /**
-   * Subscribe to pattern deleted events (Birdhouse custom event)
-   */
-  const subscribeToPatternDeleted = (handler: PatternDeletedHandler): (() => void) => {
-    patternDeletedHandlers.add(handler);
-
-    return () => {
-      patternDeletedHandlers.delete(handler);
+      skillUpdatedHandlers.delete(handler);
     };
   };
 
@@ -1300,9 +1162,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     subscribeToAgentArchived,
     subscribeToAgentUnarchived,
     subscribeToConnectionEstablished,
-    subscribeToPatternCreated,
-    subscribeToPatternUpdated,
-    subscribeToPatternDeleted,
+    subscribeToSkillUpdated,
     subscribeToQuestionAsked,
     connectionStatus,
   };

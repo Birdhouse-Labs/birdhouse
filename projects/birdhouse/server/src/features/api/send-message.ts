@@ -9,6 +9,7 @@ import { findSafeClonePoint } from "../../domain/clone-point";
 import type { AgentRow } from "../../lib/agents-db";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "../../lib/birdhouse-system-prompt";
 import { getWorkspaceStream } from "../../lib/opencode-stream";
+import { buildSkillAttachmentPreview, enrichMessageWithSkillAttachments } from "../../lib/skill-attachments";
 import { syncAgentTitle } from "../../lib/sync-agent-title";
 
 import { generateTitle as generateTitleService } from "../../lib/title-generator";
@@ -40,6 +41,17 @@ export async function sendMessage(
   const agentId = c.req.param("id");
   const { text, agent: agentName, clone_and_send, metadata } = await c.req.json();
   const workspaceRoot = workspaceDir;
+  const visibleSkills = await deps.opencode.listSkills();
+  const enrichedText = enrichMessageWithSkillAttachments(
+    text,
+    buildSkillAttachmentPreview(
+      text,
+      visibleSkills.map((skill) => ({
+        name: skill.name,
+        content: skill.content,
+      })),
+    ),
+  );
 
   // Check for wait query parameter (default: true for blocking)
   const waitParam = c.req.query("wait");
@@ -243,7 +255,7 @@ export async function sendMessage(
     {
       agentId: targetAgent.id,
       sessionId: targetAgent.session_id,
-      textLength: text.length,
+      textLength: enrichedText.length,
       model: targetAgent.model,
       wait: shouldWait,
       isClone: !!clonedAgent,
@@ -260,7 +272,7 @@ export async function sendMessage(
   const messageParts: TextPartInput[] = [
     {
       type: "text",
-      text: text,
+      text: enrichedText,
       ...(metadata && { metadata }),
     },
   ];
@@ -383,7 +395,6 @@ async function generateAndUpdateTitleForClone(
     // Call title generation service directly (no HTTP request needed)
     const result = await generateTitleService(deps, {
       message: contextMessage.trim(),
-      patternId: "title_generation_default",
     });
 
     const generatedTitle = result.title;

@@ -3,6 +3,7 @@
 
 import type { Deps } from "../dependencies";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "./birdhouse-system-prompt";
+import { buildSkillAttachmentPreview, enrichMessageWithSkillAttachments } from "./skill-attachments";
 
 export interface SendFirstMessageOptions {
   agentId: string;
@@ -39,6 +40,18 @@ export async function sendFirstMessage(
   const { agentId, sessionId, model, prompt, wait, agent, senderMetadata } = options;
   const { opencode, agentsDB, log, telemetry } = deps;
 
+  const visibleSkills = await opencode.listSkills();
+  const enrichedPrompt = enrichMessageWithSkillAttachments(
+    prompt,
+    buildSkillAttachmentPreview(
+      prompt,
+      visibleSkills.map((skill) => ({
+        name: skill.name,
+        content: skill.content,
+      })),
+    ),
+  );
+
   // Parse model format: "provider/model-id"
   const [providerID, modelID] = model.split("/");
   if (!providerID || !modelID) {
@@ -49,7 +62,7 @@ export async function sendFirstMessage(
     // Blocking mode: Wait for agent to complete before returning
     log.server.info({ agent_id: agentId, session_id: sessionId, wait }, "Sending first message (blocking)");
 
-    const messageResponse = await opencode.sendMessage(sessionId, prompt, {
+    const messageResponse = await opencode.sendMessage(sessionId, enrichedPrompt, {
       model: { providerID, modelID },
       system: BIRDHOUSE_SYSTEM_PROMPT,
       ...(agent && { agent }),
@@ -73,7 +86,7 @@ export async function sendFirstMessage(
     log.server.info({ agent_id: agentId, session_id: sessionId, wait }, "Sending first message (async)");
 
     opencode
-      .sendMessage(sessionId, prompt, {
+      .sendMessage(sessionId, enrichedPrompt, {
         model: { providerID, modelID },
         system: BIRDHOUSE_SYSTEM_PROMPT,
         ...(agent && { agent }),

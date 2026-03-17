@@ -183,16 +183,7 @@ console.log('✅ Server binaries compiled (arm64 + x64)');
 console.log('');
 
 // ============================================================================
-// Step 4: Copy Pattern Bundles Directory
-// ============================================================================
-console.log('📦 Copying pattern-bundles directory...');
-const PATTERN_BUNDLES_DIR = join(PROJECT_ROOT, 'pattern-bundles');
-cpSync(PATTERN_BUNDLES_DIR, join(CLI_DIST, 'dist', 'pattern-bundles'), { recursive: true });
-console.log('✅ Pattern bundles directory copied');
-console.log('');
-
-// ============================================================================
-// Step 5: Build OpenCode Binary (with embedded Birdhouse plugin)
+// Step 4: Build OpenCode Binary (with embedded Birdhouse plugin)
 // ============================================================================
 console.log('⚡ Building OpenCode binary...');
 
@@ -367,4 +358,4 @@ console.log('✅ Build complete!');
 console.log(`📦 Distribution ready at: ${CLI_DIST}`);
 console.log('');
 console.log('To create release tarballs:');
-console.log(`  cd ${CLI_DIST} && tar -czvf birdhouse-darwin-arm64.tar.gz dist/birdhouse-darwin-arm64 dist/server-darwin-arm64 dist/opencode/darwin-arm64 dist/frontend dist/pattern-bundles bin/ version.json`);
+console.log(`  cd ${CLI_DIST} && tar -czvf birdhouse-darwin-arm64.tar.gz dist/birdhouse-darwin-arm64 dist/server-darwin-arm64 dist/opencode/darwin-arm64 dist/frontend bin/ version.json`);

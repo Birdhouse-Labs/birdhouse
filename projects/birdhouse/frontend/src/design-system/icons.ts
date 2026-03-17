@@ -10,10 +10,10 @@ import { Bot, FolderCode, LibraryBig, Palette } from "lucide-solid";
 export const AgentIcon = Bot;
 
 /**
- * Icon representing a pattern (reusable prompt template)
- * Used in: patterns button, pattern dialogs, pattern references
+ * Icon representing the skills library
+ * Used in: skills button, skills dialogs, and attachment affordances
  */
-export const PatternIcon = LibraryBig;
+export const SkillIcon = LibraryBig;
 
 /**
  * Icon representing a workspace (code project directory)

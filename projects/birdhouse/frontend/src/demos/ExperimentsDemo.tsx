@@ -27,18 +27,11 @@ let headerTitleExperiments: Array<{
   metadata: { id: string; title: string; description?: string; date?: string };
 }> = [];
 
-let patternLibraryUiExperiments: Array<{
-  id: string;
-  component: Component;
-  metadata: { id: string; title: string; description?: string; date?: string };
-}> = [];
-
 try {
   const experimentsModule = await import("../experiments");
   primaryButtonExperiments = experimentsModule.primaryButtonsExperiments || [];
   agentTopBarExperiments = experimentsModule.agentTopBarExperiments || [];
   headerTitleExperiments = experimentsModule.headerTitleExperiments || [];
-  patternLibraryUiExperiments = experimentsModule.patternLibraryUiExperiments || [];
 } catch {
   // No experiments yet - that's okay!
 }
@@ -56,13 +49,6 @@ interface Exploration {
 }
 
 const explorations: Exploration[] = [
-  {
-    id: "pattern-library-ui",
-    name: "Skills Library UI",
-    description:
-      "Install and browse UI designs for the skills library feature. Exploring different approaches to organizing, discovering, and installing skills.",
-    experiments: patternLibraryUiExperiments,
-  },
   {
     id: "header-title",
     name: "Header Title",
