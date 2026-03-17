@@ -2,8 +2,6 @@
 // ABOUTME: Provides helpers for user identification and toolbar controls
 
 import posthog from "posthog-js";
-import "posthog-js/dist/recorder";
-import "posthog-js/dist/external-scripts-loader";
 import { log } from "./logger";
 
 const posthogKey = "phc_LwyUqyfUjlP28aI98eE2K7jA6mdTboPZYRuKotWsoYI";

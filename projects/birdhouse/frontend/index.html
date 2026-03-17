@@ -16,6 +16,9 @@
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
 
+    <!-- PostHog session recorder - loaded as vendor script so it is pre-registered
+         before posthog.init runs, bypassing disable_external_dependency_loading -->
+    <script src="/vendor/posthog-recorder.js"></script>
     <script src="/src/index.tsx" type="module"></script>
   </body>
 </html>

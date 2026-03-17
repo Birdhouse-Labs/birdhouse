@@ -20,7 +20,8 @@
     "test": "bun --bun vitest run --passWithNoTests",
     "test:watch": "bun --bun vitest",
     "check": "bun run generate:themes && bun run validate:themes && bun run typecheck && bun run lint && bun run lint:css && bun run test && bun run build",
-    "fix": "biome check --write src"
+    "fix": "biome check --write src",
+    "update:posthog-vendor": "node scripts/update-posthog-vendor.js"
   },
   "license": "MIT",
   "devDependencies": {
