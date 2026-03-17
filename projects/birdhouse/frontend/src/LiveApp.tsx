@@ -82,7 +82,7 @@ const LiveApp: Component<LiveAppProps> = (props) => {
   const [agentTrees, setAgentTrees] = createStore<TreeNode[]>([]);
   const [isLoading, setIsLoading] = createSignal(true);
   const [error, setError] = createSignal<Error | null>(null);
-  const { currentModal, modalStack, openModal, closeModal } = useModalRoute();
+  const { modalStack, openModal, closeModal } = useModalRoute();
 
   // Search state
   const [searchQuery, setSearchQuery] = createSignal("");
@@ -96,7 +96,6 @@ const LiveApp: Component<LiveAppProps> = (props) => {
   const flatMode = createMemo(() => searchResults() !== null && !includeTrees());
 
   const agentModalStack = createMemo(() => modalStack().filter((modal) => modal.type === "agent"));
-  const isTopAgentModal = (agentId: string) => currentModal()?.type === "agent" && currentModal()?.id === agentId;
 
   // Modal navigation handlers
   const openAgentModal = (agentId: string) => {
@@ -706,7 +705,7 @@ const LiveApp: Component<LiveAppProps> = (props) => {
           <AgentModal
             agentId={modal.id}
             navigationDepth={index() + 1}
-            isTop={isTopAgentModal(modal.id)}
+            isTop={index() === agentModalStack().length - 1}
             onClose={closeModal}
             onOpenAgentModal={openAgentModal}
           />

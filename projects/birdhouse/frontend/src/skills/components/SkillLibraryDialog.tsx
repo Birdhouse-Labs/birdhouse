@@ -1,14 +1,13 @@
 // ABOUTME: Main full-screen dialog for the flat skills library shell.
 // ABOUTME: Preserves the outer library dialog while replacing grouped navigation with flat list search and filtering.
 
-import { useSearchParams } from "@solidjs/router";
 import Dialog from "corvu/dialog";
 import Resizable from "corvu/resizable";
 import { Menu, X } from "lucide-solid";
-import { type Component, createEffect, createMemo, createResource, createSignal, Show } from "solid-js";
+import { type Component, createEffect, createMemo, createResource, createSignal, on, Show } from "solid-js";
 import MobileNavDrawer from "../../components/MobileNavDrawer";
 import { Button } from "../../components/ui";
-import { serializeModalStack, useModalRoute } from "../../lib/routing";
+import { useModalRoute } from "../../lib/routing";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
 import { createMediaQuery } from "../../theme/createMediaQuery";
 import { fetchSkill, fetchSkillLibrary, updateTriggerPhrases } from "../services/skill-library-api";
@@ -69,8 +68,7 @@ export interface SkillLibraryDialogProps {
 }
 
 const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
-  const { closeModal, modalStack } = useModalRoute();
-  const [_searchParams, setSearchParams] = useSearchParams<{ modals?: string }>();
+  const { closeModal, modalStack, replaceModal } = useModalRoute();
   const isDesktop = createMediaQuery("(min-width: 768px)");
   const [sidebarOpen, setSidebarOpen] = createSignal(true);
   const [searchQuery, setSearchQuery] = createSignal("");
@@ -142,10 +140,7 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
     if (skillId) {
       setStoredSelectedSkillId(skillId);
     }
-    const updatedStack = modalStack()
-      .filter((modal) => modal.type === MODAL_TYPE_LIBRARY)
-      .map(() => ({ type: MODAL_TYPE_LIBRARY, id: nextId }));
-    setSearchParams({ modals: serializeModalStack(updatedStack) });
+    replaceModal(MODAL_TYPE_LIBRARY, nextId);
 
     if (!isDesktop()) {
       setSidebarOpen(false);
@@ -170,19 +165,24 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
     }
   };
 
-  createEffect(() => {
-    if (libraryData.error) return;
+  createEffect(
+    on(
+      [selectedSkillId, storedSelectedSkillId, filteredSkills, () => !!libraryData(), () => libraryData.error],
+      ([currentSelectedSkillId, currentStoredSkillId, currentFilteredSkills, hasLoaded, hasError]) => {
+        if (hasError) return;
 
-    const nextSelectedSkillId = resolveSelectedSkillIdAfterLoad(
-      selectedSkillId() ?? storedSelectedSkillId(),
-      filteredSkills().map((skill) => skill.id),
-      !!libraryData(),
-    );
+        const nextSelectedSkillId = resolveSelectedSkillIdAfterLoad(
+          currentSelectedSkillId ?? currentStoredSkillId,
+          currentFilteredSkills.map((skill) => skill.id),
+          hasLoaded,
+        );
 
-    if (selectedSkillId() !== nextSelectedSkillId) {
-      selectSkill(nextSelectedSkillId);
-    }
-  });
+        if (currentSelectedSkillId !== nextSelectedSkillId) {
+          selectSkill(nextSelectedSkillId);
+        }
+      },
+    ),
+  );
 
   const listPane = () => (
     <SkillListPane

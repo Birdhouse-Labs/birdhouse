@@ -161,6 +161,24 @@ export function popModalStack(stack: ModalState[]): ModalState[] {
   return stack.slice(0, -1);
 }
 
+export function replaceModalByType(stack: ModalState[], type: string, id: string): ModalState[] {
+  let changed = false;
+  const next = stack.map((modal) => {
+    if (modal.type !== type) return modal;
+    if (modal.id === id) return modal;
+
+    changed = true;
+    const cacheKey = `${type}/${id}`;
+    let updated = modalCache.get(cacheKey);
+    if (!updated) {
+      updated = { type, id };
+      modalCache.set(cacheKey, updated);
+    }
+    return updated;
+  });
+  return changed ? next : stack;
+}
+
 /**
  * Hook for URL-driven modal state using query parameters
  * Format: ?modals=type/id,type/id (e.g., ?modals=workspace_config/ws_123)
@@ -185,6 +203,14 @@ export function useModalRoute() {
     setSearchParams({ modals: serializeModalStack(nextStack) });
   };
 
+  const replaceModal = (type: string, id: string) => {
+    const stack = modalStack();
+    const nextStack = replaceModalByType(stack, type, id);
+    if (nextStack === stack) return;
+
+    setSearchParams({ modals: serializeModalStack(nextStack) });
+  };
+
   const closeModal = () => {
     const stack = modalStack();
     const nextStack = popModalStack(stack);
@@ -201,6 +227,7 @@ export function useModalRoute() {
     modalStack,
     currentModal,
     openModal,
+    replaceModal,
     closeModal,
     isModalOpen,
   };

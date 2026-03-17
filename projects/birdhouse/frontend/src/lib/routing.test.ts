@@ -3,7 +3,7 @@
 // ABOUTME: Ensures modal stack URLs round-trip consistently
 
 import { describe, expect, test } from "vitest";
-import { parseModalStack, popModalStack, pushModalStack, serializeModalStack } from "./routing";
+import { parseModalStack, popModalStack, pushModalStack, replaceModalByType, serializeModalStack } from "./routing";
 
 describe("parseModalStack", () => {
   test("returns empty array for undefined", () => {
@@ -89,5 +89,39 @@ describe("popModalStack", () => {
         { type: "workspace_config", id: "ws_123" },
       ]),
     ).toEqual([{ type: "agent", id: "agent_1" }]);
+  });
+});
+
+describe("replaceModalByType", () => {
+  test("replaces entry of matching type with new id", () => {
+    expect(
+      replaceModalByType([{ type: "skill-library-v2", id: "main" }], "skill-library-v2", "skill-123"),
+    ).toEqual([{ type: "skill-library-v2", id: "skill-123" }]);
+  });
+
+  test("leaves non-matching types untouched", () => {
+    expect(
+      replaceModalByType(
+        [
+          { type: "agent", id: "agent_1" },
+          { type: "skill-library-v2", id: "main" },
+        ],
+        "skill-library-v2",
+        "skill-123",
+      ),
+    ).toEqual([
+      { type: "agent", id: "agent_1" },
+      { type: "skill-library-v2", id: "skill-123" },
+    ]);
+  });
+
+  test("returns same array reference when id is already correct", () => {
+    const stack = [{ type: "skill-library-v2", id: "skill-123" }];
+    expect(replaceModalByType(stack, "skill-library-v2", "skill-123")).toBe(stack);
+  });
+
+  test("returns same array reference when type is not in stack", () => {
+    const stack = [{ type: "agent", id: "agent_1" }];
+    expect(replaceModalByType(stack, "skill-library-v2", "skill-123")).toBe(stack);
   });
 });
