@@ -242,18 +242,10 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
         </DetailSection>
       </Show>
 
-      <DetailSection title="What Gets Sent to the LLM" defaultExpanded={false}>
+      <DetailSection title="SKILL.md Content" defaultExpanded={false}>
         <div class={`rounded-xl ${cardSurfaceFlat} overflow-hidden`}>
-          <div class="px-4 py-2 bg-surface-overlay border-b border-border-muted font-mono text-xs text-text-muted">
-            &lt;skill name="{props.pattern.title}"&gt;
-          </div>
-
           <div class="p-6">
             <MarkdownRenderer content={props.pattern.prompt} />
-          </div>
-
-          <div class="px-4 py-2 bg-surface-overlay border-t border-border-muted font-mono text-xs text-text-muted">
-            &lt;/skill&gt;
           </div>
         </div>
       </DetailSection>
