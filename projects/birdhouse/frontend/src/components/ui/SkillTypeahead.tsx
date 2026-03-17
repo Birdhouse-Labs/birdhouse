@@ -38,9 +38,9 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
   let listRef: HTMLElement | undefined;
 
   // Find the longest prefix match by looking backwards from cursor
-  // Returns patterns that match + the matched text and its position
+  // Returns skills that match plus the matched text and its position
   interface MatchResult {
-      skill: SkillSuggestion;
+    skill: SkillSuggestion;
     matchedPhrase: string; // Which trigger phrase matched
     matchedText: string; // What the user actually typed
     startIndex: number; // Where the match starts in the input
