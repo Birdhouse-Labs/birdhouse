@@ -93,6 +93,7 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
   });
 
   const skills = createMemo(() => libraryData()?.skills ?? []);
+  const hasVisibleLibraryData = createMemo(() => !libraryData.error && skills().length > 0);
 
   const filteredSkills = createMemo(() => filterSkills(skills(), searchQuery(), scopeFilter()));
 
@@ -196,6 +197,29 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
     />
   );
 
+  const listPaneContent = () => (
+    <>
+      <Show when={hasVisibleLibraryData()}>{listPane()}</Show>
+
+      <Show when={libraryData.loading && !hasVisibleLibraryData()}>
+        <div class="flex items-center justify-center p-8">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
+        </div>
+      </Show>
+
+      <Show when={libraryData.error && !hasVisibleLibraryData()}>
+        <div class="flex items-center justify-center p-8">
+          <div class="text-center space-y-4">
+            <p class="text-sm text-danger">Failed to load library</p>
+            <Button variant="secondary" onClick={() => refetchLibrary()}>
+              Retry
+            </Button>
+          </div>
+        </div>
+      </Show>
+    </>
+  );
+
   return (
     <Dialog
       open={isLibraryOpen()}
@@ -251,26 +275,7 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
                     trigger={null}
                     zIndex={110}
                   >
-                    <div class="h-full bg-surface-raised overflow-hidden flex flex-col">
-                      <Show when={!libraryData.loading && !libraryData.error}>{listPane()}</Show>
-
-                      <Show when={libraryData.loading}>
-                        <div class="flex items-center justify-center p-8">
-                          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
-                        </div>
-                      </Show>
-
-                      <Show when={libraryData.error}>
-                        <div class="flex items-center justify-center p-8">
-                          <div class="text-center space-y-4">
-                            <p class="text-sm text-danger">Failed to load library</p>
-                            <Button variant="secondary" onClick={() => refetchLibrary()}>
-                              Retry
-                            </Button>
-                          </div>
-                        </div>
-                      </Show>
-                    </div>
+                    <div class="h-full bg-surface-raised overflow-hidden flex flex-col">{listPaneContent()}</div>
                   </MobileNavDrawer>
 
                   <SkillDetailPane
@@ -293,24 +298,7 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
                       maxSize={0.5}
                       class="h-full bg-surface-raised rounded-lg overflow-hidden flex flex-col"
                     >
-                      <Show when={!libraryData.loading && !libraryData.error}>{listPane()}</Show>
-
-                      <Show when={libraryData.loading}>
-                        <div class="flex items-center justify-center p-8">
-                          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
-                        </div>
-                      </Show>
-
-                      <Show when={libraryData.error}>
-                        <div class="flex items-center justify-center p-8">
-                          <div class="text-center space-y-4">
-                            <p class="text-sm text-danger">Failed to load library</p>
-                            <Button variant="secondary" onClick={() => refetchLibrary()}>
-                              Retry
-                            </Button>
-                          </div>
-                        </div>
-                      </Show>
+                      {listPaneContent()}
                     </Resizable.Panel>
 
                     <Resizable.Handle
