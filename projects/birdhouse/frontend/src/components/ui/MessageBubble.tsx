@@ -24,9 +24,9 @@ import EventDivider from "./EventDivider";
 import IconButton from "./IconButton";
 import MenuItemButton from "./MenuItemButton";
 import MessageBubbleContent from "./MessageBubbleContent";
-import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
 import QuestionToolCard from "./QuestionToolCard";
 import ReasoningBlock from "./ReasoningBlock";
+import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
 import ToolCallCard from "./ToolCallCard";
 import AgentManagementCard from "./tools/AgentManagementCard";
 import DocumentationToolCard from "./tools/DocumentationToolCard";
@@ -399,7 +399,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
             }}
           />
 
-          {/* Pattern attachments button - only show for user messages with patterns */}
+          {/* Skill attachments button - only show for user messages with attached skills */}
           <Show when={attachedSkills().length > 0}>
             <div class="flex justify-start mt-2 mb-1">
               <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setPatternDialogOpen(true)}>

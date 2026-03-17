@@ -199,7 +199,7 @@ const Header: Component<HeaderProps> = (props) => {
         {/* Patterns Button */}
         <button
           type="button"
-          onClick={() => openModal("pattern-library-v2", "main")}
+          onClick={() => openModal("skill-library-v2", "main")}
           class="flex items-center justify-center p-2 rounded-lg transition-all hover:bg-surface-overlay text-text-secondary"
           aria-label="Browse skills"
           title="Browse skills"

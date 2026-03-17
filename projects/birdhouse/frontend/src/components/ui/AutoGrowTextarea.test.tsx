@@ -8,7 +8,7 @@ import AutoGrowTextarea from "./AutoGrowTextarea";
 
 vi.mock("../../contexts/SkillCacheContext", () => ({
   useSkillCache: () => ({
-    patterns: () => [
+    skills: () => [
       {
         id: "release-notes-from-branch",
         title: "release-notes-from-branch",
@@ -23,7 +23,7 @@ vi.mock("../../contexts/SkillCacheContext", () => ({
     loading: () => false,
     error: () => null,
     refetch: async () => {},
-    getPattern: () => undefined,
+    getSkill: () => undefined,
   }),
 }));
 

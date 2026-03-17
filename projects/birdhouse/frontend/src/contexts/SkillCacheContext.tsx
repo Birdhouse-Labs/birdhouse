@@ -12,7 +12,7 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { log } from "../lib/logger";
-import { fetchPatternLibrary } from "../patterns/services/pattern-library-api";
+import { fetchSkillLibrary } from "../skills/services/skill-library-api";
 import { useStreaming } from "./StreamingContext";
 import { useWorkspace } from "./WorkspaceContext";
 
@@ -26,7 +26,7 @@ interface SkillCacheContextValue {
   /**
    * Cached visible skills with trigger phrases for the current workspace
    */
-  patterns: Accessor<CachedSkillMetadata[]>;
+  skills: Accessor<CachedSkillMetadata[]>;
 
   /**
    * Loading state for initial fetch
@@ -44,9 +44,9 @@ interface SkillCacheContextValue {
   refetch: () => Promise<void>;
 
   /**
-   * Get single pattern by ID (from cache)
+   * Get single skill by ID (from cache)
    */
-  getPattern: (id: string) => CachedSkillMetadata | undefined;
+  getSkill: (id: string) => CachedSkillMetadata | undefined;
 }
 
 const SkillCacheContext = createContext<SkillCacheContextValue>();
@@ -63,27 +63,27 @@ export const SkillCacheProvider: ParentComponent = (props) => {
   const { workspaceId } = useWorkspace();
   const streaming = useStreaming();
 
-  const [patternsStore, setPatternsStore] = createStore<CachedSkillMetadata[]>([]);
+  const [skillsStore, setSkillsStore] = createStore<CachedSkillMetadata[]>([]);
 
   const fetchVisibleSkills = async (currentWorkspaceId: string): Promise<CachedSkillMetadata[]> => {
-    const library = await fetchPatternLibrary(currentWorkspaceId);
-    return library.skills.map((pattern) => ({
-      id: pattern.id,
-      title: pattern.title,
-      triggerPhrases: pattern.trigger_phrases,
+    const library = await fetchSkillLibrary(currentWorkspaceId);
+    return library.skills.map((skill) => ({
+      id: skill.id,
+      title: skill.title,
+      triggerPhrases: skill.trigger_phrases,
     }));
   };
 
-  const [patternsResource, { refetch: resourceRefetch }] = createResource(workspaceId, fetchVisibleSkills);
+  const [skillsResource, { refetch: resourceRefetch }] = createResource(workspaceId, fetchVisibleSkills);
 
   // Sync resource data to store when it arrives
   createEffect(() => {
-    if (patternsResource.error) {
+    if (skillsResource.error) {
       return;
     }
-    const data = patternsResource();
+    const data = skillsResource();
     if (data) {
-      setPatternsStore(data);
+      setSkillsStore(data);
     }
   });
 
@@ -101,16 +101,16 @@ export const SkillCacheProvider: ParentComponent = (props) => {
     onCleanup(unsubscribe);
   });
 
-  const getPattern = (id: string): CachedSkillMetadata | undefined => {
-    return patternsStore.find((p) => p.id === id);
+  const getSkill = (id: string): CachedSkillMetadata | undefined => {
+    return skillsStore.find((skill) => skill.id === id);
   };
 
   const value: SkillCacheContextValue = {
-    patterns: () => patternsStore,
-    loading: () => patternsResource.loading,
-    error: () => patternsResource.error ?? null,
+    skills: () => skillsStore,
+    loading: () => skillsResource.loading,
+    error: () => skillsResource.error ?? null,
     refetch,
-    getPattern,
+    getSkill,
   };
 
   return <SkillCacheContext.Provider value={value}>{props.children}</SkillCacheContext.Provider>;

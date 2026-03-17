@@ -294,7 +294,7 @@ const NewAgent: Component = () => {
           {isCreating() ? "Launching..." : "Launch Agent"}
         </Button>
 
-        {/* Pattern indicator - spacer button prevents layout jump */}
+        {/* Skill indicator - spacer button prevents layout jump */}
         <div class="flex justify-center">
           <Show
             when={patternCount() > 0}
@@ -324,7 +324,7 @@ const NewAgent: Component = () => {
         </div>
       </Show>
 
-      {/* Pattern references dialog */}
+      {/* Skill attachments dialog */}
       <SkillAttachmentsDialog
         attachments={visibleSkillAttachments()}
         open={patternDialogOpen()}

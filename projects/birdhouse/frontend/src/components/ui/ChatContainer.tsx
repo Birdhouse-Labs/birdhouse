@@ -149,7 +149,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
           </Show>
         </div>
 
-        {/* Pattern count button - appears below input in the padding area */}
+        {/* Skill count button - appears below input in the padding area */}
         <Show when={patternCount() > 0}>
           <div class="flex justify-end mt-2 -mb-1">
             <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setDialogOpen(true)}>
@@ -159,7 +159,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
         </Show>
       </div>
 
-      {/* Pattern References Dialog */}
+      {/* Skill Attachments Dialog */}
       <SkillAttachmentsDialog
         attachments={visibleSkillAttachments()}
         open={dialogOpen()}

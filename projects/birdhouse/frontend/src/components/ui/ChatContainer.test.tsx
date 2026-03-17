@@ -24,11 +24,11 @@ vi.mock("../../contexts/WorkspaceContext", () => ({
 
 vi.mock("../../contexts/SkillCacheContext", () => ({
   useSkillCache: () => ({
-    patterns: () => [],
+    skills: () => [],
     loading: () => false,
     error: () => null,
     refetch: async () => {},
-    getPattern: () => undefined,
+    getSkill: () => undefined,
   }),
 }));
 
