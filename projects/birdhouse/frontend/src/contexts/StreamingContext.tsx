@@ -145,6 +145,12 @@ export type AgentUnarchivedHandler = (payload: {
 export type ConnectionEstablishedHandler = () => void;
 
 /**
+ * Handler function for skill updated events (Birdhouse custom event)
+ * Fires when skill trigger phrases change and cache should refresh
+ */
+export type SkillUpdatedHandler = (payload: { skillName: string }) => void;
+
+/**
  * Handler function for question asked events (OpenCode question tool)
  * Fires when an AI agent pauses to ask the human a question
  */
@@ -272,6 +278,13 @@ interface StreamingContextValue {
   subscribeToConnectionEstablished: (handler: ConnectionEstablishedHandler) => () => void;
 
   /**
+   * Subscribe to skill updated events
+   * Fires when skill metadata changes and cache should refresh
+   * @returns Cleanup function to unsubscribe
+   */
+  subscribeToSkillUpdated: (handler: SkillUpdatedHandler) => () => void;
+
+  /**
    * Subscribe to question asked events for a specific agent
    * Fires when an AI agent pauses to ask the human a question via the question tool
    * @returns Cleanup function to unsubscribe
@@ -324,6 +337,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
   const agentArchivedHandlers = new Set<AgentArchivedHandler>();
   const agentUnarchivedHandlers = new Set<AgentUnarchivedHandler>();
   const connectionEstablishedHandlers = new Set<ConnectionEstablishedHandler>();
+  const skillUpdatedHandlers = new Set<SkillUpdatedHandler>();
 
   // EventSource connection (managed by visibility and workspace switching)
   let eventSource: EventSource | null = null;
@@ -691,6 +705,21 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     }
   };
 
+  const handleSkillUpdated = (properties: Record<string, unknown>) => {
+    const skillUpdate = properties as {
+      skillName?: string;
+    };
+
+    if (!skillUpdate.skillName) {
+      log.api.warn("Invalid skill.updated event", properties);
+      return;
+    }
+
+    for (const handler of skillUpdatedHandlers) {
+      handler({ skillName: skillUpdate.skillName });
+    }
+  };
+
   const handleMessage = (event: MessageEvent) => {
     try {
       const serverEvent: ServerEvent = JSON.parse(event.data);
@@ -741,6 +770,9 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
           break;
         case "question.asked":
           handleQuestionAsked(serverEvent.properties);
+          break;
+        case "birdhouse.skill.updated":
+          handleSkillUpdated(serverEvent.properties);
           break;
         case "birdhouse.connection.established":
           // Connection established - notify subscribers to refresh stale data
@@ -814,6 +846,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     agentArchivedHandlers.clear();
     agentUnarchivedHandlers.clear();
     connectionEstablishedHandlers.clear();
+    skillUpdatedHandlers.clear();
     questionAskedHandlers.clear();
   });
 
@@ -1081,6 +1114,17 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
   };
 
   /**
+   * Subscribe to skill updated events
+   */
+  const subscribeToSkillUpdated = (handler: SkillUpdatedHandler): (() => void) => {
+    skillUpdatedHandlers.add(handler);
+
+    return () => {
+      skillUpdatedHandlers.delete(handler);
+    };
+  };
+
+  /**
    * Subscribe to question asked events for a specific agent
    */
   const subscribeToQuestionAsked = (agentId: string, handler: QuestionAskedHandler): (() => void) => {
@@ -1118,6 +1162,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     subscribeToAgentArchived,
     subscribeToAgentUnarchived,
     subscribeToConnectionEstablished,
+    subscribeToSkillUpdated,
     subscribeToQuestionAsked,
     connectionStatus,
   };

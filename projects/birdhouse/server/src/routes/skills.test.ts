@@ -9,7 +9,7 @@ import { createTestDeps, withDeps } from "../dependencies";
 import { DataDB, type Workspace } from "../lib/data-db";
 import { runMigrations } from "../lib/migrations/run-migrations";
 import type { Skill } from "../lib/opencode-client";
-import { createTestApp } from "../test-utils";
+import { captureStreamEvents, createTestApp } from "../test-utils";
 import { createSkillRoutes } from "./skills";
 
 const TEST_DB_PATH_BASE = join(import.meta.dir, "..", "lib", "__fixtures__", "test-skills-routes");
@@ -296,6 +296,47 @@ metadata:
       const detailResponse = await app.request(`/${encodeURIComponent("find-docs")}`);
       const detail = (await detailResponse.json()) as SkillDetailResponse;
       expect(detail.trigger_phrases).toEqual(["docs please", "reference the docs"]);
+    });
+  });
+
+  test("emits birdhouse.skill.updated after updating trigger phrases", async () => {
+    const workspace = createWorkspace("ws_1", "/repo/current-workspace");
+    testDb.insertWorkspace(workspace);
+
+    const deps = createTestDeps({
+      listSkills: async () =>
+        [
+          {
+            name: "find-docs",
+            description: "Retrieve current library docs.",
+            location: "/Users/test/.claude/skills/find-docs/SKILL.md",
+            content: "# Shared skill",
+          },
+        ] satisfies Skill[],
+    });
+
+    await withDeps(deps, async () => {
+      const { events, cleanup } = await captureStreamEvents();
+      const app = createSkillsApp(testDb, workspace);
+
+      const updateResponse = await app.request(`/${encodeURIComponent("find-docs")}/trigger-phrases`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trigger_phrases: ["docs please"],
+        }),
+      });
+
+      expect(updateResponse.status).toBe(200);
+      expect(events).toHaveLength(1);
+      expect(events[0]).toEqual({
+        type: "birdhouse.skill.updated",
+        properties: {
+          skillName: "find-docs",
+        },
+      });
+
+      cleanup();
     });
   });
 

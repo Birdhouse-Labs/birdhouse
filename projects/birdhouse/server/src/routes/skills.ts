@@ -5,6 +5,7 @@ import { dirname } from "node:path";
 import { Hono } from "hono";
 import { getDepsFromContext } from "../lib/context-deps";
 import type { DataDB } from "../lib/data-db";
+import { broadcastToAllWorkspaces } from "../lib/opencode-stream";
 import { buildSkillAttachmentPreview } from "../lib/skill-attachments";
 import {
   findSkillByName,
@@ -103,6 +104,9 @@ export function createSkillRoutes(dataDb: DataDB) {
     }
 
     dataDb.setSkillTriggerPhrases(skill.name, validated.triggerPhrases);
+    broadcastToAllWorkspaces("birdhouse.skill.updated", {
+      skillName: skill.name,
+    });
 
     return c.json({
       name: skill.name,

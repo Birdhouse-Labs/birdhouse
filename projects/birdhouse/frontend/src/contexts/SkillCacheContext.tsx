@@ -101,6 +101,15 @@ export const SkillCacheProvider: ParentComponent = (props) => {
     onCleanup(unsubscribe);
   });
 
+  createEffect(() => {
+    const unsubscribe = streaming.subscribeToSkillUpdated(() => {
+      log.ui.info("Skill updated, refreshing visible skill cache");
+      refetch();
+    });
+
+    onCleanup(unsubscribe);
+  });
+
   const getSkill = (id: string): CachedSkillMetadata | undefined => {
     return skillsStore.find((skill) => skill.id === id);
   };
