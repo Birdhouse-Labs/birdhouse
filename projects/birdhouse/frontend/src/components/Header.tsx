@@ -3,7 +3,7 @@
 
 import Popover from "corvu/popover";
 import { Menu, Settings } from "lucide-solid";
-import { type Component, type JSX, Show } from "solid-js";
+import { type Component, createSignal, type JSX, Show } from "solid-js";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { AgentIcon, SkillIcon } from "../design-system";
 import { keepAgentInView, setKeepAgentInViewPreference } from "../lib/preferences";
@@ -137,6 +137,7 @@ const Header: Component<HeaderProps> = (props) => {
   const workspaceId = useWorkspaceId();
   const baseZIndex = useZIndex();
   const { openModal } = useModalRoute();
+  const [settingsOpen, setSettingsOpen] = createSignal(false);
 
   // New Agent button href - navigate to workspace agents page
   const newAgentHref = () => {
@@ -210,7 +211,7 @@ const Header: Component<HeaderProps> = (props) => {
         </button>
 
         {/* Settings Popover */}
-        <Popover>
+        <Popover open={settingsOpen()} onOpenChange={setSettingsOpen}>
           <Popover.Trigger
             class="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all hover:bg-surface-overlay text-text-secondary"
             data-ph-capture-attribute-button-type="open-settings-popover"
@@ -308,6 +309,22 @@ const Header: Component<HeaderProps> = (props) => {
                   />
                 </div>
               </div>
+
+              <Show when={workspaceId()}>
+                <div class="mt-4 pt-4 border-t border-border">
+                  <Button
+                    variant="secondary"
+                    leftIcon={<Settings size={16} />}
+                    class="w-full"
+                    onClick={() => {
+                      setSettingsOpen(false);
+                      setTimeout(() => openModal("workspace_config", workspaceId() ?? ""), 50);
+                    }}
+                  >
+                    Workspace Settings
+                  </Button>
+                </div>
+              </Show>
 
               <Popover.Arrow class="fill-surface-raised" />
             </Popover.Content>

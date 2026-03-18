@@ -2,14 +2,15 @@
 // ABOUTME: Provides Header, full-height container, and workspace context to all workspace pages
 
 import { Navigate, useMatch } from "@solidjs/router";
-import { type Component, createEffect, createSignal, Match, Switch } from "solid-js";
+import { type Component, createEffect, createSignal, Match, Show, Switch } from "solid-js";
 import { SkillCacheProvider } from "../contexts/SkillCacheContext";
 import { StreamingProvider } from "../contexts/StreamingContext";
 import { WorkspaceProvider } from "../contexts/WorkspaceContext";
 import LiveApp from "../LiveApp";
-import { useWorkspaceId } from "../lib/routing";
+import { useModalRoute, useWorkspaceId } from "../lib/routing";
 import Playground from "../Playground";
 import { createMediaQuery } from "../theme/createMediaQuery";
+import WorkspaceConfigDialog from "../workspace-config/components/WorkspaceConfigDialog";
 import Header from "./Header";
 import WorkspaceSettings from "./WorkspaceSettings";
 
@@ -21,6 +22,7 @@ const WorkspaceLayout: Component = () => {
   const workspaceId = useWorkspaceId();
   const isDesktop = createMediaQuery("(min-width: 768px)");
   const [sidebarOpen, setSidebarOpen] = createSignal(isDesktop());
+  const { currentModal, isModalOpen, closeModal } = useModalRoute();
 
   // Route matching for conditional rendering
   const isSettings = useMatch(() => `/workspace/${workspaceId()}/settings`);
@@ -75,6 +77,21 @@ const WorkspaceLayout: Component = () => {
           </Match>
         </Switch>
       </div>
+
+      {/* Workspace config dialog — responds to ?modals=workspace_config/... from anywhere in workspace */}
+      <Show when={currentModal()?.type === "workspace_config" ? currentModal() : null} keyed>
+        {(modal) => (
+          <WorkspaceConfigDialog
+            open={true}
+            onOpenChange={(open) => {
+              if (!open && isModalOpen("workspace_config", modal.id)) {
+                closeModal();
+              }
+            }}
+            workspaceId={modal.id}
+          />
+        )}
+      </Show>
     </div>
   );
 };
