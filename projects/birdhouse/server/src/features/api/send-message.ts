@@ -8,10 +8,10 @@ import { cloneAgent } from "../../domain/agent-lifecycle";
 import { findSafeClonePoint } from "../../domain/clone-point";
 import type { AgentRow } from "../../lib/agents-db";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "../../lib/birdhouse-system-prompt";
+import { parseModelId } from "../../lib/model-validator";
 import { getWorkspaceStream } from "../../lib/opencode-stream";
 import { buildSkillAttachmentPreview, enrichMessageWithSkillAttachments } from "../../lib/skill-attachments";
 import { syncAgentTitle } from "../../lib/sync-agent-title";
-
 import { generateTitle as generateTitleService } from "../../lib/title-generator";
 import "../../types/context";
 
@@ -263,9 +263,11 @@ export async function sendMessage(
     "Sending message to agent",
   );
 
-  // Parse model string (format: "provider/model-id")
-  const [providerID, modelID] = targetAgent.model.split("/");
-  if (!providerID || !modelID) {
+  let providerID: string;
+  let modelID: string;
+  try {
+    ({ providerID, modelID } = parseModelId(targetAgent.model));
+  } catch {
     return c.json({ error: `Invalid model format in agent record: ${targetAgent.model}` }, 500);
   }
 

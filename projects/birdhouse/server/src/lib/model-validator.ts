@@ -4,6 +4,26 @@
 import type { Deps } from "../dependencies";
 
 /**
+ * Parse a model ID string into providerID and modelID parts
+ * Splits on the first "/" only — modelID may contain further slashes
+ *
+ * @param model - Model string e.g. "anthropic/claude-sonnet-4" or "fireworks-ai/accounts/fireworks/models/kimi-k2p5"
+ * @throws Error if either part is empty or the separator is missing
+ */
+export function parseModelId(model: string): { providerID: string; modelID: string } {
+  const slashIndex = model.indexOf("/");
+  if (slashIndex === -1) {
+    throw new Error(`Invalid model format: "${model}" — expected "providerID/modelID"`);
+  }
+  const providerID = model.slice(0, slashIndex);
+  const modelID = model.slice(slashIndex + 1);
+  if (!providerID || !modelID) {
+    throw new Error(`Invalid model format: "${model}" — providerID and modelID must both be non-empty`);
+  }
+  return { providerID, modelID };
+}
+
+/**
  * Validate model ID and return error message if invalid
  * Returns null if model is valid
  *
