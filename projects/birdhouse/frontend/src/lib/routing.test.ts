@@ -94,9 +94,9 @@ describe("popModalStack", () => {
 
 describe("replaceModalByType", () => {
   test("replaces entry of matching type with new id", () => {
-    expect(
-      replaceModalByType([{ type: "skill-library-v2", id: "main" }], "skill-library-v2", "skill-123"),
-    ).toEqual([{ type: "skill-library-v2", id: "skill-123" }]);
+    expect(replaceModalByType([{ type: "skill-library-v2", id: "main" }], "skill-library-v2", "skill-123")).toEqual([
+      { type: "skill-library-v2", id: "skill-123" },
+    ]);
   });
 
   test("leaves non-matching types untouched", () => {

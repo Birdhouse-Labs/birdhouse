@@ -6,14 +6,21 @@ import type { JSX } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SkillLibraryDialog from "./SkillLibraryDialog";
 
-const { setSearchParamsMock, modalStackMock, fetchSkillLibraryMock, fetchSkillMock, updateTriggerPhrasesMock } =
-  vi.hoisted(() => ({
-    setSearchParamsMock: vi.fn(),
-    modalStackMock: vi.fn(),
-    fetchSkillLibraryMock: vi.fn(),
-    fetchSkillMock: vi.fn(),
-    updateTriggerPhrasesMock: vi.fn(),
-  }));
+const {
+  setSearchParamsMock,
+  modalStackMock,
+  replaceModalMock,
+  fetchSkillLibraryMock,
+  fetchSkillMock,
+  updateTriggerPhrasesMock,
+} = vi.hoisted(() => ({
+  setSearchParamsMock: vi.fn(),
+  modalStackMock: vi.fn(),
+  replaceModalMock: vi.fn(),
+  fetchSkillLibraryMock: vi.fn(),
+  fetchSkillMock: vi.fn(),
+  updateTriggerPhrasesMock: vi.fn(),
+}));
 
 vi.mock("@solidjs/router", () => ({
   useSearchParams: () => [{}, setSearchParamsMock],
@@ -25,6 +32,18 @@ vi.mock("../../lib/routing", () => ({
   useModalRoute: () => ({
     closeModal: vi.fn(),
     modalStack: modalStackMock,
+    replaceModal: (type: string, id: string) => {
+      replaceModalMock(type, id);
+      const stack = modalStackMock();
+      const nextStack = stack.map((modal: { type: string; id: string }) =>
+        modal.type === type ? { type, id } : modal,
+      );
+      const serialized =
+        nextStack.length === 0
+          ? undefined
+          : nextStack.map((m: { type: string; id: string }) => `${m.type}/${m.id}`).join(",");
+      setSearchParamsMock({ modals: serialized });
+    },
   }),
 }));
 
@@ -75,6 +94,7 @@ describe("SkillLibraryDialog", () => {
   beforeEach(() => {
     setSearchParamsMock.mockReset();
     modalStackMock.mockReset();
+    replaceModalMock.mockReset();
     fetchSkillLibraryMock.mockReset();
     fetchSkillMock.mockReset();
     updateTriggerPhrasesMock.mockReset();
