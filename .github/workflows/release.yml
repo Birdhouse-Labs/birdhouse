@@ -66,7 +66,6 @@ jobs:
             dist/server-darwin-arm64 \
             dist/opencode/darwin-arm64 \
             dist/frontend \
-            dist/pattern-bundles \
             version.json
           tar -czf ../birdhouse-darwin-x64.tar.gz \
             bin/birdhouse \
@@ -74,7 +73,6 @@ jobs:
             dist/server-darwin-x64 \
             dist/opencode/darwin-x64 \
             dist/frontend \
-            dist/pattern-bundles \
             version.json
 
       - name: Generate checksums
