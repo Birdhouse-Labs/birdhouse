@@ -3,6 +3,7 @@
 
 import type { Deps } from "../dependencies";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "./birdhouse-system-prompt";
+import { parseModelId } from "./model-validator";
 import { buildSkillAttachmentPreview, enrichMessageWithSkillAttachments } from "./skill-attachments";
 
 export interface SendFirstMessageOptions {
@@ -52,13 +53,7 @@ export async function sendFirstMessage(
     ),
   );
 
-  // Parse model format: providerID is everything before the first "/",
-  // modelID is everything after (may itself contain "/" e.g. "accounts/fireworks/models/kimi-k2p5")
-  const [providerID, ...modelParts] = model.split("/");
-  const modelID = modelParts.join("/");
-  if (!providerID || !modelID) {
-    throw new Error(`Invalid model format: ${model}`);
-  }
+  const { providerID, modelID } = parseModelId(model);
 
   if (wait) {
     // Blocking mode: Wait for agent to complete before returning

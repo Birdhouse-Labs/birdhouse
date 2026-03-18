@@ -2,7 +2,7 @@
 // ABOUTME: Mocks OpenCode client via deps to test validation logic
 
 import { describe, expect, test } from "bun:test";
-import { validateModel } from "./model-validator";
+import { parseModelId, validateModel } from "./model-validator";
 
 describe("Model Validator", () => {
   test("returns null for valid model", async () => {
@@ -113,5 +113,27 @@ describe("Model Validator", () => {
     expect(error).not.toBeNull();
     expect(error).toContain("Invalid model: any-model");
     expect(error).toContain("Available models:");
+  });
+});
+
+describe("parseModelId", () => {
+  test("splits simple provider/model correctly", () => {
+    const result = parseModelId("anthropic/claude-sonnet-4");
+    expect(result.providerID).toBe("anthropic");
+    expect(result.modelID).toBe("claude-sonnet-4");
+  });
+
+  test("multi-segment model ID - providerID is before first slash, modelID is the rest", () => {
+    const result = parseModelId("fireworks-ai/accounts/fireworks/models/kimi-k2p5");
+    expect(result.providerID).toBe("fireworks-ai");
+    expect(result.modelID).toBe("accounts/fireworks/models/kimi-k2p5");
+  });
+
+  test("throws on missing slash", () => {
+    expect(() => parseModelId("noslash")).toThrow();
+  });
+
+  test("throws on empty string", () => {
+    expect(() => parseModelId("")).toThrow();
   });
 });
