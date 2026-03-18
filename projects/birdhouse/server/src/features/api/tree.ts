@@ -19,7 +19,8 @@ export function formatAgentTree(root: AgentNode, requestingAgentId?: string): st
     const listMarker = level === 0 ? "-" : "-";
 
     // Extract model name (strip provider prefix if present)
-    const modelDisplay = node.model.includes("/") ? node.model.split("/")[1] : node.model;
+    // Use the last path segment since some model IDs contain multiple slashes
+    const modelDisplay = node.model.includes("/") ? node.model.split("/").at(-1) : node.model;
 
     // Build markdown line: [Title](birdhouse:agent/id) **LN** `model`
     const title = `[${node.title}](birdhouse:agent/${node.id})`;

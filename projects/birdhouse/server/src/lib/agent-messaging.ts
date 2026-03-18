@@ -3,6 +3,7 @@
 
 import type { Deps } from "../dependencies";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "./birdhouse-system-prompt";
+import { parseModelId } from "./model-validator";
 import { buildSkillAttachmentPreview, enrichMessageWithSkillAttachments } from "./skill-attachments";
 
 export interface SendFirstMessageOptions {
@@ -52,11 +53,7 @@ export async function sendFirstMessage(
     ),
   );
 
-  // Parse model format: "provider/model-id"
-  const [providerID, modelID] = model.split("/");
-  if (!providerID || !modelID) {
-    throw new Error(`Invalid model format: ${model}`);
-  }
+  const { providerID, modelID } = parseModelId(model);
 
   if (wait) {
     // Blocking mode: Wait for agent to complete before returning
