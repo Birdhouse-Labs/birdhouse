@@ -154,47 +154,65 @@ const WorkspaceContextPopover: Component = () => {
                   const isCurrent = () => workspace.workspace_id === workspaceId();
                   const health = () => healthStatuses()?.get(workspace.workspace_id);
 
-                  return (
-                    <div
-                      class="flex items-center rounded-lg transition-all hover:bg-surface-overlay group"
-                      classList={{
-                        "bg-surface-overlay": isCurrent(),
-                      }}
-                    >
-                      <a
-                        href={`#/workspace/${workspace.workspace_id}/agents`}
-                        class="flex items-center gap-2 px-3 py-2 flex-1 min-w-0"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        <HealthDot health={health()} isLoading={healthStatuses.loading} />
-                        <div class="flex-1 min-w-0">
-                          <div
-                            class="text-sm font-medium truncate"
-                            classList={{
-                              "text-accent": isCurrent(),
-                              "text-text-primary": !isCurrent(),
-                            }}
-                          >
-                            {getWorkspaceDisplayName(workspace)}
-                          </div>
-                          <div class="text-xs text-text-muted truncate">{shortenPath(workspace.directory)}</div>
-                        </div>
-                      </a>
-                      <Show when={isCurrent()}>
-                        <button
-                          type="button"
-                          class="p-2 mr-1 rounded-md text-text-muted hover:text-text-primary transition-colors flex-shrink-0"
-                          aria-label="Workspace settings"
-                          title="Workspace settings"
-                          onClick={() => {
-                            setIsOpen(false);
-                            openModal("workspace_config", workspace.workspace_id);
+                  const workspaceInfo = () => (
+                    <>
+                      <HealthDot health={health()} isLoading={healthStatuses.loading} />
+                      <div class="flex-1 min-w-0">
+                        <div
+                          class="text-sm font-medium truncate"
+                          classList={{
+                            "text-accent": isCurrent(),
+                            "text-text-primary": !isCurrent(),
                           }}
                         >
-                          <Settings size={14} />
-                        </button>
-                      </Show>
-                    </div>
+                          {getWorkspaceDisplayName(workspace)}
+                        </div>
+                        <div class="text-xs text-text-muted truncate">{shortenPath(workspace.directory)}</div>
+                      </div>
+                    </>
+                  );
+
+                  return (
+                    <Show
+                      when={isCurrent()}
+                      fallback={
+                        /* Other workspaces: link to agents + gear to open settings */
+                        <div class="flex items-center rounded-lg transition-all hover:bg-surface-overlay group">
+                          <a
+                            href={`#/workspace/${workspace.workspace_id}/agents`}
+                            class="flex items-center gap-2 px-3 py-2 flex-1 min-w-0"
+                            onClick={() => setIsOpen(false)}
+                          >
+                            {workspaceInfo()}
+                          </a>
+                          <button
+                            type="button"
+                            class="p-2 mr-1 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:text-text-primary transition-all flex-shrink-0"
+                            aria-label="Workspace settings"
+                            title="Workspace settings"
+                            onClick={() => {
+                              setIsOpen(false);
+                              openModal("workspace_config", workspace.workspace_id);
+                            }}
+                          >
+                            <Settings size={14} />
+                          </button>
+                        </div>
+                      }
+                    >
+                      {/* Current workspace: entire row opens settings */}
+                      <button
+                        type="button"
+                        class="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-surface-overlay bg-surface-overlay"
+                        onClick={() => {
+                          setIsOpen(false);
+                          openModal("workspace_config", workspace.workspace_id);
+                        }}
+                      >
+                        {workspaceInfo()}
+                        <Settings size={14} class="text-text-muted flex-shrink-0 ml-auto" />
+                      </button>
+                    </Show>
                   );
                 }}
               </For>

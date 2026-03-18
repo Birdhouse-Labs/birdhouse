@@ -311,14 +311,14 @@ const Header: Component<HeaderProps> = (props) => {
 
               <Show when={workspaceId()}>
                 <div class="mt-4 pt-4 border-t border-border">
-                  <button
-                    type="button"
-                    class="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-surface-overlay text-text-secondary text-sm font-medium"
+                  <Button
+                    variant="secondary"
+                    leftIcon={<Settings size={16} />}
+                    class="w-full"
                     onClick={() => openModal("workspace_config", workspaceId() ?? "")}
                   >
-                    <Settings size={16} class="text-text-muted" />
                     Workspace Settings
-                  </button>
+                  </Button>
                 </div>
               </Show>
 
