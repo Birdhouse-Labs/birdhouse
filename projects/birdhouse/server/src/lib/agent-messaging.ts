@@ -52,8 +52,10 @@ export async function sendFirstMessage(
     ),
   );
 
-  // Parse model format: "provider/model-id"
-  const [providerID, modelID] = model.split("/");
+  // Parse model format: providerID is everything before the first "/",
+  // modelID is everything after (may itself contain "/" e.g. "accounts/fireworks/models/kimi-k2p5")
+  const [providerID, ...modelParts] = model.split("/");
+  const modelID = modelParts.join("/");
   if (!providerID || !modelID) {
     throw new Error(`Invalid model format: ${model}`);
   }

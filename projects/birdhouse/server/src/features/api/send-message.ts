@@ -263,8 +263,10 @@ export async function sendMessage(
     "Sending message to agent",
   );
 
-  // Parse model string (format: "provider/model-id")
-  const [providerID, modelID] = targetAgent.model.split("/");
+  // Parse model string: providerID is everything before the first "/",
+  // modelID is everything after (may itself contain "/" e.g. "accounts/fireworks/models/kimi-k2p5")
+  const [providerID, ...modelParts] = targetAgent.model.split("/");
+  const modelID = modelParts.join("/");
   if (!providerID || !modelID) {
     return c.json({ error: `Invalid model format in agent record: ${targetAgent.model}` }, 500);
   }
