@@ -315,7 +315,7 @@ const Header: Component<HeaderProps> = (props) => {
                     variant="secondary"
                     leftIcon={<Settings size={16} />}
                     class="w-full"
-                    onClick={() => openModal("workspace_config", workspaceId() ?? "")}
+                    onClick={() => setTimeout(() => openModal("workspace_config", workspaceId() ?? ""), 50)}
                   >
                     Workspace Settings
                   </Button>

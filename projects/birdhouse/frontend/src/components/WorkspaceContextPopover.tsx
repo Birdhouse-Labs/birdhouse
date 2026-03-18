@@ -172,11 +172,17 @@ const WorkspaceContextPopover: Component = () => {
                     </>
                   );
 
+                  const openSettings = () => {
+                    setIsOpen(false);
+                    // Delay to let the popover's outside-click handling settle before mounting the modal
+                    setTimeout(() => openModal("workspace_config", workspace.workspace_id), 50);
+                  };
+
                   return (
                     <Show
-                      when={isCurrent()}
+                      when={isCurrent() && !isPlayground()}
                       fallback={
-                        /* Other workspaces: link to agents + gear to open settings */
+                        /* Other workspaces (and current in playground): link to agents + gear to open settings */
                         <div class="flex items-center rounded-lg transition-all hover:bg-surface-overlay group">
                           <a
                             href={`#/workspace/${workspace.workspace_id}/agents`}
@@ -185,29 +191,38 @@ const WorkspaceContextPopover: Component = () => {
                           >
                             {workspaceInfo()}
                           </a>
-                          <button
-                            type="button"
-                            class="p-2 mr-1 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:text-text-primary transition-all flex-shrink-0"
-                            aria-label="Workspace settings"
-                            title="Workspace settings"
-                            onClick={() => {
-                              setIsOpen(false);
-                              openModal("workspace_config", workspace.workspace_id);
-                            }}
-                          >
-                            <Settings size={14} />
-                          </button>
+                          <Show when={isCurrent()}>
+                            {/* Gear always visible on current workspace row */}
+                            <button
+                              type="button"
+                              class="p-2 mr-1 rounded-md text-text-muted hover:text-text-primary transition-all flex-shrink-0"
+                              aria-label="Workspace settings"
+                              title="Workspace settings"
+                              onClick={openSettings}
+                            >
+                              <Settings size={14} />
+                            </button>
+                          </Show>
+                          <Show when={!isCurrent()}>
+                            {/* Gear only on hover for other workspaces */}
+                            <button
+                              type="button"
+                              class="p-2 mr-1 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:text-text-primary transition-all flex-shrink-0"
+                              aria-label="Workspace settings"
+                              title="Workspace settings"
+                              onClick={openSettings}
+                            >
+                              <Settings size={14} />
+                            </button>
+                          </Show>
                         </div>
                       }
                     >
-                      {/* Current workspace: entire row opens settings */}
+                      {/* Current workspace (not in playground): entire row opens settings */}
                       <button
                         type="button"
-                        class="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-surface-overlay bg-surface-overlay"
-                        onClick={() => {
-                          setIsOpen(false);
-                          openModal("workspace_config", workspace.workspace_id);
-                        }}
+                        class="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-surface-overlay bg-surface-overlay text-left"
+                        onClick={openSettings}
                       >
                         {workspaceInfo()}
                         <Settings size={14} class="text-text-muted flex-shrink-0 ml-auto" />
