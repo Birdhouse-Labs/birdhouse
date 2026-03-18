@@ -3,12 +3,12 @@
 
 import { useLocation } from "@solidjs/router";
 import Popover from "corvu/popover";
-import { ChevronDown } from "lucide-solid";
+import { ChevronDown, Settings } from "lucide-solid";
 import { type Component, createEffect, createResource, createSignal, For, Show } from "solid-js";
 import { useConfig } from "../contexts/ConfigContext";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { PlaygroundIcon, WorkspaceIcon } from "../design-system";
-import { useWorkspaceId } from "../lib/routing";
+import { useModalRoute, useWorkspaceId } from "../lib/routing";
 import { fetchWorkspace, fetchWorkspaces, fetchWorkspacesHealth } from "../services/workspaces-api";
 import type { Workspace, WorkspaceHealthResponse } from "../types/workspace";
 import { shortenPath } from "../utils/paths";
@@ -44,6 +44,7 @@ const WorkspaceContextPopover: Component = () => {
   const workspaceId = useWorkspaceId();
   const baseZIndex = useZIndex();
   const config = useConfig();
+  const { openModal } = useModalRoute();
   const [isOpen, setIsOpen] = createSignal(false);
 
   // Determine current context
@@ -154,28 +155,46 @@ const WorkspaceContextPopover: Component = () => {
                   const health = () => healthStatuses()?.get(workspace.workspace_id);
 
                   return (
-                    <a
-                      href={`#/workspace/${workspace.workspace_id}/agents`}
-                      class="flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-surface-overlay group"
+                    <div
+                      class="flex items-center rounded-lg transition-all hover:bg-surface-overlay group"
                       classList={{
                         "bg-surface-overlay": isCurrent(),
                       }}
-                      onClick={() => setIsOpen(false)}
                     >
-                      <HealthDot health={health()} isLoading={healthStatuses.loading} />
-                      <div class="flex-1 min-w-0">
-                        <div
-                          class="text-sm font-medium truncate"
-                          classList={{
-                            "text-accent": isCurrent(),
-                            "text-text-primary": !isCurrent(),
+                      <a
+                        href={`#/workspace/${workspace.workspace_id}/agents`}
+                        class="flex items-center gap-2 px-3 py-2 flex-1 min-w-0"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <HealthDot health={health()} isLoading={healthStatuses.loading} />
+                        <div class="flex-1 min-w-0">
+                          <div
+                            class="text-sm font-medium truncate"
+                            classList={{
+                              "text-accent": isCurrent(),
+                              "text-text-primary": !isCurrent(),
+                            }}
+                          >
+                            {getWorkspaceDisplayName(workspace)}
+                          </div>
+                          <div class="text-xs text-text-muted truncate">{shortenPath(workspace.directory)}</div>
+                        </div>
+                      </a>
+                      <Show when={isCurrent()}>
+                        <button
+                          type="button"
+                          class="p-2 mr-1 rounded-md text-text-muted hover:text-text-primary transition-colors flex-shrink-0"
+                          aria-label="Workspace settings"
+                          title="Workspace settings"
+                          onClick={() => {
+                            setIsOpen(false);
+                            openModal("workspace_config", workspace.workspace_id);
                           }}
                         >
-                          {getWorkspaceDisplayName(workspace)}
-                        </div>
-                        <div class="text-xs text-text-muted truncate">{shortenPath(workspace.directory)}</div>
-                      </div>
-                    </a>
+                          <Settings size={14} />
+                        </button>
+                      </Show>
+                    </div>
                   );
                 }}
               </For>
