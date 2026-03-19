@@ -10,7 +10,7 @@
 
 **Example:** `~/Library/Logs/Birdhouse/birdhouse-2026-01-03.log`
 
-**Note:** This file contains logs from ALL components (Birdhouse server, OpenCode processes, frontend) in a unified timeline. Use structured metadata to filter.
+**Note:** This file contains logs from Birdhouse server and frontend in a unified timeline. In production, OpenCode process logs are also captured here. In dev mode (`OPENCODE_PATH` set), OpenCode runs detached and its logs are written to its own XDG data dir instead.
 
 ### Quick Access
 
@@ -41,13 +41,13 @@ tail -50 ~/Library/Logs/Birdhouse/birdhouse-$(date +%Y-%m-%d).log | grep -v '"ms
 
 - `api` - HTTP routes, request handling
 - `stream` - OpenCode event stream, SSE connections
-- `opencode` - OpenCode client operations, stdout/stderr from OpenCode processes
+- `opencode` - OpenCode client operations, stdout/stderr from OpenCode processes (production only; dev mode runs OpenCode detached)
 - `server` - Server startup, configuration
 - `frontend` - Browser logs relayed via `/api/logs`
 
 **Filtering by source:**
-- OpenCode stdout: `grep '"source":"stdout"'`
-- OpenCode stderr: `grep '"source":"stderr"'` (includes debug markers like `[OPENCODE-GLOBAL-INIT]`)
+- OpenCode stdout: `grep '"source":"stdout"'` (production only)
+- OpenCode stderr: `grep '"source":"stderr"'` (production only; includes debug markers like `[OPENCODE-GLOBAL-INIT]`)
 - Specific workspace: `grep '"workspaceId":"workspace-123"'`
 
 ### Configuration

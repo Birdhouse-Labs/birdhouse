@@ -24,6 +24,7 @@ interface OpenCodeHealthResponse {
 export class OpenCodeManager {
   private instances: Map<string, OpenCodeInstance> = new Map();
   private spawning: Map<string, Promise<{ port: number; pid: number }>> = new Map();
+  private spawnMutex: Promise<void> = Promise.resolve();
   private dataDb: DataDB;
   private opencodeBinaryPath: string;
   private opencodeSourcePath: string | null;
@@ -37,20 +38,7 @@ export class OpenCodeManager {
 
     // Setup shutdown handler - must be async to properly cleanup
     const handleShutdown = async (signal: string) => {
-      const keepAlive = process.env.BIRDHOUSE_KEEP_OPENCODE_ON_SHUTDOWN;
-
-      log.server.debug({ signal, keepAlive, openCodeCount: this.instances.size }, "Shutdown handler triggered");
-
-      // Check if we should keep OpenCode running (useful for dev to test reattach logic)
-      if (keepAlive === "true") {
-        log.server.info(
-          { signal, openCodeCount: this.instances.size },
-          "Received shutdown signal, leaving OpenCode instances running (BIRDHOUSE_KEEP_OPENCODE_ON_SHUTDOWN=true)",
-        );
-        process.exit(0);
-        return;
-      }
-
+      log.server.debug({ signal, openCodeCount: this.instances.size }, "Shutdown handler triggered");
       log.server.info({ signal }, "Received shutdown signal, cleaning up OpenCode instances");
       await this.shutdownAll();
       process.exit(0);
@@ -178,8 +166,12 @@ export class OpenCodeManager {
       });
     }
 
-    // Create spawn promise and store it to prevent concurrent spawns
-    const spawnPromise = this.doSpawnOpenCode(workspaceId, workspace);
+    // Create spawn promise serialized through the global mutex to prevent cross-workspace
+    // port allocation races (two workspaces calling allocateOpenCodePort concurrently
+    // could both read the DB before either writes its reserved port).
+    const spawnPromise = new Promise<{ port: number; pid: number }>((resolve, reject) => {
+      this.spawnMutex = this.spawnMutex.then(() => this.doSpawnOpenCode(workspaceId, workspace).then(resolve, reject));
+    });
     this.spawning.set(workspaceId, spawnPromise);
 
     try {
@@ -328,9 +320,9 @@ export class OpenCodeManager {
     );
 
     // Spawn OpenCode: use source path if available (dev mode), otherwise use binary
-    // Use detached mode when KEEP_OPENCODE_ON_SHUTDOWN is true to prevent terminal signals from killing OpenCode
-    // When detached, we can't pipe stdio (parent exits break pipes), so ignore stdio entirely
-    const shouldDetach = process.env.BIRDHOUSE_KEEP_OPENCODE_ON_SHUTDOWN === "true";
+    // Dev mode (OPENCODE_PATH set): always detach so OpenCode survives bun --watch hard-kills on branch switches.
+    // When detached, we can't pipe stdio (parent exits break pipes), so ignore stdio entirely.
+    const shouldDetach = this.opencodeSourcePath !== null;
     const stdio: StdioOptions = shouldDetach
       ? ["ignore", "ignore", "ignore"] // Detached: ignore all stdio (can't pipe from detached process)
       : ["ignore", "pipe", "pipe"]; // Attached: pipe stdout/stderr for logging
