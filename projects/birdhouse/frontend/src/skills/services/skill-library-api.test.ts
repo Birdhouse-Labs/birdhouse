@@ -2,7 +2,13 @@
 // ABOUTME: Verifies flat list loading, detail loading, trigger phrase updates, and location reveal.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchSkill, fetchSkillLibrary, reloadSkills, revealSkillLocation, updateTriggerPhrases } from "./skill-library-api";
+import {
+  fetchSkill,
+  fetchSkillLibrary,
+  reloadSkills,
+  revealSkillLocation,
+  updateTriggerPhrases,
+} from "./skill-library-api";
 
 beforeEach(() => {
   vi.restoreAllMocks();
