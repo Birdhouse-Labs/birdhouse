@@ -88,33 +88,9 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
     return results;
   };
 
-  // Get unique skills from match results (longest match per skill)
-  const filteredSkills = (): SkillSuggestion[] => {
-    const matches = findMatches();
-
-    if (matches.length === 0) {
-      return [];
-    }
-
-    // Group by skill ID and take longest match for each
-    const skillMap = new Map<string, MatchResult>();
-    for (const match of matches) {
-      const existing = skillMap.get(match.skill.id);
-      if (!existing || match.matchedText.length > existing.matchedText.length) {
-        skillMap.set(match.skill.id, match);
-      }
-    }
-
-    return Array.from(skillMap.values()).map((m) => m.skill);
-  };
-
-  // Get the best match for the currently highlighted skill (for text replacement)
-  const getBestMatch = (skill: SkillSuggestion): MatchResult | undefined => {
-    const matches = findMatches();
-    const skillMatches = matches.filter((m) => m.skill.id === skill.id);
-
-    // Return longest match
-    return skillMatches.sort((a, b) => b.matchedText.length - a.matchedText.length)[0];
+  // Get all match results, one entry per matching trigger phrase
+  const filteredMatches = (): MatchResult[] => {
+    return findMatches();
   };
 
   // Setup floating UI for dropdown positioning
@@ -128,7 +104,7 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
 
   // Reset highlight when filtered results change
   createEffect(() => {
-    filteredSkills();
+    filteredMatches();
     setHighlightedIndex(0);
   });
 
@@ -149,7 +125,7 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!props.visible) return;
 
-    const filtered = filteredSkills();
+    const filtered = filteredMatches();
     if (filtered.length === 0) return;
 
     switch (e.key) {
@@ -167,12 +143,9 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
           return;
         }
         e.preventDefault();
-        const selected = filtered[highlightedIndex()];
-        if (selected) {
-          const match = getBestMatch(selected);
-          if (match) {
-            props.onSelect(selected, match.matchedPhrase, match.matchedText, match.startIndex);
-          }
+        const match = filtered[highlightedIndex()];
+        if (match) {
+          props.onSelect(match.skill, match.matchedPhrase, match.matchedText, match.startIndex);
         }
         break;
       }
@@ -200,7 +173,7 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
   };
 
   const shouldShow = () => {
-    const filtered = filteredSkills();
+    const filtered = filteredMatches();
     return props.visible && filtered.length > 0;
   };
 
@@ -221,8 +194,8 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
           "z-index": baseZIndex,
         }}
       >
-        <For each={filteredSkills()}>
-          {(skill, index) => (
+        <For each={filteredMatches()}>
+          {(match, index) => (
             <div
               role="option"
               tabIndex={-1}
@@ -238,18 +211,12 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
                 e.stopPropagation();
               }}
               onClick={() => {
-                const match = getBestMatch(skill);
-                if (match) {
-                  props.onSelect(skill, match.matchedPhrase, match.matchedText, match.startIndex);
-                }
+                props.onSelect(match.skill, match.matchedPhrase, match.matchedText, match.startIndex);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  const match = getBestMatch(skill);
-                  if (match) {
-                    props.onSelect(skill, match.matchedPhrase, match.matchedText, match.startIndex);
-                  }
+                  props.onSelect(match.skill, match.matchedPhrase, match.matchedText, match.startIndex);
                 }
               }}
               onMouseEnter={() => {
@@ -257,13 +224,8 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
               }}
             >
               <div>
-                <div class="font-medium text-text-primary">{skill.title}</div>
-                <div class="text-text-secondary text-xs mt-0.5">
-                  {(() => {
-                    const match = getBestMatch(skill);
-                    return match ? match.matchedPhrase : skill.triggerPhrases[0];
-                  })()}
-                </div>
+                <div class="font-medium text-text-primary">{match.skill.title}</div>
+                <div class="text-text-secondary text-xs mt-0.5">{match.matchedPhrase}</div>
               </div>
             </div>
           )}
