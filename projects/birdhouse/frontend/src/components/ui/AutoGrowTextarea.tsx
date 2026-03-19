@@ -294,8 +294,8 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
   const handleModelSelect = (model: ModelItem, matchedText: string, matchStartIndex: number) => {
     if (!textareaRef) return;
 
-    // Insert the exact model ID - what you'd pass to agent_create's model parameter
-    const replacement = model.id;
+    // Insert the exact model ID in backticks - what you'd pass to agent_create's model parameter
+    const replacement = `\`${model.id}\``;
 
     // Focus first
     textareaRef.focus();
