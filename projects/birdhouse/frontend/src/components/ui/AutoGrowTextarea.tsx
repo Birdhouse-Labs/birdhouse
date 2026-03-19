@@ -6,10 +6,12 @@ import { useSkillCache } from "../../contexts/SkillCacheContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useWorkspaceAgentId } from "../../lib/routing";
 import { fetchAgentsForTypeahead } from "../../services/agents-api";
+import { fetchModels } from "../../services/messages-api";
 import { uiSize } from "../../theme";
 import { buildSkillMarkdownLink, buildSkillVisibleText } from "../../utils/skillLinks";
 import AgentTypeahead from "./AgentTypeahead";
 import FileTypeahead from "./FileTypeahead";
+import ModelTypeahead, { type ModelItem } from "./ModelTypeahead";
 import SkillTypeahead from "./SkillTypeahead";
 
 export interface AutoGrowTextareaProps {
@@ -26,6 +28,7 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
   const [showSkillTypeahead, setShowSkillTypeahead] = createSignal(false);
   const [showAgentTypeahead, setShowAgentTypeahead] = createSignal(false);
   const [showFileTypeahead, setShowFileTypeahead] = createSignal(false);
+  const [showModelTypeahead, setShowModelTypeahead] = createSignal(false);
   const [cursorPosition, setCursorPosition] = createSignal(0);
 
   // Get workspace context
@@ -37,6 +40,9 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
 
   // Load agents once on mount
   const [agentsData] = createResource(() => fetchAgentsForTypeahead(workspaceId));
+
+  // Load models once on mount
+  const [modelsData] = createResource(() => fetchModels(workspaceId));
 
   // Transform to the skill typeahead shape
   const typeaheadSkills = () => {
@@ -54,6 +60,12 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
   const typeaheadAgents = () => {
     const agents = agentsData();
     return agents || [];
+  };
+
+  // Get models for model typeahead
+  const typeaheadModels = (): ModelItem[] => {
+    const models = modelsData();
+    return models || [];
   };
 
   const sizeClasses = createMemo(() => {
@@ -95,14 +107,13 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
    * Handle textarea input and determine which typeahead to show
    *
    * Trigger priority order (only one typeahead shows at a time):
-   * 1. @@ → Agent typeahead (highest priority)
-   * 2. @  → File typeahead (medium priority)
-   * 3. text → Skill typeahead (lowest priority, shown when no @ triggers)
+   * 1. @@@ → Model typeahead (highest priority)
+   * 2. @@  → Agent typeahead
+   * 3. @   → File typeahead
+   * 4. text → Skill typeahead (lowest priority, shown when no @ triggers)
    *
-   * Why @@ is checked before @:
-   * - Prevents @@ from triggering file typeahead
-   * - Agent mentions should take precedence over file paths
-   * - Example: "Check @@agent and @file" → shows agent typeahead for @@
+   * @@@ is checked before @@ to prevent model trigger from activating agent typeahead.
+   * @@ is checked before @ to prevent agent trigger from activating file typeahead.
    */
   const handleInput = (e: InputEvent & { currentTarget: HTMLTextAreaElement }) => {
     const newValue = e.currentTarget.value;
@@ -114,24 +125,34 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
     // Update cursor position for typeahead positioning
     setCursorPosition(cursor);
 
-    // Check trigger priority: @@ first, then @, then pattern
+    // Check trigger priority: @@@ first, then @@, then @, then pattern
     const textBeforeCursor = newValue.substring(0, cursor);
-    const hasAgentTrigger = textBeforeCursor.includes("@@");
-    const hasFileTrigger = textBeforeCursor.includes("@");
+    const hasModelTrigger = textBeforeCursor.includes("@@@");
+    const hasAgentTrigger = !hasModelTrigger && textBeforeCursor.includes("@@");
+    const hasFileTrigger = !hasModelTrigger && !hasAgentTrigger && textBeforeCursor.includes("@");
 
     // Only one typeahead visible at a time - check in priority order
-    if (hasAgentTrigger) {
-      // Priority 1: @@ triggers agent typeahead
+    if (hasModelTrigger) {
+      // Priority 1: @@@ triggers model typeahead
+      setShowModelTypeahead(true);
+      setShowAgentTypeahead(false);
+      setShowFileTypeahead(false);
+      setShowSkillTypeahead(false);
+    } else if (hasAgentTrigger) {
+      // Priority 2: @@ triggers agent typeahead
       setShowAgentTypeahead(true);
+      setShowModelTypeahead(false);
       setShowFileTypeahead(false);
       setShowSkillTypeahead(false);
     } else if (hasFileTrigger) {
-      // Priority 2: @ triggers file typeahead (only when @@ not present)
+      // Priority 3: @ triggers file typeahead
       setShowFileTypeahead(true);
+      setShowModelTypeahead(false);
       setShowAgentTypeahead(false);
       setShowSkillTypeahead(false);
     } else {
-      // Priority 3: No @ triggers - show skill typeahead if there's content
+      // Priority 4: No @ triggers - show skill typeahead if there's content
+      setShowModelTypeahead(false);
       setShowAgentTypeahead(false);
       setShowFileTypeahead(false);
       const shouldShowSkill = newValue.length > 0;
@@ -152,7 +173,8 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
     }
 
     // When any typeahead is visible, let it handle arrow keys and Escape
-    const anyTypeaheadVisible = showSkillTypeahead() || showAgentTypeahead() || showFileTypeahead();
+    const anyTypeaheadVisible =
+      showSkillTypeahead() || showAgentTypeahead() || showFileTypeahead() || showModelTypeahead();
     if (anyTypeaheadVisible && ["ArrowUp", "ArrowDown", "Escape"].includes(e.key)) {
       // Typeahead components will handle these
       return;
@@ -263,6 +285,33 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
     // Cursor is automatically positioned after the replacement by insertText
   };
 
+  /**
+   * Handle model selection from typeahead
+   *
+   * Replaces "@@@query" with the exact model ID string (e.g. "anthropic/claude-sonnet-4-6")
+   * Uses document.execCommand to preserve undo stack
+   */
+  const handleModelSelect = (model: ModelItem, matchedText: string, matchStartIndex: number) => {
+    if (!textareaRef) return;
+
+    // Insert the exact model ID - what you'd pass to agent_create's model parameter
+    const replacement = model.id;
+
+    // Focus first
+    textareaRef.focus();
+
+    // matchedText is "@@@query" - select from matchStartIndex to end of matchedText
+    const selectionEnd = matchStartIndex + matchedText.length;
+    textareaRef.setSelectionRange(matchStartIndex, selectionEnd);
+
+    // Replace using document.execCommand (preserves undo stack)
+    document.execCommand("insertText", false, replacement);
+
+    setShowModelTypeahead(false);
+
+    // Cursor is automatically positioned after the replacement by insertText
+  };
+
   return (
     <div class="flex-1 relative flex items-end">
       <textarea
@@ -310,6 +359,15 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
         workspaceId={workspaceId}
         onSelect={handleFileSelect}
         onClose={() => setShowFileTypeahead(false)}
+      />
+      <ModelTypeahead
+        referenceElement={textareaRef}
+        inputValue={props.value}
+        cursorPosition={cursorPosition()}
+        visible={showModelTypeahead()}
+        models={typeaheadModels()}
+        onSelect={handleModelSelect}
+        onClose={() => setShowModelTypeahead(false)}
       />
     </div>
   );

@@ -39,6 +39,10 @@ vi.mock("../../services/agents-api", () => ({
   fetchAgentsForTypeahead: async () => [],
 }));
 
+vi.mock("../../services/messages-api", () => ({
+  fetchModels: async () => [],
+}));
+
 describe("AutoGrowTextarea", () => {
   beforeEach(() => {
     vi.restoreAllMocks();

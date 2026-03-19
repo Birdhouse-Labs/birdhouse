@@ -120,8 +120,8 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
     for (let start = lookbackStart; start < cursor; start++) {
       const substring = textBeforeCursor.substring(start);
 
-      // Check if this position has @@ trigger
-      if (substring.startsWith("@@")) {
+      // Check if this position has @@ trigger (but not @@@ which is the model trigger)
+      if (substring.startsWith("@@") && textBeforeCursor[start - 1] !== "@") {
         const matchedAfterTrigger = substring.substring(2); // Everything after @@
         const results = findMatchesForText(recentAgents, matchedAfterTrigger, start);
 
