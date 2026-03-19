@@ -12,6 +12,7 @@ const {
   replaceModalMock,
   fetchSkillLibraryMock,
   fetchSkillMock,
+  reloadSkillsMock,
   updateTriggerPhrasesMock,
 } = vi.hoisted(() => ({
   setSearchParamsMock: vi.fn(),
@@ -19,6 +20,7 @@ const {
   replaceModalMock: vi.fn(),
   fetchSkillLibraryMock: vi.fn(),
   fetchSkillMock: vi.fn(),
+  reloadSkillsMock: vi.fn(),
   updateTriggerPhrasesMock: vi.fn(),
 }));
 
@@ -54,6 +56,7 @@ vi.mock("../../theme/createMediaQuery", () => ({
 vi.mock("../services/skill-library-api", () => ({
   fetchSkillLibrary: fetchSkillLibraryMock,
   fetchSkill: fetchSkillMock,
+  reloadSkills: reloadSkillsMock,
   updateTriggerPhrases: updateTriggerPhrasesMock,
 }));
 
@@ -97,6 +100,7 @@ describe("SkillLibraryDialog", () => {
     replaceModalMock.mockReset();
     fetchSkillLibraryMock.mockReset();
     fetchSkillMock.mockReset();
+    reloadSkillsMock.mockReset();
     updateTriggerPhrasesMock.mockReset();
     sessionStorage.clear();
 
@@ -233,6 +237,98 @@ describe("SkillLibraryDialog", () => {
           readonly: true,
         },
       ],
+    });
+  });
+
+  it("reloads skills and refetches the current selection", async () => {
+    modalStackMock.mockReturnValue([{ type: "skill-library-v2", id: "find-docs" }]);
+
+    fetchSkillLibraryMock
+      .mockResolvedValueOnce({
+        skills: [
+          {
+            id: "find-docs",
+            title: "find-docs",
+            description: "Docs helper",
+            tags: [],
+            trigger_phrases: ["find docs"],
+            scope: "global",
+            readonly: true,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        skills: [
+          {
+            id: "find-docs",
+            title: "find-docs",
+            description: "Docs helper",
+            tags: [],
+            trigger_phrases: ["fresh docs"],
+            scope: "global",
+            readonly: true,
+          },
+        ],
+      });
+
+    fetchSkillMock
+      .mockResolvedValueOnce({
+        id: "find-docs",
+        title: "find-docs",
+        description: "Docs helper",
+        tags: [],
+        metadata: {},
+        prompt: "# Find Docs",
+        trigger_phrases: ["find docs"],
+        files: [],
+        readonly: true,
+        scope: "global",
+        location: "/tmp/find-docs/SKILL.md",
+        display_location: "~/skills/find-docs/SKILL.md",
+      })
+      .mockResolvedValueOnce({
+        id: "find-docs",
+        title: "find-docs",
+        description: "Docs helper",
+        tags: [],
+        metadata: {},
+        prompt: "# Find Docs",
+        trigger_phrases: ["fresh docs"],
+        files: [],
+        readonly: true,
+        scope: "global",
+        location: "/tmp/find-docs/SKILL.md",
+        display_location: "~/skills/find-docs/SKILL.md",
+      });
+
+    reloadSkillsMock.mockResolvedValue(undefined);
+
+    render(() => <SkillLibraryDialog workspaceId="ws_test" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Reload Skills" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Reload Skills" }));
+
+    await waitFor(() => {
+      expect(reloadSkillsMock).toHaveBeenCalledWith("ws_test");
+    });
+
+    await waitFor(() => {
+      expect(fetchSkillLibraryMock).toHaveBeenCalledTimes(2);
+      expect(fetchSkillMock).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("disables reload while agents are active", async () => {
+    fetchSkillLibraryMock.mockResolvedValue({ skills: [] });
+    reloadSkillsMock.mockResolvedValue(undefined);
+
+    render(() => <SkillLibraryDialog workspaceId="ws_test" hasActiveAgents />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Reload Skills" })).toBeDisabled();
     });
   });
 });

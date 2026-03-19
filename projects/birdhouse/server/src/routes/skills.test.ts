@@ -299,6 +299,29 @@ metadata:
     });
   });
 
+  test("reloads workspace skills by disposing the OpenCode instance", async () => {
+    const workspace = createWorkspace("ws_1", "/repo/current-workspace");
+    testDb.insertWorkspace(workspace);
+    let disposeCalled = 0;
+
+    const deps = createTestDeps({
+      disposeInstance: async () => {
+        disposeCalled += 1;
+      },
+    });
+
+    await withDeps(deps, async () => {
+      const app = createSkillsApp(testDb, workspace);
+      const response = await app.request("/reload", {
+        method: "POST",
+      });
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ success: true });
+      expect(disposeCalled).toBe(1);
+    });
+  });
+
   test("emits birdhouse.skill.updated after updating trigger phrases", async () => {
     const workspace = createWorkspace("ws_1", "/repo/current-workspace");
     testDb.insertWorkspace(workspace);

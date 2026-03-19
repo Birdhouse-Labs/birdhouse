@@ -2,7 +2,13 @@
 // ABOUTME: Verifies flat list loading, detail loading, trigger phrase updates, and location reveal.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchSkill, fetchSkillLibrary, revealSkillLocation, updateTriggerPhrases } from "./skill-library-api";
+import {
+  fetchSkill,
+  fetchSkillLibrary,
+  reloadSkills,
+  revealSkillLocation,
+  updateTriggerPhrases,
+} from "./skill-library-api";
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -166,5 +172,17 @@ describe("revealSkillLocation", () => {
       expect.stringContaining("/api/workspace/ws_test/skills/git%2Fspotlight-worktree/reveal"),
       { method: "POST" },
     );
+  });
+});
+
+describe("reloadSkills", () => {
+  it("posts to the reload endpoint for the workspace", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true } as Response);
+
+    await reloadSkills("ws_test");
+
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/workspace/ws_test/skills/reload"), {
+      method: "POST",
+    });
   });
 });

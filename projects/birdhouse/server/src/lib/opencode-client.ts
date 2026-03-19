@@ -100,6 +100,7 @@ export interface OpenCodeClient {
   waitForSessionCompletion(sessionId: string): Promise<Message>;
   getProviders(): Promise<ProvidersResponse>;
   listSkills(): Promise<Skill[]>;
+  disposeInstance(): Promise<void>;
   generate(options: {
     prompt?: string;
     system?: string[];
@@ -252,6 +253,16 @@ export function createLiveOpenCodeClient(baseUrl: string, workspaceRoot: string)
         throw new Error(`Failed to list skills: ${response.statusText}`);
       }
       return response.json() as Promise<Skill[]>;
+    },
+
+    async disposeInstance(): Promise<void> {
+      const response = await fetch(`${baseUrl}/instance/dispose?directory=${encodeURIComponent(workspaceRoot)}`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to dispose instance: ${response.statusText} - ${errorText}`);
+      }
     },
 
     async generate(options: {
@@ -575,6 +586,10 @@ export function createTestOpenCodeClient(): OpenCodeClient {
 
     async listSkills(): Promise<Skill[]> {
       return [];
+    },
+
+    async disposeInstance(): Promise<void> {
+      // Mock implementation - no-op
     },
 
     async generate(_options: {
