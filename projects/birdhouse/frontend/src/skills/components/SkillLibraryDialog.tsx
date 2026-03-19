@@ -3,14 +3,14 @@
 
 import Dialog from "corvu/dialog";
 import Resizable from "corvu/resizable";
-import { Menu, X } from "lucide-solid";
+import { Menu, RefreshCw, X } from "lucide-solid";
 import { type Component, createEffect, createMemo, createResource, createSignal, on, Show } from "solid-js";
 import MobileNavDrawer from "../../components/MobileNavDrawer";
 import { Button } from "../../components/ui";
 import { useModalRoute } from "../../lib/routing";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
 import { createMediaQuery } from "../../theme/createMediaQuery";
-import { fetchSkill, fetchSkillLibrary, updateTriggerPhrases } from "../services/skill-library-api";
+import { fetchSkill, fetchSkillLibrary, reloadSkills, updateTriggerPhrases } from "../services/skill-library-api";
 import type { SkillListScopeFilter } from "../types/skill-library-types";
 import { filterSkills } from "../utils/skill-library-filtering";
 import { resolveSelectedSkillIdAfterLoad, resolveVisibleSkillDetail } from "../utils/skill-selection";
@@ -65,6 +65,7 @@ function saveSkillLibraryUIState(workspaceId: string, state: SkillLibraryUIState
 
 export interface SkillLibraryDialogProps {
   workspaceId: string;
+  hasActiveAgents?: boolean;
 }
 
 const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
@@ -74,6 +75,8 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
   const [searchQuery, setSearchQuery] = createSignal("");
   const [scopeFilter, setScopeFilter] = createSignal<SkillListScopeFilter>("all");
   const [storedSelectedSkillId, setStoredSelectedSkillId] = createSignal<string | null>(null);
+  const [reloadingSkills, setReloadingSkills] = createSignal(false);
+  const [reloadError, setReloadError] = createSignal<string | null>(null);
 
   const isLibraryOpen = createMemo(() => modalStack().some((modal) => modal.type === MODAL_TYPE_LIBRARY));
 
@@ -157,6 +160,28 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
 
     refetchSkill();
     refetchLibrary();
+  };
+
+  const handleReloadSkills = async () => {
+    if (reloadingSkills() || props.hasActiveAgents) {
+      return;
+    }
+
+    setReloadingSkills(true);
+    setReloadError(null);
+
+    try {
+      await reloadSkills(props.workspaceId);
+      await refetchLibrary();
+
+      if (selectedSkillId()) {
+        await refetchSkill();
+      }
+    } catch (error) {
+      setReloadError(error instanceof Error ? error.message : "Failed to reload skills");
+    } finally {
+      setReloadingSkills(false);
+    }
   };
 
   const handleDialogChange = (open: boolean) => {
@@ -256,9 +281,26 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
               <Dialog.Label class="text-lg font-semibold text-heading">Skills Library</Dialog.Label>
             </div>
 
-            <Dialog.Close class="text-text-muted hover:text-text-primary transition-colors">
-              <X size={20} />
-            </Dialog.Close>
+            <div class="flex items-center gap-3">
+              <Show when={reloadError()}>
+                {(message) => <span class="hidden md:inline text-sm text-danger">{message()}</span>}
+              </Show>
+
+              <Button
+                variant="secondary"
+                onClick={handleReloadSkills}
+                disabled={reloadingSkills() || !!props.hasActiveAgents}
+                leftIcon={<RefreshCw size={16} classList={{ "animate-spin": reloadingSkills() }} />}
+                class="whitespace-nowrap"
+                aria-label="Reload Skills"
+              >
+                {reloadingSkills() ? "Reloading..." : "Reload Skills"}
+              </Button>
+
+              <Dialog.Close class="text-text-muted hover:text-text-primary transition-colors">
+                <X size={20} />
+              </Dialog.Close>
+            </div>
           </div>
 
           <div class="flex-1 overflow-hidden p-2 bg-gradient-to-br from-bg-from via-bg-via to-bg-to">

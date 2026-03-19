@@ -140,3 +140,16 @@ export async function revealSkillLocation(skillId: string, workspaceId: string):
     throw new Error(`Failed to reveal skill location: ${response.statusText} - ${text}`);
   }
 }
+
+export async function reloadSkills(workspaceId: string): Promise<void> {
+  const url = `${API_ENDPOINT_BASE}/workspace/${encodeURIComponent(workspaceId)}/skills/reload`;
+
+  const response = await fetch(url, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to reload skills: ${response.statusText} - ${text}`);
+  }
+}

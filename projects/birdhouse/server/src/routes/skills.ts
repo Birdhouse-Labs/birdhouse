@@ -87,6 +87,14 @@ export function createSkillRoutes(dataDb: DataDB) {
     return c.json(await toBirdhouseSkillDetail(skill, workspace.directory, dataDb.getSkillTriggerPhrases(skill.name)));
   });
 
+  app.post("/reload", async (c) => {
+    const { opencode } = getDepsFromContext(c);
+
+    await opencode.disposeInstance();
+
+    return c.json({ success: true });
+  });
+
   app.patch("/:skillName/trigger-phrases", async (c) => {
     const { opencode } = getDepsFromContext(c);
     const skillName = c.req.param("skillName");
