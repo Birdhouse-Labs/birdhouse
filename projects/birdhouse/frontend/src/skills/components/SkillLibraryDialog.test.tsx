@@ -321,14 +321,14 @@ describe("SkillLibraryDialog", () => {
     });
   });
 
-  it("disables reload while agents are active", async () => {
+  it("keeps reload available while agents are active", async () => {
     fetchSkillLibraryMock.mockResolvedValue({ skills: [] });
     reloadSkillsMock.mockResolvedValue(undefined);
 
-    render(() => <SkillLibraryDialog workspaceId="ws_test" hasActiveAgents />);
+    render(() => <SkillLibraryDialog workspaceId="ws_test" />);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Reload Skills" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Reload Skills" })).toBeEnabled();
     });
   });
 });

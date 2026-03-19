@@ -90,7 +90,7 @@ export function createSkillRoutes(dataDb: DataDB) {
   app.post("/reload", async (c) => {
     const { opencode } = getDepsFromContext(c);
 
-    await opencode.disposeInstance();
+    await opencode.reloadSkillState();
 
     return c.json({ success: true });
   });

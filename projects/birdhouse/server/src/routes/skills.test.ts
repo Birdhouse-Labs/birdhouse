@@ -299,14 +299,14 @@ metadata:
     });
   });
 
-  test("reloads workspace skills by disposing the OpenCode instance", async () => {
+  test("reloads workspace skills via the OpenCode skill reload endpoint", async () => {
     const workspace = createWorkspace("ws_1", "/repo/current-workspace");
     testDb.insertWorkspace(workspace);
-    let disposeCalled = 0;
+    let reloadCalled = 0;
 
     const deps = createTestDeps({
-      disposeInstance: async () => {
-        disposeCalled += 1;
+      reloadSkillState: async () => {
+        reloadCalled += 1;
       },
     });
 
@@ -318,7 +318,7 @@ metadata:
 
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({ success: true });
-      expect(disposeCalled).toBe(1);
+      expect(reloadCalled).toBe(1);
     });
   });
 

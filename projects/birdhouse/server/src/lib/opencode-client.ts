@@ -100,7 +100,7 @@ export interface OpenCodeClient {
   waitForSessionCompletion(sessionId: string): Promise<Message>;
   getProviders(): Promise<ProvidersResponse>;
   listSkills(): Promise<Skill[]>;
-  disposeInstance(): Promise<void>;
+  reloadSkillState(): Promise<void>;
   generate(options: {
     prompt?: string;
     system?: string[];
@@ -255,13 +255,13 @@ export function createLiveOpenCodeClient(baseUrl: string, workspaceRoot: string)
       return response.json() as Promise<Skill[]>;
     },
 
-    async disposeInstance(): Promise<void> {
-      const response = await fetch(`${baseUrl}/instance/dispose?directory=${encodeURIComponent(workspaceRoot)}`, {
+    async reloadSkillState(): Promise<void> {
+      const response = await fetch(`${baseUrl}/skill/reload?directory=${encodeURIComponent(workspaceRoot)}`, {
         method: "POST",
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to dispose instance: ${response.statusText} - ${errorText}`);
+        throw new Error(`Failed to reload skill state: ${response.statusText} - ${errorText}`);
       }
     },
 
@@ -588,7 +588,7 @@ export function createTestOpenCodeClient(): OpenCodeClient {
       return [];
     },
 
-    async disposeInstance(): Promise<void> {
+    async reloadSkillState(): Promise<void> {
       // Mock implementation - no-op
     },
 
