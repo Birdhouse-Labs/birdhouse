@@ -1,5 +1,5 @@
 import { createOpencodeClient } from "@opencode-ai/sdk";
-import type { AssistantMessage, Part, UserMessage } from "@opencode-ai/sdk/client";
+import type { AssistantMessage, FilePartInput, Part, TextPartInput, UserMessage } from "@opencode-ai/sdk/client";
 export type { UserMessage, AssistantMessage };
 // ABOUTME: OpenCode HTTP API client for session and message operations
 // ABOUTME: Provides both live (real API calls) and test (mocked) implementations
@@ -93,6 +93,7 @@ export interface OpenCodeClient {
       system?: string;
       agent?: string;
       metadata?: Record<string, unknown>;
+      parts?: Array<TextPartInput | FilePartInput>;
     },
   ): Promise<Message>;
   getMessages(sessionId: string, limit?: number): Promise<Message[]>;
@@ -170,15 +171,20 @@ export function createLiveOpenCodeClient(baseUrl: string, workspaceRoot: string)
         system?: string;
         agent?: string;
         metadata?: Record<string, unknown>;
+        parts?: Array<TextPartInput | FilePartInput>;
       },
     ): Promise<Message> {
+      const parts = options?.parts || [
+        { type: "text", text, ...(options?.metadata && { metadata: options.metadata }) },
+      ];
+
       const response = await fetch(
         `${baseUrl}/session/${sessionId}/message?directory=${encodeURIComponent(workspaceRoot)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            parts: [{ type: "text", text, ...(options?.metadata && { metadata: options.metadata }) }],
+            parts,
             model: options?.model,
             system: options?.system,
             agent: options?.agent,
@@ -480,6 +486,8 @@ export function createTestOpenCodeClient(): OpenCodeClient {
         noReply?: boolean;
         system?: string;
         agent?: string;
+        metadata?: Record<string, unknown>;
+        parts?: Array<TextPartInput | FilePartInput>;
       },
     ): Promise<Message> {
       const messageId = `msg_test_${Date.now()}`;

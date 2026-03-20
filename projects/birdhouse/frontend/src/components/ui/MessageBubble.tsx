@@ -10,7 +10,7 @@ import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { uiSize } from "../../theme";
 import type { Message } from "../../types/messages";
-import { isAgentEventBlock, isReasoningBlock, isSystemMessage, isToolBlock } from "../../types/messages";
+import { isAgentEventBlock, isFileBlock, isReasoningBlock, isSystemMessage, isToolBlock } from "../../types/messages";
 import type { QuestionRequest } from "../../types/question";
 import { recordAgentView } from "../../utils/agent-navigation";
 import { copyToClipboard } from "../../utils/clipboard";
@@ -24,6 +24,7 @@ import EventDivider from "./EventDivider";
 import IconButton from "./IconButton";
 import MenuItemButton from "./MenuItemButton";
 import MessageBubbleContent from "./MessageBubbleContent";
+import MessageFileAttachments from "./MessageFileAttachments";
 import QuestionToolCard from "./QuestionToolCard";
 import ReasoningBlock from "./ReasoningBlock";
 import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
@@ -131,6 +132,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
   const mode = opencodeMessage?.role === "user" ? null : opencodeMessage?.mode;
 
   const error = formatError(opencodeMessage);
+  const fileAttachments = createMemo(() => props.message.blocks?.filter(isFileBlock) ?? []);
 
   const formatErrorForDialog = () => {
     if (!error) return "";
@@ -333,6 +335,8 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
             }}
           />
 
+          <MessageFileAttachments attachments={fileAttachments()} />
+
           {/* Attached Skills Button */}
           <Show when={attachedSkills().length > 0}>
             <div class="flex justify-end mt-2 mb-1">
@@ -398,6 +402,8 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
               }
             }}
           />
+
+          <MessageFileAttachments attachments={fileAttachments()} />
 
           {/* Skill attachments button - only show for user messages with attached skills */}
           <Show when={attachedSkills().length > 0}>
@@ -468,6 +474,8 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
               </Popover.Portal>
             </Popover>
           </div>
+
+          <MessageFileAttachments attachments={fileAttachments()} />
 
           {/* Render markdown (even while streaming) */}
           <Show when={props.message.content}>

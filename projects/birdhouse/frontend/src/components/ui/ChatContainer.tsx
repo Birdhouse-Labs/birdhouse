@@ -7,11 +7,13 @@ import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { findPendingAssistantId, isMessageQueued } from "../../domain/message-queue";
 import { previewSkillAttachments } from "../../services/skill-attachments-api";
 import { uiSize } from "../../theme";
+import type { ComposerImageAttachment } from "../../types/composer-attachments";
 import type { Message } from "../../types/messages";
 import type { QuestionRequest } from "../../types/question";
 import { extractSkillLinkNames } from "../../utils/skillLinks";
 import AutoGrowTextarea from "./AutoGrowTextarea";
 import Button from "./Button";
+import ComposerImageAttachments from "./ComposerImageAttachments";
 import MessageBubble from "./MessageBubble";
 import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
 
@@ -23,6 +25,9 @@ export interface ChatContainerProps {
   onInputChange: (value: string) => void;
   onSend: () => void;
   onStop: () => void;
+  attachments?: ComposerImageAttachment[];
+  onRemoveAttachment?: (id: string) => void;
+  onAttachmentsPasted?: (files: File[]) => void | Promise<void>;
   isSendDisabled?: boolean;
   cloneMode?: boolean;
   onCloneModeChange?: (enabled: boolean) => void;
@@ -68,6 +73,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
     return visibleSkillAttachments().length;
   });
   const [dialogOpen, setDialogOpen] = createSignal(false);
+  const hasDraftContent = createMemo(() => !!props.inputValue.trim() || (props.attachments?.length ?? 0) > 0);
 
   // Find the pending assistant message ID for queue detection
   const pendingAssistantId = createMemo(() => findPendingAssistantId(props.messages));
@@ -81,11 +87,12 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
             value={props.inputValue}
             onInput={props.onInputChange}
             onSend={props.onSend}
+            onAttachmentsPasted={props.onAttachmentsPasted}
             disabled={props.isSendDisabled ?? false}
             placeholder="Type a message..."
             ref={props.inputRef}
           />
-          <Show when={props.isStreaming && !props.inputValue.trim()}>
+          <Show when={props.isStreaming && !hasDraftContent()}>
             <button
               type="button"
               onClick={props.onStop}
@@ -99,17 +106,17 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
               Stop
             </button>
           </Show>
-          <Show when={!props.isStreaming || props.inputValue.trim()}>
+          <Show when={!props.isStreaming || hasDraftContent()}>
             <div class="flex">
               <button
                 type="button"
                 onClick={props.onSend}
-                disabled={!props.inputValue.trim() || props.isSendDisabled}
+                disabled={!hasDraftContent() || props.isSendDisabled}
                 class="px-4 py-2 font-medium bg-gradient-to-r from-gradient-from to-gradient-to text-text-on-accent transition-opacity"
                 classList={{
                   [sizeClasses().text]: true,
-                  "opacity-50 cursor-not-allowed": !props.inputValue.trim() || props.isSendDisabled,
-                  "hover:opacity-90": !!props.inputValue.trim() && !props.isSendDisabled,
+                  "opacity-50 cursor-not-allowed": !hasDraftContent() || props.isSendDisabled,
+                  "hover:opacity-90": hasDraftContent() && !props.isSendDisabled,
                   "rounded-lg": !props.onCloneModeChange,
                   "rounded-l-lg": !!props.onCloneModeChange,
                 }}
@@ -148,6 +155,13 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
             </div>
           </Show>
         </div>
+
+        <Show when={(props.attachments?.length ?? 0) > 0 && props.onRemoveAttachment}>
+          <ComposerImageAttachments
+            attachments={props.attachments || []}
+            onRemove={(attachmentId) => props.onRemoveAttachment?.(attachmentId)}
+          />
+        </Show>
 
         {/* Skill count button - appears below input in the padding area */}
         <Show when={skillCount() > 0}>

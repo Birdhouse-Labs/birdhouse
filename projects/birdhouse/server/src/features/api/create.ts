@@ -7,6 +7,7 @@ import { createAgent } from "../../domain/agent-lifecycle";
 import { sendFirstMessage } from "../../lib/agent-messaging";
 import type { AgentRow } from "../../lib/agents-db";
 import { generateAgentId } from "../../lib/agents-db";
+import { parseFileAttachments } from "../../lib/message-parts";
 import { getWorkspaceStream } from "../../lib/opencode-stream";
 import { syncAgentTitle } from "../../lib/sync-agent-title";
 import { generateTitle as generateTitleService } from "../../lib/title-generator";
@@ -26,7 +27,8 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
   try {
     // 1. Parse and validate request body
     const body = await c.req.json();
-    const { title: rawTitle, model: requestModel, parent_id, prompt, wait, agent: requestAgent } = body;
+    const { title: rawTitle, model: requestModel, parent_id, prompt, wait, agent: requestAgent, attachments } = body;
+    const requestAttachments = parseFileAttachments(attachments);
 
     // Determine initial title
     // If user provides explicit title, use it (no auto-generation)
@@ -138,6 +140,7 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
           model,
           prompt: prompt.trim(),
           wait: shouldWait,
+          attachments: requestAttachments,
           ...(requestAgent && { agent: requestAgent }),
         });
 
@@ -193,6 +196,9 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
 
     // Check for specific error types
     if (error instanceof Error) {
+      if (error.message.includes("attachments")) {
+        return c.json({ error: error.message }, 400);
+      }
       if (error.message.includes("Parent agent")) {
         return c.json({ error: error.message }, 400);
       }

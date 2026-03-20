@@ -3,6 +3,7 @@
 
 import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
+import { extractImageFileAttachments } from "../../lib/message-parts";
 
 /**
  * POST /api/workspace/:workspaceId/agents/:id/revert
@@ -54,6 +55,8 @@ export async function revert(c: Context, deps: Pick<Deps, "agentsDB" | "opencode
     const textParts = targetMessage.parts.filter((part) => part.type === "text");
     const messageText = textParts.map((part) => (part as { text: string }).text).join("\n");
 
+    const attachments = extractImageFileAttachments(targetMessage.parts);
+
     // Perform the revert
     await opencode.revertSession(agent.session_id, messageId);
 
@@ -69,6 +72,7 @@ export async function revert(c: Context, deps: Pick<Deps, "agentsDB" | "opencode
     return c.json({
       success: true,
       messageText,
+      attachments,
     });
   } catch (error) {
     log.server.error(

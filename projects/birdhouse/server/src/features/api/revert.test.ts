@@ -90,9 +90,98 @@ describe("API revert", () => {
       });
 
       expect(response.status).toBe(200);
-      const data = (await response.json()) as { success: boolean; messageText: string };
+      const data = (await response.json()) as {
+        success: boolean;
+        messageText: string;
+        attachments: Array<{ type: "file"; mime: string; url: string; filename?: string }>;
+      };
       expect(data.success).toBe(true);
       expect(data.messageText).toBe("Please help me debug this");
+      expect(data.attachments).toEqual([]);
+    });
+  });
+
+  test("returns image attachments from the reverted user message", async () => {
+    const agent = createRootAgent(agentsDB, {
+      id: "agent_with_image_reset",
+      session_id: "ses_with_image_reset",
+      title: "Test Agent",
+    });
+
+    const mockMessages: Message[] = [
+      {
+        info: {
+          id: "msg_user_with_image",
+          sessionID: "ses_with_image_reset",
+          role: "user",
+          time: { created: Date.now() },
+        } as unknown as Message["info"],
+        parts: [
+          {
+            type: "text",
+            text: "Please inspect this screenshot",
+            id: "part_text",
+            sessionID: "ses_with_image_reset",
+            messageID: "msg_user_with_image",
+          },
+          {
+            type: "file",
+            mime: "image/png",
+            url: "data:image/png;base64,abc123",
+            filename: "screenshot.png",
+            id: "part_file",
+            sessionID: "ses_with_image_reset",
+            messageID: "msg_user_with_image",
+          },
+          {
+            type: "file",
+            mime: "application/pdf",
+            url: "data:application/pdf;base64,pdf123",
+            filename: "notes.pdf",
+            id: "part_pdf",
+            sessionID: "ses_with_image_reset",
+            messageID: "msg_user_with_image",
+          },
+        ],
+      },
+    ];
+
+    const deps = createTestDeps();
+    deps.agentsDB = agentsDB;
+    deps.opencode.getMessages = async () => mockMessages;
+
+    await withDeps(deps, async () => {
+      const app = withWorkspaceContext(
+        () => {
+          const hono = new Hono();
+          hono.post("/:id/revert", (c) => revert(c, deps));
+          return hono;
+        },
+        { agentsDb: agentsDB },
+      );
+
+      const response = await app.request(`/${agent.id}/revert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId: "msg_user_with_image" }),
+      });
+
+      expect(response.status).toBe(200);
+      const data = (await response.json()) as {
+        success: boolean;
+        messageText: string;
+        attachments: Array<{ type: "file"; mime: string; url: string; filename?: string }>;
+      };
+      expect(data.success).toBe(true);
+      expect(data.messageText).toBe("Please inspect this screenshot");
+      expect(data.attachments).toEqual([
+        {
+          type: "file",
+          mime: "image/png",
+          url: "data:image/png;base64,abc123",
+          filename: "screenshot.png",
+        },
+      ]);
     });
   });
 

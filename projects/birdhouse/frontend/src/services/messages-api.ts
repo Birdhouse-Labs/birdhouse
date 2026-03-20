@@ -6,7 +6,17 @@ import { mapAgentTrees } from "../adapters/agent-tree-adapter";
 import type { TreeNode } from "../components/TreeView";
 import { API_ENDPOINT_BASE, buildWorkspaceUrl } from "../config/api";
 
+import type { ComposerImageAttachment, ComposerImageAttachmentPayload } from "../types/composer-attachments";
 import type { Message } from "../types/messages";
+
+function mapComposerAttachments(attachments?: ComposerImageAttachment[]) {
+  return attachments?.map((attachment) => ({
+    type: "file" as const,
+    filename: attachment.filename,
+    mime: attachment.mime,
+    url: attachment.url,
+  }));
+}
 
 const _API_BASE = API_ENDPOINT_BASE;
 
@@ -139,6 +149,7 @@ export async function sendMessage(
   opencodePromptOptions: {
     agent?: string;
     cloneAndSend?: boolean;
+    attachments?: ComposerImageAttachment[];
   },
 ): Promise<{ sent: boolean; async: boolean; cloned_agent?: unknown }> {
   const url = `${buildWorkspaceUrl(workspaceId, `/agents/${agentId}/messages`)}?wait=false`;
@@ -153,6 +164,15 @@ export async function sendMessage(
 
   if (opencodePromptOptions.cloneAndSend) {
     body.clone_and_send = true;
+  }
+
+  const mappedAttachments = mapComposerAttachments(opencodePromptOptions.attachments);
+  if (mappedAttachments) {
+    (
+      body as typeof body & {
+        attachments: Array<{ type: "file"; filename: string; mime: string; url: string }>;
+      }
+    ).attachments = mappedAttachments;
   }
 
   const response = await fetch(url, {
@@ -223,12 +243,14 @@ export async function createAgent(
   modelId?: string,
   prompt?: string,
   agent?: string,
+  attachments?: ComposerImageAttachment[],
 ): Promise<{ id: string; parts?: unknown[] }> {
   const body: {
     model?: string | undefined;
     prompt?: string | undefined;
     title?: string;
     agent?: string;
+    attachments?: Array<{ type: "file"; filename: string; mime: string; url: string }>;
   } = {
     model: modelId,
     prompt,
@@ -240,6 +262,11 @@ export async function createAgent(
 
   if (agent !== undefined) {
     body.agent = agent;
+  }
+
+  const mappedAttachments = mapComposerAttachments(attachments);
+  if (mappedAttachments) {
+    body.attachments = mappedAttachments;
   }
 
   const url = buildWorkspaceUrl(workspaceId, "/agents");
@@ -364,7 +391,7 @@ export async function revertAgent(
   workspaceId: string,
   agentId: string,
   messageId: string,
-): Promise<{ success: boolean; messageText: string }> {
+): Promise<{ success: boolean; messageText: string; attachments: ComposerImageAttachmentPayload[] }> {
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/revert`);
   const response = await fetch(url, {
     method: "POST",

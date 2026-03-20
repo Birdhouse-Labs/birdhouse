@@ -237,6 +237,35 @@ describe("sendMessage", () => {
     expect(body.clone_and_send).toBe(true);
   });
 
+  it("should include structured image attachments when provided", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ sent: true, async: true }),
+    } as Response);
+
+    await sendMessage(mockWorkspaceId, mockAgentId, mockText, {
+      attachments: [
+        {
+          id: "att_1",
+          filename: "clipboard.png",
+          mime: "image/png",
+          url: "data:image/png;base64,abc123",
+        },
+      ],
+    });
+
+    const call = vi.mocked(fetch).mock.calls[0]!;
+    const body = JSON.parse(call[1]?.body as string);
+    expect(body.attachments).toEqual([
+      {
+        type: "file",
+        filename: "clipboard.png",
+        mime: "image/png",
+        url: "data:image/png;base64,abc123",
+      },
+    ]);
+  });
+
   it("should throw SendMessageError with details on failure", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
@@ -377,6 +406,33 @@ describe("createAgent", () => {
     const call = vi.mocked(fetch).mock.calls[0]!;
     const body = JSON.parse(call[1]?.body as string);
     expect(body.agent).toBe("custom-agent");
+  });
+
+  it("should include structured image attachments when creating an agent", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: "agent_new123" }),
+    } as Response);
+
+    await createAgent(mockWorkspaceId, undefined, undefined, undefined, undefined, [
+      {
+        id: "att_1",
+        filename: "clipboard.png",
+        mime: "image/png",
+        url: "data:image/png;base64,abc123",
+      },
+    ]);
+
+    const call = vi.mocked(fetch).mock.calls[0]!;
+    const body = JSON.parse(call[1]?.body as string);
+    expect(body.attachments).toEqual([
+      {
+        type: "file",
+        filename: "clipboard.png",
+        mime: "image/png",
+        url: "data:image/png;base64,abc123",
+      },
+    ]);
   });
 
   it("should throw error on HTTP failure", async () => {
@@ -529,7 +585,7 @@ describe("revertAgent", () => {
   const mockMessageId = "msg_123";
 
   it("should revert agent to specific message", async () => {
-    const mockResponse = { success: true, messageText: "Reverted message" };
+    const mockResponse = { success: true, messageText: "Reverted message", attachments: [] };
 
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
@@ -546,6 +602,30 @@ describe("revertAgent", () => {
       }),
     );
     expect(result).toEqual(mockResponse);
+  });
+
+  it("should return restored attachments from the revert response", async () => {
+    const mockResponse = {
+      success: true,
+      messageText: "Reverted message",
+      attachments: [
+        {
+          type: "file",
+          filename: "clipboard.png",
+          mime: "image/png",
+          url: "data:image/png;base64,abc123",
+        },
+      ],
+    };
+
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse,
+    } as Response);
+
+    const result = await revertAgent(mockWorkspaceId, mockAgentId, mockMessageId);
+
+    expect(result.attachments).toEqual(mockResponse.attachments);
   });
 
   it("should extract error message from JSON response", async () => {

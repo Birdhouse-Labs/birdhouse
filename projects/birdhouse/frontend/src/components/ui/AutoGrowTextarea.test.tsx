@@ -111,4 +111,33 @@ describe("AutoGrowTextarea", () => {
       expect((textarea as HTMLTextAreaElement).value).toBe("[Search for skills](birdhouse:skill/find-skills)");
     });
   });
+
+  it("passes pasted image files to the attachment handler instead of inserting text", async () => {
+    const onAttachmentsPasted = vi.fn();
+
+    render(() => (
+      <AutoGrowTextarea value="" onInput={() => {}} onSend={() => {}} onAttachmentsPasted={onAttachmentsPasted} />
+    ));
+
+    const textarea = screen.getByRole("textbox");
+    const file = new File(["image-bytes"], "clipboard.png", { type: "image/png" });
+
+    fireEvent.paste(textarea, {
+      clipboardData: {
+        items: [
+          {
+            kind: "file",
+            type: "image/png",
+            getAsFile: () => file,
+          },
+        ],
+      },
+    });
+
+    await waitFor(() => {
+      expect(onAttachmentsPasted).toHaveBeenCalledWith([file]);
+    });
+
+    expect((textarea as HTMLTextAreaElement).value).toBe("");
+  });
 });

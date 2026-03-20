@@ -129,6 +129,92 @@ describe("API send-message with clone_and_send", () => {
 </skill>`);
     });
 
+    test("includes pasted image attachments as file parts", async () => {
+      const sourceAgent = createRootAgent(agentsDB, {
+        id: "agent_with_image",
+        session_id: "ses_with_image",
+        title: "Image Send Agent",
+      });
+
+      let capturedParts: Array<{ type: string; text?: string; url?: string; mime?: string; filename?: string }> = [];
+
+      const mockMessage: Message = {
+        info: {
+          id: "msg_response_image",
+          sessionID: "ses_with_image",
+          role: "assistant",
+          time: { created: Date.now(), completed: Date.now() },
+          parentID: "msg_user",
+          modelID: "claude-sonnet-4",
+          providerID: "anthropic",
+          mode: "build",
+          cost: 0,
+          tokens: {
+            input: 100,
+            output: 50,
+            reasoning: 0,
+            cache: { read: 0, write: 0 },
+          },
+          path: { cwd: "/test", root: "/" },
+        },
+        parts: [],
+      };
+
+      const mockClient = {
+        session: {
+          prompt: async ({ body }: { body: { parts: typeof capturedParts } }) => {
+            capturedParts = body.parts;
+            return { data: mockMessage };
+          },
+        },
+      };
+
+      const deps = createTestDeps();
+      deps.agentsDB = agentsDB;
+      deps.opencode.client = mockClient as never;
+
+      await withDeps(deps, async () => {
+        const app = withWorkspaceContext(
+          () => {
+            const hono = new Hono();
+            hono.post("/:id/messages", (c) => sendMessage(c, deps));
+            return hono;
+          },
+          { agentsDb: agentsDB },
+        );
+
+        const response = await app.request(`/${sourceAgent.id}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: "Look at this",
+            attachments: [
+              {
+                type: "file",
+                filename: "pasted.png",
+                mime: "image/png",
+                url: "data:image/png;base64,abc123",
+              },
+            ],
+          }),
+        });
+
+        expect(response.status).toBe(200);
+      });
+
+      expect(capturedParts).toEqual([
+        { type: "text", text: "Look at this" },
+        {
+          type: "file",
+          filename: "pasted.png",
+          mime: "image/png",
+          url: "data:image/png;base64,abc123",
+        },
+      ]);
+    });
+
     test("does not attach raw trigger phrase text without an explicit skill link", async () => {
       const sourceAgent = createRootAgent(agentsDB, {
         id: "agent_skill_send_raw_text",
