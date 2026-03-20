@@ -129,7 +129,7 @@ describe("API send-message with clone_and_send", () => {
 </skill>`);
     });
 
-    test("includes pasted image attachments as file parts", async () => {
+    test("includes pasted image and pdf attachments as file parts", async () => {
       const sourceAgent = createRootAgent(agentsDB, {
         id: "agent_with_image",
         session_id: "ses_with_image",
@@ -197,6 +197,12 @@ describe("API send-message with clone_and_send", () => {
                 mime: "image/png",
                 url: "data:image/png;base64,abc123",
               },
+              {
+                type: "file",
+                filename: "notes.pdf",
+                mime: "application/pdf",
+                url: "data:application/pdf;base64,pdf123",
+              },
             ],
           }),
         });
@@ -211,6 +217,12 @@ describe("API send-message with clone_and_send", () => {
           filename: "pasted.png",
           mime: "image/png",
           url: "data:image/png;base64,abc123",
+        },
+        {
+          type: "file",
+          filename: "notes.pdf",
+          mime: "application/pdf",
+          url: "data:application/pdf;base64,pdf123",
         },
       ]);
     });
