@@ -45,4 +45,24 @@ describe("ComposerImageAttachments", () => {
       expect(screen.getAllByAltText("diagram.png")).toHaveLength(1);
     });
   });
+
+  it("removes the selected attachment from the preview dialog and closes it", async () => {
+    const onRemove = vi.fn();
+
+    render(() => <ComposerImageAttachments attachments={attachments} onRemove={onRemove} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open image preview for diagram.png" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+    expect(onRemove).toHaveBeenCalledWith("att_1");
+
+    await waitFor(() => {
+      expect(screen.getAllByAltText("diagram.png")).toHaveLength(1);
+    });
+  });
 });

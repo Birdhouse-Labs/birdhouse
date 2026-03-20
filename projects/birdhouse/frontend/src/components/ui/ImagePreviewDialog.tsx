@@ -2,7 +2,7 @@
 // ABOUTME: Shared by composer previews and sent message attachment rendering.
 
 import Dialog from "corvu/dialog";
-import { type Component, Show } from "solid-js";
+import { type Component, type JSX, Show } from "solid-js";
 import { useZIndex } from "../../contexts/ZIndexContext";
 
 export interface ImagePreviewDialogProps {
@@ -10,6 +10,7 @@ export interface ImagePreviewDialogProps {
   onOpenChange: (open: boolean) => void;
   src?: string | undefined;
   alt?: string | undefined;
+  action?: JSX.Element | undefined;
 }
 
 const ImagePreviewDialog: Component<ImagePreviewDialogProps> = (props) => {
@@ -40,6 +41,9 @@ const ImagePreviewDialog: Component<ImagePreviewDialogProps> = (props) => {
               />
             </Show>
           </div>
+          <Show when={props.action}>
+            <div class="flex justify-end px-4 py-3 border-t border-border bg-surface-raised">{props.action}</div>
+          </Show>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog>

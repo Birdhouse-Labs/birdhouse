@@ -1,9 +1,10 @@
 // ABOUTME: Thumbnail strip for pasted composer images in new-agent and reply flows.
 // ABOUTME: Supports hover remove controls and click-to-preview modal behavior.
 
-import { X } from "lucide-solid";
+import { Trash2, X } from "lucide-solid";
 import { type Component, createSignal, For, Show } from "solid-js";
 import type { ComposerImageAttachment } from "../../types/composer-attachments";
+import Button from "./Button";
 import ImagePreviewDialog from "./ImagePreviewDialog";
 
 export interface ComposerImageAttachmentsProps {
@@ -13,6 +14,14 @@ export interface ComposerImageAttachmentsProps {
 
 const ComposerImageAttachments: Component<ComposerImageAttachmentsProps> = (props) => {
   const [selectedAttachment, setSelectedAttachment] = createSignal<ComposerImageAttachment | null>(null);
+
+  const handleRemoveSelectedAttachment = () => {
+    const attachment = selectedAttachment();
+    if (!attachment) return;
+
+    props.onRemove(attachment.id);
+    setSelectedAttachment(null);
+  };
 
   return (
     <Show when={props.attachments.length > 0}>
@@ -54,6 +63,11 @@ const ComposerImageAttachments: Component<ComposerImageAttachmentsProps> = (prop
           }}
           src={selectedAttachment()?.url}
           alt={selectedAttachment()?.filename}
+          action={
+            <Button variant="tertiary" leftIcon={<Trash2 size={16} />} onClick={handleRemoveSelectedAttachment}>
+              Remove
+            </Button>
+          }
         />
       </div>
     </Show>
