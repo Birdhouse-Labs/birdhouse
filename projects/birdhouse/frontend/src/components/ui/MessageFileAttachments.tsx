@@ -22,7 +22,7 @@ const MessageFileAttachments: Component<MessageFileAttachmentsProps> = (props) =
 
   return (
     <Show when={props.attachments.length > 0}>
-      <div>
+      <div class="pt-1">
         <div class="flex flex-wrap gap-2 mb-3">
           <For each={imageAttachments()}>
             {(attachment) => (
