@@ -5,8 +5,10 @@ import Dialog from "corvu/dialog";
 import { LibraryBig } from "lucide-solid";
 import { type Component, createEffect, createMemo, createSignal, Show } from "solid-js";
 import { useZIndex } from "../../contexts/ZIndexContext";
+import { useModalRoute } from "../../lib/routing";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
 import MarkdownRenderer from "../MarkdownRenderer";
+import Button from "./Button";
 import { Combobox } from "./Combobox";
 
 export interface SkillAttachmentSnapshot {
@@ -19,10 +21,12 @@ export interface SkillAttachmentsDialogProps {
   open: boolean;
   onClose: () => void;
   initialSkillName?: string | undefined;
+  workspaceId: string;
 }
 
 export const SkillAttachmentsDialog: Component<SkillAttachmentsDialogProps> = (props) => {
   const baseZIndex = useZIndex();
+  const { openModal } = useModalRoute();
   const [selectedSkillName, setSelectedSkillName] = createSignal<string | undefined>(
     props.initialSkillName || props.attachments[0]?.name,
   );
@@ -88,7 +92,19 @@ export const SkillAttachmentsDialog: Component<SkillAttachmentsDialogProps> = (p
                 <Show when={selectedAttachment()}>
                   {(attachment) => (
                     <div class="space-y-4">
-                      <h3 class="text-lg font-semibold text-heading">What Gets Sent to the LLM</h3>
+                      <div class="flex items-center justify-between gap-4">
+                        <h3 class="text-lg font-semibold text-heading">What Gets Sent to the LLM</h3>
+                        <Button
+                          variant="secondary"
+                          leftIcon={<LibraryBig size={16} />}
+                          onClick={() => {
+                            props.onClose();
+                            openModal("skill-library-v2", attachment().name);
+                          }}
+                        >
+                          Open in skill library
+                        </Button>
+                      </div>
                       <div class={`rounded-xl ${cardSurfaceFlat} overflow-hidden`}>
                         <div class="px-4 py-2 bg-surface-overlay border-b border-border-muted font-mono text-xs text-text-muted">
                           &lt;skill name="{attachment().name}"&gt;

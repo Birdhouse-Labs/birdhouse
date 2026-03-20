@@ -372,6 +372,7 @@ const NewAgent: Component = () => {
         attachments={visibleSkillAttachments()}
         open={skillDialogOpen()}
         onClose={() => setSkillDialogOpen(false)}
+        workspaceId={workspaceId}
       />
     </div>
   );

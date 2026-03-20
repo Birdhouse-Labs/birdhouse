@@ -583,6 +583,7 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
           setSkillDialogOpen(false);
           setSelectedSkillName(undefined);
         }}
+        workspaceId={workspaceId}
         {...(selectedSkillName() ? { initialSkillName: selectedSkillName() } : {})}
       />
 

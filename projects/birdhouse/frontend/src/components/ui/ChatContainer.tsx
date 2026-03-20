@@ -190,6 +190,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
         attachments={visibleSkillAttachments()}
         open={dialogOpen()}
         onClose={() => setDialogOpen(false)}
+        workspaceId={workspaceId}
       />
 
       {/* Messages area - newest at top (scrollable) */}
