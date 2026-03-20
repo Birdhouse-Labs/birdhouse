@@ -174,7 +174,9 @@ export function createLiveOpenCodeClient(baseUrl: string, workspaceRoot: string)
         parts?: Array<TextPartInput | FilePartInput>;
       },
     ): Promise<Message> {
-      const parts = options?.parts || [{ type: "text", text, ...(options?.metadata && { metadata: options.metadata }) }];
+      const parts = options?.parts || [
+        { type: "text", text, ...(options?.metadata && { metadata: options.metadata }) },
+      ];
 
       const response = await fetch(
         `${baseUrl}/session/${sessionId}/message?directory=${encodeURIComponent(workspaceRoot)}`,

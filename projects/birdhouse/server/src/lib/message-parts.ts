@@ -25,7 +25,7 @@ export function parseFileAttachments(value: unknown): FilePartInput[] {
     };
 
     if (typedAttachment.type !== "file") {
-      throw new Error(`attachments[${index}].type must be \"file\"`);
+      throw new Error(`attachments[${index}].type must be "file"`);
     }
 
     if (typeof typedAttachment.mime !== "string" || !typedAttachment.mime.trim()) {

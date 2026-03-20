@@ -80,7 +80,7 @@ vi.mock("./ui/ChatContainer", () => ({
     <div>
       <div data-testid="chat-input-value">{props.inputValue}</div>
       <div data-testid="chat-attachments-count">{props.attachments?.length ?? 0}</div>
-      <button type="button" onClick={() => props.onResetToMessage?.("msg_reset") }>
+      <button type="button" onClick={() => props.onResetToMessage?.("msg_reset")}>
         Trigger Reset
       </button>
     </div>

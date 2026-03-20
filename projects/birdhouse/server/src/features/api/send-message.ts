@@ -1,6 +1,7 @@
 // ABOUTME: Send a message to an agent (blocking or async mode, with optional cloning)
 // ABOUTME: Used by /api/agents/:id/messages POST endpoint
 
+import type { FilePartInput } from "@opencode-ai/sdk/client";
 import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
 import { cloneAgent } from "../../domain/agent-lifecycle";
@@ -41,7 +42,7 @@ export async function sendMessage(
   const agentId = c.req.param("id");
   const { text, agent: agentName, clone_and_send, metadata, attachments } = await c.req.json();
   const rawText = typeof text === "string" ? text : "";
-  let requestAttachments;
+  let requestAttachments: FilePartInput[];
   try {
     requestAttachments = parseFileAttachments(attachments);
   } catch (error) {
@@ -239,11 +240,11 @@ export async function sendMessage(
     const workspaceId = workspace.workspace_id;
     generateAndUpdateTitleForClone(
       deps,
-        clonedAgentId,
-        rawText,
-        sourceAgent.title,
-        workspaceId,
-        opencodeBase,
+      clonedAgentId,
+      rawText,
+      sourceAgent.title,
+      workspaceId,
+      opencodeBase,
       workspaceDir,
       deps.opencode,
     ).catch((error) => {
