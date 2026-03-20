@@ -6,12 +6,9 @@ import { useFloating } from "solid-floating-ui";
 import { type Component, createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { uiSize } from "../../theme";
+import { findMatches, type MatchResult, type SkillSuggestion } from "./skill-typeahead-matching";
 
-interface SkillSuggestion {
-  id: string;
-  triggerPhrases: string[]; // Multiple ways to trigger this pattern
-  title: string;
-}
+export type { SkillSuggestion };
 
 export interface SkillTypeaheadProps {
   /** Reference element to position dropdown relative to */
@@ -37,84 +34,8 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
   const [highlightedIndex, setHighlightedIndex] = createSignal(0);
   let listRef: HTMLElement | undefined;
 
-  // Find the longest prefix match by looking backwards from cursor
-  // Returns skills that match plus the matched text and its position
-  interface MatchResult {
-    skill: SkillSuggestion;
-    matchedPhrase: string; // Which trigger phrase matched
-    matchedText: string; // What the user actually typed
-    startIndex: number; // Where the match starts in the input
-  }
-
-  const findMatches = (): MatchResult[] => {
-    const text = props.inputValue;
-    const cursor = props.cursorPosition;
-    const textLower = text.toLowerCase();
-
-    // Only look at text UP TO cursor position
-    const textBeforeCursor = text.substring(0, cursor);
-    const textBeforeCursorLower = textLower.substring(0, cursor);
-
-    // Try progressively longer substrings ending at cursor position
-    // Look back up to 50 characters (plenty for any trigger phrase)
-    const maxLookback = 50;
-    const lookbackStart = Math.max(0, cursor - maxLookback);
-
-    const results: MatchResult[] = [];
-
-    // For each skill, check if any trigger phrase is being typed
-    for (const skill of props.skills) {
-      for (const phrase of skill.triggerPhrases) {
-        const phraseLower = phrase.toLowerCase();
-
-        // Try each possible starting position in the lookback window
-        for (let start = lookbackStart; start < cursor; start++) {
-          const substring = textBeforeCursorLower.substring(start);
-
-          // Check if this trigger phrase starts with what user typed
-          if (phraseLower.startsWith(substring) && substring.length >= 2) {
-            results.push({
-              skill,
-              matchedPhrase: phrase,
-              matchedText: textBeforeCursor.substring(start), // Original case
-              startIndex: start,
-            });
-            break; // Found a match for this phrase, move to next
-          }
-        }
-      }
-    }
-
-    return results;
-  };
-
-  // Get unique skills from match results (longest match per skill)
-  const filteredSkills = (): SkillSuggestion[] => {
-    const matches = findMatches();
-
-    if (matches.length === 0) {
-      return [];
-    }
-
-    // Group by skill ID and take longest match for each
-    const skillMap = new Map<string, MatchResult>();
-    for (const match of matches) {
-      const existing = skillMap.get(match.skill.id);
-      if (!existing || match.matchedText.length > existing.matchedText.length) {
-        skillMap.set(match.skill.id, match);
-      }
-    }
-
-    return Array.from(skillMap.values()).map((m) => m.skill);
-  };
-
-  // Get the best match for the currently highlighted skill (for text replacement)
-  const getBestMatch = (skill: SkillSuggestion): MatchResult | undefined => {
-    const matches = findMatches();
-    const skillMatches = matches.filter((m) => m.skill.id === skill.id);
-
-    // Return longest match
-    return skillMatches.sort((a, b) => b.matchedText.length - a.matchedText.length)[0];
+  const filteredMatches = (): MatchResult[] => {
+    return findMatches(props.inputValue, props.cursorPosition, props.skills);
   };
 
   // Setup floating UI for dropdown positioning
@@ -128,7 +49,7 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
 
   // Reset highlight when filtered results change
   createEffect(() => {
-    filteredSkills();
+    filteredMatches();
     setHighlightedIndex(0);
   });
 
@@ -149,7 +70,7 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!props.visible) return;
 
-    const filtered = filteredSkills();
+    const filtered = filteredMatches();
     if (filtered.length === 0) return;
 
     switch (e.key) {
@@ -167,12 +88,9 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
           return;
         }
         e.preventDefault();
-        const selected = filtered[highlightedIndex()];
-        if (selected) {
-          const match = getBestMatch(selected);
-          if (match) {
-            props.onSelect(selected, match.matchedPhrase, match.matchedText, match.startIndex);
-          }
+        const match = filtered[highlightedIndex()];
+        if (match) {
+          props.onSelect(match.skill, match.matchedPhrase, match.matchedText, match.startIndex);
         }
         break;
       }
@@ -200,7 +118,7 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
   };
 
   const shouldShow = () => {
-    const filtered = filteredSkills();
+    const filtered = filteredMatches();
     return props.visible && filtered.length > 0;
   };
 
@@ -221,8 +139,8 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
           "z-index": baseZIndex,
         }}
       >
-        <For each={filteredSkills()}>
-          {(skill, index) => (
+        <For each={filteredMatches()}>
+          {(match, index) => (
             <div
               role="option"
               tabIndex={-1}
@@ -238,18 +156,12 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
                 e.stopPropagation();
               }}
               onClick={() => {
-                const match = getBestMatch(skill);
-                if (match) {
-                  props.onSelect(skill, match.matchedPhrase, match.matchedText, match.startIndex);
-                }
+                props.onSelect(match.skill, match.matchedPhrase, match.matchedText, match.startIndex);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  const match = getBestMatch(skill);
-                  if (match) {
-                    props.onSelect(skill, match.matchedPhrase, match.matchedText, match.startIndex);
-                  }
+                  props.onSelect(match.skill, match.matchedPhrase, match.matchedText, match.startIndex);
                 }
               }}
               onMouseEnter={() => {
@@ -257,13 +169,8 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
               }}
             >
               <div>
-                <div class="font-medium text-text-primary">{skill.title}</div>
-                <div class="text-text-secondary text-xs mt-0.5">
-                  {(() => {
-                    const match = getBestMatch(skill);
-                    return match ? match.matchedPhrase : skill.triggerPhrases[0];
-                  })()}
-                </div>
+                <div class="font-medium text-text-primary">{match.skill.title}</div>
+                <div class="text-text-secondary text-xs mt-0.5">{match.matchedPhrase}</div>
               </div>
             </div>
           )}

@@ -13,6 +13,8 @@ export interface SkillMetadata {
   description?: string;
   tags: string[];
   trigger_phrases: string[];
+  metadata_trigger_phrases: string[];
+  display_location: string;
   scope: SkillScope;
   readonly: boolean;
 }
@@ -35,6 +37,7 @@ export interface SkillDetail {
   metadata: Record<string, unknown>;
   prompt: string;
   trigger_phrases: string[];
+  metadata_trigger_phrases: string[];
   files: string[];
   readonly: boolean;
   scope: SkillScope;

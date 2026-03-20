@@ -17,6 +17,8 @@ export interface BirdhouseSkillSummary {
   tags: string[];
   scope: SkillScope;
   trigger_phrases: string[];
+  metadata_trigger_phrases: string[];
+  display_location: string;
   readonly: true;
 }
 
@@ -88,6 +90,15 @@ function extractSkillTags(metadata: Record<string, unknown>): string[] {
   return tags.filter((tag): tag is string => typeof tag === "string");
 }
 
+function extractMetadataTriggerPhrases(metadata: Record<string, unknown>): string[] {
+  const phrases = metadata.trigger_phrases;
+  if (!Array.isArray(phrases)) {
+    return [];
+  }
+
+  return phrases.filter((phrase): phrase is string => typeof phrase === "string");
+}
+
 export function inferSkillScope(location: string, workspaceDirectory: string): SkillScope {
   const resolvedLocation = resolve(location);
   const resolvedWorkspaceDirectory = resolve(workspaceDirectory);
@@ -147,6 +158,8 @@ export function toBirdhouseSkillSummary(
     tags: extractSkillTags(metadata),
     scope: inferSkillScope(skill.location, workspaceDirectory),
     trigger_phrases: triggerPhrases,
+    metadata_trigger_phrases: extractMetadataTriggerPhrases(metadata),
+    display_location: shortenHomePath(skill.location, homedir()),
     readonly: true,
   };
 }

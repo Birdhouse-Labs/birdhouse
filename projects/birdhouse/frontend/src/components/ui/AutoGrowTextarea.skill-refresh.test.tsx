@@ -86,6 +86,7 @@ describe("AutoGrowTextarea skill refresh", () => {
             id: "find-docs",
             title: "find-docs",
             trigger_phrases: ["old docs"],
+            metadata_trigger_phrases: [],
           },
         ],
       })
@@ -95,6 +96,7 @@ describe("AutoGrowTextarea skill refresh", () => {
             id: "find-docs",
             title: "find-docs",
             trigger_phrases: ["fresh docs"],
+            metadata_trigger_phrases: [],
           },
         ],
       });

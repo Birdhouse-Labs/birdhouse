@@ -6,6 +6,8 @@ import { cardSurfaceFlat } from "../../styles/containerStyles";
 
 export interface TriggerPhraseEditorProps {
   phrases: string[];
+  /** Phrases locked in the skill's SKILL.md frontmatter — shown but not editable */
+  readonlyPhrases?: string[];
   disabled?: boolean;
   onSave: (phrases: string[]) => Promise<void>;
 }
@@ -101,6 +103,17 @@ const TriggerPhraseEditor: Component<TriggerPhraseEditorProps> = (props) => {
 
   return (
     <div class={`rounded-xl ${cardSurfaceFlat} p-6 space-y-1`}>
+      <For each={props.readonlyPhrases}>
+        {(phrase) => (
+          <div class="flex items-center gap-2">
+            <span class="text-text-muted flex-shrink-0">•</span>
+            <span class="text-sm font-mono text-text-primary flex-1">{phrase}</span>
+            <span class="text-xs text-text-muted px-1.5 py-0.5 rounded bg-surface-raised border border-border-muted">
+              from skill
+            </span>
+          </div>
+        )}
+      </For>
       <For each={props.phrases}>
         {(phrase) => (
           <Show

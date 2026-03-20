@@ -52,6 +52,7 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
     return skills.map((skill) => ({
       id: skill.id,
       triggerPhrases: skill.triggerPhrases,
+      metadataTriggerPhrases: skill.metadataTriggerPhrases,
       title: skill.title,
     }));
   };

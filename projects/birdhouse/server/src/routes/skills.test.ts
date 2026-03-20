@@ -22,6 +22,8 @@ interface SkillsListResponse {
     tags: string[];
     scope: "workspace" | "global";
     trigger_phrases: string[];
+    metadata_trigger_phrases: string[];
+    display_location: string;
     readonly: boolean;
   }>;
 }
@@ -33,10 +35,11 @@ interface SkillDetailResponse {
   tags: string[];
   scope: "workspace" | "global";
   trigger_phrases: string[];
+  metadata_trigger_phrases: string[];
+  display_location: string;
   readonly: boolean;
   content: string;
   location: string;
-  display_location: string;
   files: string[];
   metadata: Record<string, unknown>;
 }
@@ -146,6 +149,8 @@ describe("workspace skills routes", () => {
             tags: [],
             scope: "global",
             trigger_phrases: ["look up framework docs"],
+            metadata_trigger_phrases: [],
+            display_location: "/Users/test/.claude/skills/find-docs/SKILL.md",
             readonly: true,
           },
           {
@@ -155,6 +160,8 @@ describe("workspace skills routes", () => {
             tags: [],
             scope: "workspace",
             trigger_phrases: [],
+            metadata_trigger_phrases: [],
+            display_location: "/repo/current-workspace/.agents/skills/git/spotlight-worktree/SKILL.md",
             readonly: true,
           },
         ],
@@ -211,6 +218,7 @@ metadata:
         tags: ["git", "release"],
         scope: "workspace",
         trigger_phrases: ["spotlight this branch"],
+        metadata_trigger_phrases: [],
         readonly: true,
         content: "# Git Spotlight",
         location: join(skillDir, "SKILL.md"),
@@ -228,6 +236,45 @@ metadata:
           },
         },
       });
+    });
+  });
+
+  test("extracts trigger_phrases from skill frontmatter as metadata_trigger_phrases", async () => {
+    const skillDir = createSkillDirectory({
+      "SKILL.md": `---
+name: git-commit-messages
+description: Write commit messages.
+trigger_phrases:
+  - write commit message
+  - commit this
+  - git commit
+---
+
+# Commit Messages`,
+    });
+    const workspace = createWorkspace("ws_1", dirname(skillDir));
+    testDb.insertWorkspace(workspace);
+
+    const deps = createTestDeps({
+      listSkills: async () =>
+        [
+          {
+            name: "git-commit-messages",
+            description: "Write commit messages.",
+            location: join(skillDir, "SKILL.md"),
+            content: "# Commit Messages",
+          },
+        ] satisfies Skill[],
+    });
+
+    await withDeps(deps, async () => {
+      const app = createSkillsApp(testDb, workspace);
+      const response = await app.request(`/${encodeURIComponent("git-commit-messages")}`);
+
+      expect(response.status).toBe(200);
+      const data = (await response.json()) as SkillDetailResponse;
+      expect(data.metadata_trigger_phrases).toEqual(["write commit message", "commit this", "git commit"]);
+      expect(data.trigger_phrases).toEqual([]);
     });
   });
 

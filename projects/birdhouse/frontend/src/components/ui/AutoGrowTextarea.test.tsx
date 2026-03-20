@@ -13,11 +13,13 @@ vi.mock("../../contexts/SkillCacheContext", () => ({
         id: "release-notes-from-branch",
         title: "release-notes-from-branch",
         triggerPhrases: ["generate release notes"],
+        metadataTriggerPhrases: [],
       },
       {
         id: "find-skills",
         title: "find-skills",
         triggerPhrases: ["search for skills"],
+        metadataTriggerPhrases: [],
       },
     ],
     loading: () => false,

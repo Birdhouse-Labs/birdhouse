@@ -20,6 +20,7 @@ interface CachedSkillMetadata {
   id: string;
   title: string;
   triggerPhrases: string[];
+  metadataTriggerPhrases: string[];
 }
 
 interface SkillCacheContextValue {
@@ -71,6 +72,7 @@ export const SkillCacheProvider: ParentComponent = (props) => {
       id: skill.id,
       title: skill.title,
       triggerPhrases: skill.trigger_phrases,
+      metadataTriggerPhrases: skill.metadata_trigger_phrases,
     }));
   };
 
