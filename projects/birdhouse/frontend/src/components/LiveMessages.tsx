@@ -606,35 +606,21 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
         <div class="flex flex-col h-full">
           {/* Agent Header - only show when metadata is loaded */}
           <Show when={agentMetadata()}>
-            {(metadata) =>
-              props.showCloseButton && props.onClose ? (
-                <AgentHeader
-                  agentId={props.agentId}
-                  workspaceId={workspaceId}
-                  title={metadata().title}
-                  modelName={metadata().model}
-                  messages={messagesStore}
-                  mode={selectedAgent()}
-                  onModeChange={setSelectedAgent}
-                  onHeaderClick={() => props.onAgentHeaderClick?.(props.agentId)}
-                  archivedAt={metadata().archived_at}
-                  showCloseButton={true}
-                  onClose={props.onClose}
-                />
-              ) : (
-                <AgentHeader
-                  agentId={props.agentId}
-                  workspaceId={workspaceId}
-                  title={metadata().title}
-                  modelName={metadata().model}
-                  messages={messagesStore}
-                  mode={selectedAgent()}
-                  onModeChange={setSelectedAgent}
-                  onHeaderClick={() => props.onAgentHeaderClick?.(props.agentId)}
-                  archivedAt={metadata().archived_at}
-                />
-              )
-            }
+            {(metadata) => (
+              <AgentHeader
+                agentId={props.agentId}
+                workspaceId={workspaceId}
+                title={metadata().title}
+                modelName={metadata().model}
+                messages={messagesStore}
+                mode={selectedAgent()}
+                onModeChange={setSelectedAgent}
+                onHeaderClick={() => props.onAgentHeaderClick?.(props.agentId)}
+                archivedAt={metadata().archived_at}
+                showCloseButton={props.showCloseButton && !!props.onClose}
+                onClose={props.onClose}
+              />
+            )}
           </Show>
 
           <Show when={sendError()}>
