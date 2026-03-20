@@ -4,6 +4,7 @@
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { createSignal } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
+import type { ComposerImageAttachment } from "../../types/composer-attachments";
 import ChatContainer from "./ChatContainer";
 
 const previewSkillAttachments = vi.fn(async (workspaceId: string, text: string) => {
@@ -66,5 +67,32 @@ describe("ChatContainer", () => {
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "1 skill" })).not.toBeInTheDocument();
     });
+  });
+
+  it("keeps send enabled when image attachments exist without text", () => {
+    const attachments: ComposerImageAttachment[] = [
+      {
+        id: "att_1",
+        filename: "diagram.png",
+        mime: "image/png",
+        url: "data:image/png;base64,abc123",
+      },
+    ];
+
+    render(() => (
+      <ChatContainer
+        messages={[]}
+        agentId="agent_test"
+        inputValue=""
+        isStreaming={false}
+        onInputChange={() => {}}
+        onSend={() => {}}
+        onStop={() => {}}
+        attachments={attachments}
+        onRemoveAttachment={() => {}}
+      />
+    ));
+
+    expect(screen.getByRole("button", { name: "Send" })).not.toBeDisabled();
   });
 });

@@ -1,8 +1,10 @@
 // ABOUTME: Domain logic for sending first message to agents with Birdhouse system prompt
 // ABOUTME: Encapsulates blocking vs fire-and-forget modes and model parsing
 
+import type { FilePartInput } from "@opencode-ai/sdk/client";
 import type { Deps } from "../dependencies";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "./birdhouse-system-prompt";
+import { buildPromptParts } from "./message-parts";
 import { parseModelId } from "./model-validator";
 import { buildSkillAttachmentPreview, enrichMessageWithSkillAttachments } from "./skill-attachments";
 
@@ -13,6 +15,7 @@ export interface SendFirstMessageOptions {
   prompt: string;
   wait: boolean;
   agent?: string;
+  attachments?: FilePartInput[];
   senderMetadata?: {
     sent_by_agent_id: string;
     sent_by_agent_title: string;
@@ -38,7 +41,7 @@ export async function sendFirstMessage(
   deps: Pick<Deps, "opencode" | "agentsDB" | "log" | "telemetry">,
   options: SendFirstMessageOptions,
 ): Promise<SendFirstMessageResult> {
-  const { agentId, sessionId, model, prompt, wait, agent, senderMetadata } = options;
+  const { agentId, sessionId, model, prompt, wait, agent, attachments = [], senderMetadata } = options;
   const { opencode, agentsDB, log, telemetry } = deps;
 
   const visibleSkills = await opencode.listSkills();
@@ -54,6 +57,7 @@ export async function sendFirstMessage(
   );
 
   const { providerID, modelID } = parseModelId(model);
+  const promptParts = buildPromptParts(enrichedPrompt, attachments, senderMetadata);
 
   if (wait) {
     // Blocking mode: Wait for agent to complete before returning
@@ -62,8 +66,8 @@ export async function sendFirstMessage(
     const messageResponse = await opencode.sendMessage(sessionId, enrichedPrompt, {
       model: { providerID, modelID },
       system: BIRDHOUSE_SYSTEM_PROMPT,
+      parts: promptParts,
       ...(agent && { agent }),
-      ...(senderMetadata && { metadata: senderMetadata }),
     });
 
     agentsDB.updateAgentTimestamp(agentId);
@@ -86,8 +90,8 @@ export async function sendFirstMessage(
       .sendMessage(sessionId, enrichedPrompt, {
         model: { providerID, modelID },
         system: BIRDHOUSE_SYSTEM_PROMPT,
+        parts: promptParts,
         ...(agent && { agent }),
-        ...(senderMetadata && { metadata: senderMetadata }),
       })
       .then((messageResponse) => {
         agentsDB.updateAgentTimestamp(agentId);

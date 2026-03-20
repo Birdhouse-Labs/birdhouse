@@ -371,6 +371,86 @@ describe("POST /api/agents - Create root agent", () => {
     });
   });
 
+  test("sends pasted image attachments as file parts when creating with a prompt", async () => {
+    const mockSession: Session = {
+      id: "ses_with_image_prompt",
+      title: "Agent with Image Prompt",
+      projectID: "test-project",
+      directory: "/test",
+      version: "1.0.0",
+      time: { created: Date.now(), updated: Date.now() },
+    };
+
+    const mockMessage: Message = {
+      info: {
+        id: "msg_with_image_prompt",
+        sessionID: "ses_with_image_prompt",
+        role: "assistant",
+        time: { created: Date.now(), completed: Date.now() },
+        parentID: "msg_user",
+        modelID: "claude-sonnet-4",
+        providerID: "anthropic",
+        mode: "build",
+        cost: 0,
+        tokens: {
+          input: 100,
+          output: 50,
+          reasoning: 0,
+          cache: { read: 0, write: 0 },
+        },
+        path: { cwd: "/", root: "/" },
+      },
+      parts: [],
+    };
+
+    const agentsDB = createAgentsDB(":memory:");
+
+    let capturedParts: Array<{ type: string; text?: string; url?: string; mime?: string; filename?: string }> = [];
+
+    const deps = createTestDeps({
+      createSession: async () => mockSession,
+      sendMessage: async (_sessionId, _text, options) => {
+        capturedParts = (options?.parts as typeof capturedParts | undefined) || [];
+        return mockMessage;
+      },
+    });
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const res = await app.request("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Agent with Image Prompt",
+          model: "anthropic/claude-sonnet-4",
+          prompt: "Please inspect this image",
+          wait: true,
+          attachments: [
+            {
+              type: "file",
+              filename: "pasted.png",
+              mime: "image/png",
+              url: "data:image/png;base64,abc123",
+            },
+          ],
+        }),
+      });
+
+      expect(res.status).toBe(201);
+    });
+
+    expect(capturedParts).toEqual([
+      { type: "text", text: "Please inspect this image" },
+      {
+        type: "file",
+        filename: "pasted.png",
+        mime: "image/png",
+        url: "data:image/png;base64,abc123",
+      },
+    ]);
+  });
+
   test("defaults to async mode (returns immediately without parts)", async () => {
     const mockSession: Session = {
       id: "ses_async",

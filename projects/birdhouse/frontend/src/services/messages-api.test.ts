@@ -237,6 +237,35 @@ describe("sendMessage", () => {
     expect(body.clone_and_send).toBe(true);
   });
 
+  it("should include structured image attachments when provided", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ sent: true, async: true }),
+    } as Response);
+
+    await sendMessage(mockWorkspaceId, mockAgentId, mockText, {
+      attachments: [
+        {
+          id: "att_1",
+          filename: "clipboard.png",
+          mime: "image/png",
+          url: "data:image/png;base64,abc123",
+        },
+      ],
+    });
+
+    const call = vi.mocked(fetch).mock.calls[0]!;
+    const body = JSON.parse(call[1]?.body as string);
+    expect(body.attachments).toEqual([
+      {
+        type: "file",
+        filename: "clipboard.png",
+        mime: "image/png",
+        url: "data:image/png;base64,abc123",
+      },
+    ]);
+  });
+
   it("should throw SendMessageError with details on failure", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
@@ -377,6 +406,33 @@ describe("createAgent", () => {
     const call = vi.mocked(fetch).mock.calls[0]!;
     const body = JSON.parse(call[1]?.body as string);
     expect(body.agent).toBe("custom-agent");
+  });
+
+  it("should include structured image attachments when creating an agent", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: "agent_new123" }),
+    } as Response);
+
+    await createAgent(mockWorkspaceId, undefined, undefined, undefined, undefined, [
+      {
+        id: "att_1",
+        filename: "clipboard.png",
+        mime: "image/png",
+        url: "data:image/png;base64,abc123",
+      },
+    ]);
+
+    const call = vi.mocked(fetch).mock.calls[0]!;
+    const body = JSON.parse(call[1]?.body as string);
+    expect(body.attachments).toEqual([
+      {
+        type: "file",
+        filename: "clipboard.png",
+        mime: "image/png",
+        url: "data:image/png;base64,abc123",
+      },
+    ]);
   });
 
   it("should throw error on HTTP failure", async () => {

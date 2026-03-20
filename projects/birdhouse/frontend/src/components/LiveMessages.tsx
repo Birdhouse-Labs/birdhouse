@@ -22,8 +22,10 @@ import {
   unrevertAgent,
 } from "../services/messages-api";
 import { fetchPendingQuestions } from "../services/questions-api";
+import type { ComposerImageAttachment } from "../types/composer-attachments";
 import type { Message } from "../types/messages";
 import type { QuestionRequest } from "../types/question";
+import { createComposerImageAttachments } from "../utils/composerAttachments";
 import AgentHeader from "./AgentHeader";
 import Button from "./ui/Button";
 import ChatContainer from "./ui/ChatContainer";
@@ -236,6 +238,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
 
   // Input state management
   const [inputValue, setInputValue] = createSignal("");
+  const [attachments, setAttachments] = createSignal<ComposerImageAttachment[]>([]);
   const [isSending, setIsSending] = createSignal(false);
   const [sendError, setSendError] = createSignal<string | null>(null);
   const [sendErrorDetails, setSendErrorDetails] = createSignal<SendMessageError | null>(null);
@@ -449,7 +452,8 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
 
   const handleSendMessage = async (message: string) => {
     const content = message.trim();
-    if (!content || isSending()) return;
+    const currentAttachments = attachments();
+    if ((!content && currentAttachments.length === 0) || isSending()) return;
 
     setIsSending(true);
     setSendError(null);
@@ -458,10 +462,12 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
       await sendMessage(workspaceId, props.agentId, content, {
         agent: selectedAgent(),
         cloneAndSend: cloneMode(),
+        attachments: currentAttachments,
       });
 
       // Clear input and localStorage only on success
       setInputValue("");
+      setAttachments([]);
       localStorage.removeItem(draftKey());
 
       // Reset clone mode after successful send
@@ -634,7 +640,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
                   onHeaderClick={() => props.onAgentHeaderClick?.(props.agentId)}
                   archivedAt={metadata().archived_at}
                   showCloseButton={true}
-                  onClose={props.onClose!}
+                  onClose={() => props.onClose?.()}
                 />
               </Show>
             )}
@@ -701,6 +707,14 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
             onInputChange={setInputValue}
             onSend={() => handleSendMessage(inputValue())}
             onStop={handleStop}
+            attachments={attachments()}
+            onRemoveAttachment={(attachmentId) => {
+              setAttachments((current) => current.filter((attachment) => attachment.id !== attachmentId));
+            }}
+            onAttachmentsPasted={async (files) => {
+              const pastedAttachments = await createComposerImageAttachments(files);
+              setAttachments((current) => [...current, ...pastedAttachments]);
+            }}
             isSendDisabled={isSending()}
             cloneMode={cloneMode()}
             onCloneModeChange={setCloneMode}

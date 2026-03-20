@@ -1,13 +1,13 @@
 // ABOUTME: Send a message to an agent (blocking or async mode, with optional cloning)
 // ABOUTME: Used by /api/agents/:id/messages POST endpoint
 
-import type { TextPartInput } from "@opencode-ai/sdk/client";
 import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
 import { cloneAgent } from "../../domain/agent-lifecycle";
 import { findSafeClonePoint } from "../../domain/clone-point";
 import type { AgentRow } from "../../lib/agents-db";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "../../lib/birdhouse-system-prompt";
+import { buildPromptParts, parseFileAttachments } from "../../lib/message-parts";
 import { parseModelId } from "../../lib/model-validator";
 import { getWorkspaceStream } from "../../lib/opencode-stream";
 import { buildSkillAttachmentPreview, enrichMessageWithSkillAttachments } from "../../lib/skill-attachments";
@@ -39,13 +39,21 @@ export async function sendMessage(
 
   const workspaceDir = workspace.directory;
   const agentId = c.req.param("id");
-  const { text, agent: agentName, clone_and_send, metadata } = await c.req.json();
+  const { text, agent: agentName, clone_and_send, metadata, attachments } = await c.req.json();
+  const rawText = typeof text === "string" ? text : "";
+  let requestAttachments;
+  try {
+    requestAttachments = parseFileAttachments(attachments);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid attachments";
+    return c.json({ error: message }, 400);
+  }
   const workspaceRoot = workspaceDir;
   const visibleSkills = await deps.opencode.listSkills();
   const enrichedText = enrichMessageWithSkillAttachments(
-    text,
+    rawText,
     buildSkillAttachmentPreview(
-      text,
+      rawText,
       visibleSkills.map((skill) => ({
         name: skill.name,
         content: skill.content,
@@ -231,11 +239,11 @@ export async function sendMessage(
     const workspaceId = workspace.workspace_id;
     generateAndUpdateTitleForClone(
       deps,
-      clonedAgentId,
-      text,
-      sourceAgent.title,
-      workspaceId,
-      opencodeBase,
+        clonedAgentId,
+        rawText,
+        sourceAgent.title,
+        workspaceId,
+        opencodeBase,
       workspaceDir,
       deps.opencode,
     ).catch((error) => {
@@ -271,13 +279,11 @@ export async function sendMessage(
     return c.json({ error: `Invalid model format in agent record: ${targetAgent.model}` }, 500);
   }
 
-  const messageParts: TextPartInput[] = [
-    {
-      type: "text",
-      text: enrichedText,
-      ...(metadata && { metadata }),
-    },
-  ];
+  const messageParts = buildPromptParts(enrichedText, requestAttachments, metadata);
+
+  if (messageParts.length === 0) {
+    return c.json({ error: "Message must include text or attachments" }, 400);
+  }
 
   if (!shouldWait) {
     // Async mode: Fire-and-forget (detach from the process)

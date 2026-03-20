@@ -7,10 +7,13 @@ import { type Component, createEffect, createMemo, createResource, createSignal,
 import { useWorkspace } from "../contexts/WorkspaceContext";
 import { createAgent, fetchModels, type Model } from "../services/messages-api";
 import { previewSkillAttachments } from "../services/skill-attachments-api";
+import type { ComposerImageAttachment } from "../types/composer-attachments";
+import { createComposerImageAttachments } from "../utils/composerAttachments";
 import { extractSkillLinkNames } from "../utils/skillLinks";
 import AutoGrowTextarea from "./ui/AutoGrowTextarea";
 import Button from "./ui/Button";
 import { Combobox, type ComboboxOption, type ComboboxRenderFn } from "./ui/Combobox";
+import ComposerImageAttachments from "./ui/ComposerImageAttachments";
 import SkillAttachmentsDialog from "./ui/SkillAttachmentsDialog";
 
 const STORAGE_KEY = "birdhouse:last-selected-model";
@@ -54,6 +57,7 @@ const NewAgent: Component = () => {
   const [isCreating, setIsCreating] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [selectedMode, setSelectedMode] = createSignal<"build" | "plan">("build");
+  const [attachments, setAttachments] = createSignal<ComposerImageAttachment[]>([]);
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -192,13 +196,22 @@ const NewAgent: Component = () => {
     try {
       const modelId = selectedModelId();
       const message = messageText().trim();
+      const currentAttachments = attachments();
 
       // Create the agent with optional first message
       // If message provided, server sends it and injects Birdhouse system prompt
-      const agent = await createAgent(workspaceId, undefined, modelId, message || undefined, agentForMode());
+      const agent = await createAgent(
+        workspaceId,
+        undefined,
+        modelId,
+        message || undefined,
+        agentForMode(),
+        currentAttachments,
+      );
 
       // Clear draft after successful creation
       localStorage.removeItem(NEW_AGENT_DRAFT_KEY);
+      setAttachments([]);
 
       // Navigate to the new agent (workspace-aware)
       navigate(`/workspace/${workspaceId}/agent/${agent.id}`);
@@ -266,10 +279,20 @@ const NewAgent: Component = () => {
               value={messageText()}
               onInput={setMessageText}
               onSend={handleCreateAgent}
+              onAttachmentsPasted={async (files) => {
+                const pastedAttachments = await createComposerImageAttachments(files);
+                setAttachments((current) => [...current, ...pastedAttachments]);
+              }}
               disabled={isCreating()}
               placeholder="What would you like help with?"
             />
           </div>
+          <ComposerImageAttachments
+            attachments={attachments()}
+            onRemove={(attachmentId) => {
+              setAttachments((current) => current.filter((attachment) => attachment.id !== attachmentId));
+            }}
+          />
         </div>
 
         {/* Error Message */}
