@@ -5,6 +5,7 @@
 import { useNavigate } from "@solidjs/router";
 import { type Component, createSignal, Show } from "solid-js";
 import { useWorkspace } from "../contexts/WorkspaceContext";
+import { usePageTitle } from "../lib/page-title";
 import { useModalRoute } from "../lib/routing";
 import { deleteWorkspace } from "../services/workspaces-api";
 import WorkspaceConfigDialog from "../workspace-config/components/WorkspaceConfigDialog";
@@ -17,6 +18,8 @@ const LoadingSpinner = () => (
 );
 
 const WorkspaceSettings: Component = () => {
+  usePageTitle("Workspace Settings - Birdhouse");
+
   const navigate = useNavigate();
   const { workspaceId, workspace, isLoading, error, refetch } = useWorkspace();
   const { currentModal, openModal, closeModal, isModalOpen } = useModalRoute();

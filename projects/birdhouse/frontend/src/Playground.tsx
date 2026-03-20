@@ -2,7 +2,7 @@
 // ABOUTME: Split-view layout with resizable sidebar and component demo viewer
 
 import Resizable from "corvu/resizable";
-import { type Component, createEffect, createSignal, onCleanup, Show } from "solid-js";
+import { type Component, createEffect, createMemo, createSignal, Show } from "solid-js";
 import ComponentNav from "./components/ComponentNav";
 import MobileNavDrawer from "./components/MobileNavDrawer";
 import {
@@ -26,6 +26,7 @@ import {
   TooltipDemo,
   TreeViewDemo,
 } from "./demos";
+import { usePageTitle } from "./lib/page-title";
 import { usePlaygroundComponent, useSetPlaygroundComponent } from "./lib/routing";
 import { createMediaQuery } from "./theme/createMediaQuery";
 
@@ -184,15 +185,12 @@ const Playground: Component<PlaygroundProps> = (props) => {
     }
   });
 
-  // Update browser tab title to show "Playground - Birdhouse"
-  createEffect(() => {
-    document.title = "Playground - Birdhouse";
+  const selectedComponentName = createMemo(() => {
+    const item = components.find((c) => c.id === selectedComponent());
+    return item?.name ?? selectedComponent();
   });
 
-  // Reset title when component unmounts
-  onCleanup(() => {
-    document.title = "Birdhouse";
-  });
+  usePageTitle(() => `${selectedComponentName()} - Playground - Birdhouse`);
 
   // Handle component selection - navigate to new route
   const handleSelectComponent = (id: string) => {

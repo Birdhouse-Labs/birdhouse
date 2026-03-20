@@ -3,6 +3,7 @@
 
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { type Component, createSignal, onMount, Show } from "solid-js";
+import { usePageTitle } from "../lib/page-title";
 import { checkWorkspace, createWorkspace } from "../services/workspaces-api";
 import Button from "./ui/Button";
 
@@ -13,6 +14,8 @@ const LoadingSpinner = () => (
 );
 
 const WorkspaceSetup: Component = () => {
+  usePageTitle("New Workspace - Birdhouse");
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 

@@ -5,6 +5,7 @@
 import { useNavigate } from "@solidjs/router";
 import { RefreshCw } from "lucide-solid";
 import { type Component, createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { usePageTitle } from "../lib/page-title";
 import { useModalRoute } from "../lib/routing";
 import { fetchWorkspaces, fetchWorkspacesHealth } from "../services/workspaces-api";
 import type { Workspace, WorkspaceHealthStatus as WorkspaceHealthStatusType } from "../types/workspace";
@@ -30,6 +31,8 @@ const ErrorMessage = (props: { error: Error; onRetry: () => void }) => (
 );
 
 const WorkspaceSelector: Component = () => {
+  usePageTitle("Workspaces - Birdhouse");
+
   const navigate = useNavigate();
   const [workspaces, setWorkspaces] = createSignal<Workspace[]>([]);
   const [isLoading, setIsLoading] = createSignal(true);
