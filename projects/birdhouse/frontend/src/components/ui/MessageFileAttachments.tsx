@@ -13,6 +13,29 @@ export interface MessageFileAttachmentsProps {
 const MessageFileAttachments: Component<MessageFileAttachmentsProps> = (props) => {
   const [selectedAttachment, setSelectedAttachment] = createSignal<FileBlock | null>(null);
 
+  const openPdfAttachment = async (attachment: FileBlock) => {
+    const popup = window.open("", "_blank", "noopener,noreferrer");
+    if (!popup) {
+      return;
+    }
+
+    try {
+      if (attachment.url.startsWith("data:")) {
+        const response = await fetch(attachment.url);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+
+        popup.location.href = objectUrl;
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+        return;
+      }
+
+      popup.location.href = attachment.url;
+    } catch {
+      popup.close();
+    }
+  };
+
   const imageAttachments = createMemo(() =>
     props.attachments.filter((attachment) => attachment.mimeType.startsWith("image/")),
   );
@@ -48,10 +71,9 @@ const MessageFileAttachments: Component<MessageFileAttachmentsProps> = (props) =
 
           <For each={pdfAttachments()}>
             {(attachment) => (
-              <a
-                href={attachment.url}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={() => void openPdfAttachment(attachment)}
                 aria-label={`Open PDF ${attachment.filename || "attachment"}`}
                 class="flex min-w-44 items-center gap-3 rounded-xl border border-border bg-surface-raised px-3 py-3 text-sm text-text-primary hover:border-accent/50 transition-colors"
               >
@@ -62,7 +84,7 @@ const MessageFileAttachments: Component<MessageFileAttachmentsProps> = (props) =
                   <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted">PDF</div>
                   <div class="truncate">{attachment.filename || "PDF attachment"}</div>
                 </div>
-              </a>
+              </button>
             )}
           </For>
 

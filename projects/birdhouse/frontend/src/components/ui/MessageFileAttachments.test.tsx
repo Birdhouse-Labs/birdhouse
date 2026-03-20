@@ -2,7 +2,7 @@
 // ABOUTME: Verifies image previews and PDF cards stay visible inside message bubbles.
 
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FileBlock } from "../../types/messages";
 import MessageFileAttachments from "./MessageFileAttachments";
 
@@ -11,6 +11,16 @@ vi.mock("../../contexts/ZIndexContext", () => ({
 }));
 
 describe("MessageFileAttachments", () => {
+  const originalWindowOpen = window.open;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    window.open = originalWindowOpen;
+  });
+
   it("renders image attachments and opens them in a dialog", async () => {
     const attachments: FileBlock[] = [
       {
@@ -33,7 +43,7 @@ describe("MessageFileAttachments", () => {
     });
   });
 
-  it("renders PDF attachments as file cards", () => {
+  it("opens PDF attachments in a new tab using a blob URL", async () => {
     const attachments: FileBlock[] = [
       {
         id: "file_pdf",
@@ -44,12 +54,34 @@ describe("MessageFileAttachments", () => {
       },
     ];
 
+    const popup = {
+      location: { href: "" },
+      close: vi.fn(),
+    };
+    window.open = vi.fn(() => popup as unknown as WindowProxy);
+    const fetchMock = vi.fn().mockResolvedValue({
+      blob: async () => new Blob(["pdf-bytes"], { type: "application/pdf" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const createObjectUrlMock = vi.fn(() => "blob:https://birdhouse.test/proposal");
+    const revokeObjectUrlMock = vi.fn();
+    vi.stubGlobal("URL", {
+      ...URL,
+      createObjectURL: createObjectUrlMock,
+      revokeObjectURL: revokeObjectUrlMock,
+    });
+
     render(() => <MessageFileAttachments attachments={attachments} />);
 
-    expect(screen.getByRole("link", { name: "Open PDF proposal.pdf" })).toHaveAttribute(
-      "href",
-      "data:application/pdf;base64,abc123",
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Open PDF proposal.pdf" }));
+
+    await waitFor(() => {
+      expect(window.open).toHaveBeenCalledWith("", "_blank", "noopener,noreferrer");
+      expect(fetchMock).toHaveBeenCalledWith("data:application/pdf;base64,abc123");
+      expect(createObjectUrlMock).toHaveBeenCalled();
+      expect(popup.location.href).toBe("blob:https://birdhouse.test/proposal");
+    });
+
     expect(screen.getByText("PDF")).toBeInTheDocument();
   });
 });
