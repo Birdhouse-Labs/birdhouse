@@ -21,6 +21,7 @@ import { useStreaming } from "./contexts/StreamingContext";
 import { useWorkspace } from "./contexts/WorkspaceContext";
 import { loadCollapseState, saveCollapseState } from "./lib/collapse-state";
 import { log } from "./lib/logger";
+import { usePageTitle } from "./lib/page-title";
 import { keepAgentInView } from "./lib/preferences";
 import { useModalRoute, useNavigateToWorkspaceAgent, useWorkspaceAgentId } from "./lib/routing";
 import { searchAgents } from "./services/agents-api";
@@ -381,29 +382,15 @@ const LiveApp: Component<LiveAppProps> = (props) => {
   });
 
   // Update browser tab title to show selected agent name
-  createEffect(() => {
+  usePageTitle(() => {
     const agentId = selectedAgentId();
 
     if (!agentId) {
-      // No agent selected - use default title
-      document.title = "Birdhouse";
-      return;
+      return "New Agent - Birdhouse";
     }
 
-    // Find agent in tree to get its title
     const agent = findNodeById(treeWithCollapsedState(), agentId);
-
-    if (agent) {
-      document.title = `${agent.title} - Birdhouse`;
-    } else {
-      // Agent not found yet (loading or error) - use default
-      document.title = "Birdhouse";
-    }
-  });
-
-  // Reset title when component unmounts
-  onCleanup(() => {
-    document.title = "Birdhouse";
+    return agent ? `${agent.title} - Birdhouse` : "New Agent - Birdhouse";
   });
 
   // Agent selection handler - navigate to new route

@@ -3,6 +3,7 @@
 
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { type Component, createResource, createSignal, Show } from "solid-js";
+import { usePageTitle } from "../lib/page-title";
 import { identifyPosthogUser } from "../lib/posthog";
 import { fetchUserProfile, submitUserName } from "../services/user-profile-api";
 import Button from "./ui/Button";
@@ -10,6 +11,8 @@ import Button from "./ui/Button";
 const REDIRECT_KEY = "birdhouse.setup.redirect";
 
 const SetupProfile: Component = () => {
+  usePageTitle("Profile Setup - Birdhouse");
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [profile] = createResource(fetchUserProfile);
