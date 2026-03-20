@@ -147,13 +147,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
                   props.cloneMode ? "clone-and-send" : props.isStreaming ? "queue" : "send"
                 }
               >
-                {props.isSendDisabled
-                  ? "..."
-                  : props.cloneMode
-                    ? "Clone & Send"
-                    : props.isStreaming
-                      ? "Queue"
-                      : "Send"}
+                {props.isSendDisabled ? "..." : props.cloneMode ? "Clone & Send" : props.isStreaming ? "Queue" : "Send"}
               </button>
               <Show when={props.onCloneModeChange}>
                 <button
