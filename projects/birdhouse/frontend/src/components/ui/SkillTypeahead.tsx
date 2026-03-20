@@ -6,13 +6,9 @@ import { useFloating } from "solid-floating-ui";
 import { type Component, createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { uiSize } from "../../theme";
+import { findMatches, type MatchResult, type SkillSuggestion } from "./skill-typeahead-matching";
 
-interface SkillSuggestion {
-  id: string;
-  triggerPhrases: string[];
-  metadataTriggerPhrases: string[];
-  title: string;
-}
+export type { SkillSuggestion };
 
 export interface SkillTypeaheadProps {
   /** Reference element to position dropdown relative to */
@@ -38,67 +34,8 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
   const [highlightedIndex, setHighlightedIndex] = createSignal(0);
   let listRef: HTMLElement | undefined;
 
-  // Find the longest prefix match by looking backwards from cursor
-  // Returns skills that match plus the matched text and its position
-  interface MatchResult {
-    skill: SkillSuggestion;
-    matchedPhrase: string; // Which trigger phrase matched
-    matchedText: string; // What the user actually typed
-    startIndex: number; // Where the match starts in the input
-  }
-
-  const findMatches = (): MatchResult[] => {
-    const text = props.inputValue;
-    const cursor = props.cursorPosition;
-    const textLower = text.toLowerCase();
-
-    // Only look at text UP TO cursor position
-    const textBeforeCursor = text.substring(0, cursor);
-    const textBeforeCursorLower = textLower.substring(0, cursor);
-
-    // Try progressively longer substrings ending at cursor position
-    // Look back up to 50 characters (plenty for any trigger phrase)
-    const maxLookback = 50;
-    const lookbackStart = Math.max(0, cursor - maxLookback);
-
-    const results: MatchResult[] = [];
-
-    const tryMatchPhrase = (skill: SkillSuggestion, phrase: string) => {
-      const phraseLower = phrase.toLowerCase();
-      for (let start = lookbackStart; start < cursor; start++) {
-        const substring = textBeforeCursorLower.substring(start);
-        if (phraseLower.startsWith(substring) && substring.length >= 2) {
-          results.push({
-            skill,
-            matchedPhrase: phrase,
-            matchedText: textBeforeCursor.substring(start),
-            startIndex: start,
-          });
-          break;
-        }
-      }
-    };
-
-    // For each skill, check all phrase sources: metadata phrases, user phrases, and title fallback
-    for (const skill of props.skills) {
-      for (const phrase of skill.metadataTriggerPhrases) {
-        tryMatchPhrase(skill, phrase);
-      }
-      for (const phrase of skill.triggerPhrases) {
-        tryMatchPhrase(skill, phrase);
-      }
-      // Use title as fallback when no explicit trigger phrases exist in either source
-      if (skill.metadataTriggerPhrases.length === 0 && skill.triggerPhrases.length === 0) {
-        tryMatchPhrase(skill, skill.title);
-      }
-    }
-
-    return results;
-  };
-
-  // Get all match results, one entry per matching trigger phrase
   const filteredMatches = (): MatchResult[] => {
-    return findMatches();
+    return findMatches(props.inputValue, props.cursorPosition, props.skills);
   };
 
   // Setup floating UI for dropdown positioning
