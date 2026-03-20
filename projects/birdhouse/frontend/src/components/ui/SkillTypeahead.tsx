@@ -9,7 +9,8 @@ import { uiSize } from "../../theme";
 
 interface SkillSuggestion {
   id: string;
-  triggerPhrases: string[]; // Multiple ways to trigger this pattern
+  triggerPhrases: string[];
+  metadataTriggerPhrases: string[];
   title: string;
 }
 
@@ -62,26 +63,33 @@ export const SkillTypeahead: Component<SkillTypeaheadProps> = (props) => {
 
     const results: MatchResult[] = [];
 
-    // For each skill, check if any trigger phrase is being typed
-    for (const skill of props.skills) {
-      for (const phrase of skill.triggerPhrases) {
-        const phraseLower = phrase.toLowerCase();
-
-        // Try each possible starting position in the lookback window
-        for (let start = lookbackStart; start < cursor; start++) {
-          const substring = textBeforeCursorLower.substring(start);
-
-          // Check if this trigger phrase starts with what user typed
-          if (phraseLower.startsWith(substring) && substring.length >= 2) {
-            results.push({
-              skill,
-              matchedPhrase: phrase,
-              matchedText: textBeforeCursor.substring(start), // Original case
-              startIndex: start,
-            });
-            break; // Found a match for this phrase, move to next
-          }
+    const tryMatchPhrase = (skill: SkillSuggestion, phrase: string) => {
+      const phraseLower = phrase.toLowerCase();
+      for (let start = lookbackStart; start < cursor; start++) {
+        const substring = textBeforeCursorLower.substring(start);
+        if (phraseLower.startsWith(substring) && substring.length >= 2) {
+          results.push({
+            skill,
+            matchedPhrase: phrase,
+            matchedText: textBeforeCursor.substring(start),
+            startIndex: start,
+          });
+          break;
         }
+      }
+    };
+
+    // For each skill, check all phrase sources: metadata phrases, user phrases, and title fallback
+    for (const skill of props.skills) {
+      for (const phrase of skill.metadataTriggerPhrases) {
+        tryMatchPhrase(skill, phrase);
+      }
+      for (const phrase of skill.triggerPhrases) {
+        tryMatchPhrase(skill, phrase);
+      }
+      // Use title as fallback when no explicit trigger phrases exist in either source
+      if (skill.metadataTriggerPhrases.length === 0 && skill.triggerPhrases.length === 0) {
+        tryMatchPhrase(skill, skill.title);
       }
     }
 

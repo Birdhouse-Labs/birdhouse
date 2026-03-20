@@ -229,7 +229,11 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
       </Show>
 
       <DetailSection title={scopeTitle()} description={scopeDescription()} defaultExpanded={true}>
-        <TriggerPhraseEditor phrases={props.skill.trigger_phrases} onSave={handleSaveTriggerPhrases} />
+        <TriggerPhraseEditor
+          phrases={props.skill.trigger_phrases}
+          readonlyPhrases={props.skill.metadata_trigger_phrases}
+          onSave={handleSaveTriggerPhrases}
+        />
       </DetailSection>
 
       <Show when={props.skill.files.length > 0}>

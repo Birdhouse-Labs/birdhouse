@@ -18,6 +18,7 @@ interface SkillsListResponse {
     tags: string[];
     scope: SkillScope;
     trigger_phrases: string[];
+    metadata_trigger_phrases: string[];
     readonly: boolean;
   }>;
 }
@@ -29,6 +30,7 @@ interface SkillDetailResponse {
   tags: string[];
   scope: SkillScope;
   trigger_phrases: string[];
+  metadata_trigger_phrases: string[];
   readonly: boolean;
   content: string;
   files: string[];
@@ -48,6 +50,7 @@ function toSkillMetadata(skill: SkillsListResponse["skills"][number]): SkillMeta
     description: skill.description,
     tags: skill.tags,
     trigger_phrases: skill.trigger_phrases,
+    metadata_trigger_phrases: skill.metadata_trigger_phrases,
     scope: skill.scope,
     readonly: skill.readonly,
   };
@@ -96,6 +99,7 @@ export async function fetchSkill(skillId: string, workspaceId: string): Promise<
     metadata: skill.metadata,
     prompt: skill.content,
     trigger_phrases: skill.trigger_phrases,
+    metadata_trigger_phrases: skill.metadata_trigger_phrases,
     files: skill.files,
     readonly: skill.readonly,
     scope: skill.scope,
