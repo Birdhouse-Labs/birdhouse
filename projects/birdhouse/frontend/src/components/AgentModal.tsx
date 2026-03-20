@@ -54,18 +54,14 @@ const AgentModal: Component<AgentModalProps> = (props) => {
           {/* Provide increased z-index context to children (dialogs, popovers) */}
           <ZIndexProvider baseZIndex={baseZIndex + 10}>
             <Show when={props.agentId} keyed>
-              {(agentId) =>
-                props.navigationDepth >= 1 && props.isTop ? (
-                  <LiveMessages
-                    agentId={agentId}
-                    onOpenAgentModal={props.onOpenAgentModal}
-                    showCloseButton={true}
-                    onClose={props.onClose}
-                  />
-                ) : (
-                  <LiveMessages agentId={agentId} onOpenAgentModal={props.onOpenAgentModal} />
-                )
-              }
+              {(agentId) => (
+                <LiveMessages
+                  agentId={agentId}
+                  onOpenAgentModal={props.onOpenAgentModal}
+                  showCloseButton={props.navigationDepth >= 1 && props.isTop}
+                  onClose={props.onClose}
+                />
+              )}
             </Show>
           </ZIndexProvider>
         </Dialog.Content>
