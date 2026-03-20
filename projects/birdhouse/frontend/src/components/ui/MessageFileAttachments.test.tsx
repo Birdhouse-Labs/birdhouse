@@ -2,7 +2,7 @@
 // ABOUTME: Verifies image previews and PDF cards stay visible inside message bubbles.
 
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FileBlock } from "../../types/messages";
 import MessageFileAttachments from "./MessageFileAttachments";
 
@@ -11,14 +11,8 @@ vi.mock("../../contexts/ZIndexContext", () => ({
 }));
 
 describe("MessageFileAttachments", () => {
-  const originalWindowOpen = window.open;
-
   beforeEach(() => {
     vi.restoreAllMocks();
-  });
-
-  afterEach(() => {
-    window.open = originalWindowOpen;
   });
 
   it("renders image attachments and opens them in a dialog", async () => {
@@ -43,7 +37,7 @@ describe("MessageFileAttachments", () => {
     });
   });
 
-  it("opens PDF attachments in a new tab using a blob URL", async () => {
+  it("renders PDF attachments as non-clickable cards", () => {
     const attachments: FileBlock[] = [
       {
         id: "file_pdf",
@@ -54,27 +48,11 @@ describe("MessageFileAttachments", () => {
       },
     ];
 
-    const popup = {
-      location: { href: "" },
-      close: vi.fn(),
-    };
-    window.open = vi.fn(() => popup as unknown as WindowProxy);
-    const createObjectUrlMock = vi.fn(() => "blob:https://birdhouse.test/proposal");
-    vi.stubGlobal("URL", {
-      ...URL,
-      createObjectURL: createObjectUrlMock,
-    });
-
     render(() => <MessageFileAttachments attachments={attachments} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Open PDF proposal.pdf" }));
-
-    await waitFor(() => {
-      expect(window.open).toHaveBeenCalledWith("", "_blank", "noopener,noreferrer");
-      expect(createObjectUrlMock).toHaveBeenCalled();
-      expect(popup.location.href).toBe("blob:https://birdhouse.test/proposal");
-    });
-
+    expect(screen.queryByRole("button", { name: "Open PDF proposal.pdf" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("PDF attachment proposal.pdf")).toBeInTheDocument();
     expect(screen.getByText("PDF")).toBeInTheDocument();
+    expect(screen.getByText("Preview unavailable in this browser")).toBeInTheDocument();
   });
 });

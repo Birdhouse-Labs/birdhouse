@@ -6,47 +6,12 @@ import { type Component, createMemo, createSignal, For, Show } from "solid-js";
 import type { FileBlock } from "../../types/messages";
 import ImagePreviewDialog from "./ImagePreviewDialog";
 
-function createBlobUrlFromDataUrl(dataUrl: string): string {
-  const [header, encoded] = dataUrl.split(",", 2);
-  if (!header || !encoded) {
-    throw new Error("Invalid data URL");
-  }
-
-  const mimeMatch = header.match(/^data:([^;]+);base64$/);
-  if (!mimeMatch?.[1]) {
-    throw new Error("Unsupported data URL format");
-  }
-
-  const binary = atob(encoded);
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return URL.createObjectURL(new Blob([bytes], { type: mimeMatch[1] }));
-}
-
 export interface MessageFileAttachmentsProps {
   attachments: FileBlock[];
 }
 
 const MessageFileAttachments: Component<MessageFileAttachmentsProps> = (props) => {
   const [selectedAttachment, setSelectedAttachment] = createSignal<FileBlock | null>(null);
-
-  const openPdfAttachment = async (attachment: FileBlock) => {
-    const popup = window.open("", "_blank", "noopener,noreferrer");
-    if (!popup) {
-      return;
-    }
-
-    try {
-      if (attachment.url.startsWith("data:")) {
-        const objectUrl = createBlobUrlFromDataUrl(attachment.url);
-        popup.location.href = objectUrl;
-        return;
-      }
-
-      popup.location.href = attachment.url;
-    } catch {
-      popup.close();
-    }
-  };
 
   const imageAttachments = createMemo(() =>
     props.attachments.filter((attachment) => attachment.mimeType.startsWith("image/")),
@@ -83,11 +48,9 @@ const MessageFileAttachments: Component<MessageFileAttachmentsProps> = (props) =
 
           <For each={pdfAttachments()}>
             {(attachment) => (
-              <button
-                type="button"
-                onClick={() => void openPdfAttachment(attachment)}
-                aria-label={`Open PDF ${attachment.filename || "attachment"}`}
-                class="flex min-w-44 items-center gap-3 rounded-xl border border-border bg-surface-raised px-3 py-3 text-sm text-text-primary hover:border-accent/50 transition-colors"
+              <fieldset
+                aria-label={`PDF attachment ${attachment.filename || "attachment"}`}
+                class="flex min-w-44 items-center gap-3 rounded-xl border border-border bg-surface-raised px-3 py-3 text-sm text-text-primary"
               >
                 <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
                   <FileText size={18} />
@@ -95,8 +58,9 @@ const MessageFileAttachments: Component<MessageFileAttachmentsProps> = (props) =
                 <div class="min-w-0 flex-1">
                   <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted">PDF</div>
                   <div class="truncate">{attachment.filename || "PDF attachment"}</div>
+                  <div class="text-xs text-text-muted">Preview unavailable in this browser</div>
                 </div>
-              </button>
+              </fieldset>
             )}
           </For>
 
