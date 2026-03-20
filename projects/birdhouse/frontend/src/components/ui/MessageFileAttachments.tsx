@@ -6,6 +6,22 @@ import { type Component, createMemo, createSignal, For, Show } from "solid-js";
 import type { FileBlock } from "../../types/messages";
 import ImagePreviewDialog from "./ImagePreviewDialog";
 
+function createBlobUrlFromDataUrl(dataUrl: string): string {
+  const [header, encoded] = dataUrl.split(",", 2);
+  if (!header || !encoded) {
+    throw new Error("Invalid data URL");
+  }
+
+  const mimeMatch = header.match(/^data:([^;]+);base64$/);
+  if (!mimeMatch?.[1]) {
+    throw new Error("Unsupported data URL format");
+  }
+
+  const binary = atob(encoded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return URL.createObjectURL(new Blob([bytes], { type: mimeMatch[1] }));
+}
+
 export interface MessageFileAttachmentsProps {
   attachments: FileBlock[];
 }
@@ -21,12 +37,8 @@ const MessageFileAttachments: Component<MessageFileAttachmentsProps> = (props) =
 
     try {
       if (attachment.url.startsWith("data:")) {
-        const response = await fetch(attachment.url);
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-
+        const objectUrl = createBlobUrlFromDataUrl(attachment.url);
         popup.location.href = objectUrl;
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
         return;
       }
 

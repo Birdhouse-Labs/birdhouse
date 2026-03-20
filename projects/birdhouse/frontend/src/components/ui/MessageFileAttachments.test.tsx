@@ -59,16 +59,10 @@ describe("MessageFileAttachments", () => {
       close: vi.fn(),
     };
     window.open = vi.fn(() => popup as unknown as WindowProxy);
-    const fetchMock = vi.fn().mockResolvedValue({
-      blob: async () => new Blob(["pdf-bytes"], { type: "application/pdf" }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
     const createObjectUrlMock = vi.fn(() => "blob:https://birdhouse.test/proposal");
-    const revokeObjectUrlMock = vi.fn();
     vi.stubGlobal("URL", {
       ...URL,
       createObjectURL: createObjectUrlMock,
-      revokeObjectURL: revokeObjectUrlMock,
     });
 
     render(() => <MessageFileAttachments attachments={attachments} />);
@@ -77,7 +71,6 @@ describe("MessageFileAttachments", () => {
 
     await waitFor(() => {
       expect(window.open).toHaveBeenCalledWith("", "_blank", "noopener,noreferrer");
-      expect(fetchMock).toHaveBeenCalledWith("data:application/pdf;base64,abc123");
       expect(createObjectUrlMock).toHaveBeenCalled();
       expect(popup.location.href).toBe("blob:https://birdhouse.test/proposal");
     });
