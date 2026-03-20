@@ -65,7 +65,6 @@ function saveSkillLibraryUIState(workspaceId: string, state: SkillLibraryUIState
 
 export interface SkillLibraryDialogProps {
   workspaceId: string;
-  hasActiveAgents?: boolean;
 }
 
 const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
@@ -163,7 +162,7 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
   };
 
   const handleReloadSkills = async () => {
-    if (reloadingSkills() || props.hasActiveAgents) {
+    if (reloadingSkills()) {
       return;
     }
 
@@ -289,7 +288,7 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
               <Button
                 variant="secondary"
                 onClick={handleReloadSkills}
-                disabled={reloadingSkills() || !!props.hasActiveAgents}
+                disabled={reloadingSkills()}
                 leftIcon={<RefreshCw size={16} classList={{ "animate-spin": reloadingSkills() }} />}
                 class="whitespace-nowrap"
                 aria-label="Reload Skills"

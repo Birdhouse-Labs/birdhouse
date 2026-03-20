@@ -534,20 +534,6 @@ const LiveApp: Component<LiveAppProps> = (props) => {
     return results.length;
   });
 
-  const hasActiveAgents = createMemo(() => {
-    const hasActiveDescendant = (nodes: TreeNode[]): boolean => {
-      return nodes.some((node) => {
-        if (node.status?.type === "busy" || node.status?.type === "retry") {
-          return true;
-        }
-
-        return hasActiveDescendant(node.children);
-      });
-    };
-
-    return hasActiveDescendant(treeWithCollapsedState());
-  });
-
   // Tree view component with loading/error/empty states
   // Wrapped with AgentTreeProvider to avoid prop drilling through TreeView
   const TreeViewContent = () => (
@@ -727,7 +713,7 @@ const LiveApp: Component<LiveAppProps> = (props) => {
       </For>
 
       {/* Skills Library Dialog */}
-      <SkillLibraryDialog workspaceId={workspaceId} hasActiveAgents={hasActiveAgents()} />
+      <SkillLibraryDialog workspaceId={workspaceId} />
     </div>
   );
 };
