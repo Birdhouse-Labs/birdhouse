@@ -8,7 +8,6 @@ const posthogKey = "phc_LwyUqyfUjlP28aI98eE2K7jA6mdTboPZYRuKotWsoYI";
 let initialized = false;
 
 const toolbarParamsKey = "_postHogToolbarParams";
-const maskedTextSelector = ".ph-mask-text";
 
 export function initPosthog() {
   if (initialized) return;
@@ -39,7 +38,12 @@ export function initPosthog() {
     capture_exceptions: true,
     session_recording: {
       maskAllInputs: true,
-      maskTextSelector: maskedTextSelector,
+      // Mask all text by default - agent content is sensitive
+      maskTextSelector: "*",
+      maskTextFn: (text, element) => {
+        if (element?.closest("[data-ph-capture]")) return text;
+        return "*".repeat(text.trim().length);
+      },
       recordCrossOriginIframes: false,
     },
     loaded: (ph) => {
