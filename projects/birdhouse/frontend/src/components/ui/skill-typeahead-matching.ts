@@ -34,8 +34,12 @@ export function findMatches(inputValue: string, cursorPosition: number, skills: 
   const lookbackStart = Math.max(0, cursorPosition - maxLookback);
 
   const results: MatchResult[] = [];
+  const seen = new Set<string>();
 
   const tryMatchPhrase = (skill: SkillSuggestion, phrase: string) => {
+    const key = `${skill.id}\0${phrase.toLowerCase()}`;
+    if (seen.has(key)) return;
+
     const phraseLower = phrase.toLowerCase();
     for (let start = lookbackStart; start < cursorPosition; start++) {
       // Only start a match at a word boundary
@@ -44,6 +48,7 @@ export function findMatches(inputValue: string, cursorPosition: number, skills: 
 
       const substring = textBeforeCursorLower.substring(start);
       if (phraseLower.startsWith(substring) && substring.length >= 2) {
+        seen.add(key);
         results.push({
           skill,
           matchedPhrase: phrase,

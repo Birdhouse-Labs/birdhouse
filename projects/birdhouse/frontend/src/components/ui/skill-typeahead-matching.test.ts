@@ -111,6 +111,20 @@ describe("findMatches", () => {
     });
   });
 
+  describe("duplicate suppression", () => {
+    it("does not return duplicate (skill, phrase) pairs when the same phrase appears in both sources", () => {
+      const skill = {
+        id: "git-commit",
+        title: "git-commit",
+        triggerPhrases: ["git commit"],
+        metadataTriggerPhrases: ["git commit"],
+      };
+      const matches = findMatches("git co", cursor("git co"), [skill]);
+      expect(matches).toHaveLength(1);
+      expect(matches[0].matchedPhrase).toBe("git commit");
+    });
+  });
+
   describe("metadata trigger phrases", () => {
     it("matches phrases from metadataTriggerPhrases", () => {
       const skill = {
