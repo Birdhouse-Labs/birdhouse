@@ -318,8 +318,6 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
             </Popover>
           </div>
 
-          <MessageFileAttachments attachments={fileAttachments()} />
-
           <MarkdownRenderer
             content={cleanedContent()}
             workspaceId={workspaceId}
@@ -336,6 +334,8 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
               }
             }}
           />
+
+          <MessageFileAttachments attachments={fileAttachments()} />
 
           {/* Attached Skills Button */}
           <Show when={attachedSkills().length > 0}>
@@ -385,8 +385,6 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
             </Popover>
           </div>
 
-          <MessageFileAttachments attachments={fileAttachments()} />
-
           <MarkdownRenderer
             content={cleanedContent()}
             workspaceId={workspaceId}
@@ -404,6 +402,8 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
               }
             }}
           />
+
+          <MessageFileAttachments attachments={fileAttachments()} />
 
           {/* Skill attachments button - only show for user messages with attached skills */}
           <Show when={attachedSkills().length > 0}>
