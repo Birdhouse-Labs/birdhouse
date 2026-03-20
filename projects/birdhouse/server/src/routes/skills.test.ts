@@ -23,6 +23,7 @@ interface SkillsListResponse {
     scope: "workspace" | "global";
     trigger_phrases: string[];
     metadata_trigger_phrases: string[];
+    display_location: string;
     readonly: boolean;
   }>;
 }
@@ -35,10 +36,10 @@ interface SkillDetailResponse {
   scope: "workspace" | "global";
   trigger_phrases: string[];
   metadata_trigger_phrases: string[];
+  display_location: string;
   readonly: boolean;
   content: string;
   location: string;
-  display_location: string;
   files: string[];
   metadata: Record<string, unknown>;
 }
@@ -149,6 +150,7 @@ describe("workspace skills routes", () => {
             scope: "global",
             trigger_phrases: ["look up framework docs"],
             metadata_trigger_phrases: [],
+            display_location: "/Users/test/.claude/skills/find-docs/SKILL.md",
             readonly: true,
           },
           {
@@ -159,6 +161,7 @@ describe("workspace skills routes", () => {
             scope: "workspace",
             trigger_phrases: [],
             metadata_trigger_phrases: [],
+            display_location: "/repo/current-workspace/.agents/skills/git/spotlight-worktree/SKILL.md",
             readonly: true,
           },
         ],

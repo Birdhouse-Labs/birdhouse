@@ -18,6 +18,7 @@ export interface BirdhouseSkillSummary {
   scope: SkillScope;
   trigger_phrases: string[];
   metadata_trigger_phrases: string[];
+  display_location: string;
   readonly: true;
 }
 
@@ -158,6 +159,7 @@ export function toBirdhouseSkillSummary(
     scope: inferSkillScope(skill.location, workspaceDirectory),
     trigger_phrases: triggerPhrases,
     metadata_trigger_phrases: extractMetadataTriggerPhrases(metadata),
+    display_location: shortenHomePath(skill.location, homedir()),
     readonly: true,
   };
 }

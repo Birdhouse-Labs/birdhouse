@@ -20,6 +20,7 @@ describe("SkillDetailModal", () => {
     },
     prompt: "# Find Docs\n\nUse Context7 first.",
     trigger_phrases: ["docs please"],
+    metadata_trigger_phrases: [],
     readonly: true,
     scope: "global" as const,
     location: "/Users/test/.claude/skills/find-docs/SKILL.md",

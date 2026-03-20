@@ -11,6 +11,8 @@ const skills = [
     description: "Retrieve current library docs.",
     tags: ["docs", "research"],
     trigger_phrases: ["docs please"],
+    metadata_trigger_phrases: ["look up framework docs", "find library reference"],
+    display_location: "~/.agents/skills/find-docs/SKILL.md",
     scope: "global" as const,
     readonly: true,
   },
@@ -20,6 +22,8 @@ const skills = [
     description: "Generate release notes from git history.",
     tags: ["git", "release"],
     trigger_phrases: ["generate release notes"],
+    metadata_trigger_phrases: [],
+    display_location: "/repo/workspace/.agents/skills/release-notes/SKILL.md",
     scope: "workspace" as const,
     readonly: true,
   },
@@ -40,5 +44,15 @@ describe("filterSkills", () => {
     expect(filterSkills(skills, "library docs", "all")).toEqual([skills[0]]);
     expect(filterSkills(skills, "docs please", "all")).toEqual([skills[0]]);
     expect(filterSkills(skills, "research", "all")).toEqual([skills[0]]);
+  });
+
+  it("matches against metadata trigger phrases", () => {
+    expect(filterSkills(skills, "look up framework", "all")).toEqual([skills[0]]);
+    expect(filterSkills(skills, "find library reference", "all")).toEqual([skills[0]]);
+  });
+
+  it("matches against display_location path", () => {
+    expect(filterSkills(skills, "find-docs/SKILL", "all")).toEqual([skills[0]]);
+    expect(filterSkills(skills, "release-notes/SKILL", "all")).toEqual([skills[1]]);
   });
 });

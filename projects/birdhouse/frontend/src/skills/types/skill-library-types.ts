@@ -14,6 +14,7 @@ export interface SkillMetadata {
   tags: string[];
   trigger_phrases: string[];
   metadata_trigger_phrases: string[];
+  display_location: string;
   scope: SkillScope;
   readonly: boolean;
 }

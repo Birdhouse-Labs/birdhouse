@@ -19,9 +19,14 @@ export function filterSkills(
       return true;
     }
 
-    const haystacks = [skill.title, skill.description || "", ...skill.tags, ...skill.trigger_phrases].map((value) =>
-      value.toLowerCase(),
-    );
+    const haystacks = [
+      skill.title,
+      skill.description || "",
+      ...skill.tags,
+      ...skill.trigger_phrases,
+      ...(skill.metadata_trigger_phrases ?? []),
+      skill.display_location ?? "",
+    ].map((value) => value.toLowerCase());
     return haystacks.some((value) => value.includes(normalizedQuery));
   });
 }

@@ -19,6 +19,7 @@ interface SkillsListResponse {
     scope: SkillScope;
     trigger_phrases: string[];
     metadata_trigger_phrases: string[];
+    display_location: string;
     readonly: boolean;
   }>;
 }
@@ -51,6 +52,7 @@ function toSkillMetadata(skill: SkillsListResponse["skills"][number]): SkillMeta
     tags: skill.tags,
     trigger_phrases: skill.trigger_phrases,
     metadata_trigger_phrases: skill.metadata_trigger_phrases,
+    display_location: skill.display_location,
     scope: skill.scope,
     readonly: skill.readonly,
   };
