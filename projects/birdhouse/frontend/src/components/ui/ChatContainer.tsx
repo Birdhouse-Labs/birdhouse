@@ -7,12 +7,13 @@ import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { findPendingAssistantId, isMessageQueued } from "../../domain/message-queue";
 import { previewSkillAttachments } from "../../services/skill-attachments-api";
 import { uiSize } from "../../theme";
-import type { ComposerImageAttachment } from "../../types/composer-attachments";
+import type { ComposerAttachment } from "../../types/composer-attachments";
 import type { Message } from "../../types/messages";
 import type { QuestionRequest } from "../../types/question";
 import { extractSkillLinkNames } from "../../utils/skillLinks";
 import AutoGrowTextarea from "./AutoGrowTextarea";
 import Button from "./Button";
+import ComposerAttachmentDropZone from "./ComposerAttachmentDropZone";
 import ComposerImageAttachments from "./ComposerImageAttachments";
 import MessageBubble from "./MessageBubble";
 import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
@@ -25,9 +26,10 @@ export interface ChatContainerProps {
   onInputChange: (value: string) => void;
   onSend: () => void;
   onStop: () => void;
-  attachments?: ComposerImageAttachment[];
+  attachments?: ComposerAttachment[];
   onRemoveAttachment?: (id: string) => void;
-  onAttachmentsPasted?: (files: File[]) => void | Promise<void>;
+  onAttachmentsAdded?: (files: File[]) => void | Promise<void>;
+  attachmentError?: string | null;
   isSendDisabled?: boolean;
   cloneMode?: boolean;
   onCloneModeChange?: (enabled: boolean) => void;
@@ -82,86 +84,100 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
     <div class="flex flex-col flex-1 bg-surface overflow-hidden">
       {/* Input area - at TOP for newest-at-top architecture */}
       <div class="px-4 pt-3 pb-3 border-b bg-surface-raised border-border flex-shrink-0">
-        <div class="flex items-end gap-3">
-          <AutoGrowTextarea
-            value={props.inputValue}
-            onInput={props.onInputChange}
-            onSend={props.onSend}
-            onAttachmentsPasted={props.onAttachmentsPasted}
-            disabled={props.isSendDisabled ?? false}
-            placeholder="Type a message..."
-            ref={props.inputRef}
-          />
-          <Show when={props.isStreaming && !hasDraftContent()}>
-            <button
-              type="button"
-              onClick={props.onStop}
-              class="rounded-lg px-4 py-2 font-medium bg-gradient-to-r from-gradient-from to-gradient-to text-text-on-accent transition-opacity"
-              classList={{
-                [sizeClasses().text]: true,
-              }}
-              data-ph-capture-attribute-button-type="stop-streaming"
-              data-ph-capture-attribute-agent-id={props.agentId}
-            >
-              Stop
-            </button>
-          </Show>
-          <Show when={!props.isStreaming || hasDraftContent()}>
-            <div class="flex">
-              <button
-                type="button"
-                onClick={props.onSend}
-                disabled={!hasDraftContent() || props.isSendDisabled}
-                class="px-4 py-2 font-medium bg-gradient-to-r from-gradient-from to-gradient-to text-text-on-accent transition-opacity"
-                classList={{
-                  [sizeClasses().text]: true,
-                  "opacity-50 cursor-not-allowed": !hasDraftContent() || props.isSendDisabled,
-                  "hover:opacity-90": hasDraftContent() && !props.isSendDisabled,
-                  "rounded-lg": !props.onCloneModeChange,
-                  "rounded-l-lg": !!props.onCloneModeChange,
-                }}
-                data-ph-capture-attribute-button-type="send-message"
-                data-ph-capture-attribute-agent-id={props.agentId}
-                data-ph-capture-attribute-clone-mode={props.cloneMode ? "true" : "false"}
-                data-ph-capture-attribute-is-streaming={props.isStreaming ? "true" : "false"}
-                data-ph-capture-attribute-action={
-                  props.cloneMode ? "clone-and-send" : props.isStreaming ? "queue" : "send"
-                }
-              >
-                {props.isSendDisabled ? "..." : props.cloneMode ? "Clone & Send" : props.isStreaming ? "Queue" : "Send"}
-              </button>
-              <Show when={props.onCloneModeChange}>
+        <ComposerAttachmentDropZone
+          onAttachmentsAdded={props.onAttachmentsAdded}
+          error={props.attachmentError}
+          disabled={props.isSendDisabled}
+        >
+          <div>
+            <div class="flex items-end gap-3">
+              <AutoGrowTextarea
+                value={props.inputValue}
+                onInput={props.onInputChange}
+                onSend={props.onSend}
+                onAttachmentsAdded={props.onAttachmentsAdded}
+                disabled={props.isSendDisabled ?? false}
+                placeholder="Type a message..."
+                ref={props.inputRef}
+              />
+              <Show when={props.isStreaming && !hasDraftContent()}>
                 <button
                   type="button"
-                  onClick={() => props.onCloneModeChange?.(!props.cloneMode)}
-                  disabled={props.isSendDisabled}
-                  class="px-3 py-2 font-medium bg-gradient-to-l from-gradient-from to-gradient-to text-text-on-accent transition-opacity border-l border-white/20 rounded-r-lg flex items-center justify-center"
+                  onClick={props.onStop}
+                  class="rounded-lg px-4 py-2 font-medium bg-gradient-to-r from-gradient-from to-gradient-to text-text-on-accent transition-opacity"
                   classList={{
-                    "opacity-50 cursor-not-allowed": props.isSendDisabled,
-                    "hover:opacity-90": !props.isSendDisabled,
+                    [sizeClasses().text]: true,
                   }}
-                  aria-label={props.cloneMode ? "Disable clone mode" : "Enable clone mode"}
-                  title={props.cloneMode ? "Switch to normal send" : "Switch to clone and send"}
-                  data-ph-capture-attribute-button-type="toggle-clone-mode"
+                  data-ph-capture-attribute-button-type="stop-streaming"
                   data-ph-capture-attribute-agent-id={props.agentId}
-                  data-ph-capture-attribute-current-state={props.cloneMode ? "enabled" : "disabled"}
-                  data-ph-capture-attribute-action={props.cloneMode ? "disable" : "enable"}
                 >
-                  <Show when={props.cloneMode} fallback={<Split size={18} />}>
-                    <X size={18} />
-                  </Show>
+                  Stop
                 </button>
               </Show>
+              <Show when={!props.isStreaming || hasDraftContent()}>
+                <div class="flex">
+                  <button
+                    type="button"
+                    onClick={props.onSend}
+                    disabled={!hasDraftContent() || props.isSendDisabled}
+                    class="px-4 py-2 font-medium bg-gradient-to-r from-gradient-from to-gradient-to text-text-on-accent transition-opacity"
+                    classList={{
+                      [sizeClasses().text]: true,
+                      "opacity-50 cursor-not-allowed": !hasDraftContent() || props.isSendDisabled,
+                      "hover:opacity-90": hasDraftContent() && !props.isSendDisabled,
+                      "rounded-lg": !props.onCloneModeChange,
+                      "rounded-l-lg": !!props.onCloneModeChange,
+                    }}
+                    data-ph-capture-attribute-button-type="send-message"
+                    data-ph-capture-attribute-agent-id={props.agentId}
+                    data-ph-capture-attribute-clone-mode={props.cloneMode ? "true" : "false"}
+                    data-ph-capture-attribute-is-streaming={props.isStreaming ? "true" : "false"}
+                    data-ph-capture-attribute-action={
+                      props.cloneMode ? "clone-and-send" : props.isStreaming ? "queue" : "send"
+                    }
+                  >
+                    {props.isSendDisabled
+                      ? "..."
+                      : props.cloneMode
+                        ? "Clone & Send"
+                        : props.isStreaming
+                          ? "Queue"
+                          : "Send"}
+                  </button>
+                  <Show when={props.onCloneModeChange}>
+                    <button
+                      type="button"
+                      onClick={() => props.onCloneModeChange?.(!props.cloneMode)}
+                      disabled={props.isSendDisabled}
+                      class="px-3 py-2 font-medium bg-gradient-to-l from-gradient-from to-gradient-to text-text-on-accent transition-opacity border-l border-white/20 rounded-r-lg flex items-center justify-center"
+                      classList={{
+                        "opacity-50 cursor-not-allowed": props.isSendDisabled,
+                        "hover:opacity-90": !props.isSendDisabled,
+                      }}
+                      aria-label={props.cloneMode ? "Disable clone mode" : "Enable clone mode"}
+                      title={props.cloneMode ? "Switch to normal send" : "Switch to clone and send"}
+                      data-ph-capture-attribute-button-type="toggle-clone-mode"
+                      data-ph-capture-attribute-agent-id={props.agentId}
+                      data-ph-capture-attribute-current-state={props.cloneMode ? "enabled" : "disabled"}
+                      data-ph-capture-attribute-action={props.cloneMode ? "disable" : "enable"}
+                    >
+                      <Show when={props.cloneMode} fallback={<Split size={18} />}>
+                        <X size={18} />
+                      </Show>
+                    </button>
+                  </Show>
+                </div>
+              </Show>
             </div>
-          </Show>
-        </div>
 
-        <Show when={(props.attachments?.length ?? 0) > 0 && props.onRemoveAttachment}>
-          <ComposerImageAttachments
-            attachments={props.attachments || []}
-            onRemove={(attachmentId) => props.onRemoveAttachment?.(attachmentId)}
-          />
-        </Show>
+            <Show when={(props.attachments?.length ?? 0) > 0 && props.onRemoveAttachment}>
+              <ComposerImageAttachments
+                attachments={props.attachments || []}
+                onRemove={(attachmentId) => props.onRemoveAttachment?.(attachmentId)}
+              />
+            </Show>
+          </div>
+        </ComposerAttachmentDropZone>
 
         {/* Skill count button - appears below input in the padding area */}
         <Show when={skillCount() > 0}>

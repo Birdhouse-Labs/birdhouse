@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { createSignal } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
-import type { ComposerImageAttachment } from "../../types/composer-attachments";
+import type { ComposerAttachment } from "../../types/composer-attachments";
 import ChatContainer from "./ChatContainer";
 
 const previewSkillAttachments = vi.fn(async (workspaceId: string, text: string) => {
@@ -70,7 +70,7 @@ describe("ChatContainer", () => {
   });
 
   it("keeps send enabled when image attachments exist without text", () => {
-    const attachments: ComposerImageAttachment[] = [
+    const attachments: ComposerAttachment[] = [
       {
         id: "att_1",
         filename: "diagram.png",
@@ -94,5 +94,22 @@ describe("ChatContainer", () => {
     ));
 
     expect(screen.getByRole("button", { name: "Send" })).not.toBeDisabled();
+  });
+
+  it("shows inline attachment errors below the composer", () => {
+    render(() => (
+      <ChatContainer
+        messages={[]}
+        agentId="agent_test"
+        inputValue=""
+        isStreaming={false}
+        onInputChange={() => {}}
+        onSend={() => {}}
+        onStop={() => {}}
+        attachmentError="Only images and PDFs can be attached."
+      />
+    ));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Only images and PDFs can be attached.");
   });
 });

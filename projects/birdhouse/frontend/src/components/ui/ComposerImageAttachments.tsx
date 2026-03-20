@@ -1,19 +1,19 @@
-// ABOUTME: Thumbnail strip for pasted composer images in new-agent and reply flows.
-// ABOUTME: Supports hover remove controls and click-to-preview modal behavior.
+// ABOUTME: Attachment strip for pasted and dropped composer files in new-agent and reply flows.
+// ABOUTME: Supports image previews, PDF tiles, and hover remove controls.
 
-import { Trash2, X } from "lucide-solid";
+import { FileText, Trash2, X } from "lucide-solid";
 import { type Component, createSignal, For, Show } from "solid-js";
-import type { ComposerImageAttachment } from "../../types/composer-attachments";
+import type { ComposerAttachment } from "../../types/composer-attachments";
 import Button from "./Button";
 import ImagePreviewDialog from "./ImagePreviewDialog";
 
 export interface ComposerImageAttachmentsProps {
-  attachments: ComposerImageAttachment[];
+  attachments: ComposerAttachment[];
   onRemove: (id: string) => void;
 }
 
 const ComposerImageAttachments: Component<ComposerImageAttachmentsProps> = (props) => {
-  const [selectedAttachment, setSelectedAttachment] = createSignal<ComposerImageAttachment | null>(null);
+  const [selectedAttachment, setSelectedAttachment] = createSignal<ComposerAttachment | null>(null);
 
   const handleRemoveSelectedAttachment = () => {
     const attachment = selectedAttachment();
@@ -23,6 +23,8 @@ const ComposerImageAttachments: Component<ComposerImageAttachmentsProps> = (prop
     setSelectedAttachment(null);
   };
 
+  const isImageAttachment = (attachment: ComposerAttachment) => attachment.mime.startsWith("image/");
+
   return (
     <Show when={props.attachments.length > 0}>
       <div>
@@ -30,14 +32,35 @@ const ComposerImageAttachments: Component<ComposerImageAttachmentsProps> = (prop
           <For each={props.attachments}>
             {(attachment) => (
               <div class="relative group">
-                <button
-                  type="button"
-                  class="block rounded-lg overflow-hidden border border-border bg-surface-raised hover:border-accent/50 transition-colors"
-                  onClick={() => setSelectedAttachment(attachment)}
-                  aria-label={`Open image preview for ${attachment.filename}`}
+                <Show
+                  when={isImageAttachment(attachment)}
+                  fallback={
+                    <a
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Open PDF ${attachment.filename}`}
+                      class="flex h-16 w-36 items-center gap-2 rounded-lg border border-border bg-surface-raised px-3 text-left text-text-primary hover:border-accent/50 transition-colors"
+                    >
+                      <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10 text-accent flex-shrink-0">
+                        <FileText size={18} />
+                      </div>
+                      <div class="min-w-0">
+                        <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted">PDF</div>
+                        <div class="truncate text-sm">{attachment.filename}</div>
+                      </div>
+                    </a>
+                  }
                 >
-                  <img src={attachment.url} alt={attachment.filename} class="w-16 h-16 object-cover" />
-                </button>
+                  <button
+                    type="button"
+                    class="block rounded-lg overflow-hidden border border-border bg-surface-raised hover:border-accent/50 transition-colors"
+                    onClick={() => setSelectedAttachment(attachment)}
+                    aria-label={`Open image preview for ${attachment.filename}`}
+                  >
+                    <img src={attachment.url} alt={attachment.filename} class="w-16 h-16 object-cover" />
+                  </button>
+                </Show>
                 <button
                   type="button"
                   onClick={(event) => {

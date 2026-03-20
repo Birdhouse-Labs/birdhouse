@@ -112,15 +112,16 @@ describe("AutoGrowTextarea", () => {
     });
   });
 
-  it("passes pasted image files to the attachment handler instead of inserting text", async () => {
-    const onAttachmentsPasted = vi.fn();
+  it("passes pasted image and pdf files to the attachment handler instead of inserting text", async () => {
+    const onAttachmentsAdded = vi.fn();
 
     render(() => (
-      <AutoGrowTextarea value="" onInput={() => {}} onSend={() => {}} onAttachmentsPasted={onAttachmentsPasted} />
+      <AutoGrowTextarea value="" onInput={() => {}} onSend={() => {}} onAttachmentsAdded={onAttachmentsAdded} />
     ));
 
     const textarea = screen.getByRole("textbox");
-    const file = new File(["image-bytes"], "clipboard.png", { type: "image/png" });
+    const imageFile = new File(["image-bytes"], "clipboard.png", { type: "image/png" });
+    const pdfFile = new File(["pdf-bytes"], "notes.pdf", { type: "application/pdf" });
 
     fireEvent.paste(textarea, {
       clipboardData: {
@@ -128,14 +129,19 @@ describe("AutoGrowTextarea", () => {
           {
             kind: "file",
             type: "image/png",
-            getAsFile: () => file,
+            getAsFile: () => imageFile,
+          },
+          {
+            kind: "file",
+            type: "application/pdf",
+            getAsFile: () => pdfFile,
           },
         ],
       },
     });
 
     await waitFor(() => {
-      expect(onAttachmentsPasted).toHaveBeenCalledWith([file]);
+      expect(onAttachmentsAdded).toHaveBeenCalledWith([imageFile, pdfFile]);
     });
 
     expect((textarea as HTMLTextAreaElement).value).toBe("");

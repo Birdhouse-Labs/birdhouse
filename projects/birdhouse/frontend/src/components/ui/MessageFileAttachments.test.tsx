@@ -1,5 +1,5 @@
 // ABOUTME: Tests message attachment rendering for sent file parts.
-// ABOUTME: Verifies image attachments remain visible and can open in a dialog.
+// ABOUTME: Verifies image previews and PDF cards stay visible inside message bubbles.
 
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
@@ -31,5 +31,25 @@ describe("MessageFileAttachments", () => {
     await waitFor(() => {
       expect(screen.getAllByAltText("sent-diagram.png")).toHaveLength(2);
     });
+  });
+
+  it("renders PDF attachments as file cards", () => {
+    const attachments: FileBlock[] = [
+      {
+        id: "file_pdf",
+        type: "file",
+        mimeType: "application/pdf",
+        url: "data:application/pdf;base64,abc123",
+        filename: "proposal.pdf",
+      },
+    ];
+
+    render(() => <MessageFileAttachments attachments={attachments} />);
+
+    expect(screen.getByRole("link", { name: "Open PDF proposal.pdf" })).toHaveAttribute(
+      "href",
+      "data:application/pdf;base64,abc123",
+    );
+    expect(screen.getByText("PDF")).toBeInTheDocument();
   });
 });

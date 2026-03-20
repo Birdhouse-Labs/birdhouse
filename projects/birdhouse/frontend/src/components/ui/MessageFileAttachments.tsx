@@ -16,8 +16,13 @@ const MessageFileAttachments: Component<MessageFileAttachmentsProps> = (props) =
   const imageAttachments = createMemo(() =>
     props.attachments.filter((attachment) => attachment.mimeType.startsWith("image/")),
   );
+  const pdfAttachments = createMemo(() =>
+    props.attachments.filter((attachment) => attachment.mimeType === "application/pdf"),
+  );
   const otherAttachments = createMemo(() =>
-    props.attachments.filter((attachment) => !attachment.mimeType.startsWith("image/")),
+    props.attachments.filter(
+      (attachment) => !attachment.mimeType.startsWith("image/") && attachment.mimeType !== "application/pdf",
+    ),
   );
 
   return (
@@ -38,6 +43,26 @@ const MessageFileAttachments: Component<MessageFileAttachmentsProps> = (props) =
                   class="w-24 h-24 object-cover"
                 />
               </button>
+            )}
+          </For>
+
+          <For each={pdfAttachments()}>
+            {(attachment) => (
+              <a
+                href={attachment.url}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`Open PDF ${attachment.filename || "attachment"}`}
+                class="flex min-w-44 items-center gap-3 rounded-xl border border-border bg-surface-raised px-3 py-3 text-sm text-text-primary hover:border-accent/50 transition-colors"
+              >
+                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                  <FileText size={18} />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted">PDF</div>
+                  <div class="truncate">{attachment.filename || "PDF attachment"}</div>
+                </div>
+              </a>
             )}
           </For>
 

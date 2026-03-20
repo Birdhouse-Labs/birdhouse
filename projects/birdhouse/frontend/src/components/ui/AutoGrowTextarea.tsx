@@ -18,7 +18,7 @@ export interface AutoGrowTextareaProps {
   value: string;
   onInput: (value: string) => void;
   onSend: () => void;
-  onAttachmentsPasted?: ((files: File[]) => void | Promise<void>) | undefined;
+  onAttachmentsAdded?: ((files: File[]) => void | Promise<void>) | undefined;
   disabled?: boolean;
   placeholder?: string;
   ref?: ((el: HTMLTextAreaElement) => void) | undefined;
@@ -197,20 +197,20 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
 
   const handlePaste = (e: ClipboardEvent & { currentTarget: HTMLTextAreaElement }) => {
     const items = Array.from(e.clipboardData?.items || []);
-    const pastedImageFiles = items
-      .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+    const pastedFiles = items
+      .filter((item) => item.kind === "file")
       .flatMap((item) => {
         const file = item.getAsFile();
         return file ? [file] : [];
       });
 
-    if (pastedImageFiles.length === 0) {
+    if (pastedFiles.length === 0) {
       return;
     }
 
     e.preventDefault();
     e.stopPropagation();
-    void props.onAttachmentsPasted?.(pastedImageFiles);
+    void props.onAttachmentsAdded?.(pastedFiles);
   };
 
   // Reset height when value is cleared

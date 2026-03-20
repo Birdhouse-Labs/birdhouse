@@ -1,9 +1,9 @@
-// ABOUTME: Tests composer image attachment previews and modal interactions.
-// ABOUTME: Verifies hover-remove controls do not interfere with image preview opening.
+// ABOUTME: Tests composer attachment previews and remove actions for supported file types.
+// ABOUTME: Verifies image previews and PDF cards share the composer attachment lane cleanly.
 
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
-import type { ComposerImageAttachment } from "../../types/composer-attachments";
+import type { ComposerAttachment } from "../../types/composer-attachments";
 import ComposerImageAttachments from "./ComposerImageAttachments";
 
 vi.mock("../../contexts/ZIndexContext", () => ({
@@ -11,7 +11,7 @@ vi.mock("../../contexts/ZIndexContext", () => ({
 }));
 
 describe("ComposerImageAttachments", () => {
-  const attachments: ComposerImageAttachment[] = [
+  const attachments: ComposerAttachment[] = [
     {
       id: "att_1",
       filename: "diagram.png",
@@ -64,5 +64,26 @@ describe("ComposerImageAttachments", () => {
     await waitFor(() => {
       expect(screen.getAllByAltText("diagram.png")).toHaveLength(1);
     });
+  });
+
+  it("renders pdf attachments as file tiles instead of image previews", () => {
+    render(() => (
+      <ComposerImageAttachments
+        attachments={[
+          {
+            id: "att_pdf",
+            filename: "notes.pdf",
+            mime: "application/pdf",
+            url: "data:application/pdf;base64,pdf123",
+          },
+        ]}
+        onRemove={() => {}}
+      />
+    ));
+
+    expect(screen.getByRole("link", { name: "Open PDF notes.pdf" })).toBeInTheDocument();
+    expect(screen.getByText("notes.pdf")).toBeInTheDocument();
+    expect(screen.queryByAltText("notes.pdf")).not.toBeInTheDocument();
+    expect(screen.getByText("PDF")).toBeInTheDocument();
   });
 });

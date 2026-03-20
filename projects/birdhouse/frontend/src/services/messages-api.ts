@@ -6,10 +6,10 @@ import { mapAgentTrees } from "../adapters/agent-tree-adapter";
 import type { TreeNode } from "../components/TreeView";
 import { API_ENDPOINT_BASE, buildWorkspaceUrl } from "../config/api";
 
-import type { ComposerImageAttachment, ComposerImageAttachmentPayload } from "../types/composer-attachments";
+import type { ComposerAttachment, ComposerAttachmentPayload } from "../types/composer-attachments";
 import type { Message } from "../types/messages";
 
-function mapComposerAttachments(attachments?: ComposerImageAttachment[]) {
+function mapComposerAttachments(attachments?: ComposerAttachment[]) {
   return attachments?.map((attachment) => ({
     type: "file" as const,
     filename: attachment.filename,
@@ -149,7 +149,7 @@ export async function sendMessage(
   opencodePromptOptions: {
     agent?: string;
     cloneAndSend?: boolean;
-    attachments?: ComposerImageAttachment[];
+    attachments?: ComposerAttachment[];
   },
 ): Promise<{ sent: boolean; async: boolean; cloned_agent?: unknown }> {
   const url = `${buildWorkspaceUrl(workspaceId, `/agents/${agentId}/messages`)}?wait=false`;
@@ -243,7 +243,7 @@ export async function createAgent(
   modelId?: string,
   prompt?: string,
   agent?: string,
-  attachments?: ComposerImageAttachment[],
+  attachments?: ComposerAttachment[],
 ): Promise<{ id: string; parts?: unknown[] }> {
   const body: {
     model?: string | undefined;
@@ -391,7 +391,7 @@ export async function revertAgent(
   workspaceId: string,
   agentId: string,
   messageId: string,
-): Promise<{ success: boolean; messageText: string; attachments: ComposerImageAttachmentPayload[] }> {
+): Promise<{ success: boolean; messageText: string; attachments: ComposerAttachmentPayload[] }> {
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/revert`);
   const response = await fetch(url, {
     method: "POST",
