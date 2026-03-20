@@ -16,8 +16,8 @@ describe("findMatches", () => {
       const skills = [makeSkill("git-commit", ["git commit"])];
       const matches = findMatches("git co", cursor("git co"), skills);
       expect(matches).toHaveLength(1);
-      expect(matches[0].matchedPhrase).toBe("git commit");
-      expect(matches[0].matchedText).toBe("git co");
+      expect(matches[0]!.matchedPhrase).toBe("git commit");
+      expect(matches[0]!.matchedText).toBe("git co");
     });
 
     it("matches a trigger phrase typed after other words", () => {
@@ -25,8 +25,8 @@ describe("findMatches", () => {
       const input = "please help me git co";
       const matches = findMatches(input, cursor(input), skills);
       expect(matches).toHaveLength(1);
-      expect(matches[0].matchedText).toBe("git co");
-      expect(matches[0].startIndex).toBe(15);
+      expect(matches[0]!.matchedText).toBe("git co");
+      expect(matches[0]!.startIndex).toBe(15);
     });
 
     it("is case-insensitive", () => {
@@ -34,7 +34,7 @@ describe("findMatches", () => {
       const input = "Git Co";
       const matches = findMatches(input, cursor(input), skills);
       expect(matches).toHaveLength(1);
-      expect(matches[0].matchedText).toBe("Git Co");
+      expect(matches[0]!.matchedText).toBe("Git Co");
     });
 
     it("does not match when fewer than 2 characters typed", () => {
@@ -64,7 +64,7 @@ describe("findMatches", () => {
       const input = "please use an";
       const matches = findMatches(input, cursor(input), skills);
       expect(matches).toHaveLength(1);
-      expect(matches[0].matchedText).toBe("an");
+      expect(matches[0]!.matchedText).toBe("an");
     });
 
     it("matches at the very start of the input (index 0 is a boundary)", () => {
@@ -79,7 +79,7 @@ describe("findMatches", () => {
       const input = "some context\ngit co";
       const matches = findMatches(input, cursor(input), skills);
       expect(matches).toHaveLength(1);
-      expect(matches[0].matchedText).toBe("git co");
+      expect(matches[0]!.matchedText).toBe("git co");
     });
   });
 
@@ -89,7 +89,7 @@ describe("findMatches", () => {
       const input = "commit th";
       const matches = findMatches(input, cursor(input), skills);
       expect(matches).toHaveLength(1);
-      expect(matches[0].matchedPhrase).toBe("commit this");
+      expect(matches[0]!.matchedPhrase).toBe("commit this");
     });
 
     it("returns multiple results when multiple phrases match", () => {
@@ -107,7 +107,7 @@ describe("findMatches", () => {
       const input = "git b";
       const matches = findMatches(input, cursor(input), skills);
       expect(matches).toHaveLength(1);
-      expect(matches[0].skill.id).toBe("skill-b");
+      expect(matches[0]!.skill.id).toBe("skill-b");
     });
   });
 
@@ -121,7 +121,7 @@ describe("findMatches", () => {
       };
       const matches = findMatches("git co", cursor("git co"), [skill]);
       expect(matches).toHaveLength(1);
-      expect(matches[0].matchedPhrase).toBe("git commit");
+      expect(matches[0]!.matchedPhrase).toBe("git commit");
     });
   });
 
@@ -135,7 +135,7 @@ describe("findMatches", () => {
       };
       const matches = findMatches("git co", cursor("git co"), [skill]);
       expect(matches).toHaveLength(1);
-      expect(matches[0].matchedPhrase).toBe("git commit");
+      expect(matches[0]!.matchedPhrase).toBe("git commit");
     });
 
     it("returns separate results for metadata and user phrases when both match", () => {
@@ -157,7 +157,7 @@ describe("findMatches", () => {
       const input = "my-co";
       const matches = findMatches(input, cursor(input), [skill]);
       expect(matches).toHaveLength(1);
-      expect(matches[0].matchedPhrase).toBe("my-cool-skill");
+      expect(matches[0]!.matchedPhrase).toBe("my-cool-skill");
     });
 
     it("does not use title as fallback when trigger phrases exist", () => {
@@ -188,7 +188,7 @@ describe("findMatches", () => {
       const cursorPos = 4; // after "git "
       const matches = findMatches(input, cursorPos, skills);
       expect(matches).toHaveLength(1);
-      expect(matches[0].matchedText).toBe("git ");
+      expect(matches[0]!.matchedText).toBe("git ");
     });
   });
 });

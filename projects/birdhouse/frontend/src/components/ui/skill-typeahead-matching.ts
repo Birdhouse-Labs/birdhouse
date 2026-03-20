@@ -43,7 +43,7 @@ export function findMatches(inputValue: string, cursorPosition: number, skills: 
     const phraseLower = phrase.toLowerCase();
     for (let start = lookbackStart; start < cursorPosition; start++) {
       // Only start a match at a word boundary
-      const isWordBoundary = start === 0 || /\s/.test(textBeforeCursor[start - 1]);
+      const isWordBoundary = start === 0 || /\s/.test(textBeforeCursor.charAt(start - 1));
       if (!isWordBoundary) continue;
 
       const substring = textBeforeCursorLower.substring(start);
