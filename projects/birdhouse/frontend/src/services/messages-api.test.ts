@@ -585,7 +585,7 @@ describe("revertAgent", () => {
   const mockMessageId = "msg_123";
 
   it("should revert agent to specific message", async () => {
-    const mockResponse = { success: true, messageText: "Reverted message" };
+    const mockResponse = { success: true, messageText: "Reverted message", attachments: [] };
 
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
@@ -602,6 +602,30 @@ describe("revertAgent", () => {
       }),
     );
     expect(result).toEqual(mockResponse);
+  });
+
+  it("should return restored attachments from the revert response", async () => {
+    const mockResponse = {
+      success: true,
+      messageText: "Reverted message",
+      attachments: [
+        {
+          type: "file",
+          filename: "clipboard.png",
+          mime: "image/png",
+          url: "data:image/png;base64,abc123",
+        },
+      ],
+    };
+
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse,
+    } as Response);
+
+    const result = await revertAgent(mockWorkspaceId, mockAgentId, mockMessageId);
+
+    expect(result.attachments).toEqual(mockResponse.attachments);
   });
 
   it("should extract error message from JSON response", async () => {

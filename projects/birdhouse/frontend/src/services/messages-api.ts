@@ -6,7 +6,7 @@ import { mapAgentTrees } from "../adapters/agent-tree-adapter";
 import type { TreeNode } from "../components/TreeView";
 import { API_ENDPOINT_BASE, buildWorkspaceUrl } from "../config/api";
 
-import type { ComposerImageAttachment } from "../types/composer-attachments";
+import type { ComposerImageAttachment, ComposerImageAttachmentPayload } from "../types/composer-attachments";
 import type { Message } from "../types/messages";
 
 function mapComposerAttachments(attachments?: ComposerImageAttachment[]) {
@@ -391,7 +391,7 @@ export async function revertAgent(
   workspaceId: string,
   agentId: string,
   messageId: string,
-): Promise<{ success: boolean; messageText: string }> {
+): Promise<{ success: boolean; messageText: string; attachments: ComposerImageAttachmentPayload[] }> {
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/revert`);
   const response = await fetch(url, {
     method: "POST",

@@ -7,3 +7,10 @@ export interface ComposerImageAttachment {
   mime: string;
   url: string;
 }
+
+export interface ComposerImageAttachmentPayload {
+  type: "file";
+  filename?: string;
+  mime: string;
+  url: string;
+}

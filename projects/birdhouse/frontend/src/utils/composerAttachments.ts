@@ -1,7 +1,7 @@
-// ABOUTME: Converts pasted browser File objects into composer attachment previews.
+// ABOUTME: Converts pasted and restored image data into composer attachment previews.
 // ABOUTME: Produces data URLs so the send layer can forward OpenCode-style file parts.
 
-import type { ComposerImageAttachment } from "../types/composer-attachments";
+import type { ComposerImageAttachment, ComposerImageAttachmentPayload } from "../types/composer-attachments";
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -23,4 +23,15 @@ export async function createComposerImageAttachments(files: File[]): Promise<Com
   );
 
   return attachments;
+}
+
+export function restoreComposerImageAttachments(
+  attachments: ComposerImageAttachmentPayload[],
+): ComposerImageAttachment[] {
+  return attachments.map((attachment, index) => ({
+    id: `${Date.now()}_restored_${index}_${attachment.filename || "image"}`,
+    filename: attachment.filename || `attachment-${index + 1}`,
+    mime: attachment.mime,
+    url: attachment.url,
+  }));
 }

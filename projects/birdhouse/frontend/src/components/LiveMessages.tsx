@@ -25,7 +25,7 @@ import { fetchPendingQuestions } from "../services/questions-api";
 import type { ComposerImageAttachment } from "../types/composer-attachments";
 import type { Message } from "../types/messages";
 import type { QuestionRequest } from "../types/question";
-import { createComposerImageAttachments } from "../utils/composerAttachments";
+import { createComposerImageAttachments, restoreComposerImageAttachments } from "../utils/composerAttachments";
 import AgentHeader from "./AgentHeader";
 import Button from "./ui/Button";
 import ChatContainer from "./ui/ChatContainer";
@@ -550,6 +550,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
       if (result.success) {
         // Pre-populate input with returned message text
         setInputValue(result.messageText);
+        setAttachments(restoreComposerImageAttachments(result.attachments));
 
         // Refetch agent metadata to get updated revert state
         refetchMetadata();
@@ -581,6 +582,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
       if (result.success) {
         // Clear input field (it was pre-populated with reverted message)
         setInputValue("");
+        setAttachments([]);
 
         // Refetch agent metadata to clear revert state
         refetchMetadata();
