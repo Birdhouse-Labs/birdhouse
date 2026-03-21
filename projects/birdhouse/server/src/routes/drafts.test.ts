@@ -31,13 +31,31 @@ function makeFakePngBase64(): string {
   const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
   // IHDR chunk: length(4) + "IHDR"(4) + width(4) + height(4) + bitdepth(1) + colortype(1) + compression(1) + filter(1) + interlace(1) + CRC(4) = 25 bytes
   const ihdr = [
-    0x00, 0x00, 0x00, 0x0d, // chunk length: 13
-    0x49, 0x48, 0x44, 0x52, // "IHDR"
-    0x00, 0x00, 0x00, 0x01, // width: 1
-    0x00, 0x00, 0x00, 0x01, // height: 1
-    0x08, 0x02,             // bit depth: 8, color type: 2 (RGB)
-    0x00, 0x00, 0x00,       // compression, filter, interlace: 0
-    0x90, 0x77, 0x53, 0xde, // CRC (precomputed for this IHDR)
+    0x00,
+    0x00,
+    0x00,
+    0x0d, // chunk length: 13
+    0x49,
+    0x48,
+    0x44,
+    0x52, // "IHDR"
+    0x00,
+    0x00,
+    0x00,
+    0x01, // width: 1
+    0x00,
+    0x00,
+    0x00,
+    0x01, // height: 1
+    0x08,
+    0x02, // bit depth: 8, color type: 2 (RGB)
+    0x00,
+    0x00,
+    0x00, // compression, filter, interlace: 0
+    0x90,
+    0x77,
+    0x53,
+    0xde, // CRC (precomputed for this IHDR)
   ];
   // Pad to ~4 KB with deterministic repeating bytes so we can verify
   const paddingSize = 4096 - signature.length - ihdr.length;
@@ -230,7 +248,7 @@ describe("GET /drafts/:draftId", () => {
 
     const res = await app.request("/drafts/agent_get");
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as { text: string; attachments: { filename: string }[] };
     expect(body.text).toBe("stored text");
     expect(body.attachments).toHaveLength(1);
     expect(body.attachments[0].filename).toBe("f.png");
@@ -266,7 +284,7 @@ describe("PUT /drafts/:draftId", () => {
       }),
     });
     const res = await app.request("/drafts/agent_put");
-    const body = await res.json();
+    const body = (await res.json()) as { text: string; attachments: { filename: string }[] };
     expect(body.text).toBe("my draft");
     expect(body.attachments[0].filename).toBe("img.png");
   });
