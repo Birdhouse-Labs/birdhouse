@@ -4,12 +4,14 @@ dist
 tmp
 # TypeScript build info
 *.tsbuildinfo
-# SQLite database files (created at runtime in ~/Library/Application Support)
-*.db
+# SQLite WAL files are always runtime artifacts
 *.db-shm
 *.db-wal
-# Intentionally committed fixture snapshots for migration tests
-!server/src/lib/agents-db-migrations/__fixtures__/*.db
+# Runtime databases (not test fixtures)
+server/birdhouse.db
+server/data/*.db
+# Test-generated databases (not intentional fixtures)
+**/test-*.db
 server/data/
 # Migration planning docs (not for commit)
 docs/sessions-to-agents-migration-plan.md
