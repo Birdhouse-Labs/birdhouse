@@ -112,7 +112,7 @@ The test suite runs every migration against:
 
 Passing tests = migration is verified. You are done.
 
-**Note for data.db migrations:** the fixture snapshot tests assert the exact list of applied migrations. When you add a migration, three assertions in `run-migrations.test.ts` will fail until you update them — bump the `toHaveLength` count and add your migration name to the `toEqual` array. This is intentional.
+**After adding a migration, check the fixture tests.** Both test files may assert things about which migrations have been applied — bump any `toHaveLength` counts and add your migration name to any `toEqual` arrays. The tests will tell you clearly if something needs updating.
 
 ### Step 4: Update TypeScript types if needed
 
