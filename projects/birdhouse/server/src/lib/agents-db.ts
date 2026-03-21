@@ -10,6 +10,21 @@ import { runAgentsDbMigrations, runAgentsDbMigrationsOnDb } from "./agents-db-mi
 import type { SessionStatus } from "./opencode-client";
 
 // ============================================================================
+// Draft Types
+// ============================================================================
+
+export interface AttachmentPayload {
+  filename: string;
+  mime: string;
+  url: string;
+}
+
+export interface DraftPayload {
+  text: string;
+  attachments: AttachmentPayload[];
+}
+
+// ============================================================================
 // Type Definitions
 // ============================================================================
 
@@ -155,6 +170,15 @@ export interface AgentsDB {
   /** Unarchive agent and all descendants - returns array of unarchived agent IDs */
   unarchiveAgent(agentId: string): string[];
 
+  /** Get draft payload (text + attachments) for a surface; returns empty draft if not found */
+  getDraft(draftId: string): DraftPayload;
+
+  /** Upsert draft — replaces text and all attachments atomically */
+  upsertDraft(draftId: string, context: string, payload: DraftPayload): void;
+
+  /** Delete draft and all its attachments; no-op if not found */
+  deleteDraft(draftId: string): void;
+
   /** Close database connection */
   close(): void;
 
@@ -185,6 +209,7 @@ export function generateEventId(): string {
 // ============================================================================
 // Database Creation & Configuration
 // ============================================================================
+
 
 /**
  * Open and configure a SQLite database with optimal settings.
@@ -830,6 +855,65 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
 
         db.run("COMMIT");
         return idsToUnarchive;
+      } catch (error) {
+        db.run("ROLLBACK");
+        throw error;
+      }
+    },
+
+    getDraft(draftId: string): DraftPayload {
+      const row = db
+        .query<{ text: string }, [string]>("SELECT text FROM composer_drafts WHERE draft_id = ?")
+        .get(draftId);
+
+      if (!row) {
+        return { text: "", attachments: [] };
+      }
+
+      const attachmentRows = db
+        .query<{ filename: string; mime: string; url: string }, [string]>(
+          "SELECT filename, mime, url FROM composer_draft_attachments WHERE draft_id = ? ORDER BY position ASC",
+        )
+        .all(draftId);
+
+      return {
+        text: row.text,
+        attachments: attachmentRows,
+      };
+    },
+
+    upsertDraft(draftId: string, context: string, payload: DraftPayload): void {
+      const now = Date.now();
+      try {
+        db.run("BEGIN IMMEDIATE");
+
+        db.prepare(
+          "INSERT OR REPLACE INTO composer_drafts (draft_id, context, text, updated_at) VALUES (?, ?, ?, ?)",
+        ).run(draftId, context, payload.text, now);
+
+        db.prepare("DELETE FROM composer_draft_attachments WHERE draft_id = ?").run(draftId);
+
+        const insertAttachment = db.prepare(
+          "INSERT INTO composer_draft_attachments (id, draft_id, filename, mime, url, position) VALUES (?, ?, ?, ?, ?, ?)",
+        );
+        for (let i = 0; i < payload.attachments.length; i++) {
+          const a = payload.attachments[i];
+          insertAttachment.run(nanoid(), draftId, a.filename, a.mime, a.url, i);
+        }
+
+        db.run("COMMIT");
+      } catch (error) {
+        db.run("ROLLBACK");
+        throw error;
+      }
+    },
+
+    deleteDraft(draftId: string): void {
+      try {
+        db.run("BEGIN IMMEDIATE");
+        db.prepare("DELETE FROM composer_draft_attachments WHERE draft_id = ?").run(draftId);
+        db.prepare("DELETE FROM composer_drafts WHERE draft_id = ?").run(draftId);
+        db.run("COMMIT");
       } catch (error) {
         db.run("ROLLBACK");
         throw error;
