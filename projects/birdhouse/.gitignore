@@ -5,7 +5,6 @@ tmp
 # TypeScript build info
 *.tsbuildinfo
 # SQLite database files (created at runtime in ~/Library/Application Support)
-*.db
 *.db-shm
 *.db-wal
 server/data/
