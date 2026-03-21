@@ -13,9 +13,10 @@
     "lint:custom": "bun scripts/lint-custom.ts",
     "lint:fix": "bunx biome check --write src tests",
     "check": "bun run lint && bun run typecheck && bun test && bun run build",
-    "db:migrate-dev": "bun scripts/db-migrate-dev.ts",
-    "db:rollback-dev": "bun scripts/db-rollback-dev.ts",
+    "db:migrate-data": "bun scripts/db-migrate-data.ts",
+    "db:migrate-down-data": "bun scripts/db-migrate-down-data.ts",
     "db:migrate-agents-db": "bun scripts/db-migrate-agents.ts",
+    "db:migrate-down-agents-db": "bun scripts/db-migrate-down-agents.ts",
     "agent-migration:new": "bun scripts/agent-migration-new.ts",
     "data-migration:new": "bun scripts/data-migration-new.ts"
   },
