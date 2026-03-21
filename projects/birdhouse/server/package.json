@@ -15,7 +15,8 @@
     "check": "bun run lint && bun run typecheck && bun test && bun run build",
     "migrate:dev": "bun scripts/migrate-dev.ts",
     "migrate:rollback": "bun scripts/rollback-last.ts ~/Library/Application\\ Support/Birdhouse/data-dev.db",
-    "migration:new": "bun scripts/new-agents-db-migration.ts"
+    "agent-migration:new": "bun scripts/agent-migration-new.ts",
+    "data-migration:new": "bun scripts/data-migration-new.ts"
   },
   "dependencies": {
     "@opencode-ai/sdk": "^1.1.12",

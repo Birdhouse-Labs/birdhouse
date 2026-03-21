@@ -3,7 +3,7 @@
 
 import Database from "bun:sqlite";
 import type { Migration } from "kysely";
-import { Kysely, Migrator, sql } from "kysely";
+import { Kysely, Migrator } from "kysely";
 import { BunSqliteDialect } from "kysely-bun-sqlite";
 import { log } from "../logger";
 
@@ -17,10 +17,9 @@ import * as migration_002 from "./migrations/2026-03-14_002_skill_trigger_phrase
  * Call this once on server startup before initializing DataDB
  */
 export async function runMigrations(dbPath: string): Promise<void> {
-  log.server.info({ dbPath }, "Running database migrations...");
+  log.server.info({ dbPath }, "Running data.db migrations...");
 
   // Create a temporary Kysely instance ONLY for migrations
-  // Using Record<string, never> instead of any for empty database type
   const db = new Kysely<Record<string, never>>({
     dialect: new BunSqliteDialect({
       database: new Database(dbPath),
@@ -33,20 +32,9 @@ export async function runMigrations(dbPath: string): Promise<void> {
     "2026-03-14_002_skill_trigger_phrases": migration_002,
   };
 
-  // When there is exactly one migration, reset Kysely's tracking tables so it
-  // re-evaluates from scratch. All migrations use IF NOT EXISTS so re-running
-  // them is safe — no data is affected. This fires automatically whenever
-  // migrations are squashed down to a single file, and self-disables as soon
-  // as a second migration is added.
-  if (Object.keys(allMigrations).length === 1) {
-    await sql`DROP TABLE IF EXISTS kysely_migration`.execute(db);
-    await sql`DROP TABLE IF EXISTS kysely_migration_lock`.execute(db);
-  }
-
   const migrator = new Migrator({
     db,
     provider: {
-      // Provide migrations directly instead of loading from filesystem
       async getMigrations() {
         return allMigrations;
       },
@@ -57,20 +45,19 @@ export async function runMigrations(dbPath: string): Promise<void> {
 
   results?.forEach((it) => {
     if (it.status === "Success") {
-      log.server.info({ migration: it.migrationName }, "✅ Migration applied");
+      log.server.info({ migration: it.migrationName }, "Migration applied");
     } else if (it.status === "Error") {
-      log.server.error({ migration: it.migrationName }, "❌ Migration failed");
+      log.server.error({ migration: it.migrationName }, "Migration failed");
     }
   });
 
   if (error) {
-    log.server.error({ error }, "Migration failed");
+    log.server.error({ error }, "Data.db migration failed");
     await db.destroy();
     throw error;
   }
 
-  log.server.info("All migrations applied successfully");
+  log.server.info({ dbPath }, "Data.db migrations complete");
 
-  // Clean up Kysely instance - we only needed it for migrations
   await db.destroy();
 }
