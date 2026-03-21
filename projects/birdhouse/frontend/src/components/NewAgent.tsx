@@ -3,12 +3,27 @@
 
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { Hammer, LibraryBig, Lightbulb } from "lucide-solid";
-import { type Component, createEffect, createMemo, createResource, createSignal, onMount, Show } from "solid-js";
+import {
+  type Component,
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js";
 import { useWorkspace } from "../contexts/WorkspaceContext";
+import { clearDraft, getDraft, saveDraft } from "../services/drafts-api";
 import { createAgent, fetchModels, type Model } from "../services/messages-api";
 import { previewSkillAttachments } from "../services/skill-attachments-api";
 import type { ComposerAttachment } from "../types/composer-attachments";
-import { createComposerAttachments, getComposerAttachmentError } from "../utils/composerAttachments";
+import {
+  createComposerAttachments,
+  getComposerAttachmentError,
+  restoreComposerAttachments,
+} from "../utils/composerAttachments";
+import { createDebouncedSave } from "../utils/draft-persistence";
 import { extractSkillLinkNames } from "../utils/skillLinks";
 import AutoGrowTextarea from "./ui/AutoGrowTextarea";
 import Button from "./ui/Button";
@@ -18,8 +33,6 @@ import ComposerImageAttachments from "./ui/ComposerImageAttachments";
 import SkillAttachmentsDialog from "./ui/SkillAttachmentsDialog";
 
 const STORAGE_KEY = "birdhouse:last-selected-model";
-const NEW_AGENT_DRAFT_KEY = "birdhouse:new-agent-draft";
-const DRAFT_BACKUP_PREFIX = "birdhouse:draft-backup-";
 
 const modelToOption = (model: Model): ComboboxOption<string> => ({
   value: model.id,
@@ -63,6 +76,28 @@ const NewAgent: Component = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // isLoaded gates the save effect — plain boolean, invisible to SolidJS tracking
+  let isLoaded = false;
+
+  // Debounced saver — created once at component init
+  const draftSave = createDebouncedSave(() => {
+    saveDraft(workspaceId, "new-agent", {
+      text: messageText(),
+      attachments: attachments().map(({ filename, mime, url }) => ({ filename, mime, url })),
+    }).catch(() => {}); // silent fail — user's text is still in the input
+  });
+
+  // Flush any pending save when the component unmounts
+  onCleanup(() => draftSave.flush());
+
+  // Track changes; gate on isLoaded to avoid saving during initial load
+  createEffect(() => {
+    messageText();
+    attachments();
+    if (!isLoaded) return;
+    draftSave.schedule();
+  });
+
   const linkedSkillNames = createMemo(() => extractSkillLinkNames(messageText().trim()));
 
   const [skillAttachments] = createResource(
@@ -88,19 +123,12 @@ const NewAgent: Component = () => {
   });
   const [skillDialogOpen, setSkillDialogOpen] = createSignal(false);
 
-  // Handle URL param pre-fill with timestamped draft backup
+  // Handle URL param pre-fill or load saved draft on mount
   onMount(() => {
     const urlMessage = searchParams["message"];
 
     if (urlMessage) {
-      // URL param exists - backup any existing draft with timestamp before overwriting
-      const existingDraft = localStorage.getItem(NEW_AGENT_DRAFT_KEY);
-      if (existingDraft) {
-        const timestamp = Date.now();
-        localStorage.setItem(`${DRAFT_BACKUP_PREFIX}${timestamp}`, existingDraft);
-      }
-
-      // Set message from URL param (handle array case though we expect single value)
+      // URL param present — use it directly; server draft stays untouched
       const messageValue = Array.isArray(urlMessage) ? urlMessage[0] : urlMessage;
       if (messageValue) {
         setMessageText(messageValue);
@@ -109,22 +137,22 @@ const NewAgent: Component = () => {
       // Clean up URL param using router's setSearchParams (removes 'message' key by setting to undefined)
       // This properly updates both the URL bar and router state without navigation side effects
       setSearchParams({ message: undefined }, { replace: true, scroll: false });
-    } else {
-      // Load existing draft if available
-      const draft = localStorage.getItem(NEW_AGENT_DRAFT_KEY);
-      if (draft) {
-        setMessageText(draft);
-      }
-    }
-  });
 
-  // Save draft to localStorage when input changes (only if non-empty)
-  createEffect(() => {
-    const value = messageText().trim();
-    if (value) {
-      localStorage.setItem(NEW_AGENT_DRAFT_KEY, messageText());
+      // User-provided text is saveable right away
+      isLoaded = true;
     } else {
-      localStorage.removeItem(NEW_AGENT_DRAFT_KEY);
+      // No URL param — load saved draft from server
+      getDraft(workspaceId, "new-agent")
+        .then((draft) => {
+          if (draft) {
+            setMessageText(draft.text);
+            setAttachments(restoreComposerAttachments(draft.attachments.map((a) => ({ type: "file" as const, ...a }))));
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          isLoaded = true;
+        });
     }
   });
 
@@ -213,7 +241,7 @@ const NewAgent: Component = () => {
       );
 
       // Clear draft after successful creation
-      localStorage.removeItem(NEW_AGENT_DRAFT_KEY);
+      clearDraft(workspaceId, "new-agent").catch(() => {});
       setAttachments([]);
 
       // Navigate to the new agent (workspace-aware)
