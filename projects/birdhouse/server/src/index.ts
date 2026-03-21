@@ -18,6 +18,7 @@ import { createWorkspaceMiddleware } from "./middleware/workspace";
 import { createAAPIAgentRoutes } from "./routes/aapi-agents";
 import { createAgentRoutes } from "./routes/agents";
 import { createConfigRoutes } from "./routes/config";
+import { createDraftRoutes } from "./routes/drafts";
 import { createEventRoutes } from "./routes/events";
 import { createFileRoutes } from "./routes/files";
 import { createLogRoutes } from "./routes/logs";
@@ -189,6 +190,7 @@ app.route("/api/workspaces", createWorkspaceRoutes(dataDb, opencodeManager));
 
 // Workspace-scoped routes (with middleware)
 app.route("/api/workspace/:workspaceId/agents", createAgentRoutes());
+app.route("/api/workspace/:workspaceId/drafts", createDraftRoutes());
 app.route("/api/workspace/:workspaceId/events", createEventRoutes());
 app.route("/api/workspace/:workspaceId/models", createModelRoutes());
 app.route("/api/workspace/:workspaceId/skills", createSkillRoutes(dataDb));
