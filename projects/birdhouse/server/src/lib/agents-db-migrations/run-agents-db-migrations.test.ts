@@ -126,6 +126,40 @@ describe("runAgentsDbMigrations — fresh database", () => {
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
     expect(migrations).toContain("20260320000000_initial_schema");
+    expect(migrations).toContain("20260321144612_composer_drafts");
+  });
+
+  test("creates composer_drafts and composer_draft_attachments tables", async () => {
+    await runAgentsDbMigrations(dbPath);
+    const tables = getTables(dbPath);
+    expect(tables).toContain("composer_drafts");
+    expect(tables).toContain("composer_draft_attachments");
+  });
+
+  test("composer_drafts table has all expected columns", async () => {
+    await runAgentsDbMigrations(dbPath);
+    const cols = getColumns(dbPath, "composer_drafts");
+    expect(cols).toContain("draft_id");
+    expect(cols).toContain("context");
+    expect(cols).toContain("text");
+    expect(cols).toContain("updated_at");
+  });
+
+  test("composer_draft_attachments table has all expected columns", async () => {
+    await runAgentsDbMigrations(dbPath);
+    const cols = getColumns(dbPath, "composer_draft_attachments");
+    expect(cols).toContain("id");
+    expect(cols).toContain("draft_id");
+    expect(cols).toContain("filename");
+    expect(cols).toContain("mime");
+    expect(cols).toContain("url");
+    expect(cols).toContain("position");
+  });
+
+  test("creates idx_draft_attachments_draft_id index", async () => {
+    await runAgentsDbMigrations(dbPath);
+    const indexes = getIndexes(dbPath);
+    expect(indexes).toContain("idx_draft_attachments_draft_id");
   });
 
   test("is idempotent — running twice does not error", async () => {
@@ -134,6 +168,8 @@ describe("runAgentsDbMigrations — fresh database", () => {
     const tables = getTables(dbPath);
     expect(tables).toContain("agents");
     expect(tables).toContain("agent_events");
+    expect(tables).toContain("composer_drafts");
+    expect(tables).toContain("composer_draft_attachments");
   });
 });
 
@@ -171,17 +207,17 @@ describe("runAgentsDbMigrations — demo-snapshot.db", () => {
     expect(eventCols).toContain("actor_agent_id");
   });
 
-  test("no new migrations applied — all were already recorded", async () => {
+  test("applies composer_drafts migration to existing DB", async () => {
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toEqual(["20260320000000_initial_schema"]);
+    expect(migrations).toEqual(["20260320000000_initial_schema", "20260321144612_composer_drafts"]);
   });
 
   test("is idempotent — running twice does not error or change state", async () => {
     await runAgentsDbMigrations(dbPath);
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toHaveLength(1);
+    expect(migrations).toHaveLength(2);
   });
 });
 
@@ -209,16 +245,16 @@ describe("runAgentsDbMigrations — small-snapshot.db", () => {
     expect(count?.c).toBeGreaterThan(0);
   });
 
-  test("no new migrations applied — all were already recorded", async () => {
+  test("applies composer_drafts migration to existing DB", async () => {
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toEqual(["20260320000000_initial_schema"]);
+    expect(migrations).toEqual(["20260320000000_initial_schema", "20260321144612_composer_drafts"]);
   });
 
   test("is idempotent — running twice does not error or change state", async () => {
     await runAgentsDbMigrations(dbPath);
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toHaveLength(1);
+    expect(migrations).toHaveLength(2);
   });
 });
