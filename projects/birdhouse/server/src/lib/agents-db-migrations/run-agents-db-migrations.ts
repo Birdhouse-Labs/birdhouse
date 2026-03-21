@@ -1,5 +1,5 @@
-// ABOUTME: Kysely migration runner for data.db schema changes
-// ABOUTME: Runs on server startup to apply any pending migrations
+// ABOUTME: Kysely migration runner for agents.db schema changes
+// ABOUTME: Runs once per workspace on first access to apply any pending migrations
 
 import Database from "bun:sqlite";
 import type { Migration, MigrationResult, MigrationResultSet } from "kysely";
@@ -8,21 +8,17 @@ import { BunSqliteDialect } from "kysely-bun-sqlite";
 import { log } from "../logger";
 
 // Import migrations directly so they're bundled into the compiled binary
-import * as migration_000 from "./migrations/2026-02-28_000_initial_schema";
-import * as migration_001 from "./migrations/2026-03-03_001_plaintext_secrets";
-import * as migration_002 from "./migrations/2026-03-14_002_skill_trigger_phrases";
+import * as migration_20260320000000 from "./migrations/20260320000000_initial_schema";
 
 const allMigrations: Record<string, Migration> = {
-  "2026-02-28_000_initial_schema": migration_000,
-  "2026-03-03_001_plaintext_secrets": migration_001,
-  "2026-03-14_002_skill_trigger_phrases": migration_002,
+  "20260320000000_initial_schema": migration_20260320000000,
 };
 
 /**
- * Create a Kysely Migrator for the given data.db path.
- * Used by runMigrations and the human-facing db: scripts.
+ * Create a Kysely Migrator for the given agents.db path.
+ * Used by runAgentsDbMigrations and the human-facing db: scripts.
  */
-export function createDataMigrator(dbPath: string): { migrator: Migrator; db: Kysely<Record<string, never>> } {
+export function createAgentsMigrator(dbPath: string): { migrator: Migrator; db: Kysely<Record<string, never>> } {
   const db = new Kysely<Record<string, never>>({
     dialect: new BunSqliteDialect({
       database: new Database(dbPath),
@@ -61,15 +57,15 @@ async function handleResult(resultSet: MigrationResultSet, db: Kysely<Record<str
 }
 
 /**
- * Run all pending migrations on the data database.
- * Call this once on server startup before initializing DataDB.
+ * Run all pending migrations on an agents database.
+ * Call this once before using the AgentsDB instance for a given workspace.
  */
-export async function runMigrations(dbPath: string): Promise<void> {
-  log.server.info({ dbPath }, "Running data.db migrations...");
+export async function runAgentsDbMigrations(dbPath: string): Promise<void> {
+  log.server.info({ dbPath }, "Running agents DB migrations...");
 
-  const { migrator, db } = createDataMigrator(dbPath);
+  const { migrator, db } = createAgentsMigrator(dbPath);
   const resultSet = await migrator.migrateToLatest();
   await handleResult(resultSet, db);
 
-  log.server.info({ dbPath }, "Data.db migrations complete");
+  log.server.info({ dbPath }, "Agents DB migrations complete");
 }
