@@ -171,10 +171,17 @@ describe("runAgentsDbMigrations — demo-snapshot.db", () => {
     expect(eventCols).toContain("actor_agent_id");
   });
 
-  test("records migration in kysely_migration table", async () => {
+  test("no new migrations applied — all were already recorded", async () => {
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toContain("20260320000000_initial_schema");
+    expect(migrations).toEqual(["20260320000000_initial_schema"]);
+  });
+
+  test("is idempotent — running twice does not error or change state", async () => {
+    await runAgentsDbMigrations(dbPath);
+    await runAgentsDbMigrations(dbPath);
+    const migrations = getMigrationNames(dbPath);
+    expect(migrations).toHaveLength(1);
   });
 });
 
@@ -202,10 +209,16 @@ describe("runAgentsDbMigrations — small-snapshot.db", () => {
     expect(count?.c).toBeGreaterThan(0);
   });
 
-  test("is idempotent — running twice does not error", async () => {
+  test("no new migrations applied — all were already recorded", async () => {
+    await runAgentsDbMigrations(dbPath);
+    const migrations = getMigrationNames(dbPath);
+    expect(migrations).toEqual(["20260320000000_initial_schema"]);
+  });
+
+  test("is idempotent — running twice does not error or change state", async () => {
     await runAgentsDbMigrations(dbPath);
     await runAgentsDbMigrations(dbPath);
-    const tables = getTables(dbPath);
-    expect(tables).toContain("agents");
+    const migrations = getMigrationNames(dbPath);
+    expect(migrations).toHaveLength(1);
   });
 });
