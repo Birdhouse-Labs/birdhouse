@@ -75,13 +75,14 @@ export async function down(db: Kysely<Record<string, never>>): Promise<void> {
     runner.slice(lastImportLine.index! + lastImportLine[0].length);
 
   // Find the last allMigrations entry (handles both old YYYY-MM-DD_NNN_ and new YYYYMMDDHHmmss_ keys)
-  const lastEntryMatch = [...runner.matchAll(/^    "[^"]+": migration_\S+,$/gm)];
+  // Allows 2 or 4 spaces of indentation
+  const lastEntryMatch = [...runner.matchAll(/^ {2,4}"[^"]+": migration_\S+,$/gm)];
   if (lastEntryMatch.length === 0) {
     console.error(`Could not find allMigrations entries in ${target.runnerDisplayName}`);
     process.exit(1);
   }
   const lastEntry = lastEntryMatch[lastEntryMatch.length - 1];
-  const newEntry = `    "${migrationKey}": ${importName},`;
+  const newEntry = `  "${migrationKey}": ${importName},`;
   runner =
     runner.slice(0, lastEntry.index! + lastEntry[0].length) +
     "\n" +
