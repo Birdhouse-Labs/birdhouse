@@ -112,7 +112,7 @@ The test suite runs every migration against:
 
 Passing tests = migration is verified. You are done.
 
-**After adding a migration, check the fixture tests.** Both test files may assert things about which migrations have been applied — bump any `toHaveLength` counts and add your migration name to any `toEqual` arrays. The tests will tell you clearly if something needs updating.
+**After adding a migration, update the fixture tests.** Both test files assert the exact list of applied migrations — bump the `toHaveLength` count and add your migration name to the `toEqual` array. The tests will fail clearly if you forget.
 
 ### Step 4: Update TypeScript types if needed
 
