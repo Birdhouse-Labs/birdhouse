@@ -6,7 +6,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { nanoid } from "nanoid";
-import { log } from "./logger";
+import { runAgentsDbMigrations } from "./agents-db-migrations/run-agents-db-migrations";
 import type { SessionStatus } from "./opencode-client";
 
 // ============================================================================
@@ -183,235 +183,110 @@ export function generateEventId(): string {
 }
 
 // ============================================================================
-// Database Schema
-// ============================================================================
-// NOTE: This is the initial schema (Phase 1). Future schema changes will
-// require a proper migration system with version tracking. For now, IF NOT EXISTS
-// allows the schema to be created on first run. Schema evolution will be
-// implemented when needed (do NOT delete the database - use migrations).
-
-const SCHEMA_SQL = `
--- Agents table with tree structure
-CREATE TABLE IF NOT EXISTS agents (
-  -- Identity
-  id TEXT PRIMARY KEY,
-  session_id TEXT NOT NULL UNIQUE,
-  
-  -- Tree structure
-  parent_id TEXT,
-  tree_id TEXT NOT NULL,
-  level INTEGER NOT NULL,
-  
-  -- Metadata
-  title TEXT NOT NULL,
-  project_id TEXT NOT NULL,
-  directory TEXT NOT NULL,
-  model TEXT NOT NULL,
-  
-  -- Timestamps (Unix milliseconds)
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL,
-  
-  -- Constraints
-  FOREIGN KEY (parent_id) REFERENCES agents(id) ON DELETE CASCADE
-);
-
--- Session lookup (unique index)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_agents_session_id 
-  ON agents(session_id);
-
--- Directory filtering
-CREATE INDEX IF NOT EXISTS idx_agents_directory 
-  ON agents(directory);
-
--- PRIMARY: Sort by updated_at (most common - recently active agents)
-CREATE INDEX IF NOT EXISTS idx_agents_tree_updated 
-  ON agents(tree_id DESC, level ASC, updated_at DESC);
-
--- SECONDARY: Sort by created_at (occasional - recently created agents)
-CREATE INDEX IF NOT EXISTS idx_agents_tree_created 
-  ON agents(tree_id DESC, level ASC, created_at DESC);
-`;
-
-// ============================================================================
 // Database Creation & Configuration
 // ============================================================================
 
-/**
- * Run migrations on the database
- * Uses PRAGMA table_info() to check for column/table existence before adding
- */
-function runMigrations(db: Database): void {
-  // Migration 1: Add cloned_from and cloned_at columns
-  const columns = db.prepare("PRAGMA table_info(agents)").all() as Array<{ name: string }>;
-  const hasClonedFrom = columns.some((col) => col.name === "cloned_from");
-  const hasClonedAt = columns.some((col) => col.name === "cloned_at");
-
-  if (!hasClonedFrom || !hasClonedAt) {
-    try {
-      db.run("BEGIN TRANSACTION");
-
-      if (!hasClonedFrom) {
-        db.run(`
-          ALTER TABLE agents 
-            ADD COLUMN cloned_from TEXT 
-            REFERENCES agents(id) ON DELETE SET NULL
-        `);
-
-        db.run(`
-          CREATE INDEX IF NOT EXISTS idx_agents_cloned_from 
-            ON agents(cloned_from)
-        `);
-      }
-
-      if (!hasClonedAt) {
-        db.run(`
-          ALTER TABLE agents 
-            ADD COLUMN cloned_at INTEGER
-        `);
-      }
-
-      db.run("COMMIT");
-    } catch (error) {
-      db.run("ROLLBACK");
-      throw error;
-    }
-  }
-
-  // Migration 2: Add archived_at column
-  const hasArchivedAt = columns.some((col) => col.name === "archived_at");
-
-  if (!hasArchivedAt) {
-    try {
-      db.run("BEGIN TRANSACTION");
-
-      db.run(`
-        ALTER TABLE agents 
-          ADD COLUMN archived_at INTEGER
-      `);
-
-      db.run("COMMIT");
-    } catch (error) {
-      db.run("ROLLBACK");
-      throw error;
-    }
-  }
-
-  // Migration 3: Recreate agent_events table with new action-centric schema
-  const tables = db
-    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agent_events'")
-    .all() as Array<{ name: string }>;
-  const hasEventsTable = tables.length > 0;
-
-  if (hasEventsTable) {
-    // Check if it's the old schema by looking for actor_agent_id column
-    const eventColumns = db.prepare("PRAGMA table_info(agent_events)").all() as Array<{ name: string }>;
-    const hasActorColumn = eventColumns.some((col) => col.name === "actor_agent_id");
-
-    if (!hasActorColumn) {
-      // Old schema detected - drop and recreate
-      log.server.info("Dropping old agent_events table and recreating with new schema");
-      try {
-        db.run("BEGIN TRANSACTION");
-        db.run("DROP TABLE agent_events");
-        db.run("COMMIT");
-      } catch (error) {
-        db.run("ROLLBACK");
-        throw error;
-      }
-    }
-  }
-
-  // Create new agent_events table if it doesn't exist
-  if (
-    !hasEventsTable ||
-    !db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agent_events'").all().length
-  ) {
-    try {
-      db.run("BEGIN TRANSACTION");
-
-      db.run(`
-        CREATE TABLE agent_events (
-          id TEXT PRIMARY KEY,
-          agent_id TEXT NOT NULL,
-          event_type TEXT NOT NULL,
-          timestamp INTEGER NOT NULL,
-          
-          -- Actor roles (explicit, self-documenting)
-          actor_agent_id TEXT,
-          actor_agent_title TEXT,
-          
-          source_agent_id TEXT,
-          source_agent_title TEXT,
-          
-          target_agent_id TEXT,
-          target_agent_title TEXT,
-          
-          -- Future-proofing
-          metadata TEXT,
-          
-          FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
-          FOREIGN KEY (actor_agent_id) REFERENCES agents(id) ON DELETE SET NULL,
-          FOREIGN KEY (source_agent_id) REFERENCES agents(id) ON DELETE SET NULL,
-          FOREIGN KEY (target_agent_id) REFERENCES agents(id) ON DELETE SET NULL
-        )
-      `);
-
-      db.run(`
-        CREATE INDEX IF NOT EXISTS idx_agent_events_agent_timestamp 
-          ON agent_events(agent_id, timestamp DESC)
-      `);
-
-      db.run(`
-        CREATE INDEX IF NOT EXISTS idx_agent_events_actor 
-          ON agent_events(actor_agent_id) WHERE actor_agent_id IS NOT NULL
-      `);
-
-      db.run(`
-        CREATE INDEX IF NOT EXISTS idx_agent_events_source 
-          ON agent_events(source_agent_id) WHERE source_agent_id IS NOT NULL
-      `);
-
-      db.run(`
-        CREATE INDEX IF NOT EXISTS idx_agent_events_target 
-          ON agent_events(target_agent_id) WHERE target_agent_id IS NOT NULL
-      `);
-
-      db.run("COMMIT");
-    } catch (error) {
-      db.run("ROLLBACK");
-      throw error;
-    }
-  }
-}
+// Full schema SQL used for in-memory databases (tests only).
+// Production databases use runAgentsDbMigrations() instead.
+const IN_MEMORY_SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS agents (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL UNIQUE,
+    parent_id TEXT,
+    tree_id TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    project_id TEXT NOT NULL,
+    directory TEXT NOT NULL,
+    model TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    cloned_from TEXT REFERENCES agents(id) ON DELETE SET NULL,
+    cloned_at INTEGER,
+    archived_at INTEGER,
+    FOREIGN KEY (parent_id) REFERENCES agents(id) ON DELETE CASCADE
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_agents_session_id ON agents(session_id);
+  CREATE INDEX IF NOT EXISTS idx_agents_directory ON agents(directory);
+  CREATE INDEX IF NOT EXISTS idx_agents_tree_updated ON agents(tree_id DESC, level ASC, updated_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_agents_tree_created ON agents(tree_id DESC, level ASC, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_agents_cloned_from ON agents(cloned_from);
+  CREATE TABLE IF NOT EXISTS agent_events (
+    id TEXT PRIMARY KEY,
+    agent_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    actor_agent_id TEXT,
+    actor_agent_title TEXT,
+    source_agent_id TEXT,
+    source_agent_title TEXT,
+    target_agent_id TEXT,
+    target_agent_title TEXT,
+    metadata TEXT,
+    FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+    FOREIGN KEY (actor_agent_id) REFERENCES agents(id) ON DELETE SET NULL,
+    FOREIGN KEY (source_agent_id) REFERENCES agents(id) ON DELETE SET NULL,
+    FOREIGN KEY (target_agent_id) REFERENCES agents(id) ON DELETE SET NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_agent_events_agent_timestamp ON agent_events(agent_id, timestamp DESC);
+  CREATE INDEX IF NOT EXISTS idx_agent_events_actor ON agent_events(actor_agent_id) WHERE actor_agent_id IS NOT NULL;
+  CREATE INDEX IF NOT EXISTS idx_agent_events_source ON agent_events(source_agent_id) WHERE source_agent_id IS NOT NULL;
+  CREATE INDEX IF NOT EXISTS idx_agent_events_target ON agent_events(target_agent_id) WHERE target_agent_id IS NOT NULL;
+`;
 
 /**
- * Create and configure SQLite database with optimal settings
+ * Open and configure a SQLite database with optimal settings.
+ * For :memory: databases, schema is applied inline (tests only).
+ * For file-based databases, schema is managed by runAgentsDbMigrations().
  */
 function createDatabase(dbPath: string): Database {
-  // Ensure directory exists
-  const dir = dirname(dbPath);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
+  if (dbPath !== ":memory:") {
+    // Ensure directory exists
+    const dir = dirname(dbPath);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
   }
 
-  // Open database
   const db = new Database(dbPath);
 
-  // Apply PRAGMA settings for performance
   db.run("PRAGMA journal_mode = WAL"); // Write-Ahead Logging for better concurrency
   db.run("PRAGMA cache_size = -128000"); // 128MB cache
   db.run("PRAGMA temp_store = MEMORY"); // Use memory for temporary tables
   db.run("PRAGMA mmap_size = 134217728"); // 128MB memory-mapped I/O
   db.run("PRAGMA foreign_keys = ON"); // Enforce foreign key constraints
 
-  // Create schema and indexes
-  db.run(SCHEMA_SQL);
-
-  // Run migrations
-  runMigrations(db);
+  // In-memory databases need schema created immediately (used in tests)
+  if (dbPath === ":memory:") {
+    db.run(IN_MEMORY_SCHEMA_SQL);
+  }
 
   return db;
+}
+
+// Cache of AgentsDB instances keyed by resolved db path
+// Ensures migrations run once and the same connection is reused per workspace
+const agentsDbCache = new Map<string, AgentsDB>();
+
+/**
+ * Initialize an agents database: run migrations then return a ready AgentsDB instance.
+ * Subsequent calls with the same path return the cached instance without re-running migrations.
+ */
+export async function initAgentsDB(dbPath: string): Promise<AgentsDB> {
+  const cached = agentsDbCache.get(dbPath);
+  if (cached) return cached;
+
+  // Ensure directory exists before migrations open the file
+  const dir = dirname(dbPath);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+
+  await runAgentsDbMigrations(dbPath);
+
+  const instance = createAgentsDB(dbPath);
+  agentsDbCache.set(dbPath, instance);
+  return instance;
 }
 
 // ============================================================================

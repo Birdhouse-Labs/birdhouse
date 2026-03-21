@@ -2,7 +2,7 @@
 // ABOUTME: Loads workspace context and ensures OpenCode is running before handling requests
 
 import type { Context, Next } from "hono";
-import { createAgentsDB } from "../lib/agents-db";
+import { initAgentsDB } from "../lib/agents-db";
 import type { DataDB } from "../lib/data-db";
 import { getAgentsDbPath } from "../lib/database-paths";
 import { log } from "../lib/logger";
@@ -40,9 +40,9 @@ export function createWorkspaceMiddleware(opencodeManager: OpenCodeManager, data
       c.set("opencodePort", opencode.port);
       c.set("opencodeBase", `http://127.0.0.1:${opencode.port}`);
 
-      // Open workspace-specific agents.db
+      // Initialize workspace-specific agents.db (runs migrations once, then cached)
       const agentsDbPath = getAgentsDbPath(workspaceId);
-      const agentsDb = createAgentsDB(agentsDbPath);
+      const agentsDb = await initAgentsDB(agentsDbPath);
       c.set("agentsDb", agentsDb);
 
       log.server.debug(
