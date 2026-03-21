@@ -101,7 +101,7 @@ describe("API revert", () => {
     });
   });
 
-  test("returns image attachments from the reverted user message", async () => {
+  test("returns image and pdf attachments from the reverted user message", async () => {
     const agent = createRootAgent(agentsDB, {
       id: "agent_with_image_reset",
       session_id: "ses_with_image_reset",
@@ -180,6 +180,12 @@ describe("API revert", () => {
           mime: "image/png",
           url: "data:image/png;base64,abc123",
           filename: "screenshot.png",
+        },
+        {
+          type: "file",
+          mime: "application/pdf",
+          url: "data:application/pdf;base64,pdf123",
+          filename: "notes.pdf",
         },
       ]);
     });

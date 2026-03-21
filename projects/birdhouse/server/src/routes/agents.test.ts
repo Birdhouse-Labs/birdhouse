@@ -371,7 +371,7 @@ describe("POST /api/agents - Create root agent", () => {
     });
   });
 
-  test("sends pasted image attachments as file parts when creating with a prompt", async () => {
+  test("sends pasted image and pdf attachments as file parts when creating with a prompt", async () => {
     const mockSession: Session = {
       id: "ses_with_image_prompt",
       title: "Agent with Image Prompt",
@@ -433,6 +433,12 @@ describe("POST /api/agents - Create root agent", () => {
               mime: "image/png",
               url: "data:image/png;base64,abc123",
             },
+            {
+              type: "file",
+              filename: "notes.pdf",
+              mime: "application/pdf",
+              url: "data:application/pdf;base64,pdf123",
+            },
           ],
         }),
       });
@@ -447,6 +453,12 @@ describe("POST /api/agents - Create root agent", () => {
         filename: "pasted.png",
         mime: "image/png",
         url: "data:image/png;base64,abc123",
+      },
+      {
+        type: "file",
+        filename: "notes.pdf",
+        mime: "application/pdf",
+        url: "data:application/pdf;base64,pdf123",
       },
     ]);
   });

@@ -1,7 +1,11 @@
 // ABOUTME: Builds and restores OpenCode prompt parts for Birdhouse composer flows.
-// ABOUTME: Keeps text and pasted image attachments aligned with the SDK file-part contract.
+// ABOUTME: Keeps text and accepted composer attachments aligned with the SDK file-part contract.
 
 import type { FilePartInput, Part, TextPartInput } from "@opencode-ai/sdk/client";
+
+function isRestorableComposerAttachmentMime(mime: string): boolean {
+  return mime.startsWith("image/") || mime === "application/pdf";
+}
 
 export function parseFileAttachments(value: unknown): FilePartInput[] {
   if (value === undefined) {
@@ -69,13 +73,13 @@ export function buildPromptParts(
   return parts;
 }
 
-export function extractImageFileAttachments(parts: Part[]): FilePartInput[] {
+export function extractRestorableComposerFileAttachments(parts: Part[]): FilePartInput[] {
   return parts.flatMap((part) => {
     if (part.type !== "file") {
       return [];
     }
 
-    if (typeof part.mime !== "string" || !part.mime.startsWith("image/")) {
+    if (typeof part.mime !== "string" || !isRestorableComposerAttachmentMime(part.mime)) {
       return [];
     }
 

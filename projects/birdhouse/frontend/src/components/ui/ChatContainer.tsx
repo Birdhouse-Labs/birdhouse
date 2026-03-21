@@ -7,12 +7,13 @@ import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { findPendingAssistantId, isMessageQueued } from "../../domain/message-queue";
 import { previewSkillAttachments } from "../../services/skill-attachments-api";
 import { uiSize } from "../../theme";
-import type { ComposerImageAttachment } from "../../types/composer-attachments";
+import type { ComposerAttachment } from "../../types/composer-attachments";
 import type { Message } from "../../types/messages";
 import type { QuestionRequest } from "../../types/question";
 import { extractSkillLinkNames } from "../../utils/skillLinks";
 import AutoGrowTextarea from "./AutoGrowTextarea";
 import Button from "./Button";
+import ComposerAttachmentDropZone from "./ComposerAttachmentDropZone";
 import ComposerImageAttachments from "./ComposerImageAttachments";
 import MessageBubble from "./MessageBubble";
 import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
@@ -25,9 +26,10 @@ export interface ChatContainerProps {
   onInputChange: (value: string) => void;
   onSend: () => void;
   onStop: () => void;
-  attachments?: ComposerImageAttachment[];
+  attachments?: ComposerAttachment[];
   onRemoveAttachment?: (id: string) => void;
-  onAttachmentsPasted?: (files: File[]) => void | Promise<void>;
+  onAttachmentsAdded?: (files: File[]) => void | Promise<void>;
+  attachmentError?: string | null;
   isSendDisabled?: boolean;
   cloneMode?: boolean;
   onCloneModeChange?: (enabled: boolean) => void;
@@ -83,15 +85,32 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
       {/* Input area - at TOP for newest-at-top architecture */}
       <div class="px-4 pt-3 pb-3 border-b bg-surface-raised border-border flex-shrink-0">
         <div class="flex items-end gap-3">
-          <AutoGrowTextarea
-            value={props.inputValue}
-            onInput={props.onInputChange}
-            onSend={props.onSend}
-            onAttachmentsPasted={props.onAttachmentsPasted}
-            disabled={props.isSendDisabled ?? false}
-            placeholder="Type a message..."
-            ref={props.inputRef}
-          />
+          <div class="flex-1 min-w-0">
+            <ComposerAttachmentDropZone
+              onAttachmentsAdded={props.onAttachmentsAdded}
+              error={props.attachmentError}
+              disabled={props.isSendDisabled}
+            >
+              <div>
+                <AutoGrowTextarea
+                  value={props.inputValue}
+                  onInput={props.onInputChange}
+                  onSend={props.onSend}
+                  onAttachmentsAdded={props.onAttachmentsAdded}
+                  disabled={props.isSendDisabled ?? false}
+                  placeholder="Type a message..."
+                  ref={props.inputRef}
+                />
+                <Show when={(props.attachments?.length ?? 0) > 0 && props.onRemoveAttachment}>
+                  <ComposerImageAttachments
+                    attachments={props.attachments || []}
+                    onRemove={(attachmentId) => props.onRemoveAttachment?.(attachmentId)}
+                  />
+                </Show>
+              </div>
+            </ComposerAttachmentDropZone>
+          </div>
+
           <Show when={props.isStreaming && !hasDraftContent()}>
             <button
               type="button"
@@ -155,13 +174,6 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
             </div>
           </Show>
         </div>
-
-        <Show when={(props.attachments?.length ?? 0) > 0 && props.onRemoveAttachment}>
-          <ComposerImageAttachments
-            attachments={props.attachments || []}
-            onRemove={(attachmentId) => props.onRemoveAttachment?.(attachmentId)}
-          />
-        </Show>
 
         {/* Skill count button - appears below input in the padding area */}
         <Show when={skillCount() > 0}>

@@ -237,7 +237,7 @@ describe("sendMessage", () => {
     expect(body.clone_and_send).toBe(true);
   });
 
-  it("should include structured image attachments when provided", async () => {
+  it("should include structured image and pdf attachments when provided", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ sent: true, async: true }),
@@ -251,6 +251,12 @@ describe("sendMessage", () => {
           mime: "image/png",
           url: "data:image/png;base64,abc123",
         },
+        {
+          id: "att_2",
+          filename: "notes.pdf",
+          mime: "application/pdf",
+          url: "data:application/pdf;base64,pdf123",
+        },
       ],
     });
 
@@ -262,6 +268,12 @@ describe("sendMessage", () => {
         filename: "clipboard.png",
         mime: "image/png",
         url: "data:image/png;base64,abc123",
+      },
+      {
+        type: "file",
+        filename: "notes.pdf",
+        mime: "application/pdf",
+        url: "data:application/pdf;base64,pdf123",
       },
     ]);
   });
@@ -408,7 +420,7 @@ describe("createAgent", () => {
     expect(body.agent).toBe("custom-agent");
   });
 
-  it("should include structured image attachments when creating an agent", async () => {
+  it("should include structured image and pdf attachments when creating an agent", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ id: "agent_new123" }),
@@ -421,6 +433,12 @@ describe("createAgent", () => {
         mime: "image/png",
         url: "data:image/png;base64,abc123",
       },
+      {
+        id: "att_2",
+        filename: "notes.pdf",
+        mime: "application/pdf",
+        url: "data:application/pdf;base64,pdf123",
+      },
     ]);
 
     const call = vi.mocked(fetch).mock.calls[0]!;
@@ -431,6 +449,12 @@ describe("createAgent", () => {
         filename: "clipboard.png",
         mime: "image/png",
         url: "data:image/png;base64,abc123",
+      },
+      {
+        type: "file",
+        filename: "notes.pdf",
+        mime: "application/pdf",
+        url: "data:application/pdf;base64,pdf123",
       },
     ]);
   });

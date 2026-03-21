@@ -22,10 +22,14 @@ import {
   unrevertAgent,
 } from "../services/messages-api";
 import { fetchPendingQuestions } from "../services/questions-api";
-import type { ComposerImageAttachment } from "../types/composer-attachments";
+import type { ComposerAttachment } from "../types/composer-attachments";
 import type { Message } from "../types/messages";
 import type { QuestionRequest } from "../types/question";
-import { createComposerImageAttachments, restoreComposerImageAttachments } from "../utils/composerAttachments";
+import {
+  createComposerAttachments,
+  getComposerAttachmentError,
+  restoreComposerAttachments,
+} from "../utils/composerAttachments";
 import AgentHeader from "./AgentHeader";
 import Button from "./ui/Button";
 import ChatContainer from "./ui/ChatContainer";
@@ -238,7 +242,8 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
 
   // Input state management
   const [inputValue, setInputValue] = createSignal("");
-  const [attachments, setAttachments] = createSignal<ComposerImageAttachment[]>([]);
+  const [attachments, setAttachments] = createSignal<ComposerAttachment[]>([]);
+  const [attachmentError, setAttachmentError] = createSignal<string | null>(null);
   const [isSending, setIsSending] = createSignal(false);
   const [sendError, setSendError] = createSignal<string | null>(null);
   const [sendErrorDetails, setSendErrorDetails] = createSignal<SendMessageError | null>(null);
@@ -457,6 +462,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
 
     setIsSending(true);
     setSendError(null);
+    setAttachmentError(null);
 
     try {
       await sendMessage(workspaceId, props.agentId, content, {
@@ -509,6 +515,18 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     }
   };
 
+  const handleAttachmentsAdded = async (files: File[]) => {
+    const nextError = getComposerAttachmentError(files);
+    if (nextError) {
+      setAttachmentError(nextError);
+      return;
+    }
+
+    setAttachmentError(null);
+    const nextAttachments = await createComposerAttachments(files);
+    setAttachments((current) => [...current, ...nextAttachments]);
+  };
+
   const handleCloneFromMessage = async (messageId: string, messageContent: string, event: MouseEvent) => {
     setSendError(null);
 
@@ -550,7 +568,8 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
       if (result.success) {
         // Pre-populate input with returned message text
         setInputValue(result.messageText);
-        setAttachments(restoreComposerImageAttachments(result.attachments));
+        setAttachments(restoreComposerAttachments(result.attachments));
+        setAttachmentError(null);
 
         // Refetch agent metadata to get updated revert state
         refetchMetadata();
@@ -583,6 +602,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
         // Clear input field (it was pre-populated with reverted message)
         setInputValue("");
         setAttachments([]);
+        setAttachmentError(null);
 
         // Refetch agent metadata to clear revert state
         refetchMetadata();
@@ -710,13 +730,11 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
             onSend={() => handleSendMessage(inputValue())}
             onStop={handleStop}
             attachments={attachments()}
+            attachmentError={attachmentError()}
             onRemoveAttachment={(attachmentId) => {
               setAttachments((current) => current.filter((attachment) => attachment.id !== attachmentId));
             }}
-            onAttachmentsPasted={async (files) => {
-              const pastedAttachments = await createComposerImageAttachments(files);
-              setAttachments((current) => [...current, ...pastedAttachments]);
-            }}
+            onAttachmentsAdded={handleAttachmentsAdded}
             isSendDisabled={isSending()}
             cloneMode={cloneMode()}
             onCloneModeChange={setCloneMode}

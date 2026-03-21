@@ -7,12 +7,13 @@ import { type Component, createEffect, createMemo, createResource, createSignal,
 import { useWorkspace } from "../contexts/WorkspaceContext";
 import { createAgent, fetchModels, type Model } from "../services/messages-api";
 import { previewSkillAttachments } from "../services/skill-attachments-api";
-import type { ComposerImageAttachment } from "../types/composer-attachments";
-import { createComposerImageAttachments } from "../utils/composerAttachments";
+import type { ComposerAttachment } from "../types/composer-attachments";
+import { createComposerAttachments, getComposerAttachmentError } from "../utils/composerAttachments";
 import { extractSkillLinkNames } from "../utils/skillLinks";
 import AutoGrowTextarea from "./ui/AutoGrowTextarea";
 import Button from "./ui/Button";
 import { Combobox, type ComboboxOption, type ComboboxRenderFn } from "./ui/Combobox";
+import ComposerAttachmentDropZone from "./ui/ComposerAttachmentDropZone";
 import ComposerImageAttachments from "./ui/ComposerImageAttachments";
 import SkillAttachmentsDialog from "./ui/SkillAttachmentsDialog";
 
@@ -56,8 +57,9 @@ const NewAgent: Component = () => {
   const [messageText, setMessageText] = createSignal("");
   const [isCreating, setIsCreating] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  const [attachmentError, setAttachmentError] = createSignal<string | null>(null);
   const [selectedMode, setSelectedMode] = createSignal<"build" | "plan">("build");
-  const [attachments, setAttachments] = createSignal<ComposerImageAttachment[]>([]);
+  const [attachments, setAttachments] = createSignal<ComposerAttachment[]>([]);
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -192,6 +194,7 @@ const NewAgent: Component = () => {
   const handleCreateAgent = async () => {
     setIsCreating(true);
     setError(null);
+    setAttachmentError(null);
 
     try {
       const modelId = selectedModelId();
@@ -220,6 +223,18 @@ const NewAgent: Component = () => {
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleAttachmentsAdded = async (files: File[]) => {
+    const nextError = getComposerAttachmentError(files);
+    if (nextError) {
+      setAttachmentError(nextError);
+      return;
+    }
+
+    setAttachmentError(null);
+    const nextAttachments = await createComposerAttachments(files);
+    setAttachments((current) => [...current, ...nextAttachments]);
   };
 
   return (
@@ -274,25 +289,30 @@ const NewAgent: Component = () => {
               {selectedMode() === "plan" ? <Lightbulb size={14} /> : <Hammer size={14} />}
             </button>
           </div>
-          <div class="flex">
-            <AutoGrowTextarea
-              value={messageText()}
-              onInput={setMessageText}
-              onSend={handleCreateAgent}
-              onAttachmentsPasted={async (files) => {
-                const pastedAttachments = await createComposerImageAttachments(files);
-                setAttachments((current) => [...current, ...pastedAttachments]);
-              }}
-              disabled={isCreating()}
-              placeholder="What would you like help with?"
-            />
-          </div>
-          <ComposerImageAttachments
-            attachments={attachments()}
-            onRemove={(attachmentId) => {
-              setAttachments((current) => current.filter((attachment) => attachment.id !== attachmentId));
-            }}
-          />
+          <ComposerAttachmentDropZone
+            onAttachmentsAdded={handleAttachmentsAdded}
+            error={attachmentError()}
+            disabled={isCreating()}
+          >
+            <div>
+              <div class="flex">
+                <AutoGrowTextarea
+                  value={messageText()}
+                  onInput={setMessageText}
+                  onSend={handleCreateAgent}
+                  onAttachmentsAdded={handleAttachmentsAdded}
+                  disabled={isCreating()}
+                  placeholder="What would you like help with?"
+                />
+              </div>
+              <ComposerImageAttachments
+                attachments={attachments()}
+                onRemove={(attachmentId) => {
+                  setAttachments((current) => current.filter((attachment) => attachment.id !== attachmentId));
+                }}
+              />
+            </div>
+          </ComposerAttachmentDropZone>
         </div>
 
         {/* Error Message */}
