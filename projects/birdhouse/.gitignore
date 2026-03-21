@@ -5,8 +5,11 @@ tmp
 # TypeScript build info
 *.tsbuildinfo
 # SQLite database files (created at runtime in ~/Library/Application Support)
+*.db
 *.db-shm
 *.db-wal
+# Intentionally committed fixture snapshots for migration tests
+!server/src/lib/agents-db-migrations/__fixtures__/*.db
 server/data/
 # Migration planning docs (not for commit)
 docs/sessions-to-agents-migration-plan.md
