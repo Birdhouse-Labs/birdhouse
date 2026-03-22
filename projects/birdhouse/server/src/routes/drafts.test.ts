@@ -2,7 +2,7 @@
 // ABOUTME: Includes binary round-trip tests for image and PDF attachments to verify SQLite fidelity
 
 import { describe, expect, test } from "bun:test";
-import { createAgentsDB } from "../lib/agents-db";
+import { initAgentsDB } from "../lib/agents-db";
 import { createTestApp } from "../test-utils/workspace-context";
 import { createDraftRoutes } from "./drafts";
 
@@ -13,8 +13,9 @@ import { createDraftRoutes } from "./drafts";
 /**
  * Build a test app with draft routes mounted, backed by an in-memory DB.
  */
-function buildApp(agentsDb = createAgentsDB(":memory:")) {
-  const app = createTestApp({ agentsDb });
+async function buildApp() {
+  const agentsDb = await initAgentsDB(":memory:");
+  const app = await createTestApp({ agentsDb });
   app.route("/drafts", createDraftRoutes());
   return { app, agentsDb };
 }
@@ -92,30 +93,30 @@ const FAKE_PDF_BASE64 = makeFakePdfBase64();
 // ============================================================================
 
 describe("AgentsDB draft methods", () => {
-  test("getDraft returns empty draft for unknown draftId", () => {
-    const { agentsDb } = buildApp();
+  test("getDraft returns empty draft for unknown draftId", async () => {
+    const { agentsDb } = await buildApp();
     const draft = agentsDb.getDraft("new-agent");
     expect(draft).toEqual({ text: "", attachments: [] });
   });
 
-  test("upsertDraft then getDraft returns stored text", () => {
-    const { agentsDb } = buildApp();
+  test("upsertDraft then getDraft returns stored text", async () => {
+    const { agentsDb } = await buildApp();
     agentsDb.upsertDraft("new-agent", "new-agent", { text: "hello world", attachments: [] });
     const draft = agentsDb.getDraft("new-agent");
     expect(draft.text).toBe("hello world");
     expect(draft.attachments).toEqual([]);
   });
 
-  test("upsertDraft replaces previous draft content atomically", () => {
-    const { agentsDb } = buildApp();
+  test("upsertDraft replaces previous draft content atomically", async () => {
+    const { agentsDb } = await buildApp();
     agentsDb.upsertDraft("agent_123", "reply", { text: "first draft", attachments: [] });
     agentsDb.upsertDraft("agent_123", "reply", { text: "second draft", attachments: [] });
     const draft = agentsDb.getDraft("agent_123");
     expect(draft.text).toBe("second draft");
   });
 
-  test("upsertDraft replaces all attachments when re-upserted", () => {
-    const { agentsDb } = buildApp();
+  test("upsertDraft replaces all attachments when re-upserted", async () => {
+    const { agentsDb } = await buildApp();
     agentsDb.upsertDraft("agent_abc", "reply", {
       text: "v1",
       attachments: [{ filename: "old.png", mime: "image/png", url: "data:old" }],
@@ -130,8 +131,8 @@ describe("AgentsDB draft methods", () => {
     expect(draft.attachments[0].filename).toBe("new.jpg");
   });
 
-  test("attachments are returned in insertion order (position)", () => {
-    const { agentsDb } = buildApp();
+  test("attachments are returned in insertion order (position)", async () => {
+    const { agentsDb } = await buildApp();
     agentsDb.upsertDraft("agent_order", "reply", {
       text: "",
       attachments: [
@@ -144,8 +145,8 @@ describe("AgentsDB draft methods", () => {
     expect(draft.attachments.map((a) => a.filename)).toEqual(["first.png", "second.png", "third.pdf"]);
   });
 
-  test("deleteDraft removes text and all attachments", () => {
-    const { agentsDb } = buildApp();
+  test("deleteDraft removes text and all attachments", async () => {
+    const { agentsDb } = await buildApp();
     agentsDb.upsertDraft("agent_del", "reply", {
       text: "to delete",
       attachments: [{ filename: "img.png", mime: "image/png", url: "data:img" }],
@@ -155,8 +156,8 @@ describe("AgentsDB draft methods", () => {
     expect(draft).toEqual({ text: "", attachments: [] });
   });
 
-  test("deleteDraft is idempotent — no error for unknown draftId", () => {
-    const { agentsDb } = buildApp();
+  test("deleteDraft is idempotent — no error for unknown draftId", async () => {
+    const { agentsDb } = await buildApp();
     expect(() => agentsDb.deleteDraft("does-not-exist")).not.toThrow();
   });
 
@@ -164,8 +165,8 @@ describe("AgentsDB draft methods", () => {
   // Binary round-trip tests (non-negotiable)
   // ============================================================================
 
-  test("PNG image attachment survives round-trip through SQLite byte-for-byte", () => {
-    const { agentsDb } = buildApp();
+  test("PNG image attachment survives round-trip through SQLite byte-for-byte", async () => {
+    const { agentsDb } = await buildApp();
 
     agentsDb.upsertDraft("agent_png", "reply", {
       text: "draft with image",
@@ -186,8 +187,8 @@ describe("AgentsDB draft methods", () => {
     expect(draft.attachments[0].url).toBe(`data:image/png;base64,${FAKE_PNG_BASE64}`);
   });
 
-  test("PDF attachment survives round-trip through SQLite byte-for-byte", () => {
-    const { agentsDb } = buildApp();
+  test("PDF attachment survives round-trip through SQLite byte-for-byte", async () => {
+    const { agentsDb } = await buildApp();
 
     agentsDb.upsertDraft("agent_pdf", "reply", {
       text: "draft with pdf",
@@ -208,8 +209,8 @@ describe("AgentsDB draft methods", () => {
     expect(draft.attachments[0].url).toBe(`data:application/pdf;base64,${FAKE_PDF_BASE64}`);
   });
 
-  test("multiple attachments of mixed types all survive round-trip", () => {
-    const { agentsDb } = buildApp();
+  test("multiple attachments of mixed types all survive round-trip", async () => {
+    const { agentsDb } = await buildApp();
 
     agentsDb.upsertDraft("agent_mixed", "reply", {
       text: "multiple attachments",
@@ -232,7 +233,7 @@ describe("AgentsDB draft methods", () => {
 
 describe("GET /drafts/:draftId", () => {
   test("returns 200 with empty draft for unknown draftId", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     const res = await app.request("/drafts/new-agent");
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -240,7 +241,7 @@ describe("GET /drafts/:draftId", () => {
   });
 
   test("returns stored draft text and attachments", async () => {
-    const { app, agentsDb } = buildApp();
+    const { app, agentsDb } = await buildApp();
     agentsDb.upsertDraft("agent_get", "reply", {
       text: "stored text",
       attachments: [{ filename: "f.png", mime: "image/png", url: "data:..." }],
@@ -261,7 +262,7 @@ describe("GET /drafts/:draftId", () => {
 
 describe("PUT /drafts/:draftId", () => {
   test("stores draft and returns { ok: true }", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     const res = await app.request("/drafts/new-agent", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -273,7 +274,7 @@ describe("PUT /drafts/:draftId", () => {
   });
 
   test("stored draft is retrievable via GET", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     await app.request("/drafts/agent_put", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -290,7 +291,7 @@ describe("PUT /drafts/:draftId", () => {
   });
 
   test("returns 400 when context is missing", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     const res = await app.request("/drafts/x", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -300,7 +301,7 @@ describe("PUT /drafts/:draftId", () => {
   });
 
   test("returns 400 when text is not a string", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     const res = await app.request("/drafts/x", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -310,7 +311,7 @@ describe("PUT /drafts/:draftId", () => {
   });
 
   test("returns 400 when attachments is not an array", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     const res = await app.request("/drafts/x", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -320,7 +321,7 @@ describe("PUT /drafts/:draftId", () => {
   });
 
   test("returns 400 when an attachment is missing filename", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     const res = await app.request("/drafts/x", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -334,7 +335,7 @@ describe("PUT /drafts/:draftId", () => {
   });
 
   test("returns 400 when an attachment is missing mime", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     const res = await app.request("/drafts/x", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -348,7 +349,7 @@ describe("PUT /drafts/:draftId", () => {
   });
 
   test("returns 400 when an attachment is missing url", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     const res = await app.request("/drafts/x", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -362,7 +363,7 @@ describe("PUT /drafts/:draftId", () => {
   });
 
   test("returns 413 when payload exceeds 20 MB", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     // Create a url string just over the 20 MB limit
     const oversizedUrl = "x".repeat(20 * 1024 * 1024 + 1);
     const res = await app.request("/drafts/x", {
@@ -378,7 +379,7 @@ describe("PUT /drafts/:draftId", () => {
   });
 
   test("accepts payload at exactly 20 MB", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     const exactUrl = "x".repeat(20 * 1024 * 1024);
     const res = await app.request("/drafts/x", {
       method: "PUT",
@@ -393,7 +394,7 @@ describe("PUT /drafts/:draftId", () => {
   });
 
   test("returns 400 for invalid JSON body", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     const res = await app.request("/drafts/x", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -409,7 +410,7 @@ describe("PUT /drafts/:draftId", () => {
 
 describe("DELETE /drafts/:draftId", () => {
   test("returns 200 and { ok: true } when draft exists", async () => {
-    const { app, agentsDb } = buildApp();
+    const { app, agentsDb } = await buildApp();
     agentsDb.upsertDraft("agent_todel", "reply", { text: "bye", attachments: [] });
 
     const res = await app.request("/drafts/agent_todel", { method: "DELETE" });
@@ -419,7 +420,7 @@ describe("DELETE /drafts/:draftId", () => {
   });
 
   test("returns 200 and { ok: true } even when draft does not exist (idempotent)", async () => {
-    const { app } = buildApp();
+    const { app } = await buildApp();
     const res = await app.request("/drafts/nonexistent", { method: "DELETE" });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -427,7 +428,7 @@ describe("DELETE /drafts/:draftId", () => {
   });
 
   test("draft is gone after DELETE", async () => {
-    const { app, agentsDb } = buildApp();
+    const { app, agentsDb } = await buildApp();
     agentsDb.upsertDraft("agent_gone", "reply", {
       text: "gone",
       attachments: [{ filename: "f.png", mime: "image/png", url: "data:x" }],

@@ -210,7 +210,6 @@ export function generateEventId(): string {
 // Database Creation & Configuration
 // ============================================================================
 
-
 /**
  * Open and configure a SQLite database with optimal settings.
  * Schema is managed by runAgentsDbMigrations() / runAgentsDbMigrationsOnDb().
