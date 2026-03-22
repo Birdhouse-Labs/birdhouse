@@ -4,16 +4,16 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import { createTestDeps, withDeps } from "../../dependencies";
-import { createAgentsDB } from "../../lib/agents-db";
+import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
 import type { Message } from "../../lib/opencode-client";
 import { createRootAgent, withWorkspaceContext } from "../../test-utils";
 import { revert, unrevert } from "./revert";
 
 describe("API revert", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
 
-  beforeEach(() => {
-    agentsDB = createAgentsDB(":memory:");
+  beforeEach(async () => {
+    agentsDB = await initAgentsDB(":memory:");
   });
 
   test("reverts to user message and returns message text", async () => {
@@ -69,12 +69,12 @@ describe("API revert", () => {
       },
     ];
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.getMessages = async () => mockMessages;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(
+      const app = await withWorkspaceContext(
         () => {
           const hono = new Hono();
           hono.post("/:id/revert", (c) => revert(c, deps));
@@ -146,12 +146,12 @@ describe("API revert", () => {
       },
     ];
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.getMessages = async () => mockMessages;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(
+      const app = await withWorkspaceContext(
         () => {
           const hono = new Hono();
           hono.post("/:id/revert", (c) => revert(c, deps));
@@ -192,11 +192,11 @@ describe("API revert", () => {
   });
 
   test("returns 404 for non-existent agent", async () => {
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(
+      const app = await withWorkspaceContext(
         () => {
           const hono = new Hono();
           hono.post("/:id/revert", (c) => revert(c, deps));
@@ -224,12 +224,12 @@ describe("API revert", () => {
       title: "Test Agent",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.getMessages = async () => []; // No messages
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(
+      const app = await withWorkspaceContext(
         () => {
           const hono = new Hono();
           hono.post("/:id/revert", (c) => revert(c, deps));
@@ -286,12 +286,12 @@ describe("API revert", () => {
       },
     ];
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.getMessages = async () => mockMessages;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(
+      const app = await withWorkspaceContext(
         () => {
           const hono = new Hono();
           hono.post("/:id/revert", (c) => revert(c, deps));
@@ -314,10 +314,10 @@ describe("API revert", () => {
 });
 
 describe("API unrevert", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
 
-  beforeEach(() => {
-    agentsDB = createAgentsDB(":memory:");
+  beforeEach(async () => {
+    agentsDB = await initAgentsDB(":memory:");
   });
 
   test("unreverts a reverted session", async () => {
@@ -327,11 +327,11 @@ describe("API unrevert", () => {
       title: "Test Agent",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(
+      const app = await withWorkspaceContext(
         () => {
           const hono = new Hono();
           hono.post("/:id/unrevert", (c) => unrevert(c, deps));
@@ -351,11 +351,11 @@ describe("API unrevert", () => {
   });
 
   test("returns 404 for non-existent agent", async () => {
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(
+      const app = await withWorkspaceContext(
         () => {
           const hono = new Hono();
           hono.post("/:id/unrevert", (c) => unrevert(c, deps));

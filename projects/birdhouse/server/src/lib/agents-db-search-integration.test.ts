@@ -2,13 +2,13 @@
 // ABOUTME: Verifies searchAgentsWithTrees works correctly with loadAllAgentTrees
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { type AgentsDB, createAgentsDB, insertTestData, loadAllAgentTrees } from "./agents-db";
+import { type AgentsDB, initAgentsDB, insertTestData, loadAllAgentTrees } from "./agents-db";
 
 describe("Search + Tree Loading Integration", () => {
   let db: AgentsDB;
 
-  beforeEach(() => {
-    db = createAgentsDB(":memory:");
+  beforeEach(async () => {
+    db = await initAgentsDB(":memory:");
     insertTestData(db);
   });
 

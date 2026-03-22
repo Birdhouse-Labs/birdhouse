@@ -3,14 +3,14 @@
 
 import { describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../../dependencies";
-import { createAgentsDB } from "../../lib/agents-db";
+import { initAgentsDB } from "../../lib/agents-db";
 import { captureStreamEvents, createTestApp } from "../../test-utils";
 import { createAgentTree, createChildAgent, createRootAgent } from "../../test-utils/agent-factories";
 import { unarchive } from "./unarchive";
 
 describe("unarchive - Unarchive agent and descendants", () => {
   test("unarchives single agent with no children", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     const root = createRootAgent(agentsDB, {
       id: "agent_root",
@@ -19,11 +19,11 @@ describe("unarchive - Unarchive agent and descendants", () => {
 
     agentsDB.archiveAgent(root.id);
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.patch("/:id/unarchive", (c) => unarchive(c, deps));
 
       const response = await app.request(`/${root.id}/unarchive`, {
@@ -43,7 +43,7 @@ describe("unarchive - Unarchive agent and descendants", () => {
   });
 
   test("unarchives agent with children recursively", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     // Create tree: root -> child1, child2
     const { root, children } = createAgentTree(agentsDB, {
@@ -56,11 +56,11 @@ describe("unarchive - Unarchive agent and descendants", () => {
     // Archive entire tree
     agentsDB.archiveAgent(root.id);
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.patch("/:id/unarchive", (c) => unarchive(c, deps));
 
       const response = await app.request(`/${root.id}/unarchive`, {
@@ -86,7 +86,7 @@ describe("unarchive - Unarchive agent and descendants", () => {
   });
 
   test("unarchives deep tree (grandchildren) recursively", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     // Create tree: root -> child -> grandchild
     const root = createRootAgent(agentsDB, {
@@ -106,11 +106,11 @@ describe("unarchive - Unarchive agent and descendants", () => {
     // Archive entire tree
     agentsDB.archiveAgent(root.id);
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.patch("/:id/unarchive", (c) => unarchive(c, deps));
 
       const response = await app.request(`/${root.id}/unarchive`, {
@@ -132,7 +132,7 @@ describe("unarchive - Unarchive agent and descendants", () => {
   });
 
   test("unarchives only subtree when unarchiving child agent", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     // Create tree: root -> child -> grandchild
     const root = createRootAgent(agentsDB, {
@@ -152,11 +152,11 @@ describe("unarchive - Unarchive agent and descendants", () => {
     // Archive entire tree
     agentsDB.archiveAgent(root.id);
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.patch("/:id/unarchive", (c) => unarchive(c, deps));
 
       // Unarchive child branch only
@@ -179,12 +179,12 @@ describe("unarchive - Unarchive agent and descendants", () => {
   });
 
   test("returns 404 for non-existent agent", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.patch("/:id/unarchive", (c) => unarchive(c, deps));
 
       const response = await app.request("/agent_nonexistent/unarchive", {
@@ -198,7 +198,7 @@ describe("unarchive - Unarchive agent and descendants", () => {
   });
 
   test("returns 400 when unarchiving non-archived agent", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     const root = createRootAgent(agentsDB, {
       id: "agent_root",
@@ -206,11 +206,11 @@ describe("unarchive - Unarchive agent and descendants", () => {
       // NOT archived
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.patch("/:id/unarchive", (c) => unarchive(c, deps));
 
       const response = await app.request(`/${root.id}/unarchive`, {
@@ -224,7 +224,7 @@ describe("unarchive - Unarchive agent and descendants", () => {
   });
 
   test("emits birdhouse.agent.unarchived SSE event with correct payload", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     const { root, children } = createAgentTree(agentsDB, {
       rootId: "agent_root",
@@ -236,13 +236,13 @@ describe("unarchive - Unarchive agent and descendants", () => {
     // Archive tree
     agentsDB.archiveAgent(root.id);
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
       const { events, cleanup } = await captureStreamEvents();
 
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.patch("/:id/unarchive", (c) => unarchive(c, deps));
 
       await app.request(`/${root.id}/unarchive`, {

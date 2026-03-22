@@ -15,7 +15,7 @@ import {
 } from "./dependencies";
 
 // Helper to create mock deps with custom getSession behavior
-function createMockDeps(): Deps {
+async function createMockDeps(): Promise<Deps> {
   return createTestDeps({
     getSession: async (sessionId: string) => ({
       id: sessionId,
@@ -33,8 +33,8 @@ describe("Dependencies", () => {
     expect(() => useDeps()).toThrow("Dependencies not available");
   });
 
-  test("withDeps provides deps context", () => {
-    const deps = createMockDeps();
+  test("withDeps provides deps context", async () => {
+    const deps = await createMockDeps();
 
     withDeps(deps, () => {
       const retrieved = useDeps();
@@ -42,11 +42,11 @@ describe("Dependencies", () => {
     });
   });
 
-  test("createPosthogDeps does not require OpenCode base", () => {
+  test("createPosthogDeps does not require OpenCode base", async () => {
     const originalBase = process.env.BIRDHOUSE_OPENCODE_BASE;
     delete process.env.BIRDHOUSE_OPENCODE_BASE;
 
-    const deps = createPosthogDeps();
+    const deps = await createPosthogDeps();
 
     expect(deps.posthog).toBeDefined();
 
@@ -58,7 +58,7 @@ describe("Dependencies", () => {
   });
 
   test("context preserved across async operations", async () => {
-    const deps = createMockDeps();
+    const deps = await createMockDeps();
 
     await withDeps(deps, async () => {
       const before = useDeps();
@@ -71,7 +71,7 @@ describe("Dependencies", () => {
   });
 
   test("withCurrentDeps preserves context in callbacks", async () => {
-    const deps = createMockDeps();
+    const deps = await createMockDeps();
     let capturedDeps: Deps | undefined;
 
     await withDeps(deps, async () => {
@@ -90,7 +90,7 @@ describe("Dependencies", () => {
   test("onWithDeps preserves context in event handlers", async () => {
     const emitter = new EventEmitter();
     const received: string[] = [];
-    const deps = createMockDeps();
+    const deps = await createMockDeps();
 
     await withDeps(deps, async () => {
       const cleanup = onWithDeps<string>(emitter, "test-event", (data) => {
@@ -112,7 +112,8 @@ describe("Dependencies", () => {
   });
 
   test("automatically uses test deps in test environment", async () => {
-    await withDeps(undefined, async () => {
+    const deps = await createTestDeps();
+    await withDeps(deps, async () => {
       const {
         opencode: { getSession },
       } = useDeps();
@@ -125,7 +126,7 @@ describe("Dependencies", () => {
   });
 
   test("can override specific dependencies", async () => {
-    const customDeps = createTestDeps({
+    const customDeps = await createTestDeps({
       getSession: async () => ({
         id: "custom",
         title: "Custom Mock",
@@ -148,7 +149,7 @@ describe("Dependencies", () => {
 
   test("setTimeoutWithDeps preserves context in timeout callbacks", async () => {
     const calls: string[] = [];
-    const deps = createMockDeps();
+    const deps = await createMockDeps();
 
     await withDeps(deps, async () => {
       setTimeoutWithDeps(() => {
@@ -164,7 +165,7 @@ describe("Dependencies", () => {
   });
 
   test("context preserved through nested async functions", async () => {
-    const deps = createMockDeps();
+    const deps = await createMockDeps();
 
     async function level1() {
       const { opencode } = useDeps();
@@ -192,7 +193,7 @@ describe("Dependencies", () => {
   });
 
   test("context preserved in Promise.all", async () => {
-    const deps = createMockDeps();
+    const deps = await createMockDeps();
 
     await withDeps(deps, async () => {
       const results = await Promise.all([

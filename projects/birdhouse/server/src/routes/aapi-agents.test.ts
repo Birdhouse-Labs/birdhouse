@@ -4,26 +4,26 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
 import type { FilteredMessage } from "../features/aapi/helpers/message-filter";
-import { createAgentsDB } from "../lib/agents-db";
+import { type AgentsDB, initAgentsDB } from "../lib/agents-db";
 import type { Message, Session } from "../lib/opencode-client";
 import { captureStreamEvents, withWorkspaceContext } from "../test-utils";
 import { createRootAgent } from "../test-utils/agent-factories";
 import { createAAPIAgentRoutes } from "./aapi-agents";
 
 describe("AAPI Agent Routes", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
 
-  beforeEach(() => {
-    agentsDB = createAgentsDB(":memory:");
+  beforeEach(async () => {
+    agentsDB = await initAgentsDB(":memory:");
   });
 
   describe("GET /aapi/agents/:id/messages", () => {
     test("returns 404 for non-existent agent", async () => {
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
         const response = await app.request("/agent_nonexistent/messages");
 
         expect(response.status).toBe(404);
@@ -94,13 +94,13 @@ describe("AAPI Agent Routes", () => {
         },
       ] as unknown as Message[];
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         getMessages: async () => mockMessages,
       });
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
         // Use mode=all to get all messages (test filtering, not selection)
         const response = await app.request(`/${agent.id}/messages?mode=all`);
 
@@ -182,13 +182,13 @@ describe("AAPI Agent Routes", () => {
         },
       ] as unknown as Message[];
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         getMessages: async () => mockMessages,
       });
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
         const response = await app.request(`/${agent.id}/messages`);
 
         const filtered = (await response.json()) as FilteredMessage[];
@@ -242,13 +242,13 @@ describe("AAPI Agent Routes", () => {
         },
       ] as unknown as Message[];
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         getMessages: async () => mockMessages,
       });
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
         const response = await app.request(`/${agent.id}/messages`);
 
         const filtered = (await response.json()) as FilteredMessage[];
@@ -375,11 +375,11 @@ describe("AAPI Agent Routes", () => {
           },
         ] as unknown as Message[];
 
-        const deps = createTestDeps({ getMessages: async () => mockMessages });
+        const deps = await createTestDeps({ getMessages: async () => mockMessages });
         deps.agentsDB = agentsDB;
 
         await withDeps(deps, async () => {
-          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
           const response = await app.request(`/${agent.id}/messages?mode=last`);
 
           expect(response.status).toBe(200);
@@ -526,11 +526,11 @@ describe("AAPI Agent Routes", () => {
           },
         ] as unknown as Message[];
 
-        const deps = createTestDeps({ getMessages: async () => mockMessages });
+        const deps = await createTestDeps({ getMessages: async () => mockMessages });
         deps.agentsDB = agentsDB;
 
         await withDeps(deps, async () => {
-          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
           const response = await app.request(`/${agent.id}/messages?mode=latest_turn`);
 
           expect(response.status).toBe(200);
@@ -641,11 +641,11 @@ describe("AAPI Agent Routes", () => {
           },
         ] as unknown as Message[];
 
-        const deps = createTestDeps({ getMessages: async () => mockMessages });
+        const deps = await createTestDeps({ getMessages: async () => mockMessages });
         deps.agentsDB = agentsDB;
 
         await withDeps(deps, async () => {
-          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
           const response = await app.request(`/${agent.id}/messages?mode=latest_turn`);
 
           expect(response.status).toBe(200);
@@ -780,11 +780,11 @@ describe("AAPI Agent Routes", () => {
           },
         ] as unknown as Message[];
 
-        const deps = createTestDeps({ getMessages: async () => mockMessages });
+        const deps = await createTestDeps({ getMessages: async () => mockMessages });
         deps.agentsDB = agentsDB;
 
         await withDeps(deps, async () => {
-          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
           const response = await app.request(`/${agent.id}/messages?mode=all`);
 
           expect(response.status).toBe(200);
@@ -864,11 +864,11 @@ describe("AAPI Agent Routes", () => {
           },
         ] as unknown as Message[];
 
-        const deps = createTestDeps({ getMessages: async () => mockMessages });
+        const deps = await createTestDeps({ getMessages: async () => mockMessages });
         deps.agentsDB = agentsDB;
 
         await withDeps(deps, async () => {
-          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
           const response = await app.request(`/${agent.id}/messages?mode=full`);
 
           expect(response.status).toBe(200);
@@ -941,11 +941,11 @@ describe("AAPI Agent Routes", () => {
           },
         ] as unknown as Message[];
 
-        const deps = createTestDeps({ getMessages: async () => mockMessages });
+        const deps = await createTestDeps({ getMessages: async () => mockMessages });
         deps.agentsDB = agentsDB;
 
         await withDeps(deps, async () => {
-          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
           const response = await app.request(`/${agent.id}/tool-calls/call_lookup_1`);
 
           expect(response.status).toBe(200);
@@ -978,11 +978,11 @@ describe("AAPI Agent Routes", () => {
           title: "Missing Tool Call Test",
         });
 
-        const deps = createTestDeps({ getMessages: async () => [] as Message[] });
+        const deps = await createTestDeps({ getMessages: async () => [] as Message[] });
         deps.agentsDB = agentsDB;
 
         await withDeps(deps, async () => {
-          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
           const response = await app.request(`/${agent.id}/tool-calls/call_missing`);
 
           expect(response.status).toBe(404);
@@ -999,7 +999,7 @@ describe("AAPI Agent Routes", () => {
         });
 
         let receivedLimit: number | undefined;
-        const deps = createTestDeps({
+        const deps = await createTestDeps({
           getMessages: async (_sessionId: string, limit?: number) => {
             receivedLimit = limit;
             return [];
@@ -1008,7 +1008,7 @@ describe("AAPI Agent Routes", () => {
         deps.agentsDB = agentsDB;
 
         await withDeps(deps, async () => {
-          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
           const response = await app.request(`/${agent.id}/messages?mode=full`);
 
           expect(response.status).toBe(200);
@@ -1074,11 +1074,11 @@ describe("AAPI Agent Routes", () => {
           },
         ] as unknown as Message[];
 
-        const deps = createTestDeps({ getMessages: async () => mockMessages });
+        const deps = await createTestDeps({ getMessages: async () => mockMessages });
         deps.agentsDB = agentsDB;
 
         await withDeps(deps, async () => {
-          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
           // No mode parameter - should default to 'last'
           const response = await app.request(`/${agent.id}/messages`);
 
@@ -1097,11 +1097,11 @@ describe("AAPI Agent Routes", () => {
           title: "Invalid Test",
         });
 
-        const deps = createTestDeps();
+        const deps = await createTestDeps();
         deps.agentsDB = agentsDB;
 
         await withDeps(deps, async () => {
-          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
           const response = await app.request(`/${agent.id}/messages?mode=invalid`);
 
           expect(response.status).toBe(400);
@@ -1178,11 +1178,11 @@ describe("AAPI Agent Routes", () => {
           },
         ] as unknown as Message[];
 
-        const deps = createTestDeps({ getMessages: async () => mockMessages });
+        const deps = await createTestDeps({ getMessages: async () => mockMessages });
         deps.agentsDB = agentsDB;
 
         await withDeps(deps, async () => {
-          const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+          const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
           const response = await app.request(`/${agent.id}/messages?mode=latest_turn`);
 
           expect(response.status).toBe(200);
@@ -1246,7 +1246,7 @@ describe("AAPI Agent Routes", () => {
 
       let capturedSystemPrompt: string | undefined;
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         createSession: async () => mockSession,
         sendMessage: async (_sessionId, _text, options) => {
           capturedSystemPrompt = options?.system;
@@ -1256,7 +1256,7 @@ describe("AAPI Agent Routes", () => {
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
         const response = await app.request("/", {
           method: "POST",
           headers: {
@@ -1331,7 +1331,7 @@ describe("AAPI Agent Routes", () => {
 
       let capturedSystemPrompt: string | undefined;
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         createSession: async () => mockSession,
         sendMessage: async (_sessionId, _text, options) => {
           capturedSystemPrompt = options?.system;
@@ -1341,7 +1341,7 @@ describe("AAPI Agent Routes", () => {
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
         const response = await app.request("/", {
           method: "POST",
           headers: {
@@ -1411,7 +1411,7 @@ describe("AAPI Agent Routes", () => {
 
       let capturedSystemPrompt: string | undefined;
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         createSession: async () => mockSession,
         sendMessage: async (_sessionId, _text, options) => {
           capturedSystemPrompt = options?.system;
@@ -1421,7 +1421,7 @@ describe("AAPI Agent Routes", () => {
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
         const response = await app.request("/", {
           method: "POST",
           headers: {
@@ -1562,7 +1562,7 @@ describe("AAPI Agent Routes", () => {
 
       let capturedSystemPrompt: string | undefined;
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         getMessages: async () => mockMessages,
         forkSession: async () => mockSession,
         sendMessage: async (_sessionId, _text, options) => {
@@ -1573,7 +1573,7 @@ describe("AAPI Agent Routes", () => {
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
         const response = await app.request("/", {
           method: "POST",
           headers: {
@@ -1654,7 +1654,7 @@ describe("AAPI Agent Routes", () => {
         ],
       };
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         createSession: async () => mockSession,
         sendMessage: async () => mockMessage,
       });
@@ -1663,7 +1663,7 @@ describe("AAPI Agent Routes", () => {
       await withDeps(deps, async () => {
         const { events, cleanup } = await captureStreamEvents();
 
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
         const response = await app.request("/", {
           method: "POST",
           headers: {

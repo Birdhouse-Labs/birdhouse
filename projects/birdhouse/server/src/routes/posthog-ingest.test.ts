@@ -14,7 +14,7 @@ describe("POST /ingest", () => {
     let capturedHeaders: Record<string, string> | undefined;
     let capturedBody: ArrayBuffer | undefined;
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.posthog = {
       proxyIngest: async ({ path, method, headers, body }) => {
         capturedPath = path;

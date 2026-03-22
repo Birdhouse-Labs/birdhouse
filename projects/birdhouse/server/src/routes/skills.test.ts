@@ -64,8 +64,8 @@ function createWorkspace(workspaceId: string, directory: string): Workspace {
   };
 }
 
-function createSkillsApp(testDb: DataDB, workspace: Workspace) {
-  const app = createTestApp({ workspace });
+async function createSkillsApp(testDb: DataDB, workspace: Workspace) {
+  const app = await createTestApp({ workspace });
   app.route("/", createSkillRoutes(testDb));
   return app;
 }
@@ -116,7 +116,7 @@ describe("workspace skills routes", () => {
     testDb.insertWorkspace(workspace);
     testDb.setSkillTriggerPhrases("find-docs", ["look up framework docs"]);
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listSkills: async () =>
         [
           {
@@ -135,7 +135,7 @@ describe("workspace skills routes", () => {
     });
 
     await withDeps(deps, async () => {
-      const app = createSkillsApp(testDb, workspace);
+      const app = await createSkillsApp(testDb, workspace);
       const response = await app.request("/");
 
       expect(response.status).toBe(200);
@@ -193,7 +193,7 @@ metadata:
     testDb.insertWorkspace(workspace);
     testDb.setSkillTriggerPhrases("git/spotlight-worktree", ["spotlight this branch"]);
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listSkills: async () =>
         [
           {
@@ -206,7 +206,7 @@ metadata:
     });
 
     await withDeps(deps, async () => {
-      const app = createSkillsApp(testDb, workspace);
+      const app = await createSkillsApp(testDb, workspace);
       const response = await app.request(`/${encodeURIComponent("git/spotlight-worktree")}`);
 
       expect(response.status).toBe(200);
@@ -255,7 +255,7 @@ trigger_phrases:
     const workspace = createWorkspace("ws_1", dirname(skillDir));
     testDb.insertWorkspace(workspace);
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listSkills: async () =>
         [
           {
@@ -268,7 +268,7 @@ trigger_phrases:
     });
 
     await withDeps(deps, async () => {
-      const app = createSkillsApp(testDb, workspace);
+      const app = await createSkillsApp(testDb, workspace);
       const response = await app.request(`/${encodeURIComponent("git-commit-messages")}`);
 
       expect(response.status).toBe(200);
@@ -285,7 +285,7 @@ trigger_phrases:
       "SKILL.md": "# Find Docs",
     });
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listSkills: async () =>
         [
           {
@@ -298,7 +298,7 @@ trigger_phrases:
     });
 
     await withDeps(deps, async () => {
-      const app = createSkillsApp(testDb, workspace);
+      const app = await createSkillsApp(testDb, workspace);
       const response = await app.request(`/${encodeURIComponent("find-docs")}`);
 
       expect(response.status).toBe(200);
@@ -312,7 +312,7 @@ trigger_phrases:
     const workspace = createWorkspace("ws_1", "/repo/current-workspace");
     testDb.insertWorkspace(workspace);
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listSkills: async () =>
         [
           {
@@ -325,7 +325,7 @@ trigger_phrases:
     });
 
     await withDeps(deps, async () => {
-      const app = createSkillsApp(testDb, workspace);
+      const app = await createSkillsApp(testDb, workspace);
       const updateResponse = await app.request(`/${encodeURIComponent("find-docs")}/trigger-phrases`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -351,14 +351,14 @@ trigger_phrases:
     testDb.insertWorkspace(workspace);
     let reloadCalled = 0;
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       reloadSkillState: async () => {
         reloadCalled += 1;
       },
     });
 
     await withDeps(deps, async () => {
-      const app = createSkillsApp(testDb, workspace);
+      const app = await createSkillsApp(testDb, workspace);
       const response = await app.request("/reload", {
         method: "POST",
       });
@@ -373,7 +373,7 @@ trigger_phrases:
     const workspace = createWorkspace("ws_1", "/repo/current-workspace");
     testDb.insertWorkspace(workspace);
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listSkills: async () =>
         [
           {
@@ -387,7 +387,7 @@ trigger_phrases:
 
     await withDeps(deps, async () => {
       const { events, cleanup } = await captureStreamEvents();
-      const app = createSkillsApp(testDb, workspace);
+      const app = await createSkillsApp(testDb, workspace);
 
       const updateResponse = await app.request(`/${encodeURIComponent("find-docs")}/trigger-phrases`, {
         method: "PATCH",
@@ -416,7 +416,7 @@ trigger_phrases:
     testDb.setSkillTriggerPhrases("find-docs", ["docs please"]);
     testDb.setSkillTriggerPhrases("git/spotlight-worktree", ["spotlight this branch"]);
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listSkills: async () =>
         [
           {
@@ -435,7 +435,7 @@ trigger_phrases:
     });
 
     await withDeps(deps, async () => {
-      const app = createSkillsApp(testDb, workspace);
+      const app = await createSkillsApp(testDb, workspace);
       const response = await app.request("/attachments/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -466,7 +466,7 @@ trigger_phrases:
     testDb.insertWorkspace(workspace);
     testDb.setSkillTriggerPhrases("find-docs", ["docs please"]);
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listSkills: async () =>
         [
           {
@@ -479,7 +479,7 @@ trigger_phrases:
     });
 
     await withDeps(deps, async () => {
-      const app = createSkillsApp(testDb, workspace);
+      const app = await createSkillsApp(testDb, workspace);
       const response = await app.request("/attachments/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -498,7 +498,7 @@ trigger_phrases:
     const workspace = createWorkspace("ws_1", "/repo/current-workspace");
     testDb.insertWorkspace(workspace);
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listSkills: async () =>
         [
           {
@@ -511,7 +511,7 @@ trigger_phrases:
     });
 
     await withDeps(deps, async () => {
-      const app = createSkillsApp(testDb, workspace);
+      const app = await createSkillsApp(testDb, workspace);
       const response = await app.request(`/${encodeURIComponent("find-docs")}/trigger-phrases`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -533,7 +533,7 @@ trigger_phrases:
     testDb.insertWorkspace(workspaceA);
     testDb.insertWorkspace(workspaceB);
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listSkills: async () =>
         [
           {
@@ -546,8 +546,8 @@ trigger_phrases:
     });
 
     await withDeps(deps, async () => {
-      const appA = createSkillsApp(testDb, workspaceA);
-      const appB = createSkillsApp(testDb, workspaceB);
+      const appA = await createSkillsApp(testDb, workspaceA);
+      const appB = await createSkillsApp(testDb, workspaceB);
 
       const updateResponse = await appA.request(`/${encodeURIComponent("find-docs")}/trigger-phrases`, {
         method: "PATCH",

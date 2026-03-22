@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
 import { sendMessage } from "../features/api/send-message";
-import { createAgentsDB } from "../lib/agents-db";
+import { type AgentsDB, initAgentsDB } from "../lib/agents-db";
 import type { Message } from "../lib/opencode-client";
 import type { TelemetryClient } from "../lib/telemetry";
 import { createRootAgent } from "../test-utils/agent-factories";
@@ -32,16 +32,16 @@ function makeAssistantMessage(sessionId: string): Message {
 describe("POST /agents/:id/messages — token recording", () => {
   let recordMessageTokensSpy: ReturnType<typeof mock>;
   let mockTelemetry: TelemetryClient;
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     recordMessageTokensSpy = mock(() => {});
     mockTelemetry = {
       trackAgentCreated: mock(() => {}),
       trackTokens: mock(() => {}),
       recordMessageTokens: recordMessageTokensSpy,
     };
-    agentsDB = createAgentsDB(":memory:");
+    agentsDB = await initAgentsDB(":memory:");
   });
 
   it("calls recordMessageTokens with the agent ID and response message", async () => {
@@ -52,13 +52,13 @@ describe("POST /agents/:id/messages — token recording", () => {
       session: { prompt: async () => ({ data: message }) },
     };
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.client = mockClient as never;
     deps.telemetry = mockTelemetry;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.post("/:id/messages", (c) => sendMessage(c, deps));
 
       await app.request(`/${agent.id}/messages`, {
@@ -85,7 +85,7 @@ describe("POST /agents/:id/messages — token recording", () => {
       session: { prompt: async () => ({ data: message }) },
     };
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.client = mockClient as never;
     deps.telemetry = mockTelemetry;
@@ -93,7 +93,7 @@ describe("POST /agents/:id/messages — token recording", () => {
     let responseStatus: number | undefined;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.post("/:id/messages", (c) => sendMessage(c, deps));
 
       const response = await app.request(`/${agent.id}/messages`, {

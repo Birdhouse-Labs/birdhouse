@@ -2,7 +2,7 @@
 // ABOUTME: Simple proxy that forwards all OpenCode events to clients
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { useDeps, withDeps } from "../dependencies";
+import { createTestDeps, useDeps, withDeps } from "../dependencies";
 import { getOpenCodeStream, resetStream } from "../lib/opencode-stream";
 import { withWorkspaceContext } from "../test-utils";
 import { createRootAgent } from "../test-utils/agent-factories";
@@ -50,8 +50,9 @@ afterEach(() => {
 
 describe("GET /api/events (SSE)", () => {
   test("proxies all event types through wildcard listener", async () => {
-    await withDeps(undefined, async () => {
-      const app = withWorkspaceContext(createEventRoutes);
+    const _deps = await createTestDeps();
+    await withDeps(_deps, async () => {
+      const app = await withWorkspaceContext(createEventRoutes);
       const stream = getOpenCodeStream();
 
       const request = new Request("http://localhost:3000/");
@@ -90,8 +91,9 @@ describe("GET /api/events (SSE)", () => {
   });
 
   test("forwards session.idle events", async () => {
-    await withDeps(undefined, async () => {
-      const app = withWorkspaceContext(createEventRoutes);
+    const _deps = await createTestDeps();
+    await withDeps(_deps, async () => {
+      const app = await withWorkspaceContext(createEventRoutes);
       const stream = getOpenCodeStream();
 
       const request = new Request("http://localhost:3000/");
@@ -120,8 +122,9 @@ describe("GET /api/events (SSE)", () => {
   });
 
   test("handles multiple events in sequence", async () => {
-    await withDeps(undefined, async () => {
-      const app = withWorkspaceContext(createEventRoutes);
+    const _deps = await createTestDeps();
+    await withDeps(_deps, async () => {
+      const app = await withWorkspaceContext(createEventRoutes);
       const stream = getOpenCodeStream();
 
       const request = new Request("http://localhost:3000/");
@@ -166,7 +169,8 @@ describe("GET /api/events (SSE)", () => {
 
   describe("AgentID Translation", () => {
     test("adds agentId to message.part.updated events using part.sessionID", async () => {
-      await withDeps(undefined, async () => {
+      const _deps = await createTestDeps();
+      await withDeps(_deps, async () => {
         const { agentsDB } = useDeps();
 
         // Setup: Create an agent in the database
@@ -176,7 +180,7 @@ describe("GET /api/events (SSE)", () => {
           model: "test-model",
         });
 
-        const app = withWorkspaceContext(createEventRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createEventRoutes, { agentsDb: agentsDB });
         const stream = getOpenCodeStream();
 
         const request = new Request("http://localhost:3000/");
@@ -217,7 +221,8 @@ describe("GET /api/events (SSE)", () => {
     });
 
     test("adds agentId to session.idle events using properties.sessionID", async () => {
-      await withDeps(undefined, async () => {
+      const _deps = await createTestDeps();
+      await withDeps(_deps, async () => {
         const { agentsDB } = useDeps();
 
         // Setup: Create an agent
@@ -227,7 +232,7 @@ describe("GET /api/events (SSE)", () => {
           model: "test-model",
         });
 
-        const app = withWorkspaceContext(createEventRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createEventRoutes, { agentsDb: agentsDB });
         const stream = getOpenCodeStream();
 
         const request = new Request("http://localhost:3000/");
@@ -261,7 +266,8 @@ describe("GET /api/events (SSE)", () => {
     });
 
     test("adds agentId to session.error events", async () => {
-      await withDeps(undefined, async () => {
+      const _deps = await createTestDeps();
+      await withDeps(_deps, async () => {
         const { agentsDB } = useDeps();
 
         createRootAgent(agentsDB, {
@@ -270,7 +276,7 @@ describe("GET /api/events (SSE)", () => {
           model: "test-model",
         });
 
-        const app = withWorkspaceContext(createEventRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createEventRoutes, { agentsDb: agentsDB });
         const stream = getOpenCodeStream();
 
         const request = new Request("http://localhost:3000/");
@@ -303,7 +309,8 @@ describe("GET /api/events (SSE)", () => {
     });
 
     test("caches sessionID to agentId lookups", async () => {
-      await withDeps(undefined, async () => {
+      const _deps = await createTestDeps();
+      await withDeps(_deps, async () => {
         const { agentsDB } = useDeps();
 
         createRootAgent(agentsDB, {
@@ -312,7 +319,7 @@ describe("GET /api/events (SSE)", () => {
           model: "test-model",
         });
 
-        const app = withWorkspaceContext(createEventRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createEventRoutes, { agentsDb: agentsDB });
         const stream = getOpenCodeStream();
 
         const request = new Request("http://localhost:3000/");
@@ -354,8 +361,9 @@ describe("GET /api/events (SSE)", () => {
     });
 
     test("forwards non-session events unchanged (no agentId added)", async () => {
-      await withDeps(undefined, async () => {
-        const app = withWorkspaceContext(createEventRoutes);
+      const _deps = await createTestDeps();
+      await withDeps(_deps, async () => {
+        const app = await withWorkspaceContext(createEventRoutes);
         const stream = getOpenCodeStream();
 
         const request = new Request("http://localhost:3000/");
@@ -392,8 +400,9 @@ describe("GET /api/events (SSE)", () => {
     });
 
     test("forwards frontend-handled events even when agent lookup fails", async () => {
-      await withDeps(undefined, async () => {
-        const app = withWorkspaceContext(createEventRoutes);
+      const _deps = await createTestDeps();
+      await withDeps(_deps, async () => {
+        const app = await withWorkspaceContext(createEventRoutes);
         const stream = getOpenCodeStream();
 
         const request = new Request("http://localhost:3000/");

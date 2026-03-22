@@ -19,10 +19,19 @@ const allMigrations: Record<string, Migration> = {
  * Used by runAgentsDbMigrations and the human-facing db: scripts.
  */
 export function createAgentsMigrator(dbPath: string): { migrator: Migrator; db: Kysely<Record<string, never>> } {
+  return createAgentsMigratorFromDb(new Database(dbPath));
+}
+
+/**
+ * Create a Kysely Migrator from an already-open Database instance.
+ * Used when the caller already holds the connection (e.g. in-memory databases).
+ */
+export function createAgentsMigratorFromDb(database: Database): {
+  migrator: Migrator;
+  db: Kysely<Record<string, never>>;
+} {
   const db = new Kysely<Record<string, never>>({
-    dialect: new BunSqliteDialect({
-      database: new Database(dbPath),
-    }),
+    dialect: new BunSqliteDialect({ database }),
   });
 
   const migrator = new Migrator({
@@ -68,4 +77,21 @@ export async function runAgentsDbMigrations(dbPath: string): Promise<void> {
   await handleResult(resultSet, db);
 
   log.server.info({ dbPath }, "Agents DB migrations complete");
+}
+
+/**
+ * Run all pending migrations on an already-open Database instance.
+ * Used for in-memory databases where each connection is a fresh database.
+ * Does NOT close the database — the caller retains ownership.
+ */
+export async function runAgentsDbMigrationsOnDb(database: Database): Promise<void> {
+  const { migrator, db } = createAgentsMigratorFromDb(database);
+  const resultSet = await migrator.migrateToLatest();
+  logResults(resultSet.results);
+  // Release Kysely's internal resources without closing the underlying connection.
+  // BunSqliteDialect.destroy() calls db.close(), so we skip destroy here and
+  // let the caller manage the Database lifetime.
+  if (resultSet.error) {
+    throw resultSet.error;
+  }
 }

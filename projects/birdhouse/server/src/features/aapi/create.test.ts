@@ -4,13 +4,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { Session } from "../../dependencies";
 import { createTestDeps, withDeps } from "../../dependencies";
-import { createAgentsDB } from "../../lib/agents-db";
+import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
 import type { Message } from "../../lib/opencode-client";
 import { captureStreamEvents, createRootAgent, createTestApp } from "../../test-utils";
 import { create } from "./create";
 
 describe("AAPI create agent with cloning", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
   let mockForkSession: (
     sessionId: string,
     messageId?: string,
@@ -23,8 +23,8 @@ describe("AAPI create agent with cloning", () => {
     time: { created: number; updated: number };
   }>;
 
-  beforeEach(() => {
-    agentsDB = createAgentsDB(":memory:");
+  beforeEach(async () => {
+    agentsDB = await initAgentsDB(":memory:");
 
     // Create mock fork function
     mockForkSession = async (_sessionId: string) => ({
@@ -102,14 +102,14 @@ describe("AAPI create agent with cloning", () => {
         },
       };
 
-      const deps = createTestDeps({ forkSession: mockForkSession });
+      const deps = await createTestDeps({ forkSession: mockForkSession });
       deps.agentsDB = agentsDB;
       deps.opencode.client = mockClient as never;
 
       await withDeps(deps, async () => {
         const { events, cleanup } = await captureStreamEvents();
 
-        const app = createTestApp({ agentsDb: agentsDB });
+        const app = await createTestApp({ agentsDb: agentsDB });
         app.post("/agents", (c) => create(c, deps));
 
         const response = await app.request("/agents", {
@@ -251,14 +251,14 @@ describe("AAPI create agent with cloning", () => {
         },
       };
 
-      const deps = createTestDeps({ forkSession: mockForkSession });
+      const deps = await createTestDeps({ forkSession: mockForkSession });
       deps.agentsDB = agentsDB;
       deps.opencode.client = mockClient as never;
 
       await withDeps(deps, async () => {
         const { events, cleanup } = await captureStreamEvents();
 
-        const app = createTestApp({ agentsDb: agentsDB });
+        const app = await createTestApp({ agentsDb: agentsDB });
         app.post("/agents", (c) => create(c, deps));
 
         const response = await app.request("/agents", {
@@ -372,12 +372,12 @@ describe("AAPI create agent with cloning", () => {
         },
       };
 
-      const deps = createTestDeps({ forkSession: mockForkSession });
+      const deps = await createTestDeps({ forkSession: mockForkSession });
       deps.agentsDB = agentsDB;
       deps.opencode.client = mockClient as never;
 
       await withDeps(deps, async () => {
-        const app = createTestApp({ agentsDb: agentsDB });
+        const app = await createTestApp({ agentsDb: agentsDB });
         app.post("/agents", (c) => create(c, deps));
 
         const response = await app.request("/agents", {

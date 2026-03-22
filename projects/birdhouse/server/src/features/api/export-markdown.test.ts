@@ -4,15 +4,15 @@
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import { createTestDeps, withDeps } from "../../dependencies";
-import { createAgentsDB } from "../../lib/agents-db";
+import { initAgentsDB } from "../../lib/agents-db";
 import type { Message } from "../../lib/opencode-client";
 import { createRootAgent } from "../../test-utils/agent-factories";
 import { exportMarkdown } from "./export-markdown";
 
 describe("exportMarkdown", () => {
   test("returns 404 when agent not found", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
@@ -28,7 +28,7 @@ describe("exportMarkdown", () => {
   });
 
   test("exports empty timeline with placeholder message", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const agent = createRootAgent(agentsDB, {
       session_id: "ses_test",
       id: "agent_test",
@@ -36,7 +36,7 @@ describe("exportMarkdown", () => {
       updated_at: 1704153600000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
@@ -59,7 +59,7 @@ describe("exportMarkdown", () => {
   });
 
   test("formats human user message correctly", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const agent = createRootAgent(agentsDB, {
       session_id: "ses_test",
       id: "agent_test",
@@ -85,7 +85,7 @@ describe("exportMarkdown", () => {
       ],
     };
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.getMessages = async () => [userMessage];
 
@@ -103,7 +103,7 @@ describe("exportMarkdown", () => {
   });
 
   test("formats agent-sent message with metadata", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const agent = createRootAgent(agentsDB, {
       session_id: "ses_test",
       id: "agent_test",
@@ -133,7 +133,7 @@ describe("exportMarkdown", () => {
       ],
     };
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.getMessages = async () => [agentMessage];
 
@@ -150,7 +150,7 @@ describe("exportMarkdown", () => {
   });
 
   test("formats assistant message with duration", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const agent = createRootAgent(agentsDB, {
       session_id: "ses_test",
       id: "agent_test",
@@ -186,7 +186,7 @@ describe("exportMarkdown", () => {
       ],
     };
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.getMessages = async () => [assistantMessage];
 
@@ -203,7 +203,7 @@ describe("exportMarkdown", () => {
   });
 
   test("formats assistant message without duration when not completed", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const agent = createRootAgent(agentsDB, {
       session_id: "ses_test",
       id: "agent_test",
@@ -239,7 +239,7 @@ describe("exportMarkdown", () => {
       ],
     };
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.getMessages = async () => [assistantMessage];
 
@@ -256,7 +256,7 @@ describe("exportMarkdown", () => {
   });
 
   test("formats tool call with completed status", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const agent = createRootAgent(agentsDB, {
       session_id: "ses_test",
       id: "agent_test",
@@ -307,7 +307,7 @@ describe("exportMarkdown", () => {
       ],
     };
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.getMessages = async () => [assistantMessage];
 
@@ -327,7 +327,7 @@ describe("exportMarkdown", () => {
   });
 
   test("formats tool call with error status", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const agent = createRootAgent(agentsDB, {
       session_id: "ses_test",
       id: "agent_test",
@@ -375,7 +375,7 @@ describe("exportMarkdown", () => {
       ],
     };
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.getMessages = async () => [assistantMessage];
 
@@ -393,7 +393,7 @@ describe("exportMarkdown", () => {
   });
 
   test("formats system event (clone_created)", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const agent = createRootAgent(agentsDB, {
       session_id: "ses_test",
       id: "agent_test",
@@ -431,7 +431,7 @@ describe("exportMarkdown", () => {
       metadata: null,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
@@ -451,14 +451,14 @@ describe("exportMarkdown", () => {
   });
 
   test("generates valid filename from title with special characters", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const agent = createRootAgent(agentsDB, {
       session_id: "ses_test",
       id: "agent_test",
       title: "Fix: API/HTTP Errors!",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {

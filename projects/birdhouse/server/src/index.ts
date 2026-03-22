@@ -105,7 +105,7 @@ log.server.info(
 
 // Create Hono app
 const app = new Hono();
-const posthogDeps = createPosthogDeps();
+const posthogDeps = await createPosthogDeps();
 
 // Middleware: CORS
 app.use(
