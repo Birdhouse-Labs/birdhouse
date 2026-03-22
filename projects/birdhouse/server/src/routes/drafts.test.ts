@@ -266,7 +266,7 @@ describe("PUT /drafts/:draftId", () => {
     const res = await app.request("/drafts/new-agent", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ context: "new-agent", text: "hello", attachments: [] }),
+      body: JSON.stringify({ text: "hello", attachments: [] }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -279,7 +279,6 @@ describe("PUT /drafts/:draftId", () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        context: "reply",
         text: "my draft",
         attachments: [{ filename: "img.png", mime: "image/png", url: "data:img" }],
       }),
@@ -290,22 +289,11 @@ describe("PUT /drafts/:draftId", () => {
     expect(body.attachments[0].filename).toBe("img.png");
   });
 
-  test("returns 400 when context is missing", async () => {
-    const { app } = await buildApp();
-    const res = await app.request("/drafts/x", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: "hi", attachments: [] }),
-    });
-    expect(res.status).toBe(400);
-  });
-
   test("returns 400 when text is not a string", async () => {
     const { app } = await buildApp();
     const res = await app.request("/drafts/x", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ context: "reply", text: 42, attachments: [] }),
     });
     expect(res.status).toBe(400);
   });
@@ -315,7 +303,6 @@ describe("PUT /drafts/:draftId", () => {
     const res = await app.request("/drafts/x", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ context: "reply", text: "hi", attachments: "bad" }),
     });
     expect(res.status).toBe(400);
   });
@@ -326,7 +313,6 @@ describe("PUT /drafts/:draftId", () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        context: "reply",
         text: "hi",
         attachments: [{ mime: "image/png", url: "data:x" }],
       }),
@@ -340,7 +326,6 @@ describe("PUT /drafts/:draftId", () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        context: "reply",
         text: "hi",
         attachments: [{ filename: "f.png", url: "data:x" }],
       }),
@@ -354,7 +339,6 @@ describe("PUT /drafts/:draftId", () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        context: "reply",
         text: "hi",
         attachments: [{ filename: "f.png", mime: "image/png" }],
       }),
@@ -370,7 +354,6 @@ describe("PUT /drafts/:draftId", () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        context: "reply",
         text: "",
         attachments: [{ filename: "big.bin", mime: "application/octet-stream", url: oversizedUrl }],
       }),
@@ -385,7 +368,6 @@ describe("PUT /drafts/:draftId", () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        context: "reply",
         text: "",
         attachments: [{ filename: "exact.bin", mime: "application/octet-stream", url: exactUrl }],
       }),

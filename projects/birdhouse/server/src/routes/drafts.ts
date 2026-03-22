@@ -30,18 +30,16 @@ export function createDraftRoutes() {
     const agentsDb = c.get("agentsDb");
     const { draftId } = c.req.param();
 
-    let body: { context?: unknown; text?: unknown; attachments?: unknown };
+    let body: { text?: unknown; attachments?: unknown };
     try {
       body = await c.req.json();
     } catch {
       return c.json({ error: "Invalid JSON body" }, 400);
     }
 
-    const { context, text, attachments } = body;
+    const { text, attachments } = body;
+    const context = draftId === "new-agent" ? "new-agent" : "reply";
 
-    if (typeof context !== "string" || !context.trim()) {
-      return c.json({ error: "context is required and must be a non-empty string" }, 400);
-    }
     if (typeof text !== "string") {
       return c.json({ error: "text must be a string" }, 400);
     }
