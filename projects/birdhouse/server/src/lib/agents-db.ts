@@ -6,7 +6,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { nanoid } from "nanoid";
-import { runAgentsDbMigrations } from "./agents-db-migrations/run-agents-db-migrations";
+import { runAgentsDbMigrations, runAgentsDbMigrationsOnDb } from "./agents-db-migrations/run-agents-db-migrations";
 import type { SessionStatus } from "./opencode-client";
 
 // ============================================================================
@@ -186,62 +186,12 @@ export function generateEventId(): string {
 // Database Creation & Configuration
 // ============================================================================
 
-// Full schema SQL used for in-memory databases (tests only).
-// Production databases use runAgentsDbMigrations() instead.
-const IN_MEMORY_SCHEMA_SQL = `
-  CREATE TABLE IF NOT EXISTS agents (
-    id TEXT PRIMARY KEY,
-    session_id TEXT NOT NULL UNIQUE,
-    parent_id TEXT,
-    tree_id TEXT NOT NULL,
-    level INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    project_id TEXT NOT NULL,
-    directory TEXT NOT NULL,
-    model TEXT NOT NULL,
-    created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL,
-    cloned_from TEXT REFERENCES agents(id) ON DELETE SET NULL,
-    cloned_at INTEGER,
-    archived_at INTEGER,
-    FOREIGN KEY (parent_id) REFERENCES agents(id) ON DELETE CASCADE
-  );
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_agents_session_id ON agents(session_id);
-  CREATE INDEX IF NOT EXISTS idx_agents_directory ON agents(directory);
-  CREATE INDEX IF NOT EXISTS idx_agents_tree_updated ON agents(tree_id DESC, level ASC, updated_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_agents_tree_created ON agents(tree_id DESC, level ASC, created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_agents_cloned_from ON agents(cloned_from);
-  CREATE TABLE IF NOT EXISTS agent_events (
-    id TEXT PRIMARY KEY,
-    agent_id TEXT NOT NULL,
-    event_type TEXT NOT NULL,
-    timestamp INTEGER NOT NULL,
-    actor_agent_id TEXT,
-    actor_agent_title TEXT,
-    source_agent_id TEXT,
-    source_agent_title TEXT,
-    target_agent_id TEXT,
-    target_agent_title TEXT,
-    metadata TEXT,
-    FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
-    FOREIGN KEY (actor_agent_id) REFERENCES agents(id) ON DELETE SET NULL,
-    FOREIGN KEY (source_agent_id) REFERENCES agents(id) ON DELETE SET NULL,
-    FOREIGN KEY (target_agent_id) REFERENCES agents(id) ON DELETE SET NULL
-  );
-  CREATE INDEX IF NOT EXISTS idx_agent_events_agent_timestamp ON agent_events(agent_id, timestamp DESC);
-  CREATE INDEX IF NOT EXISTS idx_agent_events_actor ON agent_events(actor_agent_id) WHERE actor_agent_id IS NOT NULL;
-  CREATE INDEX IF NOT EXISTS idx_agent_events_source ON agent_events(source_agent_id) WHERE source_agent_id IS NOT NULL;
-  CREATE INDEX IF NOT EXISTS idx_agent_events_target ON agent_events(target_agent_id) WHERE target_agent_id IS NOT NULL;
-`;
-
 /**
  * Open and configure a SQLite database with optimal settings.
- * For :memory: databases, schema is applied inline (tests only).
- * For file-based databases, schema is managed by runAgentsDbMigrations().
+ * Schema is managed by runAgentsDbMigrations() / runAgentsDbMigrationsOnDb().
  */
 function createDatabase(dbPath: string): Database {
   if (dbPath !== ":memory:") {
-    // Ensure directory exists
     const dir = dirname(dbPath);
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
@@ -256,11 +206,6 @@ function createDatabase(dbPath: string): Database {
   db.run("PRAGMA mmap_size = 134217728"); // 128MB memory-mapped I/O
   db.run("PRAGMA foreign_keys = ON"); // Enforce foreign key constraints
 
-  // In-memory databases need schema created immediately (used in tests)
-  if (dbPath === ":memory:") {
-    db.run(IN_MEMORY_SCHEMA_SQL);
-  }
-
   return db;
 }
 
@@ -271,12 +216,23 @@ const agentsDbCache = new Map<string, AgentsDB>();
 /**
  * Initialize an agents database: run migrations then return a ready AgentsDB instance.
  * Subsequent calls with the same path return the cached instance without re-running migrations.
+ *
+ * For :memory: databases, migrations run on the same connection that will be used
+ * for queries — each in-memory database is a fresh isolated connection.
  */
 export async function initAgentsDB(dbPath: string): Promise<AgentsDB> {
   const cached = agentsDbCache.get(dbPath);
   if (cached) return cached;
 
-  // Ensure directory exists before migrations open the file
+  if (dbPath === ":memory:") {
+    // In-memory: open the connection first, migrate on it, then wrap it
+    const db = createDatabase(dbPath);
+    await runAgentsDbMigrationsOnDb(db);
+    const instance = createAgentsDB(dbPath, db);
+    // Do not cache :memory: instances — each caller gets a fresh isolated database
+    return instance;
+  }
+
   const dir = dirname(dbPath);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
@@ -294,10 +250,11 @@ export async function initAgentsDB(dbPath: string): Promise<AgentsDB> {
 // ============================================================================
 
 /**
- * Create agents database instance
+ * Create agents database instance.
+ * Pass an existing Database to reuse an already-open connection (e.g. from initAgentsDB for :memory:).
  */
-export function createAgentsDB(dbPath: string): AgentsDB {
-  const db = createDatabase(dbPath);
+export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB {
+  const db = existingDb ?? createDatabase(dbPath);
 
   // Prepare statements for better performance (Bun's SQLite uses query() for prepared statements)
   const insertQuery = db.query(`
