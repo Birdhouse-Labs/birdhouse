@@ -4,13 +4,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import { createTestDeps, withDeps } from "../../dependencies";
-import type { AgentRow } from "../../lib/agents-db";
-import { createAgentsDB } from "../../lib/agents-db";
+import type { AgentRow, AgentsDB } from "../../lib/agents-db";
+import { initAgentsDB } from "../../lib/agents-db";
 import { captureStreamEvents, createRootAgent, withWorkspaceContext } from "../../test-utils";
 import { cloneAgent } from "./clone-agent";
 
 describe("API clone-agent", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
   let mockForkSession: (
     sessionId: string,
     messageId?: string,
@@ -23,8 +23,8 @@ describe("API clone-agent", () => {
     time: { created: number; updated: number };
   }>;
 
-  beforeEach(() => {
-    agentsDB = createAgentsDB(":memory:");
+  beforeEach(async () => {
+    agentsDB = await initAgentsDB(":memory:");
 
     // Create mock fork function
     mockForkSession = async (_sessionId: string, _messageId?: string) => ({
@@ -45,11 +45,11 @@ describe("API clone-agent", () => {
       title: "Source Agent",
     });
 
-    const deps = createTestDeps({ forkSession: mockForkSession });
+    const deps = await createTestDeps({ forkSession: mockForkSession });
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(
+      const app = await withWorkspaceContext(
         () => {
           const hono = new Hono();
           hono.post("/:id/clone", (c) => cloneAgent(c, deps));
@@ -91,11 +91,11 @@ describe("API clone-agent", () => {
       title: "Source Agent",
     });
 
-    const deps = createTestDeps({ forkSession: mockForkSession });
+    const deps = await createTestDeps({ forkSession: mockForkSession });
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(
+      const app = await withWorkspaceContext(
         () => {
           const hono = new Hono();
           hono.post("/:id/clone", (c) => cloneAgent(c, deps));
@@ -121,11 +121,11 @@ describe("API clone-agent", () => {
   });
 
   test("returns 404 for non-existent agent", async () => {
-    const deps = createTestDeps({ forkSession: mockForkSession });
+    const deps = await createTestDeps({ forkSession: mockForkSession });
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(
+      const app = await withWorkspaceContext(
         () => {
           const hono = new Hono();
           hono.post("/:id/clone", (c) => cloneAgent(c, deps));
@@ -153,13 +153,13 @@ describe("API clone-agent", () => {
       title: "Source Agent",
     });
 
-    const deps = createTestDeps({ forkSession: mockForkSession });
+    const deps = await createTestDeps({ forkSession: mockForkSession });
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
       const { events, cleanup } = await captureStreamEvents();
 
-      const app = withWorkspaceContext(
+      const app = await withWorkspaceContext(
         () => {
           const hono = new Hono();
           hono.post("/:id/clone", (c) => cloneAgent(c, deps));

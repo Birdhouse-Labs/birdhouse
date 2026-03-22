@@ -3,17 +3,17 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../../dependencies";
-import { createAgentsDB } from "../../lib/agents-db";
+import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
 import type { Message } from "../../lib/opencode-client";
 import { createTestApp } from "../../test-utils";
 import { createRootAgent } from "../../test-utils/agent-factories";
 import { sendMessage } from "./send-message";
 
 describe("AAPI send-message", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
 
-  beforeEach(() => {
-    agentsDB = createAgentsDB(":memory:");
+  beforeEach(async () => {
+    agentsDB = await initAgentsDB(":memory:");
   });
 
   describe("POST /aapi/agents/:id/messages - Agent-to-agent with metadata", () => {
@@ -76,12 +76,12 @@ describe("AAPI send-message", () => {
         },
       };
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
       deps.opencode.client = mockClient as never;
 
       await withDeps(deps, async () => {
-        const app = createTestApp({ agentsDb: agentsDB });
+        const app = await createTestApp({ agentsDb: agentsDB });
         app.post("/:id/messages", (c) => sendMessage(c, deps));
 
         const response = await app.request(`/${targetAgent.id}/messages`, {
@@ -159,12 +159,12 @@ describe("AAPI send-message", () => {
         },
       };
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
       deps.opencode.client = mockClient as never;
 
       await withDeps(deps, async () => {
-        const app = createTestApp({ agentsDb: agentsDB });
+        const app = await createTestApp({ agentsDb: agentsDB });
         app.post("/:id/messages", (c) => sendMessage(c, deps));
 
         const response = await app.request(`/${targetAgent.id}/messages`, {
@@ -234,12 +234,12 @@ describe("AAPI send-message", () => {
         },
       };
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
       deps.opencode.client = mockClient as never;
 
       await withDeps(deps, async () => {
-        const app = createTestApp({ agentsDb: agentsDB });
+        const app = await createTestApp({ agentsDb: agentsDB });
         app.post("/:id/messages", (c) => sendMessage(c, deps));
 
         const response = await app.request(`/${targetAgent.id}/messages`, {
@@ -266,11 +266,11 @@ describe("AAPI send-message", () => {
         title: "Calling Agent",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = createTestApp({ agentsDb: agentsDB });
+        const app = await createTestApp({ agentsDb: agentsDB });
         app.post("/:id/messages", (c) => sendMessage(c, deps));
 
         const response = await app.request("/agent_nonexistent/messages", {

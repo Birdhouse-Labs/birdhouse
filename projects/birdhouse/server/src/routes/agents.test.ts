@@ -4,7 +4,7 @@
 import { describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
 import type { AgentNode, AgentRow, AgentTree } from "../lib/agents-db";
-import { createAgentsDB } from "../lib/agents-db";
+import { initAgentsDB } from "../lib/agents-db";
 import type { Message, Session } from "../lib/opencode-client";
 import { setMockSessionPrompt } from "../lib/opencode-client";
 import { createAgentTree, createChildAgent, createRootAgent, withWorkspaceContext } from "../test-utils";
@@ -55,9 +55,9 @@ describe("POST /api/agents - Create root agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async (title?: string) => {
         expect(title).toBe("Root Agent");
         return mockSession;
@@ -68,7 +68,7 @@ describe("POST /api/agents - Create root agent", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,9 +109,9 @@ describe("POST /api/agents - Create root agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async (title?: string) => {
         expect(title).toBe("Creating Agent...");
         return mockSession;
@@ -120,7 +120,7 @@ describe("POST /api/agents - Create root agent", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -146,9 +146,9 @@ describe("POST /api/agents - Create root agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async (title?: string) => {
         expect(title).toBe("Creating Agent...");
         return mockSession;
@@ -157,7 +157,7 @@ describe("POST /api/agents - Create root agent", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -174,8 +174,8 @@ describe("POST /api/agents - Create root agent", () => {
   });
 
   test("uses default model when not provided", async () => {
-    await withDeps(createTestDeps(), async () => {
-      const app = withWorkspaceContext(createAgentRoutes);
+    await withDeps(await createTestDeps(), async () => {
+      const app = await withWorkspaceContext(createAgentRoutes);
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -200,9 +200,9 @@ describe("POST /api/agents - Create root agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async () => mockSession,
     });
     deps.agentsDB = agentsDB;
@@ -221,7 +221,7 @@ describe("POST /api/agents - Create root agent", () => {
         originalEmit(type, properties);
       };
 
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -255,15 +255,15 @@ describe("POST /api/agents - Create root agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async () => mockSession,
     });
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
 
       // Test with specific model format
       const res = await app.request("/", {
@@ -325,12 +325,12 @@ describe("POST /api/agents - Create root agent", () => {
       ],
     };
 
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     let sendMessageCalled = false;
     let capturedSystemPrompt: string | undefined;
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async () => mockSession,
       sendMessage: async (_sessionId, _text, options) => {
         sendMessageCalled = true;
@@ -341,7 +341,7 @@ describe("POST /api/agents - Create root agent", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -403,11 +403,11 @@ describe("POST /api/agents - Create root agent", () => {
       parts: [],
     };
 
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     let capturedParts: Array<{ type: string; text?: string; url?: string; mime?: string; filename?: string }> = [];
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async () => mockSession,
       sendMessage: async (_sessionId, _text, options) => {
         capturedParts = (options?.parts as typeof capturedParts | undefined) || [];
@@ -417,7 +417,7 @@ describe("POST /api/agents - Create root agent", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -503,12 +503,12 @@ describe("POST /api/agents - Create root agent", () => {
       ],
     };
 
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     let sendMessageCalled = false;
     let sendMessagePromise: Promise<Message> | null = null;
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async () => mockSession,
       sendMessage: async (_sessionId, _text, _options) => {
         sendMessageCalled = true;
@@ -522,7 +522,7 @@ describe("POST /api/agents - Create root agent", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -560,11 +560,11 @@ describe("POST /api/agents - Create root agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     let sendMessageCalled = false;
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async () => mockSession,
       sendMessage: async () => {
         sendMessageCalled = true;
@@ -574,7 +574,7 @@ describe("POST /api/agents - Create root agent", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -595,7 +595,7 @@ describe("POST /api/agents - Create root agent", () => {
 
 describe("POST /api/agents - Create child agent", () => {
   test("creates child agent with correct tree metadata", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     // First, create a root agent directly in the database
     const rootAgent = createRootAgent(agentsDB, {
@@ -612,7 +612,7 @@ describe("POST /api/agents - Create child agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async (title?: string) => {
         expect(title).toBe("Child Agent");
         return mockChildSession;
@@ -621,7 +621,7 @@ describe("POST /api/agents - Create child agent", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -653,7 +653,7 @@ describe("POST /api/agents - Create child agent", () => {
   });
 
   test("creates grandchild agent with level=2", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     // Create root and child agents
     const rootAgent = createRootAgent(agentsDB, {
@@ -674,13 +674,13 @@ describe("POST /api/agents - Create child agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async () => mockGrandchildSession,
     });
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -701,13 +701,13 @@ describe("POST /api/agents - Create child agent", () => {
   });
 
   test("returns 400 for invalid parent_id", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -726,8 +726,8 @@ describe("POST /api/agents - Create child agent", () => {
   });
 
   test("validates parent_id type", async () => {
-    await withDeps(createTestDeps(), async () => {
-      const app = withWorkspaceContext(createAgentRoutes);
+    await withDeps(await createTestDeps(), async () => {
+      const app = await withWorkspaceContext(createAgentRoutes);
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -747,14 +747,14 @@ describe("POST /api/agents - Create child agent", () => {
 
 describe("POST /api/agents - Error handling", () => {
   test("handles OpenCode API failures", async () => {
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async () => {
         throw new Error("Failed to create session: 500 Internal Server Error");
       },
     });
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes);
+      const app = await withWorkspaceContext(createAgentRoutes);
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -771,7 +771,7 @@ describe("POST /api/agents - Error handling", () => {
   });
 
   test("handles duplicate session_id gracefully", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     // Create an agent with a specific session_id
     createRootAgent(agentsDB, {
@@ -789,13 +789,13 @@ describe("POST /api/agents - Error handling", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       createSession: async () => mockSession,
     });
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -814,7 +814,7 @@ describe("POST /api/agents - Error handling", () => {
 
 describe("GET /api/agents/:id - Get agent by ID", () => {
   test("returns agent by agent_id", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     // Create a test agent
     const agent = createRootAgent(agentsDB, {
@@ -824,11 +824,11 @@ describe("GET /api/agents/:id - Get agent by ID", () => {
       id: "agent_test123",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_test123");
 
       expect(res.status).toBe(200);
@@ -840,12 +840,12 @@ describe("GET /api/agents/:id - Get agent by ID", () => {
   });
 
   test("returns 404 for non-existent agent", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_nonexistent");
 
       expect(res.status).toBe(404);
@@ -857,7 +857,7 @@ describe("GET /api/agents/:id - Get agent by ID", () => {
 
 describe("GET /api/agents/:id/messages - Get messages for agent", () => {
   test("returns messages using agent_id", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     // Create a test agent
     createRootAgent(agentsDB, {
@@ -889,7 +889,7 @@ describe("GET /api/agents/:id/messages - Get messages for agent", () => {
       },
     ];
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       getMessages: async (sessionId: string, _limit?: number) => {
         expect(sessionId).toBe("ses_msgs123");
         return mockMessages as Message[];
@@ -898,7 +898,7 @@ describe("GET /api/agents/:id/messages - Get messages for agent", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_msgs123/messages");
 
       expect(res.status).toBe(200);
@@ -908,12 +908,12 @@ describe("GET /api/agents/:id/messages - Get messages for agent", () => {
   });
 
   test("returns 404 for non-existent agent", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_nonexistent/messages");
 
       expect(res.status).toBe(404);
@@ -923,7 +923,7 @@ describe("GET /api/agents/:id/messages - Get messages for agent", () => {
   });
 
   test("passes limit parameter to getMessages", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     createRootAgent(agentsDB, {
       title: "Limit Test",
@@ -932,7 +932,7 @@ describe("GET /api/agents/:id/messages - Get messages for agent", () => {
 
     let receivedLimit: number | undefined;
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       getMessages: async (_sessionId: string, limit?: number) => {
         receivedLimit = limit;
         return [];
@@ -941,7 +941,7 @@ describe("GET /api/agents/:id/messages - Get messages for agent", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       await app.request("/agent_limit/messages?limit=10");
 
       expect(receivedLimit).toBe(10);
@@ -951,7 +951,7 @@ describe("GET /api/agents/:id/messages - Get messages for agent", () => {
 
 describe("POST /api/agents/:id/messages - Send message to agent", () => {
   test("sends message using agent_id and updates timestamp", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     createRootAgent(agentsDB, {
@@ -962,7 +962,7 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
       updated_at: now - 1000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
@@ -1003,7 +1003,7 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
         };
       });
 
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
 
       const beforeTimestamp = agentsDB.getAgentById("agent_send123")?.updated_at;
 
@@ -1030,12 +1030,12 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
   });
 
   test("returns 404 for non-existent agent", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_nonexistent/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1049,7 +1049,7 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
   });
 
   test("handles sendMessage errors", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     createRootAgent(agentsDB, {
       session_id: "ses_error",
@@ -1057,7 +1057,7 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
       id: "agent_error",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
@@ -1066,7 +1066,7 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
         throw new Error("OpenCode API failure");
       });
 
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_error/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1087,12 +1087,12 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
 
 describe("GET /api/agents - Load all agent trees", () => {
   test("returns empty trees array for empty database", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/");
 
       expect(res.status).toBe(200);
@@ -1102,18 +1102,18 @@ describe("GET /api/agents - Load all agent trees", () => {
   });
 
   test("returns single root agent with no children", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     createRootAgent(agentsDB, {
       title: "Single Root Agent",
       id: "agent_single",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/");
 
       expect(res.status).toBe(200);
@@ -1134,7 +1134,7 @@ describe("GET /api/agents - Load all agent trees", () => {
   });
 
   test("returns single tree with children", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     createAgentTree(agentsDB, {
       rootTitle: "Root Agent",
@@ -1142,11 +1142,11 @@ describe("GET /api/agents - Load all agent trees", () => {
       childTitles: ["Child 1", "Child 2"],
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/");
 
       expect(res.status).toBe(200);
@@ -1167,7 +1167,7 @@ describe("GET /api/agents - Load all agent trees", () => {
   });
 
   test("returns multiple independent trees", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     // Create 3 independent root agents with different created_at times
@@ -1192,11 +1192,11 @@ describe("GET /api/agents - Load all agent trees", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/");
 
       expect(res.status).toBe(200);
@@ -1218,7 +1218,7 @@ describe("GET /api/agents - Load all agent trees", () => {
   });
 
   test("handles multi-level tree (grandchildren)", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
 
     const root = createRootAgent(agentsDB, {
       title: "Root",
@@ -1234,11 +1234,11 @@ describe("GET /api/agents - Load all agent trees", () => {
       model: "anthropic/claude-haiku",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/");
 
       expect(res.status).toBe(200);
@@ -1264,7 +1264,7 @@ describe("GET /api/agents - Load all agent trees", () => {
   });
 
   test("handles multiple children per parent", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const root = createRootAgent(agentsDB, {
@@ -1293,11 +1293,11 @@ describe("GET /api/agents - Load all agent trees", () => {
       updated_at: now - 1000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/");
 
       expect(res.status).toBe(200);
@@ -1319,7 +1319,7 @@ describe("GET /api/agents - Load all agent trees", () => {
   });
 
   test("sorts by updated_at by default", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     // Create agents with different updated_at times
@@ -1337,11 +1337,11 @@ describe("GET /api/agents - Load all agent trees", () => {
       id: "agent_new",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/");
 
       expect(res.status).toBe(200);
@@ -1357,7 +1357,7 @@ describe("GET /api/agents - Load all agent trees", () => {
   });
 
   test("sorts by created_at when specified", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     // Create agents with different created_at times
@@ -1375,11 +1375,11 @@ describe("GET /api/agents - Load all agent trees", () => {
       id: "agent_second",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/?sortBy=created_at");
 
       expect(res.status).toBe(200);
@@ -1393,7 +1393,7 @@ describe("GET /api/agents - Load all agent trees", () => {
   });
 
   test("injects explicit status and falls back to idle for descendants", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const root = createRootAgent(agentsDB, {
@@ -1412,7 +1412,7 @@ describe("GET /api/agents - Load all agent trees", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       getSessionStatus: async () => ({
         [root.session_id]: { type: "busy" },
       }),
@@ -1420,7 +1420,7 @@ describe("GET /api/agents - Load all agent trees", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/");
 
       expect(res.status).toBe(200);
@@ -1434,7 +1434,7 @@ describe("GET /api/agents - Load all agent trees", () => {
   });
 
   test("defaults to updated_at sort while created_at sort can produce a different tree order", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const olderCreatedRecentlyUpdated = createRootAgent(agentsDB, {
@@ -1451,11 +1451,11 @@ describe("GET /api/agents - Load all agent trees", () => {
       updated_at: now - 5_000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
 
       const defaultRes = await app.request("/");
       expect(defaultRes.status).toBe(200);
@@ -1476,12 +1476,12 @@ describe("GET /api/agents - Load all agent trees", () => {
   });
 
   test("returns 400 for invalid sortBy parameter", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/?sortBy=invalid");
 
       expect(res.status).toBe(400);
@@ -1491,7 +1491,7 @@ describe("GET /api/agents - Load all agent trees", () => {
   });
 
   test("handles complex multi-tree scenario", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     // Tree 1: Root + 2 children (oldest)
@@ -1543,11 +1543,11 @@ describe("GET /api/agents - Load all agent trees", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/");
 
       expect(res.status).toBe(200);
@@ -1591,7 +1591,7 @@ describe("GET /api/agents - Load all agent trees", () => {
 
 describe("PATCH /api/agents/:id - Update agent title", () => {
   test("updates agent title successfully", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     // Create a test agent
@@ -1603,11 +1603,11 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
       id: "agent_patch_test",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_patch_test", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1630,7 +1630,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
   });
 
   test("trims whitespace from title", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     createRootAgent(agentsDB, {
@@ -1640,11 +1640,11 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
       id: "agent_trim_test",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_trim_test", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1660,7 +1660,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
   });
 
   test("returns 400 for empty title", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     createRootAgent(agentsDB, {
@@ -1670,11 +1670,11 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
       id: "agent_empty_test",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_empty_test", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1690,12 +1690,12 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
   });
 
   test("returns 400 for missing title", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_test", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1709,12 +1709,12 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
   });
 
   test("returns 404 for non-existent agent", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_nonexistent", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1730,7 +1730,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
   });
 
   test("syncs title to OpenCode when updating agent", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     // Create a test agent with a known session_id
@@ -1743,7 +1743,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
       id: "agent_sync_test",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     // Track if updateSessionTitle was called
@@ -1774,7 +1774,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
         originalEmit(type, properties);
       };
 
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_sync_test", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1804,7 +1804,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
   });
 
   test("succeeds even when OpenCode sync fails (graceful degradation)", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     // Create a test agent
@@ -1817,7 +1817,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
       id: "agent_fail_test",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     // Make updateSessionTitle throw an error
@@ -1839,7 +1839,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
         originalEmit(type, properties);
       };
 
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_fail_test", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

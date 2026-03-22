@@ -4,13 +4,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import { createTestDeps, withDeps } from "../../dependencies";
-import { createAgentsDB } from "../../lib/agents-db";
+import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
 import type { Message, Skill } from "../../lib/opencode-client";
 import { captureStreamEvents, createRootAgent, withWorkspaceContext } from "../../test-utils";
 import { sendMessage } from "./send-message";
 
 describe("API send-message with clone_and_send", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
   let mockForkSession: (
     sessionId: string,
     messageId?: string,
@@ -23,8 +23,8 @@ describe("API send-message with clone_and_send", () => {
     time: { created: number; updated: number };
   }>;
 
-  beforeEach(() => {
-    agentsDB = createAgentsDB(":memory:");
+  beforeEach(async () => {
+    agentsDB = await initAgentsDB(":memory:");
 
     // Create mock fork function
     mockForkSession = async (_sessionId: string) => ({
@@ -94,13 +94,13 @@ describe("API send-message with clone_and_send", () => {
         },
       };
 
-      const deps = createTestDeps({ listSkills: async () => visibleSkills });
+      const deps = await createTestDeps({ listSkills: async () => visibleSkills });
       deps.agentsDB = agentsDB;
       deps.opencode.client = mockClient as never;
       deps.dataDb.setSkillTriggerPhrases("find-docs", ["docs please"]);
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(
+        const app = await withWorkspaceContext(
           () => {
             const hono = new Hono();
             hono.post("/:id/messages", (c) => sendMessage(c, deps));
@@ -169,12 +169,12 @@ describe("API send-message with clone_and_send", () => {
         },
       };
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
       deps.opencode.client = mockClient as never;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(
+        const app = await withWorkspaceContext(
           () => {
             const hono = new Hono();
             hono.post("/:id/messages", (c) => sendMessage(c, deps));
@@ -283,13 +283,13 @@ describe("API send-message with clone_and_send", () => {
         },
       };
 
-      const deps = createTestDeps({ listSkills: async () => visibleSkills });
+      const deps = await createTestDeps({ listSkills: async () => visibleSkills });
       deps.agentsDB = agentsDB;
       deps.opencode.client = mockClient as never;
       deps.dataDb.setSkillTriggerPhrases("find-docs", ["docs please"]);
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(
+        const app = await withWorkspaceContext(
           () => {
             const hono = new Hono();
             hono.post("/:id/messages", (c) => sendMessage(c, deps));
@@ -360,14 +360,14 @@ describe("API send-message with clone_and_send", () => {
         },
       };
 
-      const deps = createTestDeps({ forkSession: mockForkSession });
+      const deps = await createTestDeps({ forkSession: mockForkSession });
       deps.agentsDB = agentsDB;
       deps.opencode.client = mockClient as never;
 
       await withDeps(deps, async () => {
         const { events, cleanup } = await captureStreamEvents();
 
-        const app = withWorkspaceContext(
+        const app = await withWorkspaceContext(
           () => {
             const hono = new Hono();
             hono.post("/:id/messages", (c) => sendMessage(c, deps));
@@ -487,12 +487,12 @@ describe("API send-message with clone_and_send", () => {
         },
       };
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
       deps.opencode.client = mockClient as never;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(
+        const app = await withWorkspaceContext(
           () => {
             const hono = new Hono();
             hono.post("/:id/messages", (c) => sendMessage(c, deps));

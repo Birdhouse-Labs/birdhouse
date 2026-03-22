@@ -26,7 +26,10 @@ export function createAgentsMigrator(dbPath: string): { migrator: Migrator; db: 
  * Create a Kysely Migrator from an already-open Database instance.
  * Used when the caller already holds the connection (e.g. in-memory databases).
  */
-export function createAgentsMigratorFromDb(database: Database): { migrator: Migrator; db: Kysely<Record<string, never>> } {
+export function createAgentsMigratorFromDb(database: Database): {
+  migrator: Migrator;
+  db: Kysely<Record<string, never>>;
+} {
   const db = new Kysely<Record<string, never>>({
     dialect: new BunSqliteDialect({ database }),
   });

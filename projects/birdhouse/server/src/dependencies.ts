@@ -3,20 +3,19 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { EventEmitter } from "node:events";
-import { type AgentsDB, createAgentsDB, getDefaultDatabasePath } from "./lib/agents-db";
-import { type DataDB, getDataDB } from "./lib/data-db";
+import { type AgentsDB, getDefaultDatabasePath, initAgentsDB } from "./lib/agents-db";
+import type { DataDB } from "./lib/data-db";
 import { type CapturedLog, createLiveLogger, createTestLogger, type LoggerDeps } from "./lib/logger";
 import {
-  createLiveOpenCodeClient,
   createTestOpenCodeClient,
   type Message,
   type OpenCodeClient,
   type ProvidersResponse,
   type Session,
 } from "./lib/opencode-client";
-import { getOpenCodeStream, OpenCodeStream } from "./lib/opencode-stream";
+import { getOpenCodeStream, type OpenCodeStream } from "./lib/opencode-stream";
 import { createLivePosthogProxy, createTestPosthogProxy, type PosthogProxy } from "./lib/posthog-proxy";
-import { createLiveTelemetryClient, createTestTelemetryClient, type TelemetryClient } from "./lib/telemetry";
+import { createTestTelemetryClient, type TelemetryClient } from "./lib/telemetry";
 import { TestDataDB } from "./test-utils/data-db-test";
 
 // ============================================================================
@@ -75,11 +74,9 @@ export function useDeps(): Deps {
 
 /**
  * Run function with dependencies context
- * Auto-uses test/live deps if none provided
  */
-export function withDeps<T>(deps: Deps | undefined, fn: () => T): T {
-  const finalDeps = deps || createDeps();
-  return depsContext.run(finalDeps, fn);
+export function withDeps<T>(deps: Deps, fn: () => T): T {
+  return depsContext.run(deps, fn);
 }
 
 // ============================================================================
@@ -136,33 +133,11 @@ export function setTimeoutWithDeps<Args extends unknown[]>(
 // ============================================================================
 
 // Get OpenCode base URL (required)
-function getOpenCodeBase(): string {
+function _getOpenCodeBase(): string {
   if (!process.env.BIRDHOUSE_OPENCODE_BASE) {
     throw new Error("BIRDHOUSE_OPENCODE_BASE environment variable is required");
   }
   return process.env.BIRDHOUSE_OPENCODE_BASE;
-}
-
-// Lazy initialization of liveDeps (only created when first accessed in production)
-// Note: This is only used by non-workspace routes (like health check).
-// Workspace routes use getDepsFromContext() to get workspace-specific deps.
-let liveDeps: Deps | undefined;
-function getLiveDeps(): Deps {
-  if (!liveDeps) {
-    liveDeps = {
-      opencode: createLiveOpenCodeClient(getOpenCodeBase(), process.env.BIRDHOUSE_WORKSPACE_ROOT || process.cwd()),
-      log: createLiveLogger(),
-      agentsDB: createAgentsDB(getDefaultDatabasePath(undefined)),
-      dataDb: getDataDB(),
-      posthog: createLivePosthogProxy(),
-      telemetry: createLiveTelemetryClient(getDataDB()),
-      getStream: (opencodeBase: string, workspaceDirectory: string) => {
-        // Production: Create new stream per request for workspace isolation
-        return new OpenCodeStream(opencodeBase, workspaceDirectory);
-      },
-    };
-  }
-  return liveDeps;
 }
 
 // ============================================================================
@@ -171,19 +146,6 @@ function getLiveDeps(): Deps {
 
 // Test logger singleton (so captured logs persist across test runs)
 const testLoggerInstance = createTestLogger();
-
-const testDeps: Deps = {
-  opencode: createTestOpenCodeClient(),
-  log: testLoggerInstance.log,
-  agentsDB: createAgentsDB(":memory:"), // Use in-memory DB for tests
-  dataDb: new TestDataDB(),
-  posthog: createTestPosthogProxy(),
-  telemetry: createTestTelemetryClient(),
-  getStream: (_opencodeBase: string, _workspaceDirectory: string) => {
-    // Tests: Return singleton so test events flow through to route
-    return getOpenCodeStream();
-  },
-};
 
 /**
  * Get captured logs from test logger
@@ -204,14 +166,14 @@ export function clearCapturedLogs(): void {
  * Create test deps with optional opencode overrides
  * Includes test logger and in-memory database automatically
  */
-export function createTestDeps(opencode?: Partial<Deps["opencode"]>): Deps {
+export async function createTestDeps(opencode?: Partial<Deps["opencode"]>): Promise<Deps> {
   return {
     opencode: {
       ...createTestOpenCodeClient(),
       ...opencode,
     },
     log: testLoggerInstance.log,
-    agentsDB: createAgentsDB(":memory:"),
+    agentsDB: await initAgentsDB(":memory:"),
     dataDb: new TestDataDB(),
     posthog: createTestPosthogProxy(),
     telemetry: createTestTelemetryClient(),
@@ -222,27 +184,14 @@ export function createTestDeps(opencode?: Partial<Deps["opencode"]>): Deps {
   };
 }
 
-export function createPosthogDeps(): Deps {
+export async function createPosthogDeps(): Promise<Deps> {
   return {
     opencode: createTestOpenCodeClient(),
     log: createLiveLogger(),
-    agentsDB: createAgentsDB(getDefaultDatabasePath(undefined)),
+    agentsDB: await initAgentsDB(getDefaultDatabasePath(undefined)),
     dataDb: new TestDataDB(),
     posthog: createLivePosthogProxy(),
     telemetry: createTestTelemetryClient(),
     getStream: (_opencodeBase: string, _workspaceDirectory: string) => getOpenCodeStream(),
   };
-}
-
-// ============================================================================
-// Auto Environment Detection
-// ============================================================================
-
-/**
- * Create dependencies based on environment
- * Auto-detects test vs production
- */
-function createDeps(): Deps {
-  const isTest = process.env.NODE_ENV === "test" || (typeof Bun !== "undefined" && Bun?.main?.includes(".test."));
-  return isTest ? testDeps : getLiveDeps();
 }

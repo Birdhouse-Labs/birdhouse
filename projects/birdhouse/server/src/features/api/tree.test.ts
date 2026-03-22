@@ -12,9 +12,9 @@ describe("GET /api/agents/:id/tree", () => {
   let app: Hono;
   let agentsDB: AgentsDB;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     clearCapturedLogs();
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     agentsDB = deps.agentsDB;
 
     app = new Hono();

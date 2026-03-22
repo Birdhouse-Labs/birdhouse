@@ -3,16 +3,16 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
-import { createAgentsDB } from "../lib/agents-db";
+import { type AgentsDB, initAgentsDB } from "../lib/agents-db";
 import type { Session } from "../lib/opencode-client";
 import { createRootAgent, createTestApp } from "../test-utils";
 import { createAgentRoutes } from "./agents";
 
 describe("GET /api/agents/:id with revert state", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
 
-  beforeEach(() => {
-    agentsDB = createAgentsDB(":memory:");
+  beforeEach(async () => {
+    agentsDB = await initAgentsDB(":memory:");
   });
 
   test("includes revert state when session is reverted", async () => {
@@ -38,12 +38,12 @@ describe("GET /api/agents/:id with revert state", () => {
       },
     };
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.getSession = async () => mockSession;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       const routes = createAgentRoutes();
       app.route("/", routes);
 
@@ -76,12 +76,12 @@ describe("GET /api/agents/:id with revert state", () => {
       },
     };
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
     deps.opencode.getSession = async () => mockSession;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       const routes = createAgentRoutes();
       app.route("/", routes);
 
@@ -95,11 +95,11 @@ describe("GET /api/agents/:id with revert state", () => {
   });
 
   test("returns 404 for non-existent agent", async () => {
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       const routes = createAgentRoutes();
       app.route("/", routes);
 

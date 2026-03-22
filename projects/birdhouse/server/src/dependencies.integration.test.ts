@@ -6,7 +6,7 @@ import { EventEmitter } from "node:events";
 import { createTestDeps, onWithDeps, setTimeoutWithDeps, useDeps, withDeps } from "./dependencies";
 
 // Helper
-function createMockDeps() {
+async function createMockDeps() {
   return createTestDeps();
 }
 
@@ -15,7 +15,7 @@ describe("Helpers Integration", () => {
     const emitter = new EventEmitter();
     const processedEvents: string[] = [];
 
-    const deps = createMockDeps();
+    const deps = await createMockDeps();
 
     await withDeps(deps, async () => {
       // Subscribe to stream with deps preserved
@@ -47,7 +47,7 @@ describe("Helpers Integration", () => {
   test("Background job scenario: setTimeout accesses deps", async () => {
     const completedJobs: string[] = [];
 
-    const deps = createMockDeps();
+    const deps = await createMockDeps();
 
     await withDeps(deps, async () => {
       // Schedule background job with deps preserved
@@ -74,7 +74,7 @@ describe("Helpers Integration", () => {
       handler2: [] as string[],
     };
 
-    const deps = createMockDeps();
+    const deps = await createMockDeps();
 
     await withDeps(deps, async () => {
       const cleanup1 = onWithDeps<string>(emitter, "event", async (data) => {

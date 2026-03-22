@@ -2,14 +2,14 @@
 // ABOUTME: Verifies schema, indexes, CRUD operations, and foreign key constraints
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { type AgentsDB, createAgentsDB, generateAgentId, insertTestData } from "./agents-db";
+import { type AgentsDB, generateAgentId, initAgentsDB, insertTestData } from "./agents-db";
 
 describe("AgentsDB", () => {
   let db: AgentsDB;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Use in-memory database for tests
-    db = createAgentsDB(":memory:");
+    db = await initAgentsDB(":memory:");
   });
 
   afterEach(() => {

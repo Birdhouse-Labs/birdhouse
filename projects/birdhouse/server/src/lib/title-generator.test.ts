@@ -18,7 +18,7 @@ describe("title-generator", () => {
         }
       | undefined;
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       generate: async (options) => {
         capturedOptions = options;
         return "Array sorting function";
@@ -50,7 +50,7 @@ describe("title-generator", () => {
         }
       | undefined;
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       generate: async (options) => {
         capturedOptions = options;
         return "Clone title";

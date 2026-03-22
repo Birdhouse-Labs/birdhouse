@@ -70,7 +70,7 @@ describe("agent-messaging token recording", () => {
         },
       ];
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         listSkills: async () => visibleSkills,
         sendMessage: async (_sessionId, text) => {
           capturedPrompt = text;
@@ -113,7 +113,7 @@ describe("agent-messaging token recording", () => {
         },
       ];
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         listSkills: async () => visibleSkills,
         sendMessage: async (_sessionId, text) => {
           capturedPrompt = text;
@@ -149,7 +149,7 @@ describe("agent-messaging token recording", () => {
         cache: { read: 27_000, write: 500 },
       });
 
-      const deps = createTestDeps({ sendMessage: async () => message });
+      const deps = await createTestDeps({ sendMessage: async () => message });
       deps.telemetry = mockTelemetry;
 
       await withDeps(deps, () =>
@@ -168,7 +168,7 @@ describe("agent-messaging token recording", () => {
 
     it("does not call recordMessageTokens for user-role messages", async () => {
       const userMessage = makeUserMessage();
-      const deps = createTestDeps({ sendMessage: async () => userMessage });
+      const deps = await createTestDeps({ sendMessage: async () => userMessage });
       deps.telemetry = mockTelemetry;
 
       await withDeps(deps, () =>
@@ -200,7 +200,7 @@ describe("agent-messaging token recording", () => {
       });
       mockTelemetry.recordMessageTokens = recordMessageTokensSpy;
 
-      const deps = createTestDeps({ sendMessage: async () => message });
+      const deps = await createTestDeps({ sendMessage: async () => message });
       deps.telemetry = mockTelemetry;
 
       await expect(
@@ -226,7 +226,7 @@ describe("agent-messaging token recording", () => {
         cache: { read: 15_000, write: 300 },
       });
 
-      const deps = createTestDeps({ sendMessage: async () => message });
+      const deps = await createTestDeps({ sendMessage: async () => message });
       deps.telemetry = mockTelemetry;
 
       await withDeps(deps, () =>

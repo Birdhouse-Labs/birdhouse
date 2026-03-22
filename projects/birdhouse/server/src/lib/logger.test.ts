@@ -151,7 +151,7 @@ describe("Logger", () => {
     });
 
     test("captures logs from test logger", async () => {
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
 
       await withDeps(deps, () => {
         const { log } = useDeps();
@@ -169,7 +169,7 @@ describe("Logger", () => {
     });
 
     test("captures multiple logs across subsystems", async () => {
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
 
       await withDeps(deps, () => {
         const { log } = useDeps();
@@ -203,7 +203,7 @@ describe("Logger", () => {
     });
 
     test("clearCapturedLogs resets the log buffer", async () => {
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
 
       await withDeps(deps, () => {
         const { log } = useDeps();
@@ -226,7 +226,7 @@ describe("Logger", () => {
     });
 
     test("can filter captured logs by level", async () => {
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
 
       await withDeps(deps, () => {
         const { log } = useDeps();
@@ -248,7 +248,7 @@ describe("Logger", () => {
     });
 
     test("can filter captured logs by subsystem", async () => {
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
 
       await withDeps(deps, () => {
         const { log } = useDeps();
@@ -266,7 +266,7 @@ describe("Logger", () => {
     });
 
     test("can assert on log data properties", async () => {
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
 
       await withDeps(deps, () => {
         const { log } = useDeps();

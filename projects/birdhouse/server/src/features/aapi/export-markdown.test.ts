@@ -7,18 +7,18 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Hono } from "hono";
 import { createTestDeps, withDeps } from "../../dependencies";
-import { createAgentsDB } from "../../lib/agents-db";
+import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
 import type { Message } from "../../lib/opencode-client";
 import { createRootAgent } from "../../test-utils/agent-factories";
 import { exportMarkdown } from "./export-markdown";
 
 describe("AAPI export-markdown", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
   let tmpDir: string;
   let originalWorkspaceRoot: string | undefined;
 
   beforeEach(async () => {
-    agentsDB = createAgentsDB(":memory:");
+    agentsDB = await initAgentsDB(":memory:");
 
     // Create temporary directory for test files
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "birdhouse-test-"));
@@ -53,7 +53,7 @@ describe("AAPI export-markdown", () => {
         id: "agent_test",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -111,7 +111,7 @@ describe("AAPI export-markdown", () => {
         ],
       };
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
       deps.opencode.getMessages = async () => [userMessage];
 
@@ -151,7 +151,7 @@ describe("AAPI export-markdown", () => {
         id: "agent_test",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -193,7 +193,7 @@ describe("AAPI export-markdown", () => {
         id: "agent_test",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -223,7 +223,7 @@ describe("AAPI export-markdown", () => {
         id: "agent_test",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -254,7 +254,7 @@ describe("AAPI export-markdown", () => {
         id: "agent_test",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -301,7 +301,7 @@ describe("AAPI export-markdown", () => {
         title: "Fix: API/HTTP Errors!",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -327,7 +327,7 @@ describe("AAPI export-markdown", () => {
 
   describe("POST /aapi/agents/:id/export - Error scenarios", () => {
     test("returns 404 when agent not found", async () => {
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -352,7 +352,7 @@ describe("AAPI export-markdown", () => {
         id: "agent_test",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -377,7 +377,7 @@ describe("AAPI export-markdown", () => {
         id: "agent_test",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -426,7 +426,7 @@ describe("AAPI export-markdown", () => {
         ],
       };
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
       deps.opencode.getMessages = async () => [userMessage];
 
@@ -464,7 +464,7 @@ describe("AAPI export-markdown", () => {
         id: "agent_test",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -515,7 +515,7 @@ describe("AAPI export-markdown", () => {
         ],
       };
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
       deps.opencode.getMessages = async () => [userMessage];
 

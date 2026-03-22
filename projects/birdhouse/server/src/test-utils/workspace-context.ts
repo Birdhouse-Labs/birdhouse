@@ -3,7 +3,7 @@
 
 import { Hono } from "hono";
 import type { AgentsDB } from "../lib/agents-db";
-import { createAgentsDB } from "../lib/agents-db";
+import { initAgentsDB } from "../lib/agents-db";
 import type { Workspace } from "../lib/data-db";
 
 /**
@@ -23,7 +23,7 @@ export interface MockWorkspaceContext {
  * @param routeFactory - Function that creates the route handler (e.g., createAgentRoutes)
  * @param context - Optional context overrides (if agentsDb not provided, creates new in-memory DB)
  */
-export function withWorkspaceContext(routeFactory: () => Hono, context?: MockWorkspaceContext): Hono {
+export async function withWorkspaceContext(routeFactory: () => Hono, context?: MockWorkspaceContext): Promise<Hono> {
   const defaultWorkspace: Workspace = {
     workspace_id: "test-workspace",
     directory: "/test/workspace",
@@ -35,7 +35,7 @@ export function withWorkspaceContext(routeFactory: () => Hono, context?: MockWor
 
   // Use provided agentsDb or create a new one
   // If caller provides agentsDb in deps, it should also pass it here
-  const agentsDb = context?.agentsDb || createAgentsDB(":memory:");
+  const agentsDb = context?.agentsDb || (await initAgentsDB(":memory:"));
 
   const fullContext: Required<MockWorkspaceContext> = {
     workspace: context?.workspace || defaultWorkspace,
@@ -89,22 +89,22 @@ export function createMockWorkspace(overrides?: Partial<Workspace>): Workspace {
  *
  * @example
  * ```typescript
- * const app = createTestApp();
+ * const app = await createTestApp();
  * app.patch("/:id/archive", (c) => archive(c, deps));
  * const res = await app.request("/agent_123/archive", { method: "PATCH" });
  * ```
  *
  * @example With overrides
  * ```typescript
- * const agentsDB = createAgentsDB(":memory:");
- * const app = createTestApp({ agentsDb: agentsDB });
+ * const agentsDB = await initAgentsDB(":memory:");
+ * const app = await createTestApp({ agentsDb: agentsDB });
  * ```
  */
-export function createTestApp(overrides?: MockWorkspaceContext): Hono {
+export async function createTestApp(overrides?: MockWorkspaceContext): Promise<Hono> {
   const defaultWorkspace: Workspace = createMockWorkspace();
 
   // Use provided agentsDb or create a new one
-  const agentsDb = overrides?.agentsDb || createAgentsDB(":memory:");
+  const agentsDb = overrides?.agentsDb || (await initAgentsDB(":memory:"));
 
   const fullContext: Required<MockWorkspaceContext> = {
     workspace: overrides?.workspace || defaultWorkspace,

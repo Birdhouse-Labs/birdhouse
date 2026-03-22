@@ -58,7 +58,7 @@ describe("GET /api/models", () => {
       return new Response("Not found", { status: 404 });
     }) as typeof global.fetch;
 
-    const app = withWorkspaceContext(createModelRoutes);
+    const app = await withWorkspaceContext(createModelRoutes);
     const req = new Request("http://localhost/");
     const res = await app.fetch(req);
 
@@ -116,7 +116,7 @@ describe("GET /api/models", () => {
       return new Response("Not found", { status: 404 });
     }) as typeof global.fetch;
 
-    const app = withWorkspaceContext(createModelRoutes);
+    const app = await withWorkspaceContext(createModelRoutes);
     const req = new Request("http://localhost/");
     const res = await app.fetch(req);
 
@@ -178,7 +178,7 @@ describe("GET /api/models", () => {
       return new Response("Not found", { status: 404 });
     }) as typeof global.fetch;
 
-    const app = withWorkspaceContext(createModelRoutes);
+    const app = await withWorkspaceContext(createModelRoutes);
     const req = new Request("http://localhost/");
     const res = await app.fetch(req);
 
@@ -204,7 +204,7 @@ describe("GET /api/models", () => {
       return new Response("Internal Server Error", { status: 500 });
     }) as typeof global.fetch;
 
-    const app = withWorkspaceContext(createModelRoutes);
+    const app = await withWorkspaceContext(createModelRoutes);
     const req = new Request("http://localhost/");
     const res = await app.fetch(req);
 

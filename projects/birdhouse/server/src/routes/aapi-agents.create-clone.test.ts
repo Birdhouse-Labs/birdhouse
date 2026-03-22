@@ -3,20 +3,20 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, type Session, withDeps } from "../dependencies";
-import { type AgentRow, createAgentsDB } from "../lib/agents-db";
+import { type AgentRow, type AgentsDB, initAgentsDB } from "../lib/agents-db";
 import type { Message } from "../lib/opencode-client";
 import { captureStreamEvents, withWorkspaceContext } from "../test-utils";
 import { createRootAgent } from "../test-utils/agent-factories";
 import { createAAPIAgentRoutes } from "./aapi-agents";
 
 describe("AAPI Agent Create with Cloning", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
   let mockForkSession: (sessionId: string, messageId?: string) => Promise<Session>;
   let mockGetMessages: (sessionId: string) => Promise<Message[]>;
   let mockSendMessage: (sessionId: string, text: string, options?: unknown) => Promise<Message>;
 
-  beforeEach(() => {
-    agentsDB = createAgentsDB(":memory:");
+  beforeEach(async () => {
+    agentsDB = await initAgentsDB(":memory:");
 
     mockForkSession = async (_sessionId: string, _messageId?: string) => ({
       id: `ses_forked_${Date.now()}`,
@@ -61,7 +61,7 @@ describe("AAPI Agent Create with Cloning", () => {
         id: "agent_current",
       });
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         getSession: async (sessionId: string) => ({
           id: sessionId,
           title: "Session",
@@ -83,7 +83,7 @@ describe("AAPI Agent Create with Cloning", () => {
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         // Simulate request from current agent's session
         const _response = await app.request("/by-session/ses_current", {
@@ -101,11 +101,11 @@ describe("AAPI Agent Create with Cloning", () => {
     });
 
     test("requires title parameter", async () => {
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -133,14 +133,14 @@ describe("AAPI Agent Create with Cloning", () => {
         id: "agent_source",
       });
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         forkSession: mockForkSession,
         sendMessage: mockSendMessage,
       });
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -218,7 +218,7 @@ describe("AAPI Agent Create with Cloning", () => {
         };
       };
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         forkSession: mockForkSession,
         getMessages: mockGetMessages,
         sendMessage: mockSendMessage,
@@ -226,7 +226,7 @@ describe("AAPI Agent Create with Cloning", () => {
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -252,14 +252,14 @@ describe("AAPI Agent Create with Cloning", () => {
         id: "agent_source3",
       });
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         forkSession: mockForkSession,
         sendMessage: mockSendMessage,
       });
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -287,7 +287,7 @@ describe("AAPI Agent Create with Cloning", () => {
         id: "agent_event_clone",
       });
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         forkSession: mockForkSession,
         sendMessage: mockSendMessage,
       });
@@ -296,7 +296,7 @@ describe("AAPI Agent Create with Cloning", () => {
       await withDeps(deps, async () => {
         const { events, cleanup } = await captureStreamEvents();
 
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -328,13 +328,13 @@ describe("AAPI Agent Create with Cloning", () => {
     });
 
     test("returns 404 when source agent does not exist", async () => {
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         forkSession: mockForkSession,
       });
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -372,13 +372,13 @@ describe("AAPI Agent Create with Cloning", () => {
           },
         ] as Message[];
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         getMessages: mockGetMessages,
       });
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -471,7 +471,7 @@ describe("AAPI Agent Create with Cloning", () => {
         };
       };
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         getMessages: mockGetMessages,
         forkSession: mockForkSession,
         sendMessage: mockSendMessage,
@@ -479,7 +479,7 @@ describe("AAPI Agent Create with Cloning", () => {
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         // Simulate request from current agent's session
         const response = await app.request("/", {
@@ -548,7 +548,7 @@ describe("AAPI Agent Create with Cloning", () => {
         };
       };
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         getMessages: mockGetMessages,
         forkSession: mockForkSession,
         sendMessage: mockSendMessage,
@@ -556,7 +556,7 @@ describe("AAPI Agent Create with Cloning", () => {
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -586,13 +586,13 @@ describe("AAPI Agent Create with Cloning", () => {
 
       mockGetMessages = async () => [];
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         getMessages: mockGetMessages,
       });
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -633,13 +633,13 @@ describe("AAPI Agent Create with Cloning", () => {
           },
         ] as Message[];
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         getMessages: mockGetMessages,
       });
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -670,7 +670,7 @@ describe("AAPI Agent Create with Cloning", () => {
         id: "agent_current_model",
       });
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         createSession: async () => ({
           id: "ses_new",
           title: "New",
@@ -701,7 +701,7 @@ describe("AAPI Agent Create with Cloning", () => {
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -731,7 +731,7 @@ describe("AAPI Agent Create with Cloning", () => {
         id: "agent_source_model",
       });
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         forkSession: mockForkSession,
         getProviders: async () => ({
           providers: [
@@ -751,7 +751,7 @@ describe("AAPI Agent Create with Cloning", () => {
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -772,11 +772,11 @@ describe("AAPI Agent Create with Cloning", () => {
     });
 
     test("returns 400 when both from_self and from_agent_id specified", async () => {
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -796,11 +796,11 @@ describe("AAPI Agent Create with Cloning", () => {
     });
 
     test("returns 400 when from_message_id without clone source", async () => {
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -834,7 +834,7 @@ describe("AAPI Agent Create with Cloning", () => {
         return mockSendMessage(sessionId, text, options);
       };
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         createSession: async () => ({
           id: "ses_new_model",
           title: "New",
@@ -848,7 +848,7 @@ describe("AAPI Agent Create with Cloning", () => {
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -887,14 +887,14 @@ describe("AAPI Agent Create with Cloning", () => {
         return mockSendMessage(sessionId, text, options);
       };
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         forkSession: mockForkSession,
         sendMessage: mockSendWithModelCapture,
       });
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -924,14 +924,14 @@ describe("AAPI Agent Create with Cloning", () => {
         id: "agent_wait",
       });
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         forkSession: mockForkSession,
         sendMessage: mockSendMessage,
       });
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",
@@ -959,14 +959,14 @@ describe("AAPI Agent Create with Cloning", () => {
         id: "agent_async",
       });
 
-      const deps = createTestDeps({
+      const deps = await createTestDeps({
         forkSession: mockForkSession,
         sendMessage: async () => ({}) as Message, // No response needed for async
       });
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
-        const app = withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
+        const app = await withWorkspaceContext(createAAPIAgentRoutes, { agentsDb: agentsDB });
 
         const response = await app.request("/", {
           method: "POST",

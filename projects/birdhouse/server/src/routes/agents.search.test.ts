@@ -4,7 +4,7 @@
 import { describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
 import type { AgentNode, AgentTree } from "../lib/agents-db";
-import { createAgentsDB } from "../lib/agents-db";
+import { initAgentsDB } from "../lib/agents-db";
 import { withWorkspaceContext } from "../test-utils";
 import { createChildAgent, createRootAgent } from "../test-utils/agent-factories";
 import { createAgentRoutes } from "./agents";
@@ -30,12 +30,12 @@ interface TreeSearchResponse {
 
 describe("GET /api/agents/search - Basic behavior", () => {
   test("returns empty flat results for non-matching query", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=nonexistent");
 
       expect(res.status).toBe(200);
@@ -48,7 +48,7 @@ describe("GET /api/agents/search - Basic behavior", () => {
   });
 
   test("returns all agents when query is empty", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     // Create test agents
@@ -68,11 +68,11 @@ describe("GET /api/agents/search - Basic behavior", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search");
 
       expect(res.status).toBe(200);
@@ -84,12 +84,12 @@ describe("GET /api/agents/search - Basic behavior", () => {
   });
 
   test("returns empty tree results for non-matching query", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=nonexistent&includeTrees=true");
 
       expect(res.status).toBe(200);
@@ -103,12 +103,12 @@ describe("GET /api/agents/search - Basic behavior", () => {
   });
 
   test("returns 400 for invalid includeTrees parameter", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?includeTrees=invalid");
 
       expect(res.status).toBe(400);
@@ -118,12 +118,12 @@ describe("GET /api/agents/search - Basic behavior", () => {
   });
 
   test("handles empty query parameter", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=");
 
       expect(res.status).toBe(200);
@@ -136,7 +136,7 @@ describe("GET /api/agents/search - Basic behavior", () => {
   });
 
   test("treats empty query parameter as match-all when agents exist", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const older = createRootAgent(agentsDB, {
@@ -155,11 +155,11 @@ describe("GET /api/agents/search - Basic behavior", () => {
       updated_at: now - 1000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=");
 
       expect(res.status).toBe(200);
@@ -170,7 +170,7 @@ describe("GET /api/agents/search - Basic behavior", () => {
   });
 
   test("treats whitespace-only query as empty for default sorting and match-all", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const older = createRootAgent(agentsDB, {
@@ -189,11 +189,11 @@ describe("GET /api/agents/search - Basic behavior", () => {
       updated_at: now - 1000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=%20%20");
 
       expect(res.status).toBe(200);
@@ -204,12 +204,12 @@ describe("GET /api/agents/search - Basic behavior", () => {
   });
 
   test("handles includeTrees=false explicitly", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=test&includeTrees=false");
 
       expect(res.status).toBe(200);
@@ -222,12 +222,12 @@ describe("GET /api/agents/search - Basic behavior", () => {
   });
 
   test("combines multiple query parameters correctly", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=database%20optimization&includeTrees=true");
 
       expect(res.status).toBe(200);
@@ -241,7 +241,7 @@ describe("GET /api/agents/search - Basic behavior", () => {
 
 describe("GET /api/agents/search - Flat mode with real data", () => {
   test("returns matching agents in flat format", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     // Create test agents
@@ -268,11 +268,11 @@ describe("GET /api/agents/search - Flat mode with real data", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=database");
 
       expect(res.status).toBe(200);
@@ -288,7 +288,7 @@ describe("GET /api/agents/search - Flat mode with real data", () => {
   });
 
   test("searches case-insensitively", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     createRootAgent(agentsDB, {
@@ -299,11 +299,11 @@ describe("GET /api/agents/search - Flat mode with real data", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=api");
 
       expect(res.status).toBe(200);
@@ -314,7 +314,7 @@ describe("GET /api/agents/search - Flat mode with real data", () => {
   });
 
   test("includes status from OpenCode", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     createRootAgent(agentsDB, {
@@ -325,11 +325,11 @@ describe("GET /api/agents/search - Flat mode with real data", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=test");
 
       expect(res.status).toBe(200);
@@ -340,7 +340,7 @@ describe("GET /api/agents/search - Flat mode with real data", () => {
   });
 
   test("injects explicit status and falls back to idle in flat mode", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const busyAgent = createRootAgent(agentsDB, {
@@ -359,7 +359,7 @@ describe("GET /api/agents/search - Flat mode with real data", () => {
       updated_at: now - 1000,
     });
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       getSessionStatus: async () => ({
         [busyAgent.session_id]: { type: "busy" },
       }),
@@ -367,7 +367,7 @@ describe("GET /api/agents/search - Flat mode with real data", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=api");
 
       expect(res.status).toBe(200);
@@ -380,7 +380,7 @@ describe("GET /api/agents/search - Flat mode with real data", () => {
   });
 
   test("keeps relevance order in flat mode even when order=asc is requested", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const exact = createRootAgent(agentsDB, {
@@ -399,11 +399,11 @@ describe("GET /api/agents/search - Flat mode with real data", () => {
       updated_at: now - 1000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=api&sortBy=relevance&order=asc");
 
       expect(res.status).toBe(200);
@@ -415,7 +415,7 @@ describe("GET /api/agents/search - Flat mode with real data", () => {
 
 describe("GET /api/agents/search - Tree mode with real data", () => {
   test("returns complete tree when root matches", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     // Create tree with matching root
@@ -441,11 +441,11 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=bug&includeTrees=true");
 
       expect(res.status).toBe(200);
@@ -465,7 +465,7 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
   });
 
   test("returns complete tree when child matches", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const root = createRootAgent(agentsDB, {
@@ -484,11 +484,11 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=database&includeTrees=true");
 
       expect(res.status).toBe(200);
@@ -508,7 +508,7 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
   });
 
   test("deduplicates when multiple agents in same tree match", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const root = createRootAgent(agentsDB, {
@@ -535,11 +535,11 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=api&includeTrees=true");
 
       expect(res.status).toBe(200);
@@ -559,7 +559,7 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
   });
 
   test("includes status in all tree nodes", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const root = createRootAgent(agentsDB, {
@@ -577,11 +577,11 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=status&includeTrees=true");
 
       expect(res.status).toBe(200);
@@ -596,7 +596,7 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
   });
 
   test("injects explicit status and falls back to idle in tree mode", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const root = createRootAgent(agentsDB, {
@@ -615,7 +615,7 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       getSessionStatus: async () => ({
         [root.session_id]: { type: "retry" },
       }),
@@ -623,7 +623,7 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=status&includeTrees=true");
 
       expect(res.status).toBe(200);
@@ -637,7 +637,7 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
   });
 
   test("tree mode keeps matched ids by relevance but orders trees by updated_at for sortBy=relevance", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const exactTree = createRootAgent(agentsDB, {
@@ -656,11 +656,11 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
       updated_at: now - 1000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=api&includeTrees=true&sortBy=relevance&order=desc");
 
       expect(res.status).toBe(200);
@@ -675,7 +675,7 @@ describe("GET /api/agents/search - Tree mode with real data", () => {
 
 describe("GET /api/agents/search - Sort functionality", () => {
   test("defaults to relevance sorting when query is provided", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     // Create agents with different match qualities
@@ -695,11 +695,11 @@ describe("GET /api/agents/search - Sort functionality", () => {
       updated_at: now,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=database");
 
       expect(res.status).toBe(200);
@@ -712,7 +712,7 @@ describe("GET /api/agents/search - Sort functionality", () => {
   });
 
   test("sorts by updated_at DESC when specified", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const older = createRootAgent(agentsDB, {
@@ -731,11 +731,11 @@ describe("GET /api/agents/search - Sort functionality", () => {
       updated_at: now - 1000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=API&sortBy=updated_at&order=desc");
 
       expect(res.status).toBe(200);
@@ -748,7 +748,7 @@ describe("GET /api/agents/search - Sort functionality", () => {
   });
 
   test("sorts by updated_at ASC when specified", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const older = createRootAgent(agentsDB, {
@@ -767,11 +767,11 @@ describe("GET /api/agents/search - Sort functionality", () => {
       updated_at: now - 1000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=Feature&sortBy=updated_at&order=asc");
 
       expect(res.status).toBe(200);
@@ -784,7 +784,7 @@ describe("GET /api/agents/search - Sort functionality", () => {
   });
 
   test("sorts by created_at DESC when specified", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const oldCreated = createRootAgent(agentsDB, {
@@ -803,11 +803,11 @@ describe("GET /api/agents/search - Sort functionality", () => {
       updated_at: now - 2000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=Bug&sortBy=created_at&order=desc");
 
       expect(res.status).toBe(200);
@@ -820,7 +820,7 @@ describe("GET /api/agents/search - Sort functionality", () => {
   });
 
   test("sorts by created_at ASC when specified", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const oldCreated = createRootAgent(agentsDB, {
@@ -839,11 +839,11 @@ describe("GET /api/agents/search - Sort functionality", () => {
       updated_at: now - 2000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=Task&sortBy=created_at&order=asc");
 
       expect(res.status).toBe(200);
@@ -856,7 +856,7 @@ describe("GET /api/agents/search - Sort functionality", () => {
   });
 
   test("defaults to updated_at DESC when query is empty", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     const older = createRootAgent(agentsDB, {
@@ -875,11 +875,11 @@ describe("GET /api/agents/search - Sort functionality", () => {
       updated_at: now - 1000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search");
 
       expect(res.status).toBe(200);
@@ -892,7 +892,7 @@ describe("GET /api/agents/search - Sort functionality", () => {
   });
 
   test("tree mode respects sort parameters", async () => {
-    const agentsDB = createAgentsDB(":memory:");
+    const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
     // Older tree
@@ -913,11 +913,11 @@ describe("GET /api/agents/search - Sort functionality", () => {
       updated_at: now - 1000,
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
 
       // Test DESC (newer first)
       const resDesc = await app.request("/search?q=API&includeTrees=true&sortBy=updated_at&order=desc");
@@ -938,12 +938,12 @@ describe("GET /api/agents/search - Sort functionality", () => {
 
 describe("GET /api/agents/search - Sort validation", () => {
   test("returns 400 for invalid sortBy parameter", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?sortBy=invalid");
 
       expect(res.status).toBe(400);
@@ -953,12 +953,12 @@ describe("GET /api/agents/search - Sort validation", () => {
   });
 
   test("returns 400 for invalid order parameter", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?order=invalid");
 
       expect(res.status).toBe(400);
@@ -968,12 +968,12 @@ describe("GET /api/agents/search - Sort validation", () => {
   });
 
   test("returns 400 for relevance sorting with empty query", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?sortBy=relevance");
 
       expect(res.status).toBe(400);
@@ -983,12 +983,12 @@ describe("GET /api/agents/search - Sort validation", () => {
   });
 
   test("rejects relevance sorting with whitespace-only query", async () => {
-    const agentsDB = createAgentsDB(":memory:");
-    const deps = createTestDeps();
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/search?q=%20%20&sortBy=relevance");
 
       expect(res.status).toBe(400);

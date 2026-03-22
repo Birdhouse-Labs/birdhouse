@@ -3,24 +3,24 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../../dependencies";
-import { createAgentsDB } from "../../lib/agents-db";
+import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
 import type { QuestionRequest } from "../../lib/opencode-client";
 import { createRootAgent, createTestApp } from "../../test-utils";
 import { getAgentQuestions, replyToAgentQuestion } from "./question";
 
 describe("getAgentQuestions", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
 
-  beforeEach(() => {
-    agentsDB = createAgentsDB(":memory:");
+  beforeEach(async () => {
+    agentsDB = await initAgentsDB(":memory:");
   });
 
   test("returns 404 for unknown agent", async () => {
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.get("/:id/questions", (c) => getAgentQuestions(c, deps));
 
       const response = await app.request("/agent_unknown/questions");
@@ -37,14 +37,14 @@ describe("getAgentQuestions", () => {
       title: "Test Agent",
     });
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listPendingQuestions: async () => [],
       getSessionStatus: async () => ({ ses_1: { type: "busy" } }),
     });
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.get("/:id/questions", (c) => getAgentQuestions(c, deps));
 
       const response = await app.request(`/${agent.id}/questions`);
@@ -88,14 +88,14 @@ describe("getAgentQuestions", () => {
       ],
     };
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listPendingQuestions: async () => [matchingQuestion, otherSessionQuestion],
       getSessionStatus: async () => ({ ses_1: { type: "busy" } }),
     });
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.get("/:id/questions", (c) => getAgentQuestions(c, deps));
 
       const response = await app.request(`/${agent.id}/questions`);
@@ -120,7 +120,7 @@ describe("getAgentQuestions", () => {
       questions: [{ question: "Which approach?", header: "Approach", options: [] }],
     };
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listPendingQuestions: async () => [pendingQuestion],
       // Session is idle — question is a leaked promise from an aborted run
       getSessionStatus: async () => ({ ses_1: { type: "idle" } }),
@@ -128,7 +128,7 @@ describe("getAgentQuestions", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.get("/:id/questions", (c) => getAgentQuestions(c, deps));
 
       const response = await app.request(`/${agent.id}/questions`);
@@ -151,7 +151,7 @@ describe("getAgentQuestions", () => {
       questions: [{ question: "Which approach?", header: "Approach", options: [] }],
     };
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listPendingQuestions: async () => [pendingQuestion],
       // Session not in map — treated as idle
       getSessionStatus: async () => ({}),
@@ -159,7 +159,7 @@ describe("getAgentQuestions", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.get("/:id/questions", (c) => getAgentQuestions(c, deps));
 
       const response = await app.request(`/${agent.id}/questions`);
@@ -187,14 +187,14 @@ describe("getAgentQuestions", () => {
       questions: [{ question: "Q2?", header: "Q2", options: [] }],
     };
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       listPendingQuestions: async () => [question1, question2],
       getSessionStatus: async () => ({ ses_1: { type: "busy" } }),
     });
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.get("/:id/questions", (c) => getAgentQuestions(c, deps));
 
       const response = await app.request(`/${agent.id}/questions`);
@@ -206,18 +206,18 @@ describe("getAgentQuestions", () => {
 });
 
 describe("replyToAgentQuestion", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
 
-  beforeEach(() => {
-    agentsDB = createAgentsDB(":memory:");
+  beforeEach(async () => {
+    agentsDB = await initAgentsDB(":memory:");
   });
 
   test("returns 404 for unknown agent", async () => {
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.post("/:id/questions/:requestId/reply", (c) => replyToAgentQuestion(c, deps));
 
       const response = await app.request("/agent_unknown/questions/req_1/reply", {
@@ -238,11 +238,11 @@ describe("replyToAgentQuestion", () => {
       title: "Test Agent",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.post("/:id/questions/:requestId/reply", (c) => replyToAgentQuestion(c, deps));
 
       const response = await app.request(`/${agent.id}/questions/req_1/reply`, {
@@ -263,11 +263,11 @@ describe("replyToAgentQuestion", () => {
       title: "Test Agent",
     });
 
-    const deps = createTestDeps();
+    const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.post("/:id/questions/:requestId/reply", (c) => replyToAgentQuestion(c, deps));
 
       const response = await app.request(`/${agent.id}/questions/req_1/reply`, {
@@ -291,7 +291,7 @@ describe("replyToAgentQuestion", () => {
     let capturedRequestID: string | undefined;
     let capturedAnswers: string[][] | undefined;
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       replyToQuestion: async (requestID: string, answers: string[][]) => {
         capturedRequestID = requestID;
         capturedAnswers = answers;
@@ -300,7 +300,7 @@ describe("replyToAgentQuestion", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.post("/:id/questions/:requestId/reply", (c) => replyToAgentQuestion(c, deps));
 
       const response = await app.request(`/${agent.id}/questions/req_42/reply`, {
@@ -321,7 +321,7 @@ describe("replyToAgentQuestion", () => {
       title: "Test Agent",
     });
 
-    const deps = createTestDeps({
+    const deps = await createTestDeps({
       replyToQuestion: async () => {
         throw new Error("Not Found");
       },
@@ -329,7 +329,7 @@ describe("replyToAgentQuestion", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const app = createTestApp({ agentsDb: agentsDB });
+      const app = await createTestApp({ agentsDb: agentsDB });
       app.post("/:id/questions/:requestId/reply", (c) => replyToAgentQuestion(c, deps));
 
       const response = await app.request(`/${agent.id}/questions/req_1/reply`, {

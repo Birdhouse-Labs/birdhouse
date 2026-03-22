@@ -7,19 +7,19 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Hono } from "hono";
 import { createTestDeps, withDeps } from "../../dependencies";
-import type { AgentRow } from "../../lib/agents-db";
-import { createAgentsDB } from "../../lib/agents-db";
+import type { AgentRow, AgentsDB } from "../../lib/agents-db";
+import { initAgentsDB } from "../../lib/agents-db";
 import type { Message } from "../../lib/opencode-client";
 import { createChildAgent, createRootAgent } from "../../test-utils/agent-factories";
 import { exportTree } from "./export-tree";
 
 describe("AAPI export-tree", () => {
-  let agentsDB: ReturnType<typeof createAgentsDB>;
+  let agentsDB: AgentsDB;
   let tmpDir: string;
   let originalWorkspaceRoot: string | undefined;
 
   beforeEach(async () => {
-    agentsDB = createAgentsDB(":memory:");
+    agentsDB = await initAgentsDB(":memory:");
 
     // Create temporary directory for test files
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "birdhouse-test-"));
@@ -55,7 +55,7 @@ describe("AAPI export-tree", () => {
         title: "Solo Agent",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -111,7 +111,7 @@ describe("AAPI export-tree", () => {
         model: "anthropic/claude-haiku-4",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -184,7 +184,7 @@ describe("AAPI export-tree", () => {
         model: "anthropic/claude-opus-4",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -220,7 +220,7 @@ describe("AAPI export-tree", () => {
         title: "Agent | With | Pipes",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -256,7 +256,7 @@ describe("AAPI export-tree", () => {
         title: "Agent\nWith\nNewlines",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -293,7 +293,7 @@ describe("AAPI export-tree", () => {
         model: "anthropic/claude-haiku-4",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -347,7 +347,7 @@ describe("AAPI export-tree", () => {
         ],
       };
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
       deps.opencode.getMessages = async () => [userMessage];
 
@@ -382,7 +382,7 @@ describe("AAPI export-tree", () => {
         title: "Test Agent",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -424,7 +424,7 @@ describe("AAPI export-tree", () => {
         title: "Test Agent",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -455,7 +455,7 @@ describe("AAPI export-tree", () => {
         title: "Test Agent",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -493,7 +493,7 @@ describe("AAPI export-tree", () => {
         model: "anthropic/claude-haiku-4",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -536,7 +536,7 @@ describe("AAPI export-tree", () => {
         model: "anthropic/claude-haiku-4",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       // Mock getMessages to fail for child agent
@@ -601,7 +601,7 @@ describe("AAPI export-tree", () => {
         model: "anthropic/claude-haiku-4",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       // Mock to fail for child
@@ -650,7 +650,7 @@ describe("AAPI export-tree", () => {
 
   describe("POST /aapi/agents/:id/export-tree - Error scenarios", () => {
     test("returns 404 when agent not found", async () => {
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -676,7 +676,7 @@ describe("AAPI export-tree", () => {
         title: "Test Agent",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -702,7 +702,7 @@ describe("AAPI export-tree", () => {
         title: "Test Agent",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -742,7 +742,7 @@ describe("AAPI export-tree", () => {
         agents.push(agent);
       }
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -789,7 +789,7 @@ describe("AAPI export-tree", () => {
         parent = agent.id;
       }
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -830,7 +830,7 @@ describe("AAPI export-tree", () => {
         title: "Solo",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -889,7 +889,7 @@ describe("AAPI export-tree", () => {
         model: "anthropic/claude-haiku-4",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -927,7 +927,7 @@ describe("AAPI export-tree", () => {
         title: "Test Agent with Special Characters!@#",
       });
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
 
       await withDeps(deps, async () => {
@@ -986,7 +986,7 @@ describe("AAPI export-tree", () => {
         ],
       };
 
-      const deps = createTestDeps();
+      const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
       deps.opencode.getMessages = async () => [userMessage];
 
