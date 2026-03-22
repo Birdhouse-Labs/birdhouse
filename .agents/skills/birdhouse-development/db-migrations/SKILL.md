@@ -120,6 +120,12 @@ If you added or removed columns, update interfaces in `agents-db.ts` or `data-db
 
 ---
 
+## Getting an agents.db in tests
+
+Always use `await initAgentsDB(":memory:")` — never `createAgentsDB(":memory:")`. The init function runs the real Kysely migrations on the connection, so your test database always reflects the current schema automatically. `createAgentsDB` does not apply any schema and will fail immediately on table operations.
+
+---
+
 ## Naming
 
 - New migrations: `YYYYMMDDHHmmss_descriptive_name.ts` (second precision, sorts correctly across branches)
