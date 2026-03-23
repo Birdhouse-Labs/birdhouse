@@ -1,7 +1,7 @@
 // ABOUTME: Unit tests for workspace management routes
 // ABOUTME: Tests workspace health check endpoints for single and batch operations
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { Hono } from "hono";
 import type { DataDB, Workspace } from "../lib/data-db";
 import type { OpenCodeManager } from "../lib/opencode-manager";
@@ -57,11 +57,13 @@ function createMockOpenCodeManager(
   verifyFn?: (port: number, pid: number, workspaceId: string) => Promise<boolean>,
   shutdownFn?: (workspaceId: string) => Promise<void>,
   restartFn?: (workspaceId: string) => Promise<{ port: number; pid: number }>,
+  spawnFn?: (workspaceId: string) => Promise<{ port: number; pid: number }>,
 ): OpenCodeManager {
   return {
     verifyOpenCodeInstance: verifyFn || (async () => true),
     shutdownOpenCode: shutdownFn || (async () => {}),
     restartOpenCode: restartFn || (async () => ({ port: 3001, pid: 12345 })),
+    getOrSpawnOpenCode: spawnFn || (async () => ({ port: 3001, pid: 12345 })),
   } as OpenCodeManager;
 }
 
@@ -496,5 +498,164 @@ describe("POST /api/workspace/:id/restart", () => {
       success: false,
       message: "Failed to kill process",
     });
+  });
+});
+
+describe("POST /api/workspace/:id/start", () => {
+  test("returns 404 when workspace doesn't exist", async () => {
+    const dataDb = createMockDataDB();
+    const opencodeManager = createMockOpenCodeManager();
+    const app = new Hono();
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
+
+    const res = await app.request("/nonexistent-workspace/start", { method: "POST" });
+
+    expect(res.status).toBe(404);
+    const data = (await res.json()) as ErrorResponse;
+    expect(data).toEqual({ error: "Workspace not found" });
+  });
+
+  test("returns 202 immediately without waiting for spawn", async () => {
+    const dataDb = createMockDataDB();
+    const workspace: Workspace = {
+      workspace_id: "test-workspace",
+      directory: "/test",
+      opencode_port: null,
+      opencode_pid: null,
+      created_at: "2024-01-01T00:00:00.000Z",
+      last_used: "2024-01-01T00:00:00.000Z",
+    };
+    dataDb.insertWorkspace(workspace);
+
+    // Spawn takes a long time — endpoint should return before it completes
+    let spawnCompleted = false;
+    const opencodeManager = createMockOpenCodeManager(undefined, undefined, undefined, async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      spawnCompleted = true;
+      return { port: 3001, pid: 12345 };
+    });
+
+    const app = new Hono();
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
+
+    const res = await app.request("/test-workspace/start", { method: "POST" });
+
+    // Should return 202 immediately, before spawn completes
+    expect(res.status).toBe(202);
+    expect(spawnCompleted).toBe(false);
+  });
+
+  test("calls getOrSpawnOpenCode in the background", async () => {
+    const dataDb = createMockDataDB();
+    const workspace: Workspace = {
+      workspace_id: "test-workspace",
+      directory: "/test",
+      opencode_port: null,
+      opencode_pid: null,
+      created_at: "2024-01-01T00:00:00.000Z",
+      last_used: "2024-01-01T00:00:00.000Z",
+    };
+    dataDb.insertWorkspace(workspace);
+
+    let spawnCalledWith: string | null = null;
+    const opencodeManager = createMockOpenCodeManager(undefined, undefined, undefined, async (workspaceId) => {
+      spawnCalledWith = workspaceId;
+      return { port: 3001, pid: 12345 };
+    });
+
+    const app = new Hono();
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
+
+    await app.request("/test-workspace/start", { method: "POST" });
+
+    // Wait briefly for the fire-and-forget to run
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(spawnCalledWith).toBe("test-workspace");
+  });
+});
+
+describe("GET /api/workspace/:id/logs", () => {
+  test("returns 404 when workspace doesn't exist", async () => {
+    const dataDb = createMockDataDB();
+    const opencodeManager = createMockOpenCodeManager();
+    const app = new Hono();
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
+
+    const res = await app.request("/nonexistent-workspace/logs");
+
+    expect(res.status).toBe(404);
+    const data = (await res.json()) as ErrorResponse;
+    expect(data).toEqual({ error: "Workspace not found" });
+  });
+
+  test("returns available:false when OPENCODE_PATH is not set (prod mode)", async () => {
+    const dataDb = createMockDataDB();
+    const workspace: Workspace = {
+      workspace_id: "test-workspace",
+      directory: "/test",
+      opencode_port: null,
+      opencode_pid: null,
+      created_at: "2024-01-01T00:00:00.000Z",
+      last_used: "2024-01-01T00:00:00.000Z",
+    };
+    dataDb.insertWorkspace(workspace);
+
+    const opencodeManager = createMockOpenCodeManager();
+    const app = new Hono();
+
+    // Simulate prod mode: OPENCODE_PATH not set
+    const savedEnv = process.env.OPENCODE_PATH;
+    delete process.env.OPENCODE_PATH;
+
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
+
+    const res = await app.request("/test-workspace/logs");
+
+    // Restore env
+    if (savedEnv !== undefined) {
+      process.env.OPENCODE_PATH = savedEnv;
+    }
+
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as { lines: string[]; available: boolean; reason?: string };
+    expect(data.available).toBe(false);
+    expect(data.reason).toBe("logs_in_server_log");
+    expect(data.lines).toEqual([]);
+  });
+
+  test("returns empty lines when log file does not exist yet (dev mode)", async () => {
+    const dataDb = createMockDataDB();
+    const workspace: Workspace = {
+      workspace_id: "nonexistent-workspace-log",
+      directory: "/test",
+      opencode_port: null,
+      opencode_pid: null,
+      created_at: "2024-01-01T00:00:00.000Z",
+      last_used: "2024-01-01T00:00:00.000Z",
+    };
+    dataDb.insertWorkspace(workspace);
+
+    const opencodeManager = createMockOpenCodeManager();
+    const app = new Hono();
+
+    // Simulate dev mode
+    const savedEnv = process.env.OPENCODE_PATH;
+    process.env.OPENCODE_PATH = "/some/path";
+
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
+
+    const res = await app.request("/nonexistent-workspace-log/logs");
+
+    // Restore env
+    if (savedEnv !== undefined) {
+      process.env.OPENCODE_PATH = savedEnv;
+    } else {
+      delete process.env.OPENCODE_PATH;
+    }
+
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as { lines: string[]; available: boolean };
+    expect(data.available).toBe(true);
+    expect(data.lines).toEqual([]);
   });
 });
