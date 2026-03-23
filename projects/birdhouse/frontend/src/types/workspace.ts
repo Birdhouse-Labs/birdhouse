@@ -51,6 +51,7 @@ export interface WorkspaceDeleteResponse {
  */
 export interface WorkspaceHealthResponse {
   workspaceId: string;
+  title: string | null;
   opencodeRunning: boolean;
   port: number | null;
   pid: number | null;

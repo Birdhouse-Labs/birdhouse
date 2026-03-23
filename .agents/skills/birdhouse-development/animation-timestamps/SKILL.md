@@ -1,6 +1,8 @@
 ---
 name: animation-timestamps
 description: Prevents CSS animations from restarting when SolidJS components recreate by storing timestamps and using negative animation-delay to skip ahead.
+tags:
+  - birdhouse-development
 trigger_phrases:
   - animation timestamps
   - preserve animations

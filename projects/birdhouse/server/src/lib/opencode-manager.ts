@@ -2,7 +2,7 @@
 // ABOUTME: Handles spawning, tracking, and lifecycle management of OpenCode instances per workspace
 
 import { type ChildProcess, type StdioOptions, spawn } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, openSync } from "node:fs";
 import { join } from "node:path";
 import type { DataDB, Workspace } from "./data-db";
 import { getOpenCodeDataDir } from "./database-paths";
@@ -12,7 +12,7 @@ import { providersToEnv } from "./secrets";
 interface OpenCodeInstance {
   port: number;
   pid: number;
-  process: ChildProcess;
+  process: ChildProcess | null; // null for reattached instances from previous server run
 }
 
 interface OpenCodeHealthResponse {
@@ -36,16 +36,24 @@ export class OpenCodeManager {
     this.opencodeSourcePath = process.env.OPENCODE_PATH || null;
     this.serverPort = serverPort;
 
-    // Setup shutdown handler - must be async to properly cleanup
-    const handleShutdown = async (signal: string) => {
-      log.server.debug({ signal, openCodeCount: this.instances.size }, "Shutdown handler triggered");
-      log.server.info({ signal }, "Received shutdown signal, cleaning up OpenCode instances");
+    // SIGINT/SIGTERM: exit cleanly, leave OpenCode running.
+    // The dev launcher (dev.ts) prints running instances and handles shutdown messaging.
+    process.on("SIGINT", () => {
+      process.exit(0);
+    });
+
+    // SIGTERM: exit cleanly, leave OpenCode running (normal shutdown path from launcher).
+    process.on("SIGTERM", () => {
+      log.server.debug({ signal: "SIGTERM" }, "Shutdown handler triggered");
+      process.exit(0);
+    });
+
+    // SIGQUIT (Ctrl+\ or kill -QUIT): kill all OpenCode instances then exit.
+    // Use from the terminal for a deliberate full teardown, or from agent scripts via kill -QUIT.
+    process.on("SIGQUIT", async () => {
       await this.shutdownAll();
       process.exit(0);
-    };
-
-    process.on("SIGINT", () => handleShutdown("SIGINT"));
-    process.on("SIGTERM", () => handleShutdown("SIGTERM"));
+    });
   }
 
   /**
@@ -149,6 +157,12 @@ export class OpenCodeManager {
           { workspaceId, port: workspace.opencode_port, pid: workspace.opencode_pid },
           "Verified and reusing OpenCode instance from previous server run",
         );
+        // Track reattached instance so shutdown/listing can find it
+        this.instances.set(workspaceId, {
+          port: workspace.opencode_port,
+          pid: workspace.opencode_pid,
+          process: null,
+        });
         return {
           port: workspace.opencode_port,
           pid: workspace.opencode_pid,
@@ -321,11 +335,19 @@ export class OpenCodeManager {
 
     // Spawn OpenCode: use source path if available (dev mode), otherwise use binary
     // Dev mode (OPENCODE_PATH set): always detach so OpenCode survives bun --watch hard-kills on branch switches.
-    // When detached, we can't pipe stdio (parent exits break pipes), so ignore stdio entirely.
+    // Detached processes can't pipe stdio to the parent (pipes break when parent exits), so we
+    // redirect stdout/stderr to a log file in the workspace data dir instead.
     const shouldDetach = this.opencodeSourcePath !== null;
-    const stdio: StdioOptions = shouldDetach
-      ? ["ignore", "ignore", "ignore"] // Detached: ignore all stdio (can't pipe from detached process)
-      : ["ignore", "pipe", "pipe"]; // Attached: pipe stdout/stderr for logging
+    let stdio: StdioOptions;
+    if (shouldDetach) {
+      const logDir = join(opencodeDataDir, "logs");
+      if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
+      const logFile = join(logDir, "opencode.log");
+      const logFd = openSync(logFile, "a");
+      stdio = ["ignore", logFd, logFd];
+    } else {
+      stdio = ["ignore", "pipe", "pipe"]; // Attached: pipe stdout/stderr for logging
+    }
 
     const proc = this.opencodeSourcePath
       ? spawn(
@@ -657,29 +679,52 @@ export class OpenCodeManager {
   async shutdownOpenCode(workspaceId: string): Promise<void> {
     const instance = this.instances.get(workspaceId);
 
-    // If in memory, we have the ChildProcess handle
+    // If in memory, use process handle if available, otherwise fall back to PID kill
     if (instance) {
       log.server.info({ workspaceId, port: instance.port, pid: instance.pid }, "Shutting down OpenCode from memory");
 
-      // Send SIGTERM for graceful shutdown
-      instance.process.kill("SIGTERM");
+      if (instance.process) {
+        // Send SIGTERM for graceful shutdown
+        instance.process.kill("SIGTERM");
 
-      // Wait for graceful shutdown
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(() => {
-          // Force kill if still alive
-          if (this.isProcessAlive(instance.pid)) {
-            log.server.warn({ workspaceId, pid: instance.pid }, "OpenCode did not exit gracefully, force killing");
-            instance.process.kill("SIGKILL");
-          }
-          resolve();
-        }, 5000);
+        // Wait for graceful shutdown
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => {
+            // Force kill if still alive
+            if (this.isProcessAlive(instance.pid)) {
+              log.server.warn({ workspaceId, pid: instance.pid }, "OpenCode did not exit gracefully, force killing");
+              instance.process!.kill("SIGKILL");
+            }
+            resolve();
+          }, 5000);
 
-        instance.process.once("exit", () => {
-          clearTimeout(timeout);
-          resolve();
+          instance.process!.once("exit", () => {
+            clearTimeout(timeout);
+            resolve();
+          });
         });
-      });
+      } else {
+        // Reattached instance — no process handle, kill by PID directly
+        if (this.isProcessAlive(instance.pid)) {
+          try {
+            process.kill(instance.pid, "SIGTERM");
+            let attempts = 0;
+            while (attempts < 50 && this.isProcessAlive(instance.pid)) {
+              await new Promise((resolve) => setTimeout(resolve, 100));
+              attempts++;
+            }
+            if (this.isProcessAlive(instance.pid)) {
+              log.server.warn({ workspaceId, pid: instance.pid }, "OpenCode did not exit gracefully, force killing");
+              process.kill(instance.pid, "SIGKILL");
+            }
+          } catch (error) {
+            log.server.error(
+              { workspaceId, pid: instance.pid, error: error instanceof Error ? error.message : "Unknown" },
+              "Failed to kill reattached OpenCode process",
+            );
+          }
+        }
+      }
 
       this.instances.delete(workspaceId);
       this.dataDb.updateWorkspace(workspaceId, {

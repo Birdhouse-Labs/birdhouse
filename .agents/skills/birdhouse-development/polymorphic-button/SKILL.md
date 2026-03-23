@@ -1,6 +1,8 @@
 ---
 name: polymorphic-button
 description: Ensures navigation buttons support browser link behaviors by rendering as <a> tags with href while maintaining button styling and effects.
+tags:
+  - birdhouse-development
 trigger_phrases:
   - button link behavior
   - right click button

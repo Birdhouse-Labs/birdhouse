@@ -253,6 +253,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
         if (!workspace.opencode_port || !workspace.opencode_pid) {
           return {
             workspaceId: workspace.workspace_id,
+            title: workspace.title,
             opencodeRunning: false,
             port: null,
             pid: null,
@@ -271,6 +272,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
           if (isValid) {
             return {
               workspaceId: workspace.workspace_id,
+              title: workspace.title,
               opencodeRunning: true,
               port: workspace.opencode_port,
               pid: workspace.opencode_pid,
@@ -280,6 +282,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
 
           return {
             workspaceId: workspace.workspace_id,
+            title: workspace.title,
             opencodeRunning: false,
             port: workspace.opencode_port,
             pid: workspace.opencode_pid,
@@ -296,6 +299,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
 
           return {
             workspaceId: workspace.workspace_id,
+            title: workspace.title,
             opencodeRunning: false,
             port: workspace.opencode_port,
             pid: workspace.opencode_pid,
