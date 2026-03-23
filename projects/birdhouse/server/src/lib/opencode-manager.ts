@@ -2,7 +2,7 @@
 // ABOUTME: Handles spawning, tracking, and lifecycle management of OpenCode instances per workspace
 
 import { type ChildProcess, type StdioOptions, spawn } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, openSync } from "node:fs";
 import { join } from "node:path";
 import type { DataDB, Workspace } from "./data-db";
 import { getOpenCodeDataDir } from "./database-paths";
@@ -321,11 +321,19 @@ export class OpenCodeManager {
 
     // Spawn OpenCode: use source path if available (dev mode), otherwise use binary
     // Dev mode (OPENCODE_PATH set): always detach so OpenCode survives bun --watch hard-kills on branch switches.
-    // When detached, we can't pipe stdio (parent exits break pipes), so ignore stdio entirely.
+    // Detached processes can't pipe stdio to the parent (pipes break when parent exits), so we
+    // redirect stdout/stderr to a log file in the workspace data dir instead.
     const shouldDetach = this.opencodeSourcePath !== null;
-    const stdio: StdioOptions = shouldDetach
-      ? ["ignore", "ignore", "ignore"] // Detached: ignore all stdio (can't pipe from detached process)
-      : ["ignore", "pipe", "pipe"]; // Attached: pipe stdout/stderr for logging
+    let stdio: StdioOptions;
+    if (shouldDetach) {
+      const logDir = join(opencodeDataDir, "logs");
+      if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
+      const logFile = join(logDir, "opencode.log");
+      const logFd = openSync(logFile, "a");
+      stdio = ["ignore", logFd, logFd];
+    } else {
+      stdio = ["ignore", "pipe", "pipe"]; // Attached: pipe stdout/stderr for logging
+    }
 
     const proc = this.opencodeSourcePath
       ? spawn(
