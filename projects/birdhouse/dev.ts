@@ -87,22 +87,26 @@ const shutdown = async (killOpenCode: boolean) => {
 // SIGINT (Ctrl+C): on first press, list running OpenCode instances and offer to kill them.
 // Second press within 3s kills them; waiting out the timer exits cleanly leaving them alive.
 //
-// Uses timestamps instead of a counter to distinguish a genuine second keypress from
-// duplicate SIGINTs fired by the process group (bun --watch, vite) on the same Ctrl+C.
-// Signals arriving within 500ms of the first are treated as the same keypress.
-let firstSigintAt: number | null = null;
+// State machine:
+//   idle (sigintTimer null, !shuttingDown): first press — show listing, start timer
+//   waiting (sigintTimer set): second press — kill OpenCode
+//   shutting down (!shuttingDown): ignore, shutdown already in progress
 let sigintTimer: ReturnType<typeof setTimeout> | null = null;
 
 process.on('SIGINT', async () => {
-  const now = Date.now();
+  if (sigintTimer !== null) {
+    // Timer is active — this is a genuine second keypress
+    clearTimeout(sigintTimer);
+    sigintTimer = null;
+    process.stdout.write('Killing OpenCode instances...\n');
+    shutdown(true);
+    return;
+  }
 
-  // Treat signals within 500ms of the first as the same keypress (process group noise)
-  const isSecondPress = firstSigintAt !== null && (now - firstSigintAt) > 500;
+  if (shuttingDown) return; // Already handling shutdown — ignore
 
-  if (!isSecondPress && firstSigintAt === null) {
-    firstSigintAt = now;
-    // Mark shutting down immediately so child exit watchers don't fire process.exit(1)
-    shuttingDown = true;
+  // First press — mark shutting down immediately so child exit watchers don't fire process.exit(1)
+  shuttingDown = true;
 
     // Read running OpenCode instances directly from the DB — don't depend on the server
     // being alive (it receives the same SIGINT from the process group and may already be gone).
@@ -138,13 +142,6 @@ process.on('SIGINT', async () => {
     } else {
       shutdown(false);
     }
-  } else if (isSecondPress) {
-    // Genuine second keypress — kill OpenCode too
-    if (sigintTimer) clearTimeout(sigintTimer);
-    process.stdout.write('Killing OpenCode instances...\n');
-    shutdown(true);
-  }
-  // else: duplicate signal from process group within 500ms — ignore
 });
 
 process.on('SIGTERM', () => shutdown(false));
