@@ -202,6 +202,7 @@ let shuttingDown = false;
 function spawnServer(port) {
   const env = {
     ...process.env,
+    NODE_ENV: 'production',
     BIRDHOUSE_BASE_PORT: port.toString(),
     BIRDHOUSE_OPENCODE_BIN: PATHS.opencode,
     FRONTEND_STATIC: PATHS.frontend,
