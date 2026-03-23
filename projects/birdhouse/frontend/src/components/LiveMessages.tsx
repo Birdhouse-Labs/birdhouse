@@ -11,6 +11,7 @@ import { useWorkspace } from "../contexts/WorkspaceContext";
 import { handlePartDelta, handlePartUpdate } from "../domain/message-updates";
 
 import { log } from "../lib/logger";
+import { clearDraft, getDraft, saveDraft } from "../services/drafts-api";
 import {
   cloneAgent,
   fetchAgent,
@@ -30,6 +31,7 @@ import {
   getComposerAttachmentError,
   restoreComposerAttachments,
 } from "../utils/composerAttachments";
+import { createDebouncedSave } from "../utils/draft-persistence";
 import AgentHeader from "./AgentHeader";
 import Button from "./ui/Button";
 import ChatContainer from "./ui/ChatContainer";
@@ -252,18 +254,37 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
   // Input ref for focusing (reactive signal so effects can track it)
   const [inputRef, setInputRef] = createSignal<HTMLTextAreaElement | undefined>();
 
-  // localStorage key for draft persistence
-  const draftKey = () => `birdhouse:draft:${props.agentId}`;
+  // isLoaded gates the save effect — plain boolean, invisible to SolidJS tracking
+  let isLoaded = false;
 
-  // Load draft from localStorage on mount
+  // Debounced saver — created once at component init
+  const draftSave = createDebouncedSave(() => {
+    saveDraft(workspaceId, props.agentId, {
+      text: inputValue(),
+      attachments: attachments().map(({ filename, mime, url }) => ({ filename, mime, url })),
+    }).catch(() => {}); // silent fail — user's text is still in the input
+  });
+
+  // Flush any pending save when the component unmounts
+  onCleanup(() => draftSave.flush());
+
+  // Load draft from server; resets when agentId changes
   createEffect(() => {
-    // Track agent changes by reading props.agentId
-    props.agentId;
-    const draft = localStorage.getItem(draftKey());
-
-    if (draft) {
-      setInputValue(draft);
-    }
+    const agentId = props.agentId; // track for agent changes
+    isLoaded = false;
+    setInputValue("");
+    setAttachments([]);
+    getDraft(workspaceId, agentId)
+      .then((draft) => {
+        if (draft) {
+          setInputValue(draft.text);
+          setAttachments(restoreComposerAttachments(draft.attachments.map((a) => ({ type: "file" as const, ...a }))));
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        isLoaded = true;
+      });
   });
 
   // Focus input when both draft and inputRef exist
@@ -277,14 +298,12 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     }
   });
 
-  // Save draft to localStorage when input changes (only if non-empty)
+  // Track changes; gate on isLoaded to avoid saving during initial load
   createEffect(() => {
-    const value = inputValue().trim();
-    if (value) {
-      localStorage.setItem(draftKey(), inputValue());
-    } else {
-      localStorage.removeItem(draftKey());
-    }
+    inputValue();
+    attachments();
+    if (!isLoaded) return;
+    draftSave.schedule();
   });
 
   // Subscribe to connection established events to refresh stale data
@@ -471,10 +490,10 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
         attachments: currentAttachments,
       });
 
-      // Clear input and localStorage only on success
+      // Clear input and draft only on success
       setInputValue("");
       setAttachments([]);
-      localStorage.removeItem(draftKey());
+      clearDraft(workspaceId, props.agentId).catch(() => {});
 
       // Reset clone mode after successful send
       setCloneMode(false);
@@ -536,7 +555,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
       const newAgent = await cloneAgent(workspaceId, props.agentId, messageId);
 
       // Pre-populate the cloned agent's input with the message content
-      localStorage.setItem(`birdhouse:draft:${newAgent.id}`, messageContent);
+      saveDraft(workspaceId, newAgent.id, { text: messageContent, attachments: [] }).catch(() => {});
 
       // Navigate based on modifier key
       if (isModifierClick) {

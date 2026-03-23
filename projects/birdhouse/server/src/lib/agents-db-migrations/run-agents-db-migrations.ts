@@ -9,9 +9,11 @@ import { log } from "../logger";
 
 // Import migrations directly so they're bundled into the compiled binary
 import * as migration_20260320000000 from "./migrations/20260320000000_initial_schema";
+import * as migration_20260321144612 from "./migrations/20260321144612_composer_drafts";
 
 const allMigrations: Record<string, Migration> = {
   "20260320000000_initial_schema": migration_20260320000000,
+  "20260321144612_composer_drafts": migration_20260321144612,
 };
 
 /**
