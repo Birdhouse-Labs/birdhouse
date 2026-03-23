@@ -36,61 +36,22 @@ export class OpenCodeManager {
     this.opencodeSourcePath = process.env.OPENCODE_PATH || null;
     this.serverPort = serverPort;
 
-    // SIGINT (Ctrl+C): leave OpenCode running, but offer a second press to kill them.
-    // First press: print running instances + hint, then exit cleanly.
-    // Second press within 3s: kill all OpenCode instances then exit.
-    let sigintCount = 0;
-    let sigintTimer: ReturnType<typeof setTimeout> | null = null;
-
-    process.on("SIGINT", async () => {
-      sigintCount++;
-
-      if (sigintCount === 1) {
-        // Print running OpenCode instances
-        const instances = Array.from(this.instances.entries());
-        const workspaces = this.dataDb.getAllWorkspaces();
-        process.stdout.write("\n");
-        if (instances.length > 0) {
-          process.stdout.write("OpenCode instances still running:\n");
-          for (const [workspaceId, inst] of instances) {
-            const ws = workspaces.find((w) => w.workspace_id === workspaceId);
-            const label = ws?.title || workspaceId;
-            process.stdout.write(`  ${label}  pid=${inst.pid}  port=${inst.port}\n`);
-          }
-          process.stdout.write("\nPress Ctrl+C again within 3s to kill them, or Ctrl+\\ to always kill.\n");
-          // Hold the event loop open while waiting for a second press.
-          // Without this, Bun exits immediately once the HTTP server stops.
-          process.stdin.resume();
-          sigintTimer = setTimeout(() => {
-            sigintCount = 0;
-            sigintTimer = null;
-            process.stdin.pause();
-            process.exit(0);
-          }, 3000);
-        } else {
-          process.stdout.write("No OpenCode instances running.\n");
-          process.exit(0);
-        }
-      } else {
-        // Second press within 3s — kill OpenCode too
-        if (sigintTimer) clearTimeout(sigintTimer);
-        process.stdin.pause();
-        process.stdout.write("Killing OpenCode instances...\n");
-        await this.shutdownAll();
-        process.exit(0);
-      }
+    // SIGINT: exit cleanly, leave OpenCode running.
+    // The dev launcher (dev.ts) owns the double-press UX — it queries /api/workspaces/health
+    // and handles the interactive prompt before sending SIGTERM here.
+    process.on("SIGINT", () => {
+      process.exit(0);
     });
 
-    // SIGTERM: always exit cleanly, leave OpenCode running (used by bun --watch hard-kills)
+    // SIGTERM: exit cleanly, leave OpenCode running (normal shutdown path from launcher).
     process.on("SIGTERM", () => {
       log.server.debug({ signal: "SIGTERM" }, "Shutdown handler triggered");
       process.exit(0);
     });
 
-    // SIGQUIT (Ctrl+\ or kill -QUIT): always kill OpenCode then exit.
-    // Use this from the terminal for a deliberate full teardown, or from agent scripts.
+    // SIGQUIT (Ctrl+\ or kill -QUIT): kill all OpenCode instances then exit.
+    // Use from the terminal for a deliberate full teardown, or from agent scripts via kill -QUIT.
     process.on("SIGQUIT", async () => {
-      process.stdout.write("\nKilling OpenCode instances...\n");
       await this.shutdownAll();
       process.exit(0);
     });
