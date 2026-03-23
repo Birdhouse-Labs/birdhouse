@@ -46,10 +46,14 @@ const frontendProc = Bun.spawn(['bun', 'run', 'dev'], {
 });
 
 // Handle shutdown gracefully
+// shuttingDown: set on first SIGINT to suppress child exit error messages
+// shutdownStarted: set when shutdown() begins to prevent double-execution
 let shuttingDown = false;
+let shutdownStarted = false;
 
 const shutdown = async (killOpenCode: boolean) => {
-  if (shuttingDown) return;
+  if (shutdownStarted) return;
+  shutdownStarted = true;
   shuttingDown = true;
 
   if (killOpenCode) {
@@ -85,6 +89,9 @@ process.on('SIGINT', async () => {
   sigintCount++;
 
   if (sigintCount === 1) {
+    // Mark shutting down immediately so child exit watchers don't fire process.exit(1)
+    shuttingDown = true;
+
     // Query server for running OpenCode instances
     let running: Array<{ title: string; pid: number; port: number }> = [];
     try {
