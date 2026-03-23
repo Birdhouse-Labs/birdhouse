@@ -1,6 +1,8 @@
 ---
 name: db-migrations
 description: Complete guide to Birdhouse database migrations for agents. Covers both data.db and agents.db — generating migrations, verifying via tests, and applying to specific databases when explicitly asked. Load this skill whenever working on database migrations.
+tags:
+  - birdhouse-development
 trigger_phrases:
   - database migration
   - db migration

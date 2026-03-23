@@ -1,6 +1,8 @@
 ---
 name: logging
 description: Complete guide to Birdhouse logging for agents. Covers where to find logs (dev vs prod, Birdhouse vs OpenCode), how to write logs correctly (subsystems, levels, structured data), and how to tune log verbosity. Load this skill whenever reading, writing, or debugging logs.
+tags:
+  - birdhouse-development
 trigger_phrases:
   - find logs
   - read logs

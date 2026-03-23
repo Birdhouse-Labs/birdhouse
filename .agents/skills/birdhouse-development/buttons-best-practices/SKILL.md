@@ -1,6 +1,8 @@
 ---
 name: buttons-best-practices
 description: Guidelines for button variants (primary/secondary/tertiary) and when to use href for navigation vs onClick for actions.
+tags:
+  - birdhouse-development
 trigger_phrases:
   - button styles
   - buttons best practices
