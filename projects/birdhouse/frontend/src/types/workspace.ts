@@ -56,6 +56,8 @@ export interface WorkspaceHealthResponse {
   port: number | null;
   pid: number | null;
   error: string | null;
+  /** Set when OpenCode is running but has an invalid config (e.g. broken MCP server) */
+  configError: string | null;
 }
 
 /**

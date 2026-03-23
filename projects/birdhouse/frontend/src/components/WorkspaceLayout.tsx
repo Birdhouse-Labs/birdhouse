@@ -39,7 +39,8 @@ const WorkspaceLayout: Component = () => {
   // Workspace readiness state
   const [isReady, setIsReady] = createSignal(false);
   const [healthError, setHealthError] = createSignal<string | null>(null);
-  // Only surface errors after a grace period to avoid flashing errors during normal startup
+  const [configError, setConfigError] = createSignal<string | null>(null);
+  // Only surface transient network errors after a grace period to avoid startup flicker
   const ERROR_GRACE_PERIOD_MS = 10_000;
   let errorSince: number | null = null;
 
@@ -74,16 +75,23 @@ const WorkspaceLayout: Component = () => {
         if (health.opencodeRunning) {
           setIsReady(true);
           setHealthError(null);
+          setConfigError(null);
           errorSince = null;
           clearInterval(pollInterval);
-        } else {
-          // health.error while opencodeRunning=false is a normal transient state
-          // during cold start (e.g. "not started yet") — not a real failure, clear any error
+        } else if (health.configError) {
+          // Config errors are definitive — surface immediately, no grace period
+          setConfigError(health.configError);
           errorSince = null;
           setHealthError(null);
+        } else {
+          // health.error while opencodeRunning=false is a normal transient state
+          // during cold start (e.g. "not started yet") — clear any prior errors
+          errorSince = null;
+          setHealthError(null);
+          setConfigError(null);
         }
       } catch (error) {
-        // Surface genuine errors (network failures, etc.) only after grace period
+        // Surface genuine network errors only after grace period
         // to avoid flashing errors during normal startup sequencing
         const now = Date.now();
         if (errorSince === null) {
@@ -127,6 +135,7 @@ const WorkspaceLayout: Component = () => {
                   workspaceId={id}
                   workspaceTitle={workspaceData()?.title ?? null}
                   error={healthError()}
+                  configError={configError()}
                 />
               )}
             </Show>

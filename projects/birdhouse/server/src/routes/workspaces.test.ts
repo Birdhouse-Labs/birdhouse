@@ -14,6 +14,7 @@ interface WorkspaceHealthResponse {
   port: number | null;
   pid: number | null;
   error: string | null;
+  configError: string | null;
 }
 
 type BatchHealthResponse = WorkspaceHealthResponse[];
@@ -54,13 +55,13 @@ function createMockDataDB(): DataDB {
 }
 
 function createMockOpenCodeManager(
-  verifyFn?: (port: number, pid: number, workspaceId: string) => Promise<boolean>,
+  verifyFn?: (port: number, pid: number, workspaceId: string) => Promise<{ healthy: boolean; configError?: string }>,
   shutdownFn?: (workspaceId: string) => Promise<void>,
   restartFn?: (workspaceId: string) => Promise<{ port: number; pid: number }>,
   spawnFn?: (workspaceId: string) => Promise<{ port: number; pid: number }>,
 ): OpenCodeManager {
   return {
-    verifyOpenCodeInstance: verifyFn || (async () => true),
+    verifyOpenCodeInstance: verifyFn || (async () => ({ healthy: true })),
     shutdownOpenCode: shutdownFn || (async () => {}),
     restartOpenCode: restartFn || (async () => ({ port: 3001, pid: 12345 })),
     getOrSpawnOpenCode: spawnFn || (async () => ({ port: 3001, pid: 12345 })),
@@ -107,6 +108,7 @@ describe("GET /api/workspace/:id/health", () => {
       port: null,
       pid: null,
       error: "Workspace environment not started for this workspace",
+      configError: null,
     });
   });
 
@@ -122,7 +124,7 @@ describe("GET /api/workspace/:id/health", () => {
     };
     dataDb.insertWorkspace(workspace);
 
-    const opencodeManager = createMockOpenCodeManager(async () => true);
+    const opencodeManager = createMockOpenCodeManager(async () => ({ healthy: true }));
     const app = new Hono();
     app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
@@ -136,6 +138,7 @@ describe("GET /api/workspace/:id/health", () => {
       port: 3001,
       pid: 12345,
       error: null,
+      configError: null,
     });
   });
 
@@ -151,7 +154,7 @@ describe("GET /api/workspace/:id/health", () => {
     };
     dataDb.insertWorkspace(workspace);
 
-    const opencodeManager = createMockOpenCodeManager(async () => false);
+    const opencodeManager = createMockOpenCodeManager(async () => ({ healthy: false }));
     const app = new Hono();
     app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
@@ -165,6 +168,41 @@ describe("GET /api/workspace/:id/health", () => {
       port: 3001,
       pid: 12345,
       error: "Workspace environment not responding or workspace ID mismatch",
+      configError: null,
+    });
+  });
+
+  test("returns configError when OpenCode has invalid config", async () => {
+    const dataDb = createMockDataDB();
+    const workspace: Workspace = {
+      workspace_id: "test-workspace",
+      directory: "/test",
+      opencode_port: 3001,
+      opencode_pid: 12345,
+      created_at: "2024-01-01T00:00:00.000Z",
+      last_used: "2024-01-01T00:00:00.000Z",
+    };
+    dataDb.insertWorkspace(workspace);
+
+    const configErrorMsg = "Invalid MCP server configuration at path 'mcp.my-server'";
+    const opencodeManager = createMockOpenCodeManager(async () => ({
+      healthy: false,
+      configError: configErrorMsg,
+    }));
+    const app = new Hono();
+    app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
+
+    const res = await app.request("/test-workspace/health");
+
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as WorkspaceHealthResponse;
+    expect(data).toEqual({
+      workspaceId: "test-workspace",
+      opencodeRunning: false,
+      port: 3001,
+      pid: 12345,
+      error: "Workspace environment not responding or workspace ID mismatch",
+      configError: configErrorMsg,
     });
   });
 
@@ -196,6 +234,7 @@ describe("GET /api/workspace/:id/health", () => {
       port: 3001,
       pid: 12345,
       error: "Network timeout",
+      configError: null,
     });
   });
 });
@@ -226,7 +265,7 @@ describe("GET /api/workspaces/health", () => {
     };
     dataDb.insertWorkspace(workspace);
 
-    const opencodeManager = createMockOpenCodeManager(async () => true);
+    const opencodeManager = createMockOpenCodeManager(async () => ({ healthy: true }));
     const app = new Hono();
     app.route("/", createWorkspaceRoutes(dataDb, opencodeManager));
 
@@ -241,6 +280,7 @@ describe("GET /api/workspaces/health", () => {
         port: 3001,
         pid: 12345,
         error: null,
+        configError: null,
       },
     ]);
   });
@@ -282,9 +322,9 @@ describe("GET /api/workspaces/health", () => {
     // workspace-2: not started
     // workspace-3: started but verification fails
     const opencodeManager = createMockOpenCodeManager(async (_port: number, _pid: number, workspaceId: string) => {
-      if (workspaceId === "workspace-1") return true;
-      if (workspaceId === "workspace-3") return false;
-      return false;
+      if (workspaceId === "workspace-1") return { healthy: true };
+      if (workspaceId === "workspace-3") return { healthy: false };
+      return { healthy: false };
     });
 
     const app = new Hono();
@@ -307,6 +347,7 @@ describe("GET /api/workspaces/health", () => {
       port: 3001,
       pid: 12345,
       error: null,
+      configError: null,
     });
 
     expect(ws2).toEqual({
@@ -315,6 +356,7 @@ describe("GET /api/workspaces/health", () => {
       port: null,
       pid: null,
       error: "Workspace environment not started for this workspace",
+      configError: null,
     });
 
     expect(ws3).toEqual({
@@ -323,6 +365,7 @@ describe("GET /api/workspaces/health", () => {
       port: 3003,
       pid: 54321,
       error: "Workspace environment not responding or workspace ID mismatch",
+      configError: null,
     });
   });
 
@@ -355,7 +398,7 @@ describe("GET /api/workspaces/health", () => {
       if (workspaceId === "workspace-1") {
         throw new Error("Connection refused");
       }
-      return true;
+      return { healthy: true };
     });
 
     const app = new Hono();
@@ -376,6 +419,7 @@ describe("GET /api/workspaces/health", () => {
       port: 3001,
       pid: 12345,
       error: "Connection refused",
+      configError: null,
     });
 
     expect(ws2).toEqual({
@@ -384,6 +428,7 @@ describe("GET /api/workspaces/health", () => {
       port: 3002,
       pid: 54321,
       error: null,
+      configError: null,
     });
   });
 });

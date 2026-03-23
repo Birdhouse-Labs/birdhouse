@@ -17,6 +17,7 @@ describe("WorkspaceHealthStatus", () => {
           port: 3001,
           pid: 12345,
           error: null,
+          configError: null,
           lastChecked: Date.now(),
         }}
         isChecking={false}

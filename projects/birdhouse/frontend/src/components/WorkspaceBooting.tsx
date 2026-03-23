@@ -1,7 +1,7 @@
 // ABOUTME: Workspace booting screen shown while OpenCode is starting up
 // ABOUTME: Polls for log output, shows elapsed time, and provides restart/settings actions
 
-import { Settings } from "lucide-solid";
+import { AlertTriangle, Settings } from "lucide-solid";
 import { type Component, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { useModalRoute } from "../lib/routing";
 import { fetchWorkspaceLogs, restartWorkspace } from "../services/workspaces-api";
@@ -11,6 +11,8 @@ export interface WorkspaceBootingProps {
   workspaceId: string;
   workspaceTitle: string | null;
   error?: string | null;
+  /** Set when OpenCode has an invalid configuration — shows a distinct error UI */
+  configError?: string | null;
 }
 
 // How long before we show the "taking longer than expected" message (ms)
@@ -43,7 +45,8 @@ const WorkspaceBooting: Component<WorkspaceBootingProps> = (props) => {
   const [restarting, setRestarting] = createSignal(false);
 
   const isSlow = () => elapsedMs() >= SLOW_THRESHOLD_MS;
-  const showRestart = () => elapsedMs() >= RESTART_THRESHOLD_MS;
+  // Don't show Restart when there's a config error — restarting won't help
+  const showRestart = () => !props.configError && elapsedMs() >= RESTART_THRESHOLD_MS;
 
   const handleRestart = async () => {
     if (restarting()) return;
@@ -90,56 +93,86 @@ const WorkspaceBooting: Component<WorkspaceBootingProps> = (props) => {
 
   return (
     <div class="flex flex-col items-center justify-center h-full gap-6 p-8 max-w-2xl mx-auto">
-      {/* Header */}
-      <div class="flex flex-col items-center gap-3 text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent" />
-        <h2 class="text-xl font-semibold text-text-primary">Starting workspace environment...</h2>
-        <Show when={props.workspaceTitle}>
-          <p class="text-sm text-text-muted">{props.workspaceTitle}</p>
-        </Show>
-      </div>
-
-      {/* Slow / error messages */}
-      <Show when={props.error}>
-        <p class="text-sm text-danger text-center">{props.error}</p>
-      </Show>
-      <Show when={!props.error && isSlow()}>
-        <p class="text-sm text-text-muted text-center">Taking longer than expected...</p>
-      </Show>
-
-      {/* Log output */}
-      <Show when={logLines().length > 0}>
-        <div class="w-full rounded-lg border border-border bg-surface overflow-hidden">
-          <div class="px-3 py-2 border-b border-border">
-            <span class="text-xs font-medium text-text-muted uppercase tracking-wide">Startup logs</span>
+      {/* Config error state — distinct from normal booting */}
+      <Show when={props.configError}>
+        {/* No spinner — this is a terminal error state, not loading */}
+        <div class="flex flex-col items-center gap-4 text-center">
+          <div class="flex items-center justify-center w-14 h-14 rounded-full bg-danger/10">
+            <AlertTriangle size={28} class="text-danger" />
           </div>
-          <div class="overflow-y-auto max-h-48 p-3">
-            <For each={logLines()}>
-              {(line) => (
-                <div class={`font-mono text-xs leading-relaxed whitespace-pre-wrap break-all ${getLineColor(line)}`}>
-                  {line}
-                </div>
-              )}
-            </For>
+          <div class="flex flex-col gap-1">
+            <h2 class="text-xl font-semibold text-text-primary">Workspace configuration error</h2>
+            <Show when={props.workspaceTitle}>
+              <p class="text-sm text-text-muted">{props.workspaceTitle}</p>
+            </Show>
           </div>
+          <p class="text-sm text-danger max-w-md">{props.configError}</p>
+          <p class="text-sm text-text-muted">Fix the configuration below to start this workspace.</p>
         </div>
-      </Show>
 
-      {/* Action buttons */}
-      <div class="flex items-center gap-3">
+        {/* Prominent Settings CTA */}
         <Button
-          variant="secondary"
+          variant="primary"
           leftIcon={<Settings size={14} />}
           onClick={() => openModal("workspace_config", props.workspaceId)}
         >
-          Workspace Settings
+          Open Workspace Settings
         </Button>
-        <Show when={showRestart()}>
-          <Button variant="tertiary" disabled={restarting()} onClick={handleRestart}>
-            {restarting() ? "Restarting..." : "Restart"}
-          </Button>
+      </Show>
+
+      {/* Normal booting state */}
+      <Show when={!props.configError}>
+        {/* Header */}
+        <div class="flex flex-col items-center gap-3 text-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent" />
+          <h2 class="text-xl font-semibold text-text-primary">Starting workspace environment...</h2>
+          <Show when={props.workspaceTitle}>
+            <p class="text-sm text-text-muted">{props.workspaceTitle}</p>
+          </Show>
+        </div>
+
+        {/* Slow / error messages */}
+        <Show when={props.error}>
+          <p class="text-sm text-danger text-center">{props.error}</p>
         </Show>
-      </div>
+        <Show when={!props.error && isSlow()}>
+          <p class="text-sm text-text-muted text-center">Taking longer than expected...</p>
+        </Show>
+
+        {/* Log output */}
+        <Show when={logLines().length > 0}>
+          <div class="w-full rounded-lg border border-border bg-surface overflow-hidden">
+            <div class="px-3 py-2 border-b border-border">
+              <span class="text-xs font-medium text-text-muted uppercase tracking-wide">Startup logs</span>
+            </div>
+            <div class="overflow-y-auto max-h-48 p-3">
+              <For each={logLines()}>
+                {(line) => (
+                  <div class={`font-mono text-xs leading-relaxed whitespace-pre-wrap break-all ${getLineColor(line)}`}>
+                    {line}
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
+
+        {/* Action buttons */}
+        <div class="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            leftIcon={<Settings size={14} />}
+            onClick={() => openModal("workspace_config", props.workspaceId)}
+          >
+            Workspace Settings
+          </Button>
+          <Show when={showRestart()}>
+            <Button variant="tertiary" disabled={restarting()} onClick={handleRestart}>
+              {restarting() ? "Restarting..." : "Restart"}
+            </Button>
+          </Show>
+        </div>
+      </Show>
     </div>
   );
 };

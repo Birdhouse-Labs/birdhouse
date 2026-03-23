@@ -260,12 +260,13 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
             port: null,
             pid: null,
             error: "Workspace environment not started for this workspace",
+            configError: null,
           };
         }
 
         try {
           // Verify the OpenCode instance is actually valid and responding
-          const isValid = await opencodeManager.verifyOpenCodeInstance(
+          const { healthy: isValid, configError = null } = await opencodeManager.verifyOpenCodeInstance(
             workspace.opencode_port,
             workspace.opencode_pid,
             workspace.workspace_id,
@@ -279,6 +280,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
               port: workspace.opencode_port,
               pid: workspace.opencode_pid,
               error: null,
+              configError: null,
             };
           }
 
@@ -289,6 +291,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
             port: workspace.opencode_port,
             pid: workspace.opencode_pid,
             error: "Workspace environment not responding or workspace ID mismatch",
+            configError,
           };
         } catch (error) {
           log.server.error(
@@ -306,6 +309,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
             port: workspace.opencode_port,
             pid: workspace.opencode_pid,
             error: error instanceof Error ? error.message : "Unknown error during health check",
+            configError: null,
           };
         }
       }),
@@ -421,12 +425,13 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
         port: null,
         pid: null,
         error: "Workspace environment not started for this workspace",
+        configError: null,
       });
     }
 
     try {
       // Verify the OpenCode instance is actually valid and responding
-      const isValid = await opencodeManager.verifyOpenCodeInstance(
+      const { healthy: isValid, configError = null } = await opencodeManager.verifyOpenCodeInstance(
         workspace.opencode_port,
         workspace.opencode_pid,
         workspaceId,
@@ -439,6 +444,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
           port: workspace.opencode_port,
           pid: workspace.opencode_pid,
           error: null,
+          configError: null,
         });
       }
 
@@ -448,6 +454,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
         port: workspace.opencode_port,
         pid: workspace.opencode_pid,
         error: "Workspace environment not responding or workspace ID mismatch",
+        configError,
       });
     } catch (error) {
       log.server.error(
@@ -465,6 +472,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
           port: workspace.opencode_port,
           pid: workspace.opencode_pid,
           error: error instanceof Error ? error.message : "Unknown error during health check",
+          configError: null,
         },
         500,
       );
