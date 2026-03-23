@@ -84,64 +84,41 @@ const shutdown = async (killOpenCode: boolean) => {
   process.exit(0);
 };
 
-// SIGINT (Ctrl+C): on first press, list running OpenCode instances and offer to kill them.
-// Second press within 3s kills them; waiting out the timer exits cleanly leaving them alive.
-//
-// State machine:
-//   idle (sigintTimer null, !shuttingDown): first press — show listing, start timer
-//   waiting (sigintTimer set): second press — kill OpenCode
-//   shutting down (!shuttingDown): ignore, shutdown already in progress
-let sigintTimer: ReturnType<typeof setTimeout> | null = null;
-
+// SIGINT (Ctrl+C): print running OpenCode instances then exit cleanly, leaving them alive.
+// Use Ctrl+\ (SIGQUIT) to also kill OpenCode instances.
 process.on('SIGINT', async () => {
-  if (sigintTimer !== null) {
-    // Timer is active — this is a genuine second keypress
-    clearTimeout(sigintTimer);
-    sigintTimer = null;
-    process.stdout.write('Killing OpenCode instances...\n');
-    shutdown(true);
-    return;
-  }
-
-  if (shuttingDown) return; // Already handling shutdown — ignore
-
-  // First press — mark shutting down immediately so child exit watchers don't fire process.exit(1)
+  if (shuttingDown) return;
   shuttingDown = true;
 
-    // Read running OpenCode instances directly from the DB — don't depend on the server
-    // being alive (it receives the same SIGINT from the process group and may already be gone).
-    type WorkspaceRow = { title: string | null; opencode_pid: number | null; opencode_port: number | null };
-    let running: Array<{ title: string; pid: number; port: number }> = [];
-    try {
-      const dataDir = process.platform === 'darwin'
-        ? join(homedir(), 'Library/Application Support/Birdhouse')
-        : join(homedir(), '.local/share/birdhouse');
-      const dbPath = process.env.BIRDHOUSE_DATA_DB_PATH || join(dataDir, 'data.db');
-      const db = new Database(dbPath, { readonly: true });
-      const rows = db.query<WorkspaceRow, []>(
-        'SELECT title, opencode_pid, opencode_port FROM workspaces WHERE opencode_pid IS NOT NULL AND opencode_port IS NOT NULL'
-      ).all();
-      db.close();
-      running = rows.map(r => ({ title: r.title || r.opencode_pid!.toString(), pid: r.opencode_pid!, port: r.opencode_port! }));
-    } catch {
-      // DB not readable — nothing to list
-    }
+  // Read running OpenCode instances directly from the DB — don't depend on the server
+  // being alive (it receives the same SIGINT from the process group and may already be gone).
+  type WorkspaceRow = { title: string | null; opencode_pid: number | null; opencode_port: number | null };
+  let running: Array<{ title: string; pid: number; port: number }> = [];
+  try {
+    const dataDir = process.platform === 'darwin'
+      ? join(homedir(), 'Library/Application Support/Birdhouse')
+      : join(homedir(), '.local/share/birdhouse');
+    const dbPath = process.env.BIRDHOUSE_DATA_DB_PATH || join(dataDir, 'data.db');
+    const db = new Database(dbPath, { readonly: true });
+    const rows = db.query<WorkspaceRow, []>(
+      'SELECT title, opencode_pid, opencode_port FROM workspaces WHERE opencode_pid IS NOT NULL AND opencode_port IS NOT NULL'
+    ).all();
+    db.close();
+    running = rows.map(r => ({ title: r.title || r.opencode_pid!.toString(), pid: r.opencode_pid!, port: r.opencode_port! }));
+  } catch {
+    // DB not readable — nothing to list
+  }
 
-    process.stdout.write('\n');
-    if (running.length > 0) {
-      process.stdout.write('OpenCode instances still running:\n');
-      for (const w of running) {
-        process.stdout.write(`  ${w.title || w.pid}  pid=${w.pid}  port=${w.port}\n`);
-      }
-      process.stdout.write('\nPress Ctrl+C again within 3s to kill them, or Ctrl+\\ to always kill.\n');
-
-      sigintTimer = setTimeout(() => {
-        sigintTimer = null;
-        shutdown(false);
-      }, 3000);
-    } else {
-      shutdown(false);
+  process.stdout.write('\n');
+  if (running.length > 0) {
+    process.stdout.write('OpenCode instances left running:\n');
+    for (const w of running) {
+      process.stdout.write(`  ${w.title}  pid=${w.pid}  port=${w.port}\n`);
     }
+    process.stdout.write('(Use Ctrl+\\ to kill them too)\n');
+  }
+
+  shutdown(false);
 });
 
 process.on('SIGTERM', () => shutdown(false));
