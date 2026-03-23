@@ -92,6 +92,8 @@ process.on('SIGINT', async () => {
 
   // Read running OpenCode instances directly from the DB — don't depend on the server
   // being alive (it receives the same SIGINT from the process group and may already be gone).
+  // This is best-effort: the DB may briefly lag behind reality at startup, but is accurate
+  // during normal operation after warmup completes.
   type WorkspaceRow = { title: string | null; opencode_pid: number | null; opencode_port: number | null };
   let running: Array<{ title: string; pid: number; port: number }> = [];
   try {

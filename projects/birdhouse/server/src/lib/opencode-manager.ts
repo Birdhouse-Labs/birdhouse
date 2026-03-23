@@ -36,9 +36,8 @@ export class OpenCodeManager {
     this.opencodeSourcePath = process.env.OPENCODE_PATH || null;
     this.serverPort = serverPort;
 
-    // SIGINT: exit cleanly, leave OpenCode running.
-    // The dev launcher (dev.ts) owns the double-press UX — it queries /api/workspaces/health
-    // and handles the interactive prompt before sending SIGTERM here.
+    // SIGINT/SIGTERM: exit cleanly, leave OpenCode running.
+    // The dev launcher (dev.ts) prints running instances and handles shutdown messaging.
     process.on("SIGINT", () => {
       process.exit(0);
     });

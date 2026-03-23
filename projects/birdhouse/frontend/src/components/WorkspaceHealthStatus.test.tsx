@@ -12,6 +12,7 @@ describe("WorkspaceHealthStatus", () => {
         workspaceId="ws-123"
         health={{
           workspaceId: "ws-123",
+          title: "Test",
           opencodeRunning: true,
           port: 3001,
           pid: 12345,
