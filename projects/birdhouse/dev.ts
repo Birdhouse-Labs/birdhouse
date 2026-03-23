@@ -5,6 +5,10 @@
 // Make this a module to support top-level await
 export {};
 
+import { Database } from 'bun:sqlite';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+
 if (!process.env.BIRDHOUSE_BASE_PORT) {
   console.error('❌ Missing BIRDHOUSE_BASE_PORT in .env file');
   process.exit(1);
@@ -100,16 +104,23 @@ process.on('SIGINT', async () => {
     // Mark shutting down immediately so child exit watchers don't fire process.exit(1)
     shuttingDown = true;
 
-    // Query server for running OpenCode instances
+    // Read running OpenCode instances directly from the DB — don't depend on the server
+    // being alive (it receives the same SIGINT from the process group and may already be gone).
+    type WorkspaceRow = { title: string | null; opencode_pid: number | null; opencode_port: number | null };
     let running: Array<{ title: string; pid: number; port: number }> = [];
     try {
-      const res = await fetch(`http://localhost:${SERVER_PORT}/api/workspaces/health`);
-      if (res.ok) {
-        const data = await res.json() as Array<{ title: string; pid: number; port: number; opencodeRunning: boolean }>;
-        running = data.filter(w => w.opencodeRunning);
-      }
+      const dataDir = process.platform === 'darwin'
+        ? join(homedir(), 'Library/Application Support/Birdhouse')
+        : join(homedir(), '.local/share/birdhouse');
+      const dbPath = process.env.BIRDHOUSE_DATA_DB_PATH || join(dataDir, 'data.db');
+      const db = new Database(dbPath, { readonly: true });
+      const rows = db.query<WorkspaceRow, []>(
+        'SELECT title, opencode_pid, opencode_port FROM workspaces WHERE opencode_pid IS NOT NULL AND opencode_port IS NOT NULL'
+      ).all();
+      db.close();
+      running = rows.map(r => ({ title: r.title || r.opencode_pid!.toString(), pid: r.opencode_pid!, port: r.opencode_port! }));
     } catch {
-      // Server already down — nothing to list
+      // DB not readable — nothing to list
     }
 
     process.stdout.write('\n');
