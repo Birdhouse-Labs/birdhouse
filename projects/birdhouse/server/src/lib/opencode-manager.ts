@@ -58,17 +58,16 @@ export class OpenCodeManager {
             process.stdout.write(`  ${label}  pid=${inst.pid}  port=${inst.port}\n`);
           }
           process.stdout.write("\nPress Ctrl+C again within 3s to kill them, or Ctrl+\\ to always kill.\n");
+          // Don't exit yet — wait for second press or timeout
+          sigintTimer = setTimeout(() => {
+            sigintCount = 0;
+            sigintTimer = null;
+            process.exit(0);
+          }, 3000);
         } else {
           process.stdout.write("No OpenCode instances running.\n");
+          process.exit(0);
         }
-
-        // Reset after 3s
-        sigintTimer = setTimeout(() => {
-          sigintCount = 0;
-          sigintTimer = null;
-        }, 3000);
-
-        process.exit(0);
       } else {
         // Second press within 3s — kill OpenCode too
         if (sigintTimer) clearTimeout(sigintTimer);
