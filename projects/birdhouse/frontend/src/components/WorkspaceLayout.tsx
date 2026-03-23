@@ -39,6 +39,9 @@ const WorkspaceLayout: Component = () => {
   // Workspace readiness state
   const [isReady, setIsReady] = createSignal(false);
   const [healthError, setHealthError] = createSignal<string | null>(null);
+  // Only surface errors after a grace period to avoid flashing errors during normal startup
+  const ERROR_GRACE_PERIOD_MS = 10_000;
+  let errorSince: number | null = null;
 
   // Fetch workspace title for the booting screen (non-workspace-scoped endpoint)
   const [workspaceData] = createResource(workspaceId, (id) => fetchWorkspace(id).catch(() => null));
@@ -71,14 +74,24 @@ const WorkspaceLayout: Component = () => {
         if (health.opencodeRunning) {
           setIsReady(true);
           setHealthError(null);
+          errorSince = null;
           clearInterval(pollInterval);
-        } else if (health.error) {
-          setHealthError(health.error);
         } else {
+          // health.error while opencodeRunning=false is a normal transient state
+          // during cold start (e.g. "not started yet") — not a real failure, clear any error
+          errorSince = null;
           setHealthError(null);
         }
       } catch (error) {
-        setHealthError(error instanceof Error ? error.message : "Health check failed");
+        // Surface genuine errors (network failures, etc.) only after grace period
+        // to avoid flashing errors during normal startup sequencing
+        const now = Date.now();
+        if (errorSince === null) {
+          errorSince = now;
+        }
+        if (now - errorSince >= ERROR_GRACE_PERIOD_MS) {
+          setHealthError(error instanceof Error ? error.message : "Health check failed");
+        }
       }
     };
 
