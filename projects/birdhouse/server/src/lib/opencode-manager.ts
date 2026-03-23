@@ -58,10 +58,13 @@ export class OpenCodeManager {
             process.stdout.write(`  ${label}  pid=${inst.pid}  port=${inst.port}\n`);
           }
           process.stdout.write("\nPress Ctrl+C again within 3s to kill them, or Ctrl+\\ to always kill.\n");
-          // Don't exit yet — wait for second press or timeout
+          // Hold the event loop open while waiting for a second press.
+          // Without this, Bun exits immediately once the HTTP server stops.
+          process.stdin.resume();
           sigintTimer = setTimeout(() => {
             sigintCount = 0;
             sigintTimer = null;
+            process.stdin.pause();
             process.exit(0);
           }, 3000);
         } else {
@@ -71,6 +74,7 @@ export class OpenCodeManager {
       } else {
         // Second press within 3s — kill OpenCode too
         if (sigintTimer) clearTimeout(sigintTimer);
+        process.stdin.pause();
         process.stdout.write("Killing OpenCode instances...\n");
         await this.shutdownAll();
         process.exit(0);
