@@ -1,7 +1,7 @@
 // ABOUTME: Unit tests for workspace management routes
 // ABOUTME: Tests workspace health check endpoints for single and batch operations
 
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import type { DataDB, Workspace } from "../lib/data-db";
 import type { OpenCodeManager } from "../lib/opencode-manager";
@@ -570,7 +570,9 @@ describe("POST /api/workspace/:id/start", () => {
 
     // Wait briefly for the fire-and-forget to run
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(spawnCalledWith).toBe("test-workspace");
+    expect(spawnCalledWith).not.toBeNull();
+    // biome-ignore lint/style/noNonNullAssertion: checked above
+    expect(spawnCalledWith!).toBe("test-workspace");
   });
 });
 

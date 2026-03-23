@@ -10,6 +10,7 @@ import type {
   WorkspaceCreateResponse,
   WorkspaceDeleteResponse,
   WorkspaceHealthResponse,
+  WorkspaceLogsResponse,
 } from "../types/workspace";
 
 /**
@@ -280,5 +281,71 @@ export async function restartWorkspace(workspaceId: string): Promise<{ success: 
     return response.json();
   } catch (error) {
     throw new Error(`Failed to restart workspace: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+/**
+ * Trigger OpenCode spawn for workspace (fire-and-forget on server side)
+ * Returns once the request is accepted (202)
+ * @param workspaceId Workspace ID to start
+ */
+export async function startWorkspace(workspaceId: string): Promise<void> {
+  const url = `${API_ENDPOINT_BASE}/workspaces/${workspaceId}/start`;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      const responseBody = await response.text();
+      let errorMessage = `Failed to start workspace: ${response.statusText}`;
+
+      try {
+        const errorData = JSON.parse(responseBody);
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // Response wasn't JSON, use status text
+      }
+
+      throw new Error(errorMessage);
+    }
+  } catch (error) {
+    throw new Error(`Failed to start workspace: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+/**
+ * Fetch recent log lines for a workspace's OpenCode instance
+ * @param workspaceId Workspace ID to fetch logs for
+ * @returns Log response with lines and availability flag
+ */
+export async function fetchWorkspaceLogs(workspaceId: string): Promise<WorkspaceLogsResponse> {
+  const url = `${API_ENDPOINT_BASE}/workspaces/${workspaceId}/logs`;
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const responseBody = await response.text();
+      let errorMessage = `Failed to fetch workspace logs: ${response.statusText}`;
+
+      try {
+        const errorData = JSON.parse(responseBody);
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // Response wasn't JSON, use status text
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  } catch (error) {
+    throw new Error(`Failed to fetch workspace logs: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }

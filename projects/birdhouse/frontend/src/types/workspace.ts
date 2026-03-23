@@ -64,3 +64,12 @@ export interface WorkspaceHealthResponse {
 export interface WorkspaceHealthStatus extends WorkspaceHealthResponse {
   lastChecked: number; // timestamp in ms
 }
+
+/**
+ * Response from workspace logs endpoint
+ */
+export interface WorkspaceLogsResponse {
+  lines: string[];
+  available: boolean;
+  reason?: string;
+}
