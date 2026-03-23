@@ -12,7 +12,7 @@ import { providersToEnv } from "./secrets";
 interface OpenCodeInstance {
   port: number;
   pid: number;
-  process: ChildProcess;
+  process: ChildProcess | null; // null for reattached instances from previous server run
 }
 
 interface OpenCodeHealthResponse {
@@ -193,6 +193,12 @@ export class OpenCodeManager {
           { workspaceId, port: workspace.opencode_port, pid: workspace.opencode_pid },
           "Verified and reusing OpenCode instance from previous server run",
         );
+        // Track reattached instance so shutdown/listing can find it
+        this.instances.set(workspaceId, {
+          port: workspace.opencode_port,
+          pid: workspace.opencode_pid,
+          process: null,
+        });
         return {
           port: workspace.opencode_port,
           pid: workspace.opencode_pid,
@@ -709,29 +715,52 @@ export class OpenCodeManager {
   async shutdownOpenCode(workspaceId: string): Promise<void> {
     const instance = this.instances.get(workspaceId);
 
-    // If in memory, we have the ChildProcess handle
+    // If in memory, use process handle if available, otherwise fall back to PID kill
     if (instance) {
       log.server.info({ workspaceId, port: instance.port, pid: instance.pid }, "Shutting down OpenCode from memory");
 
-      // Send SIGTERM for graceful shutdown
-      instance.process.kill("SIGTERM");
+      if (instance.process) {
+        // Send SIGTERM for graceful shutdown
+        instance.process.kill("SIGTERM");
 
-      // Wait for graceful shutdown
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(() => {
-          // Force kill if still alive
-          if (this.isProcessAlive(instance.pid)) {
-            log.server.warn({ workspaceId, pid: instance.pid }, "OpenCode did not exit gracefully, force killing");
-            instance.process.kill("SIGKILL");
-          }
-          resolve();
-        }, 5000);
+        // Wait for graceful shutdown
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => {
+            // Force kill if still alive
+            if (this.isProcessAlive(instance.pid)) {
+              log.server.warn({ workspaceId, pid: instance.pid }, "OpenCode did not exit gracefully, force killing");
+              instance.process!.kill("SIGKILL");
+            }
+            resolve();
+          }, 5000);
 
-        instance.process.once("exit", () => {
-          clearTimeout(timeout);
-          resolve();
+          instance.process!.once("exit", () => {
+            clearTimeout(timeout);
+            resolve();
+          });
         });
-      });
+      } else {
+        // Reattached instance — no process handle, kill by PID directly
+        if (this.isProcessAlive(instance.pid)) {
+          try {
+            process.kill(instance.pid, "SIGTERM");
+            let attempts = 0;
+            while (attempts < 50 && this.isProcessAlive(instance.pid)) {
+              await new Promise((resolve) => setTimeout(resolve, 100));
+              attempts++;
+            }
+            if (this.isProcessAlive(instance.pid)) {
+              log.server.warn({ workspaceId, pid: instance.pid }, "OpenCode did not exit gracefully, force killing");
+              process.kill(instance.pid, "SIGKILL");
+            }
+          } catch (error) {
+            log.server.error(
+              { workspaceId, pid: instance.pid, error: error instanceof Error ? error.message : "Unknown" },
+              "Failed to kill reattached OpenCode process",
+            );
+          }
+        }
+      }
 
       this.instances.delete(workspaceId);
       this.dataDb.updateWorkspace(workspaceId, {
