@@ -125,18 +125,23 @@ process.on('SIGTERM', () => shutdown(false));
 // SIGQUIT: hard teardown including OpenCode (for scripts/agents)
 process.on('SIGQUIT', () => shutdown(true));
 
-// Wait for all processes and handle port conflicts
-const exitResult = await Promise.race([serverProc.exited, frontendProc.exited]);
+// Watch for unexpected child exits (e.g. port conflicts at startup).
+// Once shuttingDown is set, we ignore exits — they're expected.
+serverProc.exited.then(() => {
+  if (!shuttingDown && serverProc.exitCode !== 0) {
+    console.error('\n❌ Server failed to start (possibly port in use)');
+    console.error(`   To free port ${SERVER_PORT}: kill -9 $(lsof -t -i:${SERVER_PORT})`);
+    process.exit(1);
+  }
+});
 
-// Check if any process failed due to port conflict
-if (serverProc.exitCode !== null && serverProc.exitCode !== 0) {
-  console.error('\n❌ Server failed to start (possibly port in use)');
-  console.error(`   To free port ${SERVER_PORT}: kill -9 $(lsof -t -i:${SERVER_PORT})`);
-  process.exit(1);
-}
+frontendProc.exited.then(() => {
+  if (!shuttingDown && frontendProc.exitCode !== 0) {
+    console.error('\n❌ Frontend failed to start (possibly port in use)');
+    console.error(`   To free port ${FRONTEND_PORT}: kill -9 $(lsof -t -i:${FRONTEND_PORT})`);
+    process.exit(1);
+  }
+});
 
-if (frontendProc.exitCode !== null && frontendProc.exitCode !== 0) {
-  console.error('\n❌ Frontend failed to start (possibly port in use)');
-  console.error(`   To free port ${FRONTEND_PORT}: kill -9 $(lsof -t -i:${FRONTEND_PORT})`);
-  process.exit(1);
-}
+// Keep the event loop alive — all exit paths go through shutdown()
+await new Promise(() => {});
