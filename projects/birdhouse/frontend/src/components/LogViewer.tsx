@@ -330,7 +330,12 @@ const LogRow: Component<{ line: LogLine; expanded: boolean; onToggleExpand: () =
 /** The inner content of a log row (level dot, timestamp, subsystem, message) */
 const RowContent: Component<{ line: LogLine }> = (props) => (
   <>
-    <span class={`inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1 ${levelColorClass(props.line.level)}`} />
+    <span class="relative flex-shrink-0 mt-1 group/dot">
+      <span class={`inline-block w-1.5 h-1.5 rounded-full ${levelColorClass(props.line.level)}`} />
+      <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase bg-surface-overlay border border-border text-text-primary whitespace-nowrap opacity-0 group-hover/dot:opacity-100 transition-none">
+        {props.line.level}
+      </span>
+    </span>
     <span class="text-text-muted flex-shrink-0 tabular-nums">{formatTime(props.line.time)}</span>
     <span class="text-text-muted/60 flex-shrink-0 text-[10px] uppercase tracking-wide">{props.line.subsystem}</span>
     <span class="text-text-secondary break-all leading-relaxed flex-1">{props.line.msg}</span>
