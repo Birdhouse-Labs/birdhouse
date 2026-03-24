@@ -103,6 +103,8 @@ const WorkspaceBooting: Component<WorkspaceBootingProps> = (props) => {
           Open Workspace Settings
         </Button>
 
+        <LogViewer workspaceId={props.workspaceId} buttonLabel="View Startup Logs" buttonVariant="tertiary" />
+
         {/* Error details dialog */}
         <Dialog open={errorDetailsOpen()} onOpenChange={setErrorDetailsOpen}>
           <Dialog.Portal>
