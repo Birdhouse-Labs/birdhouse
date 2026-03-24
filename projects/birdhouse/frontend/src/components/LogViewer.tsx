@@ -68,7 +68,7 @@ const LogViewer: Component<LogViewerProps> = (props) => {
   const [error, setError] = createSignal<string | null>(null);
   const [search, setSearch] = createSignal("");
   const [sourceFilter, setSourceFilter] = createSignal<SourceFilter>("all");
-  const [expandedIndices, setExpandedIndices] = createSignal<Set<number>>(new Set());
+  const [expandedKeys, setExpandedKeys] = createSignal<Set<string>>(new Set());
   const [copied, setCopied] = createSignal(false);
   const [autoScroll, setAutoScroll] = createSignal(true);
 
@@ -101,7 +101,7 @@ const LogViewer: Component<LogViewerProps> = (props) => {
     if (!open()) return;
 
     setLoading(true);
-    setExpandedIndices(new Set<number>());
+    setExpandedKeys(new Set<string>());
     setAutoScroll(true);
     loadLogs();
 
@@ -119,13 +119,13 @@ const LogViewer: Component<LogViewerProps> = (props) => {
 
   const filteredLines = createMemo(() => filterLines(lines(), search(), sourceFilter()));
 
-  const toggleExpanded = (index: number) => {
-    setExpandedIndices((prev) => {
+  const toggleExpanded = (key: string) => {
+    setExpandedKeys((prev) => {
       const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
+      if (next.has(key)) {
+        next.delete(key);
       } else {
-        next.add(index);
+        next.add(key);
       }
       return next;
     });
@@ -246,11 +246,11 @@ const LogViewer: Component<LogViewerProps> = (props) => {
               </Show>
 
               <For each={filteredLines()}>
-                {(line, index) => (
+                {(line) => (
                   <LogRow
                     line={line}
-                    expanded={expandedIndices().has(index())}
-                    onToggleExpand={() => toggleExpanded(index())}
+                    expanded={expandedKeys().has(line.raw)}
+                    onToggleExpand={() => toggleExpanded(line.raw)}
                   />
                 )}
               </For>
