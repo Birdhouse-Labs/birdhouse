@@ -70,6 +70,7 @@ const LogViewer: Component<LogViewerProps> = (props) => {
   const [sourceFilter, setSourceFilter] = createSignal<SourceFilter>("all");
   const [expandedIndices, setExpandedIndices] = createSignal<Set<number>>(new Set());
   const [copied, setCopied] = createSignal(false);
+  const [autoScroll, setAutoScroll] = createSignal(true);
 
   // Ref for the log list container — used to scroll to bottom after updates
   let listRef: HTMLDivElement | undefined;
@@ -84,12 +85,14 @@ const LogViewer: Component<LogViewerProps> = (props) => {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
-      // Scroll to bottom after state settles
-      queueMicrotask(() => {
-        if (listRef) {
-          listRef.scrollTop = listRef.scrollHeight;
-        }
-      });
+      // Scroll to bottom only when auto-scroll is enabled
+      if (autoScroll()) {
+        queueMicrotask(() => {
+          if (listRef) {
+            listRef.scrollTop = listRef.scrollHeight;
+          }
+        });
+      }
     }
   };
 
@@ -99,6 +102,7 @@ const LogViewer: Component<LogViewerProps> = (props) => {
 
     setLoading(true);
     setExpandedIndices(new Set<number>());
+    setAutoScroll(true);
     loadLogs();
 
     const interval = setInterval(loadLogs, POLL_INTERVAL_MS);
@@ -187,7 +191,7 @@ const LogViewer: Component<LogViewerProps> = (props) => {
               </div>
             </div>
 
-            {/* Toolbar: search + source chips */}
+            {/* Toolbar: search + source chips + auto-scroll toggle */}
             <div class="flex items-center gap-3 px-5 py-2.5 border-b border-border flex-shrink-0">
               <input
                 type="text"
@@ -211,6 +215,16 @@ const LogViewer: Component<LogViewerProps> = (props) => {
                   />
                 </Show>
               </div>
+              {/* Auto-scroll toggle */}
+              <label class="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer select-none flex-shrink-0">
+                <input
+                  type="checkbox"
+                  checked={autoScroll()}
+                  onChange={(e) => setAutoScroll(e.currentTarget.checked)}
+                  class="w-3 h-3 accent-accent"
+                />
+                Auto-scroll
+              </label>
             </div>
 
             {/* Log list */}
@@ -233,35 +247,11 @@ const LogViewer: Component<LogViewerProps> = (props) => {
 
               <For each={filteredLines()}>
                 {(line, index) => (
-                  <button
-                    type="button"
-                    class="w-full text-left border-b border-border/40 last:border-0 hover:bg-surface/50"
-                    onClick={() => toggleExpanded(index())}
-                  >
-                    {/* Main row */}
-                    <div class="flex items-baseline gap-2.5 px-4 py-1.5">
-                      {/* Level dot */}
-                      <span
-                        class={`inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1 ${levelColorClass(line.level)}`}
-                      />
-                      {/* Timestamp */}
-                      <span class="text-text-muted flex-shrink-0 tabular-nums">{formatTime(line.time)}</span>
-                      {/* Subsystem */}
-                      <span class="text-text-muted/60 flex-shrink-0 text-[10px] uppercase tracking-wide">
-                        {line.subsystem}
-                      </span>
-                      {/* Message */}
-                      <span class="text-text-secondary break-all leading-relaxed">{line.msg}</span>
-                    </div>
-                    {/* Expanded raw */}
-                    <Show when={expandedIndices().has(index())}>
-                      <div class="px-4 pb-2">
-                        <pre class="bg-surface rounded-lg p-3 text-[10px] text-text-muted whitespace-pre-wrap break-all border border-border leading-relaxed overflow-x-auto">
-                          {line.raw}
-                        </pre>
-                      </div>
-                    </Show>
-                  </button>
+                  <LogRow
+                    line={line}
+                    expanded={expandedIndices().has(index())}
+                    onToggleExpand={() => toggleExpanded(index())}
+                  />
                 )}
               </For>
             </div>
@@ -278,6 +268,74 @@ const LogViewer: Component<LogViewerProps> = (props) => {
     </>
   );
 };
+
+/** A single log row with hover-copy, and expand-to-raw for Birdhouse lines only */
+const LogRow: Component<{ line: LogLine; expanded: boolean; onToggleExpand: () => void }> = (props) => {
+  const [rowCopied, setRowCopied] = createSignal(false);
+  const canExpand = () => props.line.source === "birdhouse";
+
+  const handleCopyRow = (e: MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(props.line.raw).then(() => {
+      setRowCopied(true);
+      setTimeout(() => setRowCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div class="group border-b border-border/40 last:border-0">
+      {/* Main row: expand trigger (Birdhouse only) + copy button side-by-side */}
+      <div class={`flex items-baseline gap-0 ${canExpand() ? "hover:bg-surface/50" : ""}`}>
+        {/* Clickable expand area — Birdhouse rows only */}
+        <Show
+          when={canExpand()}
+          fallback={
+            <div class="flex items-baseline gap-2.5 px-4 py-1.5 flex-1">
+              <RowContent line={props.line} />
+            </div>
+          }
+        >
+          <button
+            type="button"
+            class="flex items-baseline gap-2.5 px-4 py-1.5 flex-1 text-left"
+            onClick={props.onToggleExpand}
+          >
+            <RowContent line={props.line} />
+          </button>
+        </Show>
+        {/* Per-row copy button — appears on hover, always on the right */}
+        <button
+          type="button"
+          title="Copy raw"
+          class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center text-text-muted hover:text-text-primary px-2 py-1.5"
+          onClick={handleCopyRow}
+        >
+          <Show when={rowCopied()} fallback={<ClipboardCopy size={11} />}>
+            <Check size={11} class="text-success" />
+          </Show>
+        </button>
+      </div>
+      {/* Expanded raw — only for Birdhouse lines */}
+      <Show when={props.expanded && canExpand()}>
+        <div class="px-4 pb-2">
+          <pre class="bg-surface rounded-lg p-3 text-[10px] text-text-muted whitespace-pre-wrap break-all border border-border leading-relaxed overflow-x-auto">
+            {props.line.raw}
+          </pre>
+        </div>
+      </Show>
+    </div>
+  );
+};
+
+/** The inner content of a log row (level dot, timestamp, subsystem, message) */
+const RowContent: Component<{ line: LogLine }> = (props) => (
+  <>
+    <span class={`inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1 ${levelColorClass(props.line.level)}`} />
+    <span class="text-text-muted flex-shrink-0 tabular-nums">{formatTime(props.line.time)}</span>
+    <span class="text-text-muted/60 flex-shrink-0 text-[10px] uppercase tracking-wide">{props.line.subsystem}</span>
+    <span class="text-text-secondary break-all leading-relaxed flex-1">{props.line.msg}</span>
+  </>
+);
 
 /** Small source filter chip */
 const SourceChip: Component<{ label: string; active: boolean; onClick: () => void }> = (props) => (
