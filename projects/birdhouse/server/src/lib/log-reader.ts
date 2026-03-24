@@ -61,20 +61,23 @@ export function parseBirdhouseLogLine(line: string): LogLine | null {
 // OpenCode log parsing
 // ---------------------------------------------------------------------------
 
-// Format: LEVEL  YYYY-MM-DDTHH:MM:SS +Xms <rest…>
-const OPENCODE_LINE_RE = /^(\w+)\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\s+\+\d+ms\s+(.*)/;
+// Format: LEVEL  YYYY-MM-DDTHH:MM:SS +Xms <remainder>
+// Named capture groups make the intended field mapping unambiguous.
+const OPENCODE_LINE_RE = /^(?<rawLevel>\w+)\s+(?<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\s+\+\d+ms\s+(?<msg>.*)/;
 
 /**
  * Parse a single line from the OpenCode plain-text log.
  * Returns null if the line is blank or doesn't match the expected format.
+ * msg is set to the remainder after the elapsed field — never includes the
+ * level, timestamp, or elapsed prefix.
  */
 export function parseOpenCodeLogLine(line: string): LogLine | null {
   if (!line.trim()) return null;
 
   const match = OPENCODE_LINE_RE.exec(line);
-  if (!match) return null;
+  if (!match?.groups) return null;
 
-  const [, rawLevel, timestamp, msg] = match;
+  const { rawLevel, timestamp, msg } = match.groups;
   const level = rawLevel.toLowerCase();
   // Timestamp has no timezone — treat as UTC
   const time = `${timestamp}.000Z`;

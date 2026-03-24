@@ -91,12 +91,16 @@ describe("parseOpenCodeLogLine", () => {
     expect(result?.level).toBe("debug");
   });
 
-  test("uses full suffix after elapsed as msg", () => {
+  test("msg is only the remainder after the elapsed field — no level/timestamp prefix", () => {
     const line = "INFO  2026-03-24T03:20:51 +38831ms service=server method=GET path=/global/health request";
     const result = parseOpenCodeLogLine(line);
 
     expect(result).not.toBeNull();
-    // Full suffix, key=value pairs included
+    // msg must not start with the level, timestamp, or elapsed prefix
+    expect(result?.msg).not.toMatch(/^INFO/);
+    expect(result?.msg).not.toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(result?.msg).not.toMatch(/^\+\d+ms/);
+    // msg is the full suffix after +Xms — key=value pairs plus trailing words
     expect(result?.msg).toBe("service=server method=GET path=/global/health request");
   });
 
@@ -118,7 +122,6 @@ describe("parseOpenCodeLogLine", () => {
 describe("readRecentLogs", () => {
   let tmpDir: string;
   let originalLogDir: string | undefined;
-  let originalOpencodeDataRoot: string | undefined;
   let originalOpencodePathEnv: string | undefined;
   let originalNodeEnv: string | undefined;
 
