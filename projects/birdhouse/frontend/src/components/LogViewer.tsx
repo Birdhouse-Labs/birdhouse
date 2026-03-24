@@ -337,7 +337,9 @@ const RowContent: Component<{ line: LogLine }> = (props) => (
       </span>
     </span>
     <span class="text-text-muted flex-shrink-0 tabular-nums">{formatTime(props.line.time)}</span>
-    <span class="text-text-muted/60 flex-shrink-0 text-[10px] uppercase tracking-wide">{props.line.subsystem}</span>
+    <span class="text-text-muted/60 flex-shrink-0 text-[10px] uppercase tracking-wide">
+      {props.line.source === "birdhouse" ? `birdhouse/${props.line.subsystem}` : props.line.source}
+    </span>
     <span class="text-text-secondary break-all leading-relaxed flex-1">{props.line.msg}</span>
   </>
 );
