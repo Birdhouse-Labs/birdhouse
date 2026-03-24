@@ -51,8 +51,6 @@ function levelColorClass(level: string): string {
       return "bg-warning";
     case "info":
       return "bg-text-secondary";
-    case "debug":
-    case "trace":
     default:
       return "bg-text-muted";
   }

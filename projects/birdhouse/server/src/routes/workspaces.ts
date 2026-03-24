@@ -8,6 +8,7 @@ import type { DataDB } from "../lib/data-db";
 import { getOpenCodeDataDir } from "../lib/database-paths";
 import { log } from "../lib/logger";
 import type { OpenCodeManager } from "../lib/opencode-manager";
+import { getWorkspaceStream } from "../lib/opencode-stream";
 import { generateWorkspaceId } from "../lib/workspace";
 
 export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeManager) {
@@ -493,6 +494,15 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
     }
 
     try {
+      // Notify connected clients the workspace is about to restart
+      // Must fire before restartOpenCode() — the SSE stream is still alive at this point
+      const opencodeBase = opencodeManager.getOpenCodeBase(workspaceId);
+      if (opencodeBase) {
+        getWorkspaceStream(opencodeBase, workspace.directory).emitCustomEvent("birdhouse.workspace.restarting", {
+          workspaceId,
+        });
+      }
+
       // Use centralized restart method (ensures safety delay and consistent behavior)
       const { port, pid } = await opencodeManager.restartOpenCode(workspaceId);
 

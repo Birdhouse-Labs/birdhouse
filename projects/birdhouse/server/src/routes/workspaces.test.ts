@@ -65,6 +65,7 @@ function createMockOpenCodeManager(
     shutdownOpenCode: shutdownFn || (async () => {}),
     restartOpenCode: restartFn || (async () => ({ port: 3001, pid: 12345 })),
     getOrSpawnOpenCode: spawnFn || (async () => ({ port: 3001, pid: 12345 })),
+    getOpenCodeBase: () => null, // No stream to emit to in tests
   } as OpenCodeManager;
 }
 

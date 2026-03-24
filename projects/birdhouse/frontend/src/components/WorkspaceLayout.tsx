@@ -14,7 +14,7 @@ import {
   Switch,
 } from "solid-js";
 import { SkillCacheProvider } from "../contexts/SkillCacheContext";
-import { StreamingProvider } from "../contexts/StreamingContext";
+import { StreamingProvider, useStreaming } from "../contexts/StreamingContext";
 import { WorkspaceProvider } from "../contexts/WorkspaceContext";
 import LiveApp from "../LiveApp";
 import { useModalRoute, useWorkspaceId } from "../lib/routing";
@@ -59,16 +59,10 @@ const WorkspaceLayout: Component = () => {
     }
   });
 
-  onMount(() => {
-    const id = workspaceId();
-    if (!id) return;
+  // Start health polling — returns a cleanup function to stop it
+  const startHealthPolling = (id: string) => {
+    errorSince = null;
 
-    // Kick off the spawn in the background
-    startWorkspace(id).catch(() => {
-      // Ignore — health poll will surface the error
-    });
-
-    // Poll health every 2s until ready
     const pollHealth = async () => {
       try {
         const health = await fetchWorkspaceHealth(id);
@@ -105,9 +99,35 @@ const WorkspaceLayout: Component = () => {
 
     pollHealth();
     const pollInterval = setInterval(pollHealth, 2000);
+    return () => clearInterval(pollInterval);
+  };
 
-    onCleanup(() => clearInterval(pollInterval));
+  // Current poll cleanup — held so WorkspaceRestartWatcher can restart it
+  let stopHealthPolling: (() => void) | null = null;
+
+  onMount(() => {
+    const id = workspaceId();
+    if (!id) return;
+
+    // Kick off the spawn in the background
+    startWorkspace(id).catch(() => {
+      // Ignore — health poll will surface the error
+    });
+
+    stopHealthPolling = startHealthPolling(id);
+    onCleanup(() => stopHealthPolling?.());
   });
+
+  // Called by WorkspaceRestartWatcher when a restart event arrives
+  const handleWorkspaceRestarting = () => {
+    const id = workspaceId();
+    if (!id) return;
+    stopHealthPolling?.();
+    setIsReady(false);
+    setHealthError(null);
+    setConfigError(null);
+    stopHealthPolling = startHealthPolling(id);
+  };
 
   return (
     <div
@@ -146,6 +166,7 @@ const WorkspaceLayout: Component = () => {
               {(id) => (
                 <WorkspaceProvider>
                   <StreamingProvider workspaceId={id}>
+                    <WorkspaceRestartWatcher onRestarting={handleWorkspaceRestarting} />
                     <SkillCacheProvider>
                       <Switch fallback={<Navigate href={`/workspace/${id}/agents`} />}>
                         <Match when={isSettings()}>
@@ -183,6 +204,23 @@ const WorkspaceLayout: Component = () => {
       </Show>
     </div>
   );
+};
+
+/**
+ * Subscribes to workspace restarting SSE events and calls onRestarting.
+ * Must be rendered inside StreamingProvider.
+ */
+const WorkspaceRestartWatcher: Component<{ onRestarting: () => void }> = (props) => {
+  const streaming = useStreaming();
+
+  createEffect(() => {
+    const unsubscribe = streaming.subscribeToWorkspaceRestarting(() => {
+      props.onRestarting();
+    });
+    onCleanup(unsubscribe);
+  });
+
+  return null;
 };
 
 export default WorkspaceLayout;

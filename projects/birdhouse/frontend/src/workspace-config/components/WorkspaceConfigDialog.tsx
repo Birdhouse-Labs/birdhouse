@@ -3,6 +3,7 @@
 
 import Dialog from "corvu/dialog";
 import { type Component, createEffect, createMemo, createResource, createSignal, Show } from "solid-js";
+import LogViewer from "../../components/LogViewer";
 import { Button } from "../../components/ui";
 import { log } from "../../lib/logger";
 import { fetchWorkspace, restartWorkspace } from "../../services/workspaces-api";
@@ -10,7 +11,6 @@ import type { Workspace } from "../../types/workspace";
 import { fetchWorkspaceConfig, updateWorkspaceConfig } from "../services/workspace-config-api";
 import type { AnthropicOptions, McpServers, WorkspaceConfig, WorkspaceConfigUpdate } from "../types/config-types";
 import { PROVIDERS } from "../types/provider-registry";
-import LogViewer from "../../components/LogViewer";
 import McpConfigSection from "./McpConfigSection";
 import McpJsonDialog from "./McpJsonDialog";
 import ProviderDeleteDialog from "./ProviderDeleteDialog";

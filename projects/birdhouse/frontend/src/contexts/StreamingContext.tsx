@@ -145,6 +145,12 @@ export type AgentUnarchivedHandler = (payload: {
 export type ConnectionEstablishedHandler = () => void;
 
 /**
+ * Handler function for workspace restarting events
+ * Fires when a workspace restart is initiated — before OpenCode shuts down
+ */
+export type WorkspaceRestartingHandler = () => void;
+
+/**
  * Handler function for skill updated events (Birdhouse custom event)
  * Fires when skill trigger phrases change and cache should refresh
  */
@@ -278,6 +284,13 @@ interface StreamingContextValue {
   subscribeToConnectionEstablished: (handler: ConnectionEstablishedHandler) => () => void;
 
   /**
+   * Subscribe to workspace restarting events
+   * Fires when a workspace restart is initiated — before OpenCode shuts down
+   * @returns Cleanup function to unsubscribe
+   */
+  subscribeToWorkspaceRestarting: (handler: WorkspaceRestartingHandler) => () => void;
+
+  /**
    * Subscribe to skill updated events
    * Fires when skill metadata changes and cache should refresh
    * @returns Cleanup function to unsubscribe
@@ -338,6 +351,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
   const agentUnarchivedHandlers = new Set<AgentUnarchivedHandler>();
   const connectionEstablishedHandlers = new Set<ConnectionEstablishedHandler>();
   const skillUpdatedHandlers = new Set<SkillUpdatedHandler>();
+  const workspaceRestartingHandlers = new Set<WorkspaceRestartingHandler>();
 
   // EventSource connection (managed by visibility and workspace switching)
   let eventSource: EventSource | null = null;
@@ -781,6 +795,12 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
             handler();
           }
           break;
+        case "birdhouse.workspace.restarting":
+          log.api.debug("Workspace restarting SSE event received");
+          for (const handler of workspaceRestartingHandlers) {
+            handler();
+          }
+          break;
       }
     } catch {
       // Ignore parse errors - stream might send non-JSON data
@@ -847,6 +867,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     agentUnarchivedHandlers.clear();
     connectionEstablishedHandlers.clear();
     skillUpdatedHandlers.clear();
+    workspaceRestartingHandlers.clear();
     questionAskedHandlers.clear();
   });
 
@@ -1114,6 +1135,17 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
   };
 
   /**
+   * Subscribe to workspace restarting events
+   */
+  const subscribeToWorkspaceRestarting = (handler: WorkspaceRestartingHandler): (() => void) => {
+    workspaceRestartingHandlers.add(handler);
+
+    return () => {
+      workspaceRestartingHandlers.delete(handler);
+    };
+  };
+
+  /**
    * Subscribe to skill updated events
    */
   const subscribeToSkillUpdated = (handler: SkillUpdatedHandler): (() => void) => {
@@ -1162,6 +1194,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     subscribeToAgentArchived,
     subscribeToAgentUnarchived,
     subscribeToConnectionEstablished,
+    subscribeToWorkspaceRestarting,
     subscribeToSkillUpdated,
     subscribeToQuestionAsked,
     connectionStatus,
