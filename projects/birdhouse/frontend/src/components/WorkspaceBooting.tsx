@@ -1,7 +1,8 @@
 // ABOUTME: Workspace booting screen shown while OpenCode is starting up
 // ABOUTME: Polls for log output, shows elapsed time, and provides restart/settings actions
 
-import { AlertTriangle, Settings } from "lucide-solid";
+import Dialog from "corvu/dialog";
+import { AlertTriangle, Copy, Settings } from "lucide-solid";
 import { type Component, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { useModalRoute } from "../lib/routing";
 import { fetchWorkspaceLogs, restartWorkspace } from "../services/workspaces-api";
@@ -43,6 +44,8 @@ const WorkspaceBooting: Component<WorkspaceBootingProps> = (props) => {
   const [elapsedMs, setElapsedMs] = createSignal(0);
   const [logLines, setLogLines] = createSignal<string[]>([]);
   const [restarting, setRestarting] = createSignal(false);
+  const [errorDetailsOpen, setErrorDetailsOpen] = createSignal(false);
+  const [copied, setCopied] = createSignal(false);
 
   const isSlow = () => elapsedMs() >= SLOW_THRESHOLD_MS;
   // Don't show Restart when there's a config error — restarting won't help
@@ -58,6 +61,14 @@ const WorkspaceBooting: Component<WorkspaceBootingProps> = (props) => {
     });
     // Keep restarting state to show feedback briefly, then reset
     setTimeout(() => setRestarting(false), 3000);
+  };
+
+  const handleCopyError = () => {
+    if (!props.configError) return;
+    navigator.clipboard.writeText(props.configError).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   onMount(() => {
@@ -101,13 +112,21 @@ const WorkspaceBooting: Component<WorkspaceBootingProps> = (props) => {
             <AlertTriangle size={28} class="text-danger" />
           </div>
           <div class="flex flex-col gap-1">
-            <h2 class="text-xl font-semibold text-text-primary">Workspace configuration error</h2>
+            <h2 class="text-xl font-semibold text-text-primary">Workspace failed to boot</h2>
             <Show when={props.workspaceTitle}>
               <p class="text-sm text-text-muted">{props.workspaceTitle}</p>
             </Show>
           </div>
-          <p class="text-sm text-danger max-w-md">{props.configError}</p>
-          <p class="text-sm text-text-muted">Fix the configuration below to start this workspace.</p>
+          <p class="text-sm text-text-secondary">
+            Click &lsquo;Open Workspace Settings&rsquo; below to fix the configuration.
+          </p>
+          <button
+            type="button"
+            class="text-xs text-text-muted underline underline-offset-2 hover:text-text-secondary transition-colors"
+            onClick={() => setErrorDetailsOpen(true)}
+          >
+            Show error details
+          </button>
         </div>
 
         {/* Prominent Settings CTA */}
@@ -118,6 +137,29 @@ const WorkspaceBooting: Component<WorkspaceBootingProps> = (props) => {
         >
           Open Workspace Settings
         </Button>
+
+        {/* Error details dialog */}
+        <Dialog open={errorDetailsOpen()} onOpenChange={setErrorDetailsOpen}>
+          <Dialog.Portal>
+            <Dialog.Overlay class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
+            <Dialog.Content class="fixed left-1/2 top-1/2 z-50 w-full max-w-lg rounded-2xl p-6 border shadow-2xl -translate-x-1/2 -translate-y-1/2 bg-surface-raised border-border">
+              <div class="flex items-center justify-between mb-4">
+                <Dialog.Label class="text-lg font-semibold text-heading">Error Details</Dialog.Label>
+                <Dialog.Close class="text-text-muted hover:text-text-primary transition-colors focus:outline-none rounded p-1 w-8 h-8 flex items-center justify-center flex-shrink-0">
+                  <span class="text-xl leading-none select-none">×</span>
+                </Dialog.Close>
+              </div>
+              <pre class="font-mono text-xs text-text-secondary bg-surface rounded-lg p-4 overflow-auto max-h-48 whitespace-pre-wrap break-all border border-border">
+                {props.configError}
+              </pre>
+              <div class="flex justify-end mt-4">
+                <Button variant="secondary" leftIcon={<Copy size={13} />} onClick={handleCopyError}>
+                  {copied() ? "Copied!" : "Copy"}
+                </Button>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog>
       </Show>
 
       {/* Normal booting state */}
