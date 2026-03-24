@@ -75,3 +75,23 @@ export interface WorkspaceLogsResponse {
   available: boolean;
   reason?: string;
 }
+
+/**
+ * A single structured log line from the recent logs endpoint
+ */
+export interface LogLine {
+  time: string;
+  level: string;
+  subsystem: string;
+  msg: string;
+  raw: string;
+  source: "birdhouse" | "opencode";
+}
+
+/**
+ * Response from GET /api/logs/recent
+ */
+export interface RecentLogsResponse {
+  lines: LogLine[];
+  truncated: boolean;
+}

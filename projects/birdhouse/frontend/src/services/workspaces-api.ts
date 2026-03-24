@@ -4,13 +4,13 @@
 import { API_ENDPOINT_BASE } from "../config/api";
 
 import type {
+  RecentLogsResponse,
   Workspace,
   WorkspaceCheckResponse,
   WorkspaceCreateRequest,
   WorkspaceCreateResponse,
   WorkspaceDeleteResponse,
   WorkspaceHealthResponse,
-  WorkspaceLogsResponse,
 } from "../types/workspace";
 
 /**
@@ -318,19 +318,23 @@ export async function startWorkspace(workspaceId: string): Promise<void> {
 }
 
 /**
- * Fetch recent log lines for a workspace's OpenCode instance
- * @param workspaceId Workspace ID to fetch logs for
- * @returns Log response with lines and availability flag
+ * Fetch recent structured log lines from Birdhouse and optionally OpenCode
+ * @param workspaceId Workspace ID to include OpenCode logs (optional)
+ * @returns Recent log lines and truncation flag
  */
-export async function fetchWorkspaceLogs(workspaceId: string): Promise<WorkspaceLogsResponse> {
-  const url = `${API_ENDPOINT_BASE}/workspaces/${workspaceId}/logs`;
+export async function fetchRecentLogs(workspaceId?: string): Promise<RecentLogsResponse> {
+  const params = new URLSearchParams({ limit: "200" });
+  if (workspaceId) {
+    params.set("workspaceId", workspaceId);
+  }
+  const url = `${API_ENDPOINT_BASE}/logs/recent?${params}`;
 
   try {
     const response = await fetch(url);
 
     if (!response.ok) {
       const responseBody = await response.text();
-      let errorMessage = `Failed to fetch workspace logs: ${response.statusText}`;
+      let errorMessage = `Failed to fetch logs: ${response.statusText}`;
 
       try {
         const errorData = JSON.parse(responseBody);
@@ -346,6 +350,6 @@ export async function fetchWorkspaceLogs(workspaceId: string): Promise<Workspace
 
     return response.json();
   } catch (error) {
-    throw new Error(`Failed to fetch workspace logs: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`Failed to fetch logs: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
