@@ -10,6 +10,7 @@ import type { Workspace } from "../../types/workspace";
 import { fetchWorkspaceConfig, updateWorkspaceConfig } from "../services/workspace-config-api";
 import type { AnthropicOptions, McpServers, WorkspaceConfig, WorkspaceConfigUpdate } from "../types/config-types";
 import { PROVIDERS } from "../types/provider-registry";
+import LogViewer from "../../components/LogViewer";
 import McpConfigSection from "./McpConfigSection";
 import McpJsonDialog from "./McpJsonDialog";
 import ProviderDeleteDialog from "./ProviderDeleteDialog";
@@ -378,6 +379,12 @@ const WorkspaceConfigDialog: Component<WorkspaceConfigDialogProps> = (props) => 
                     onConfigureJson={() => setShowMcpDialog(true)}
                   />
                 </Show>
+              </section>
+
+              {/* Diagnostics Section */}
+              <section>
+                <h2 class="text-xl font-semibold text-text-primary mb-4 pb-2 border-b border-border">Diagnostics</h2>
+                <LogViewer workspaceId={props.workspaceId} />
               </section>
             </div>
           </div>
