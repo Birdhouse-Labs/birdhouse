@@ -4,6 +4,7 @@
 import { API_ENDPOINT_BASE } from "../config/api";
 
 import type {
+  RecentLogsResponse,
   Workspace,
   WorkspaceCheckResponse,
   WorkspaceCreateRequest,
@@ -280,5 +281,75 @@ export async function restartWorkspace(workspaceId: string): Promise<{ success: 
     return response.json();
   } catch (error) {
     throw new Error(`Failed to restart workspace: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+/**
+ * Trigger OpenCode spawn for workspace (fire-and-forget on server side)
+ * Returns once the request is accepted (202)
+ * @param workspaceId Workspace ID to start
+ */
+export async function startWorkspace(workspaceId: string): Promise<void> {
+  const url = `${API_ENDPOINT_BASE}/workspaces/${workspaceId}/start`;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      const responseBody = await response.text();
+      let errorMessage = `Failed to start workspace: ${response.statusText}`;
+
+      try {
+        const errorData = JSON.parse(responseBody);
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // Response wasn't JSON, use status text
+      }
+
+      throw new Error(errorMessage);
+    }
+  } catch (error) {
+    throw new Error(`Failed to start workspace: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+/**
+ * Fetch recent structured log lines from Birdhouse and optionally OpenCode
+ * @param workspaceId Workspace ID to include OpenCode logs (optional)
+ * @returns Recent log lines and truncation flag
+ */
+export async function fetchRecentLogs(workspaceId?: string): Promise<RecentLogsResponse> {
+  const params = new URLSearchParams({ limit: "200" });
+  if (workspaceId) {
+    params.set("workspaceId", workspaceId);
+  }
+  const url = `${API_ENDPOINT_BASE}/logs/recent?${params}`;
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const responseBody = await response.text();
+      let errorMessage = `Failed to fetch logs: ${response.statusText}`;
+
+      try {
+        const errorData = JSON.parse(responseBody);
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // Response wasn't JSON, use status text
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  } catch (error) {
+    throw new Error(`Failed to fetch logs: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }

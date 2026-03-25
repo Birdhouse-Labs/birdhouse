@@ -56,6 +56,8 @@ export interface WorkspaceHealthResponse {
   port: number | null;
   pid: number | null;
   error: string | null;
+  /** Set when OpenCode is running but has an invalid config (e.g. broken MCP server) */
+  configError: string | null;
 }
 
 /**
@@ -63,4 +65,33 @@ export interface WorkspaceHealthResponse {
  */
 export interface WorkspaceHealthStatus extends WorkspaceHealthResponse {
   lastChecked: number; // timestamp in ms
+}
+
+/**
+ * Response from workspace logs endpoint
+ */
+export interface WorkspaceLogsResponse {
+  lines: string[];
+  available: boolean;
+  reason?: string;
+}
+
+/**
+ * A single structured log line from the recent logs endpoint
+ */
+export interface LogLine {
+  time: string;
+  level: string;
+  subsystem: string;
+  msg: string;
+  raw: string;
+  source: "birdhouse" | "opencode";
+}
+
+/**
+ * Response from GET /api/logs/recent
+ */
+export interface RecentLogsResponse {
+  lines: LogLine[];
+  truncated: boolean;
 }

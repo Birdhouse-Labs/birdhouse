@@ -3,6 +3,7 @@
 
 import Dialog from "corvu/dialog";
 import { type Component, createEffect, createMemo, createResource, createSignal, Show } from "solid-js";
+import LogViewer from "../../components/LogViewer";
 import { Button } from "../../components/ui";
 import { log } from "../../lib/logger";
 import { fetchWorkspace, restartWorkspace } from "../../services/workspaces-api";
@@ -378,6 +379,12 @@ const WorkspaceConfigDialog: Component<WorkspaceConfigDialogProps> = (props) => 
                     onConfigureJson={() => setShowMcpDialog(true)}
                   />
                 </Show>
+              </section>
+
+              {/* Diagnostics Section */}
+              <section>
+                <h2 class="text-xl font-semibold text-text-primary mb-4 pb-2 border-b border-border">Diagnostics</h2>
+                <LogViewer workspaceId={props.workspaceId} />
               </section>
             </div>
           </div>

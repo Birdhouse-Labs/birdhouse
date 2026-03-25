@@ -1,11 +1,14 @@
 // ABOUTME: Workspace management routes for multi-workspace support
 // ABOUTME: CRUD operations for workspaces, including creation, listing, and deletion
 
-import { basename } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { basename, join } from "node:path";
 import { Hono } from "hono";
 import type { DataDB } from "../lib/data-db";
+import { getOpenCodeDataDir } from "../lib/database-paths";
 import { log } from "../lib/logger";
 import type { OpenCodeManager } from "../lib/opencode-manager";
+import { getWorkspaceStream } from "../lib/opencode-stream";
 import { generateWorkspaceId } from "../lib/workspace";
 
 export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeManager) {
@@ -258,12 +261,13 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
             port: null,
             pid: null,
             error: "Workspace environment not started for this workspace",
+            configError: null,
           };
         }
 
         try {
           // Verify the OpenCode instance is actually valid and responding
-          const isValid = await opencodeManager.verifyOpenCodeInstance(
+          const { healthy: isValid, configError = null } = await opencodeManager.verifyOpenCodeInstance(
             workspace.opencode_port,
             workspace.opencode_pid,
             workspace.workspace_id,
@@ -277,6 +281,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
               port: workspace.opencode_port,
               pid: workspace.opencode_pid,
               error: null,
+              configError: null,
             };
           }
 
@@ -287,6 +292,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
             port: workspace.opencode_port,
             pid: workspace.opencode_pid,
             error: "Workspace environment not responding or workspace ID mismatch",
+            configError,
           };
         } catch (error) {
           log.server.error(
@@ -304,12 +310,76 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
             port: workspace.opencode_port,
             pid: workspace.opencode_pid,
             error: error instanceof Error ? error.message : "Unknown error during health check",
+            configError: null,
           };
         }
       }),
     );
 
     return c.json(healthStatuses);
+  });
+
+  /**
+   * POST /api/workspace/:id/start
+   * Trigger OpenCode spawn for workspace (fire-and-forget)
+   * Returns 202 immediately; spawn happens in the background
+   */
+  app.post("/:id/start", (c) => {
+    const workspaceId = c.req.param("id");
+
+    const workspace = dataDb.getWorkspaceById(workspaceId);
+    if (!workspace) {
+      return c.json({ error: "Workspace not found" }, 404);
+    }
+
+    // Fire and forget — do not await
+    opencodeManager.getOrSpawnOpenCode(workspaceId).catch((error) => {
+      log.server.warn(
+        { workspaceId, error: error instanceof Error ? error.message : "Unknown" },
+        "Background OpenCode spawn failed",
+      );
+    });
+
+    return c.json({ started: true }, 202);
+  });
+
+  /**
+   * GET /api/workspace/:id/logs
+   * Return recent OpenCode log lines for the workspace
+   * Dev mode: reads from log file; prod mode: returns available:false
+   */
+  app.get("/:id/logs", (c) => {
+    const workspaceId = c.req.param("id");
+
+    const workspace = dataDb.getWorkspaceById(workspaceId);
+    if (!workspace) {
+      return c.json({ error: "Workspace not found" }, 404);
+    }
+
+    const isDevMode = !!process.env.OPENCODE_PATH;
+
+    if (!isDevMode) {
+      return c.json({ lines: [], available: false, reason: "logs_in_server_log" });
+    }
+
+    const logFile = join(getOpenCodeDataDir(workspaceId), "logs", "opencode.log");
+
+    if (!existsSync(logFile)) {
+      return c.json({ lines: [], available: true });
+    }
+
+    try {
+      const content = readFileSync(logFile, "utf8");
+      const allLines = content.split("\n").filter((line) => line.trim().length > 0);
+      const lines = allLines.slice(-100);
+      return c.json({ lines, available: true });
+    } catch (error) {
+      log.server.error(
+        { workspaceId, logFile, error: error instanceof Error ? error.message : "Unknown" },
+        "Failed to read OpenCode log file",
+      );
+      return c.json({ lines: [], available: true });
+    }
   });
 
   /**
@@ -356,12 +426,13 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
         port: null,
         pid: null,
         error: "Workspace environment not started for this workspace",
+        configError: null,
       });
     }
 
     try {
       // Verify the OpenCode instance is actually valid and responding
-      const isValid = await opencodeManager.verifyOpenCodeInstance(
+      const { healthy: isValid, configError = null } = await opencodeManager.verifyOpenCodeInstance(
         workspace.opencode_port,
         workspace.opencode_pid,
         workspaceId,
@@ -374,6 +445,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
           port: workspace.opencode_port,
           pid: workspace.opencode_pid,
           error: null,
+          configError: null,
         });
       }
 
@@ -383,6 +455,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
         port: workspace.opencode_port,
         pid: workspace.opencode_pid,
         error: "Workspace environment not responding or workspace ID mismatch",
+        configError,
       });
     } catch (error) {
       log.server.error(
@@ -400,6 +473,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
           port: workspace.opencode_port,
           pid: workspace.opencode_pid,
           error: error instanceof Error ? error.message : "Unknown error during health check",
+          configError: null,
         },
         500,
       );
@@ -420,6 +494,15 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
     }
 
     try {
+      // Notify connected clients the workspace is about to restart
+      // Must fire before restartOpenCode() — the SSE stream is still alive at this point
+      const opencodeBase = opencodeManager.getOpenCodeBase(workspaceId);
+      if (opencodeBase) {
+        getWorkspaceStream(opencodeBase, workspace.directory).emitCustomEvent("birdhouse.workspace.restarting", {
+          workspaceId,
+        });
+      }
+
       // Use centralized restart method (ensures safety delay and consistent behavior)
       const { port, pid } = await opencodeManager.restartOpenCode(workspaceId);
 

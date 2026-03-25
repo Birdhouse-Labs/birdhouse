@@ -21,6 +21,11 @@ interface OpenCodeHealthResponse {
   birdhouseWorkspaceId: string | null;
 }
 
+interface OpenCodeSessionListResponse {
+  name?: string;
+  data?: { path?: string; issues?: unknown[] };
+}
+
 export class OpenCodeManager {
   private instances: Map<string, OpenCodeInstance> = new Map();
   private spawning: Map<string, Promise<{ port: number; pid: number }>> = new Map();
@@ -82,7 +87,7 @@ export class OpenCodeManager {
         continue;
       }
 
-      const isValid = await this.verifyOpenCodeInstance(opencode_port, opencode_pid, workspace_id);
+      const { healthy: isValid } = await this.verifyOpenCodeInstance(opencode_port, opencode_pid, workspace_id);
 
       if (isValid) {
         validCount++;
@@ -150,7 +155,11 @@ export class OpenCodeManager {
 
     // Check DB for existing OpenCode (could be from previous server run)
     if (workspace.opencode_port && workspace.opencode_pid) {
-      const isValid = await this.verifyOpenCodeInstance(workspace.opencode_port, workspace.opencode_pid, workspaceId);
+      const { healthy: isValid } = await this.verifyOpenCodeInstance(
+        workspace.opencode_port,
+        workspace.opencode_pid,
+        workspaceId,
+      );
 
       if (isValid) {
         log.server.info(
@@ -598,13 +607,19 @@ export class OpenCodeManager {
 
   /**
    * Verify OpenCode instance is running correctly for expected workspace
+   * Returns { healthy: true } when fully operational, or { healthy: false, configError? } when not.
+   * configError is set when OpenCode is alive but has an invalid configuration.
    * Public method - used by health check API endpoint
    */
-  async verifyOpenCodeInstance(port: number, pid: number, expectedWorkspaceId: string): Promise<boolean> {
+  async verifyOpenCodeInstance(
+    port: number,
+    pid: number,
+    expectedWorkspaceId: string,
+  ): Promise<{ healthy: boolean; configError?: string }> {
     // Check if process is alive
     if (!this.isProcessAlive(pid)) {
       log.server.debug({ port, pid, expectedWorkspaceId }, "OpenCode process not alive");
-      return false;
+      return { healthy: false };
     }
 
     // Try to hit health endpoint
@@ -615,7 +630,7 @@ export class OpenCodeManager {
 
       if (!response.ok) {
         log.server.debug({ port, pid, expectedWorkspaceId, status: response.status }, "OpenCode health check failed");
-        return false;
+        return { healthy: false };
       }
 
       const health = (await response.json()) as OpenCodeHealthResponse;
@@ -631,17 +646,59 @@ export class OpenCodeManager {
           },
           "OpenCode workspace ID mismatch - wrong workspace on this port",
         );
-        return false;
+        return { healthy: false };
+      }
+
+      // Deep check: call /session/list to detect config errors (e.g. broken MCP config).
+      // OpenCode reports healthy on /global/health even with invalid config, but
+      // /session/list returns a ConfigInvalidError immediately.
+      const configError = await this.checkForConfigError(port);
+      if (configError !== null) {
+        log.server.warn({ port, pid, expectedWorkspaceId, configError }, "OpenCode has invalid configuration");
+        return { healthy: false, configError };
       }
 
       // All checks passed
-      return true;
+      return { healthy: true };
     } catch (error) {
       log.server.debug(
         { port, pid, expectedWorkspaceId, error: error instanceof Error ? error.message : String(error) },
         "Failed to connect to OpenCode health endpoint",
       );
-      return false;
+      return { healthy: false };
+    }
+  }
+
+  /**
+   * Call /session/list to detect config errors on a running OpenCode instance.
+   * Returns the error message string if a ConfigInvalidError is present, null otherwise.
+   */
+  private async checkForConfigError(port: number): Promise<string | null> {
+    try {
+      const response = await fetch(`http://localhost:${port}/session/list`, {
+        signal: AbortSignal.timeout(1500),
+      });
+
+      if (!response.ok) {
+        // Non-200 from /session/list — try to parse a ConfigInvalidError
+        try {
+          const body = (await response.json()) as OpenCodeSessionListResponse;
+          if (body.name === "ConfigInvalidError") {
+            const issues = body.data?.issues;
+            const path = body.data?.path ?? "config";
+            const issueCount = Array.isArray(issues) ? issues.length : 0;
+            return `Invalid configuration at '${path}' (${issueCount} issue${issueCount !== 1 ? "s" : ""})`;
+          }
+        } catch {
+          // Body wasn't JSON or didn't match — not a config error we recognize
+        }
+      }
+
+      return null;
+    } catch {
+      // Timeout or network error on /session/list — treat as no config error
+      // (the process might still be starting up)
+      return null;
     }
   }
 
