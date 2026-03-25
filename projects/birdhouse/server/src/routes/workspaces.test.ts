@@ -66,7 +66,7 @@ function createMockOpenCodeManager(
     restartOpenCode: restartFn || (async () => ({ port: 3001, pid: 12345 })),
     getOrSpawnOpenCode: spawnFn || (async () => ({ port: 3001, pid: 12345 })),
     getOpenCodeBase: () => null, // No stream to emit to in tests
-  } as OpenCodeManager;
+  } as unknown as OpenCodeManager;
 }
 
 describe("GET /api/workspace/:id/health", () => {
