@@ -20,6 +20,7 @@ import {
   SendMessageError,
   sendMessage,
   stopAgent,
+  stopAgentTree,
   unrevertAgent,
 } from "../services/messages-api";
 import { fetchPendingQuestions } from "../services/questions-api";
@@ -94,6 +95,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
   const [messagesStore, setMessages] = createStore<Message[]>([]);
   const [selectedAgent, setSelectedAgent] = createSignal("build");
   const [cloneMode, setCloneMode] = createSignal(false);
+  const [stopTreeMode, setStopTreeMode] = createSignal(false);
 
   // Resource handles fetch lifecycle (with workspace ID)
   const [messagesResource, { refetch }] = createResource(
@@ -162,6 +164,12 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     const status = agentStatus();
     return status.type === "busy" || status.type === "retry";
   };
+
+  createEffect(() => {
+    if (!isAgentWorking()) {
+      setStopTreeMode(false);
+    }
+  });
 
   // Subscribe to session.status SSE events to keep status updated.
   // When session goes idle (e.g. after stop/abort), clear pending questions immediately
@@ -520,8 +528,11 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     setSendError(null);
 
     try {
-      // Send to API (with wait=false for async operation)
-      await stopAgent(workspaceId, props.agentId);
+      if (stopTreeMode()) {
+        await stopAgentTree(workspaceId, props.agentId);
+      } else {
+        await stopAgent(workspaceId, props.agentId);
+      }
 
       // Streaming will update the UI with user message + assistant response
     } catch (error) {
@@ -748,6 +759,8 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
             onInputChange={setInputValue}
             onSend={() => handleSendMessage(inputValue())}
             onStop={handleStop}
+            stopTreeMode={stopTreeMode()}
+            onStopTreeModeChange={setStopTreeMode}
             attachments={attachments()}
             attachmentError={attachmentError()}
             onRemoveAttachment={(attachmentId) => {

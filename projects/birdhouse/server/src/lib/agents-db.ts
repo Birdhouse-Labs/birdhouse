@@ -152,6 +152,9 @@ export interface AgentsDB {
     sortDir?: SortDirection,
   ): { rows: AgentRow[]; matchedAgentIds: string[] };
 
+  /** Get all agents that belong to the same tree */
+  getAgentsByTreeId(treeId: string): AgentRow[];
+
   /** Update agent's updated_at timestamp (called when messages are sent) */
   updateAgentTimestamp(agentId: string): void;
 
@@ -700,6 +703,20 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
       const rows = db.prepare(sortQuery).all(...treeIds) as AgentRow[];
 
       return { rows, matchedAgentIds };
+    },
+
+    getAgentsByTreeId(treeId: string): AgentRow[] {
+      return db
+        .query<AgentRow, [string]>(`
+          SELECT
+            id, session_id, parent_id, tree_id, level,
+            title, project_id, directory, model,
+            created_at, updated_at, cloned_from, cloned_at, archived_at
+          FROM agents
+          WHERE tree_id = ?
+          ORDER BY level ASC, created_at ASC
+        `)
+        .all(treeId) as AgentRow[];
     },
 
     updateAgentTimestamp(agentId: string): void {

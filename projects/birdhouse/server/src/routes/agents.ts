@@ -126,6 +126,7 @@ export function createAgentRoutes() {
   app.get("/:id/wait", (c) => handlers.wait(c, getDepsFromContext(c)));
 
   app.post("/:id/stop", (c) => handlers.stopAgent(c, getDepsFromContext(c)));
+  app.post("/:id/stop-tree", (c) => handlers.stopAgentTree(c, getDepsFromContext(c)));
 
   // GET /api/agents/:id/questions - List pending questions for agent
   app.get("/:id/questions", (c) => getAgentQuestions(c, getDepsFromContext(c)));
