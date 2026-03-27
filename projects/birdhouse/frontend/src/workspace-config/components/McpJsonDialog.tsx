@@ -5,7 +5,7 @@ import Dialog from "corvu/dialog";
 import Popover from "corvu/popover";
 import { Info } from "lucide-solid";
 import { type Component, createEffect, createMemo, createSignal, Show } from "solid-js";
-import { Button } from "../../components/ui";
+import { Button, TextEditor } from "../../components/ui";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import type { McpServers } from "../types/config-types";
 
@@ -163,10 +163,13 @@ const McpJsonDialog: Component<McpJsonDialogProps> = (props) => {
           {/* Content */}
           <div class="space-y-4">
             {/* JSON Editor */}
-            <textarea
+            <TextEditor
               value={jsonString()}
-              onInput={(e) => setJsonString(e.currentTarget.value)}
+              onInput={setJsonString}
               onBlur={handleBlur}
+              language="json"
+              height="500px"
+              ariaLabel="MCP server configuration JSON"
               placeholder={`{
   "linear": {
     "enabled": true,
@@ -177,7 +180,10 @@ const McpJsonDialog: Component<McpJsonDialogProps> = (props) => {
     }
   }
 }`}
-              class="w-full h-[500px] px-4 py-3 bg-surface text-text-primary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all resize-none font-mono text-sm"
+              options={{
+                formatOnPaste: true,
+                formatOnType: true,
+              }}
             />
 
             {/* Error Display */}
