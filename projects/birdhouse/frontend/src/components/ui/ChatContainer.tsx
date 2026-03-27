@@ -1,7 +1,7 @@
 // ABOUTME: Chat container with input at top and message list below (newest-at-top architecture)
 // ABOUTME: Orchestrates message rendering and input handling
 
-import { LibraryBig, Network, Square, X } from "lucide-solid";
+import { LibraryBig, Network, Split, Square, X } from "lucide-solid";
 import { type Accessor, type Component, createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { findPendingAssistantId, isMessageQueued } from "../../domain/message-queue";
