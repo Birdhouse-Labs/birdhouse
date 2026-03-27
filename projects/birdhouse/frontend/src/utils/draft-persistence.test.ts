@@ -83,6 +83,20 @@ describe("createDebouncedSave", () => {
     expect(callback).toHaveBeenCalledTimes(1);
   });
 
+  it("cancel clears a pending timer without calling the callback", () => {
+    const callback = vi.fn();
+    const { schedule, cancel } = createDebouncedSave(callback);
+
+    schedule();
+    vi.advanceTimersByTime(200);
+
+    cancel();
+    expect(callback).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(500);
+    expect(callback).not.toHaveBeenCalled();
+  });
+
   it("flush when no timer pending is a no-op", () => {
     const callback = vi.fn();
     const { flush } = createDebouncedSave(callback);
