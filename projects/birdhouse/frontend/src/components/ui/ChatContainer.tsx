@@ -81,9 +81,11 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
 
   const StopTreeModeIcon: Component = () => (
     <span class="relative flex h-[18px] w-[18px] items-center justify-center overflow-visible">
-      <Network size={16} />
-      <span class="absolute -bottom-[2px] -right-[2px] flex h-[11px] w-[11px] items-center justify-center rounded-[3px] bg-danger text-white ring-1 ring-surface-raised">
-        <Square size={8} fill="currentColor" stroke-width={3} />
+      <span class="translate-y-[1px] -translate-x-[1px]">
+        <Network size={15} />
+      </span>
+      <span class="absolute -right-[1px] -top-[1px] flex h-[9px] w-[9px] items-center justify-center rounded-[3px] bg-danger text-white ring-1 ring-surface-raised">
+        <Square size={6} fill="currentColor" stroke-width={3} />
       </span>
     </span>
   );
