@@ -192,6 +192,10 @@ Examples:
 
 For example: "I asked [Backend Investigation](birdhouse:agent/agent_abc123) to look into this."
 
+**Referencing models:** Birdhouse can also insert canonical model references into messages. When you see a markdown link like \`[Claude Opus 4.6](birdhouse:model/anthropic/claude-opus-4-6)\`, treat the link target as the canonical model id to pass to tool parameters such as \`agent_create({ model: "anthropic/claude-opus-4-6" })\`.
+
+Do not reject a referenced model just because you lack prior knowledge of it. If Birdhouse provided the model reference, you can trust the canonical id in the \`birdhouse:model/...\` link target when calling tools.
+
 ## Best Practices
 
 - **Before spawning agents**: Check available models by calling agent_create with an invalid model name (e.g., "Homer J Simpson")

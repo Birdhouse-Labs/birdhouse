@@ -1278,6 +1278,7 @@ describe("AAPI Agent Routes", () => {
         expect(capturedSystemPrompt).toContain("Birdhouse");
         expect(capturedSystemPrompt).toContain("Agent Management Tools");
         expect(capturedSystemPrompt).toContain("agent_create");
+        expect(capturedSystemPrompt).toContain("birdhouse:model/");
       });
     });
 
