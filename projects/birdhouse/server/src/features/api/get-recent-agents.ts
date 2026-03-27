@@ -6,7 +6,7 @@ import type { Deps } from "../../dependencies";
 import type { Message } from "../../lib/opencode-client";
 
 const MAX_AGENTS = 100;
-const MAX_SNIPPET_LENGTH = 100;
+const MAX_SNIPPET_LENGTH = 200;
 
 interface RecentAgentResponse {
   id: string;
@@ -15,7 +15,11 @@ interface RecentAgentResponse {
   parent_id: string | null;
   tree_id: string;
   lastMessageAt: number | null;
-  lastUserMessage: string | null;
+  lastUserMessage: {
+    text: string;
+    isAgentSent: boolean;
+    sentByAgentTitle?: string;
+  } | null;
   lastAgentMessage: string | null;
 }
 
@@ -78,10 +82,25 @@ export async function getRecentAgents(c: Context, deps: Pick<Deps, "agentsDB" | 
           const lastMessageAt = lastMessage.info.time.created;
 
           // Find last user message (search from end)
-          let lastUserMessage: string | null = null;
+          let lastUserMessage: RecentAgentResponse["lastUserMessage"] = null;
           for (let i = messages.length - 1; i >= 0; i--) {
-            if (messages[i].info.role === "user") {
-              lastUserMessage = extractMessageText(messages[i], MAX_SNIPPET_LENGTH);
+            const msg = messages[i];
+            if (msg.info.role === "user") {
+              const text = extractMessageText(msg, MAX_SNIPPET_LENGTH);
+              
+              // Check if this message was sent by an agent (not human)
+              // Look for sent_by_agent_id or sent_by_agent_title in first text part metadata
+              const firstTextPart = msg.parts.find((p) => p.type === "text") as 
+                | { type: "text"; text: string; metadata?: Record<string, unknown> }
+                | undefined;
+              const metadata = firstTextPart?.metadata;
+              const isAgentSent = !!(metadata?.sent_by_agent_id || metadata?.sent_by_agent_title);
+              
+              lastUserMessage = {
+                text,
+                isAgentSent,
+                sentByAgentTitle: metadata?.sent_by_agent_title as string | undefined,
+              };
               break;
             }
           }

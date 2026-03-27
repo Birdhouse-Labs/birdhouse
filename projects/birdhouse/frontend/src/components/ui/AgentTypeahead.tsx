@@ -14,7 +14,11 @@ export interface Agent {
   parent_id: string | null;
   tree_id: string;
   lastMessageAt: number | null;
-  lastUserMessage: string | null;
+  lastUserMessage: {
+    text: string;
+    isAgentSent: boolean;
+    sentByAgentTitle?: string;
+  } | null;
   lastAgentMessage: string | null;
 }
 
@@ -209,8 +213,9 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
   const sizeClasses = () => {
     const size = uiSize();
     return {
-      option: size === "sm" ? "text-xs" : size === "md" ? "text-sm" : "text-base",
+      option: size === "sm" ? "text-sm" : size === "md" ? "text-sm" : "text-base",
       meta: size === "sm" ? "text-[10px]" : size === "md" ? "text-xs" : "text-sm",
+      message: size === "sm" ? "text-xs" : size === "md" ? "text-xs" : "text-sm",
     };
   };
 
@@ -229,13 +234,6 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
     return `${days}d ago`;
   };
 
-  // Truncate message text
-  const truncateMessage = (text: string | null): string | null => {
-    if (!text) return null;
-    if (text.length <= 60) return text;
-    return `${text.slice(0, 60)}...`;
-  };
-
   const shouldShow = () => {
     const displayed = displayAgents();
     return props.visible && displayed.length > 0;
@@ -248,12 +246,12 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
           listRef = el;
           setFloating(el);
         }}
-        class="rounded-xl border shadow-xl overflow-y-auto bg-surface-overlay border-border"
+        class="rounded-xl border shadow-xl overflow-y-auto bg-surface-overlay border-border max-w-2xl"
         style={{
           position: position.strategy,
           top: `${position.y ?? 0}px`,
           left: `${position.x ?? 0}px`,
-          "max-height": "16rem",
+          "max-height": "min(80vh, 36rem)",
           "min-width": "20rem",
           "z-index": baseZIndex,
         }}
@@ -293,19 +291,102 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
                 setHighlightedIndex(index());
               }}
             >
-              <div class="flex flex-col gap-0.5">
-                <div class="font-medium text-text-primary">{agent.title}</div>
-                <div class={`${sizeClasses().meta} text-text-secondary flex items-center gap-2`}>
-                  <span>{formatTimestamp(agent.lastMessageAt)}</span>
-                  {agent.lastUserMessage && (
-                    <span class="truncate max-w-[150px]" title={agent.lastUserMessage}>
-                      You: {truncateMessage(agent.lastUserMessage)}
-                    </span>
-                  )}
+              <div class="flex flex-col gap-1 py-1">
+                <div class="flex items-baseline justify-between gap-2">
+                  <div class="font-medium text-text-primary truncate flex-1">{agent.title}</div>
+                  <div class={`${sizeClasses().meta} text-text-secondary shrink-0`}>
+                    {formatTimestamp(agent.lastMessageAt)}
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1.5 mt-1">
+                  {/* Agent message first (older, higher up) - mini bubble left */}
                   {agent.lastAgentMessage && (
-                    <span class="truncate max-w-[150px]" title={agent.lastAgentMessage}>
-                      Agent: {truncateMessage(agent.lastAgentMessage)}
-                    </span>
+                    <div class="flex justify-start">
+                      <div 
+                        class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[85%] relative`}
+                        style={{
+                          "background": "var(--theme-surface-raised)",
+                          "box-shadow": "0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)",
+                          "line-height": "1.35",
+                          "max-height": "4em",
+                          "overflow": "hidden"
+                        }}
+                        title={agent.lastAgentMessage}
+                      >
+                        {agent.lastAgentMessage}
+                        <div 
+                          class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
+                          style={{
+                            "background": "linear-gradient(to bottom, transparent, var(--theme-surface-raised))"
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {/* User message second (newer, lower down) */}
+                  {agent.lastUserMessage && (
+                    <>
+                      {/* Agent-sent: centered with gradient (like main chat) */}
+                      {agent.lastUserMessage.isAgentSent ? (
+                        <div class="flex justify-center">
+                          <div 
+                            class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[90%] relative`}
+                            style={{
+                              "background": `linear-gradient(to right,
+                                color-mix(in srgb, var(--theme-gradient-from) 20%, var(--theme-surface-raised)),
+                                color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised)),
+                                color-mix(in srgb, var(--theme-gradient-to) 20%, var(--theme-surface-raised))
+                              )`,
+                              "box-shadow": `0 0 0 1px color-mix(in srgb, var(--theme-gradient-via) 40%, transparent),
+                                             0 2px 8px -2px color-mix(in srgb, var(--theme-gradient-via) 25%, transparent)`,
+                              "line-height": "1.35",
+                              "max-height": "4em",
+                              "overflow": "hidden"
+                            }}
+                            title={agent.lastUserMessage.text}
+                          >
+                            {agent.lastUserMessage.text}
+                            <div 
+                              class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
+                              style={{
+                                "background": `linear-gradient(to bottom, 
+                                  transparent, 
+                                  color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised))
+                                )`
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        /* Human user message: right-aligned with accent tint */
+                        <div class="flex justify-end">
+                          <div 
+                            class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[85%] relative`}
+                            style={{
+                              "background": "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",
+                              "box-shadow": `0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
+                                             0 2px 8px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent)`,
+                              "line-height": "1.35",
+                              "max-height": "4em",
+                              "overflow": "hidden"
+                            }}
+                            title={agent.lastUserMessage.text}
+                          >
+                            {agent.lastUserMessage.text}
+                            <div 
+                              class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
+                              style={{
+                                "background": `linear-gradient(to bottom, 
+                                  transparent, 
+                                  color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))
+                                )`
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

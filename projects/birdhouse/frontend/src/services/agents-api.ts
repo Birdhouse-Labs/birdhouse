@@ -23,7 +23,11 @@ export interface RecentAgentForTypeahead {
   parent_id: string | null;
   tree_id: string;
   lastMessageAt: number | null;
-  lastUserMessage: string | null;
+  lastUserMessage: {
+    text: string;
+    isAgentSent: boolean;
+    sentByAgentTitle?: string;
+  } | null;
   lastAgentMessage: string | null;
 }
 
