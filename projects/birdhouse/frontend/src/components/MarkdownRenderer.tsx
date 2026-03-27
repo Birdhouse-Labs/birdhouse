@@ -149,12 +149,10 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 
       if (token.href.startsWith("birdhouse:model/")) {
         const modelId = token.href.replace("birdhouse:model/", "");
-        const escapedText = escapeHtml(token.text);
         const escapedModelId = escapeHtml(modelId);
+        const escapedText = escapeHtml(token.text);
 
-        const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="lucide lucide-cpu"><rect width="16" height="16" x="4" y="4" rx="2"></rect><rect width="6" height="6" x="9" y="9" rx="1"></rect><path d="M15 2v2"></path><path d="M15 20v2"></path><path d="M2 15h2"></path><path d="M2 9h2"></path><path d="M20 15h2"></path><path d="M20 9h2"></path><path d="M9 2v2"></path><path d="M9 20v2"></path></svg>`;
-
-        return `<span data-model-link="${escapedModelId}" class="inline-flex items-center gap-1 rounded font-medium text-text-primary">${icon}${escapedText}</span>`;
+        return `<span class="model-popover"><button type="button" class="model-ref inline-flex items-center rounded font-semibold cursor-pointer">${escapedText}</button><span class="model-popover-content"><span class="model-popover-label">Model ID</span><span class="model-popover-id">${escapedModelId}</span></span></span>`;
       }
 
       if (token.href.startsWith("birdhouse:agent/")) {
@@ -223,7 +221,15 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
   const proseInvert = createMemo(() => isDark());
 
   const handleReferenceClick = (e: Event) => {
-    const target = e.target as HTMLElement;
+    if (e instanceof KeyboardEvent && e.key !== "Enter" && e.key !== " ") {
+      return;
+    }
+
+    const target = (e.target as HTMLElement).closest<HTMLElement>("[data-skill-link], [data-agent-link]");
+
+    if (!target) {
+      return;
+    }
 
     if (target.hasAttribute("data-skill-link")) {
       e.preventDefault();
@@ -240,6 +246,7 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
           identifier: skillName,
         });
       }
+      return;
     }
 
     if (target.hasAttribute("data-agent-link")) {
@@ -268,16 +275,6 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
           },
         );
       }
-    }
-  };
-
-  const handleClick = (e: MouseEvent) => {
-    handleReferenceClick(e);
-  };
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      handleReferenceClick(e);
     }
   };
 
@@ -312,6 +309,58 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
         .agent-btn:hover svg {
           color: var(--theme-gradient-from);
         }
+
+        .model-ref {
+          color: var(--theme-gradient-from);
+        }
+
+        .model-ref:hover {
+          color: var(--theme-gradient-to);
+        }
+
+        .model-popover {
+          position: relative;
+          display: inline-flex;
+        }
+
+        .model-popover-content {
+          display: none;
+          position: absolute;
+          top: calc(100% + 0.5rem);
+          left: 0;
+          min-width: 18rem;
+          max-width: min(24rem, calc(100vw - 2rem));
+          padding: 0.75rem;
+          border: 1px solid var(--color-border);
+          border-radius: 0.5rem;
+          background: var(--color-surface-raised);
+          box-shadow: var(--shadow-lg);
+          z-index: 60;
+        }
+
+        .model-popover:focus-within .model-popover-content {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .model-popover-label {
+          font-size: 0.75rem;
+          font-weight: 500;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          color: var(--color-text-secondary);
+        }
+
+        .model-popover-id {
+          border-radius: 0.375rem;
+          background: var(--color-surface);
+          padding: 0.375rem 0.5rem;
+          font-family: var(--font-mono);
+          font-size: 0.875rem;
+          color: var(--color-text-primary);
+          overflow-wrap: anywhere;
+        }
       `}</style>
 
       {/* biome-ignore lint/a11y/noStaticElementInteractions: Event delegation for dynamically generated skill links in markdown */}
@@ -325,8 +374,8 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
           "overflow-wrap": "break-word",
           "word-break": "break-word",
         }}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
+        onClick={handleReferenceClick}
+        onKeyDown={handleReferenceClick}
       >
         <For each={parsedParts()}>
           {(part) => {
