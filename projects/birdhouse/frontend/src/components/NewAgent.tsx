@@ -241,8 +241,8 @@ const NewAgent: Component = () => {
       );
 
       // Clear draft after successful creation
+      draftSave.cancel();
       clearDraft(workspaceId, "new-agent").catch(() => {});
-      setAttachments([]);
 
       // Navigate to the new agent (workspace-aware)
       navigate(`/workspace/${workspaceId}/agent/${agent.id}`);

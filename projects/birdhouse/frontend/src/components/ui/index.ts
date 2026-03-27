@@ -48,5 +48,7 @@ export type { MessageButtonProps } from "./MessageButton";
 export { default as MessageButton } from "./MessageButton";
 export type { ReasoningBlockProps } from "./ReasoningBlock";
 export { default as ReasoningBlock } from "./ReasoningBlock";
+export type { TextEditorProps } from "./TextEditor";
+export { default as TextEditor } from "./TextEditor";
 export type { ToolCallCardProps } from "./ToolCallCard";
 export { default as ToolCallCard } from "./ToolCallCard";

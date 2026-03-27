@@ -24,6 +24,7 @@ import {
   SendMessageError,
   sendMessage,
   stopAgent,
+  stopAgentTree,
   unrevertAgent,
   updateAgentTitle,
 } from "./messages-api";
@@ -180,6 +181,39 @@ describe("stopAgent", () => {
     } as Response);
 
     await expect(stopAgent(mockWorkspaceId, mockAgentId)).rejects.toThrow("Failed to stop agent: Agent not running");
+  });
+});
+
+describe("stopAgentTree", () => {
+  const mockWorkspaceId = "ws_test123";
+  const mockAgentId = "agent_test123";
+
+  it("should stop a full agent tree", async () => {
+    const mockResponse = { success: true };
+
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse,
+    } as Response);
+
+    const result = await stopAgentTree(mockWorkspaceId, mockAgentId);
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining(`/agents/${mockAgentId}/stop-tree`),
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(result).toEqual(mockResponse);
+  });
+
+  it("should throw error with server message on failure", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: "Tree is not running" }),
+    } as Response);
+
+    await expect(stopAgentTree(mockWorkspaceId, mockAgentId)).rejects.toThrow(
+      "Failed to stop agent tree: Tree is not running",
+    );
   });
 });
 

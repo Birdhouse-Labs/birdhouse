@@ -8,6 +8,7 @@ import { useWorkspaceAgentId } from "../../lib/routing";
 import { fetchRecentAgents } from "../../services/agents-api";
 import { fetchModels } from "../../services/messages-api";
 import { uiSize } from "../../theme";
+import { buildModelMarkdownLink } from "../../utils/modelLinks";
 import { buildSkillMarkdownLink, buildSkillVisibleText } from "../../utils/skillLinks";
 import AgentTypeahead from "./AgentTypeahead";
 import FileTypeahead from "./FileTypeahead";
@@ -308,14 +309,14 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
   /**
    * Handle model selection from typeahead
    *
-   * Replaces "@@@query" with the exact model ID string (e.g. "anthropic/claude-sonnet-4-6")
+   * Replaces "@@@query" with a canonical Birdhouse model markdown reference
+   * (e.g. "[Claude Sonnet 4.6](birdhouse:model/anthropic/claude-sonnet-4-6)")
    * Uses document.execCommand to preserve undo stack
    */
   const handleModelSelect = (model: ModelItem, matchedText: string, matchStartIndex: number) => {
     if (!textareaRef) return;
 
-    // Insert the exact model ID in backticks - what you'd pass to agent_create's model parameter
-    const replacement = `\`${model.id}\``;
+    const replacement = buildModelMarkdownLink(model.id, model.name);
 
     // Focus first
     textareaRef.focus();

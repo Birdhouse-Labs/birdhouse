@@ -157,6 +157,7 @@ export interface AgentsDB {
 
   /** Get all agents that belong to the same tree */
   getAgentsByTreeId(treeId: string): AgentRow[];
+
   /** Update agent's updated_at timestamp (called when messages are sent) */
   updateAgentTimestamp(agentId: string): void;
 

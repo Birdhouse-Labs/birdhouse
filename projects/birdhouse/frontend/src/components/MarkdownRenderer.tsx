@@ -2,11 +2,13 @@
 // ABOUTME: Uses marked's custom renderer API for proper code block extraction
 
 import { marked, type Tokens } from "marked";
-import { type Component, createMemo, For, Suspense } from "solid-js";
+import { type Component, createEffect, createMemo, For, onCleanup, Suspense } from "solid-js";
+import { render } from "solid-js/web";
 import { borderColor, cardSurface } from "../styles/containerStyles";
 import { codeTheme, isDark, uiSize } from "../theme";
 import { resolveCodeTheme } from "../theme/codeThemes";
 import { CodeBlockContainer } from "./ui";
+import ModelReferenceButton from "./ui/ModelReferenceButton";
 
 interface CodeBlockInfo {
   code: string;
@@ -91,6 +93,8 @@ const CodeBlockSkeleton: Component<{ language: string }> = (props) => {
 };
 
 export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
+  let contentRef: HTMLDivElement | undefined;
+  let modelReferenceDisposers: Array<() => void> = [];
   const sizeClasses = createMemo(() => {
     const size = uiSize();
     return {
@@ -135,7 +139,7 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
       return id;
     };
 
-    // Override link renderer to detect skill and agent links
+    // Override link renderer to detect Birdhouse-specific reference links.
     const originalLink = renderer.link.bind(renderer);
     renderer.link = (token: { href: string; text: string; tokens?: unknown[]; type?: string; raw?: string }) => {
       if (token.href.startsWith("birdhouse:skill/")) {
@@ -145,6 +149,14 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
         const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="lucide lucide-library-big"><rect width="8" height="18" x="3" y="3" rx="1"></rect><path d="M7 3v18"></path><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"></path></svg>`;
 
         return `<button data-skill-link="${skillName}" class="agent-btn inline-flex items-center gap-1 rounded font-medium cursor-pointer" style="transition: transform 100ms ease-in-out;" onmousemove="const rect = this.getBoundingClientRect(); const x = event.clientX - rect.left; const percent = (x / rect.width * 100); this.style.setProperty('--mouse-x', percent + '%');" onmouseleave="this.style.removeProperty('--mouse-x');">${icon}${escapedText}</button>`;
+      }
+
+      if (token.href.startsWith("birdhouse:model/")) {
+        const modelId = token.href.replace("birdhouse:model/", "");
+        const escapedModelId = escapeHtml(modelId);
+        const escapedText = escapeHtml(token.text);
+
+        return `<span data-model-reference data-model-id="${escapedModelId}" data-model-label="${escapedText}"></span>`;
       }
 
       if (token.href.startsWith("birdhouse:agent/")) {
@@ -194,7 +206,9 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
       if (before) {
         parts.push({ type: "html", content: before });
       }
+
       parts.push({ type: "codeblock", content: "", codeInfo: block });
+
       remainingHtml = after;
     });
 
@@ -212,8 +226,50 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
   // Memoize isDark to avoid repeated reactive reads
   const proseInvert = createMemo(() => isDark());
 
+  const mountModelReferences = () => {
+    if (!contentRef) {
+      return;
+    }
+
+    for (const dispose of modelReferenceDisposers) {
+      dispose();
+    }
+
+    const mounts = Array.from(contentRef.querySelectorAll<HTMLElement>("[data-model-reference]"));
+    modelReferenceDisposers = mounts.map((mount) => {
+      const modelId = mount.dataset["modelId"];
+      const label = mount.dataset["modelLabel"];
+
+      if (!modelId || !label) {
+        return () => {};
+      }
+
+      return render(() => <ModelReferenceButton modelId={modelId} label={label} />, mount);
+    });
+  };
+
+  createEffect(() => {
+    parsedParts();
+    queueMicrotask(mountModelReferences);
+
+    onCleanup(() => {
+      for (const dispose of modelReferenceDisposers) {
+        dispose();
+      }
+      modelReferenceDisposers = [];
+    });
+  });
+
   const handleReferenceClick = (e: Event) => {
-    const target = e.target as HTMLElement;
+    if (e instanceof KeyboardEvent && e.key !== "Enter" && e.key !== " ") {
+      return;
+    }
+
+    const target = (e.target as HTMLElement).closest<HTMLElement>("[data-skill-link], [data-agent-link]");
+
+    if (!target) {
+      return;
+    }
 
     if (target.hasAttribute("data-skill-link")) {
       e.preventDefault();
@@ -230,6 +286,7 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
           identifier: skillName,
         });
       }
+      return;
     }
 
     if (target.hasAttribute("data-agent-link")) {
@@ -258,16 +315,6 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
           },
         );
       }
-    }
-  };
-
-  const handleClick = (e: MouseEvent) => {
-    handleReferenceClick(e);
-  };
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      handleReferenceClick(e);
     }
   };
 
@@ -302,10 +349,22 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
         .agent-btn:hover svg {
           color: var(--theme-gradient-from);
         }
+
+        .model-ref {
+          color: var(--theme-gradient-from);
+        }
+
+        .model-ref:hover {
+          color: var(--theme-gradient-to);
+        }
       `}</style>
 
       {/* biome-ignore lint/a11y/noStaticElementInteractions: Event delegation for dynamically generated skill links in markdown */}
       <div
+        ref={(el) => {
+          contentRef = el;
+          queueMicrotask(mountModelReferences);
+        }}
         class={`prose max-w-none ${props.class || ""}`}
         classList={{
           [sizeClasses().prose]: true,
@@ -315,8 +374,8 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
           "overflow-wrap": "break-word",
           "word-break": "break-word",
         }}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
+        onClick={handleReferenceClick}
+        onKeyDown={handleReferenceClick}
       >
         <For each={parsedParts()}>
           {(part) => {

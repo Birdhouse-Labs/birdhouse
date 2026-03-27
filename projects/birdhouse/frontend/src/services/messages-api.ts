@@ -108,6 +108,20 @@ export async function stopAgent(workspaceId: string, agentId: string) {
   return response.json();
 }
 
+export async function stopAgentTree(workspaceId: string, agentId: string) {
+  const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/stop-tree`);
+  const response = await fetch(url, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const { error } = await response.json();
+    throw new Error(`Failed to stop agent tree: ${error}`);
+  }
+
+  return response.json();
+}
+
 /**
  * Enhanced error with additional debug information
  */

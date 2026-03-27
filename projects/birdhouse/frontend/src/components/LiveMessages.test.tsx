@@ -52,6 +52,7 @@ vi.mock("../services/messages-api", () => {
     fetchAgent: fetchAgentMock,
     sendMessage: vi.fn(),
     stopAgent: vi.fn(),
+    stopAgentTree: vi.fn(),
     cloneAgent: vi.fn(),
     revertAgent: revertAgentMock,
     unrevertAgent: unrevertAgentMock,

@@ -14,4 +14,5 @@ export { revert, unrevert } from "./revert";
 export { searchAgents } from "./search-agents";
 export { sendMessage } from "./send-message";
 export { stopAgent } from "./stop-agent";
+export { stopAgentTree } from "./stop-agent-tree";
 export { wait } from "./wait";
