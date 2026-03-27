@@ -241,6 +241,7 @@ const NewAgent: Component = () => {
       );
 
       // Clear draft after successful creation
+      draftSave.cancel();
       clearDraft(workspaceId, "new-agent").catch(() => {});
       setAttachments([]);
 
