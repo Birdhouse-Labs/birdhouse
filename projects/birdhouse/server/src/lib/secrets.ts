@@ -1,5 +1,5 @@
 // ABOUTME: Type definitions and utilities for workspace secrets (provider API keys and MCP config)
-// ABOUTME: Provides validation and environment variable mapping for provider credentials
+// ABOUTME: Provides validation plus OpenCode config and environment mappings for provider credentials
 
 /**
  * MCP servers configuration (matches OpenCode format)
@@ -79,6 +79,15 @@ export interface WorkspaceSecretsDecrypted {
   mcp?: McpServers;
 }
 
+interface OpenCodeProviderConfigEntry {
+  options?: Record<string, unknown>;
+}
+
+export interface OpenCodeProviderConfig {
+  enabledProviders: string[];
+  provider: Record<string, OpenCodeProviderConfigEntry>;
+}
+
 /**
  * Validate secrets structure (basic type checking)
  */
@@ -103,58 +112,64 @@ export function validateSecrets(secrets: unknown): secrets is WorkspaceSecretsDe
   return true;
 }
 
+export function buildOpenCodeProviderConfig(providers: ProviderCredentials): OpenCodeProviderConfig {
+  const enabledProviders: string[] = [];
+  const provider: Record<string, OpenCodeProviderConfigEntry> = {};
+
+  function addApiKeyProvider(providerId: string, apiKey: string | undefined) {
+    if (!apiKey) return;
+    enabledProviders.push(providerId);
+    provider[providerId] = {
+      options: {
+        apiKey,
+      },
+    };
+  }
+
+  addApiKeyProvider("anthropic", providers.anthropic?.api_key);
+  addApiKeyProvider("openai", providers.openai?.api_key);
+  addApiKeyProvider("google", providers.google?.api_key);
+  addApiKeyProvider("openrouter", providers.openrouter?.api_key);
+  addApiKeyProvider("groq", providers.groq?.api_key);
+  addApiKeyProvider("perplexity", providers.perplexity?.api_key);
+  addApiKeyProvider("xai", providers.xai?.api_key);
+  addApiKeyProvider("mistral", providers.mistral?.api_key);
+  addApiKeyProvider("cohere", providers.cohere?.api_key);
+  addApiKeyProvider("deepinfra", providers.deepinfra?.api_key);
+  addApiKeyProvider("cerebras", providers.cerebras?.api_key);
+  addApiKeyProvider("togetherai", providers.together?.api_key);
+  addApiKeyProvider("zai", providers.zai?.api_key);
+  addApiKeyProvider("fireworks-ai", providers.fireworks?.api_key);
+
+  if (providers.aws) {
+    enabledProviders.push("amazon-bedrock");
+  }
+  if (providers.azure) {
+    enabledProviders.push("azure");
+  }
+  if (providers.vertex) {
+    enabledProviders.push("google-vertex");
+  }
+  if (providers.cloudflare) {
+    enabledProviders.push("cloudflare-ai-gateway");
+  }
+  if (providers.sap) {
+    enabledProviders.push("sap-ai-core");
+  }
+
+  return {
+    enabledProviders,
+    provider,
+  };
+}
+
 /**
- * Convert provider credentials to OpenCode environment variables
- * Maps our storage format to OpenCode's expected env var names
+ * Convert provider credentials to OpenCode environment variables for providers
+ * that still rely on environment-based configuration.
  */
 export function providersToEnv(providers: ProviderCredentials): Record<string, string> {
   const env: Record<string, string> = {};
 
-  // Tier 1: Simple single-key providers
-  if (providers.anthropic?.api_key) {
-    env.ANTHROPIC_API_KEY = providers.anthropic.api_key;
-  }
-  if (providers.openai?.api_key) {
-    env.OPENAI_API_KEY = providers.openai.api_key;
-  }
-  if (providers.google?.api_key) {
-    env.GOOGLE_GENERATIVE_AI_API_KEY = providers.google.api_key;
-  }
-  if (providers.openrouter?.api_key) {
-    env.OPENROUTER_API_KEY = providers.openrouter.api_key;
-  }
-  if (providers.groq?.api_key) {
-    env.GROQ_API_KEY = providers.groq.api_key;
-  }
-  if (providers.perplexity?.api_key) {
-    env.PERPLEXITY_API_KEY = providers.perplexity.api_key;
-  }
-  if (providers.xai?.api_key) {
-    env.XAI_API_KEY = providers.xai.api_key;
-  }
-  if (providers.mistral?.api_key) {
-    env.MISTRAL_API_KEY = providers.mistral.api_key;
-  }
-  if (providers.cohere?.api_key) {
-    env.COHERE_API_KEY = providers.cohere.api_key;
-  }
-  if (providers.deepinfra?.api_key) {
-    env.DEEPINFRA_API_KEY = providers.deepinfra.api_key;
-  }
-  if (providers.cerebras?.api_key) {
-    env.CEREBRAS_API_KEY = providers.cerebras.api_key;
-  }
-  if (providers.together?.api_key) {
-    env.TOGETHER_API_KEY = providers.together.api_key;
-  }
-  if (providers.zai?.api_key) {
-    env.ZHIPU_API_KEY = providers.zai.api_key;
-  }
-  if (providers.fireworks?.api_key) {
-    env.FIREWORKS_API_KEY = providers.fireworks.api_key;
-  }
-
-  // Tier 2: Complex multi-key providers
   if (providers.aws) {
     env.AWS_ACCESS_KEY_ID = providers.aws.access_key_id;
     env.AWS_SECRET_ACCESS_KEY = providers.aws.secret_access_key;
@@ -167,14 +182,13 @@ export function providersToEnv(providers: ProviderCredentials): Record<string, s
     env.AZURE_API_KEY = providers.azure.api_key;
   }
   if (providers.vertex) {
+    env.GOOGLE_VERTEX_PROJECT = providers.vertex.project;
+    env.GOOGLE_VERTEX_LOCATION = providers.vertex.location;
     env.VERTEX_PROJECT = providers.vertex.project;
     env.VERTEX_LOCATION = providers.vertex.location;
     if (providers.vertex.credentials_path) {
       env.GOOGLE_APPLICATION_CREDENTIALS = providers.vertex.credentials_path;
     }
-  }
-  if (providers.github?.github_token) {
-    env.GITHUB_TOKEN = providers.github.github_token;
   }
   if (providers.cloudflare) {
     env.CLOUDFLARE_ACCOUNT_ID = providers.cloudflare.account_id;

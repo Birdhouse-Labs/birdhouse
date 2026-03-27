@@ -2,7 +2,13 @@
 // ABOUTME: Verifies validateSecrets type checking and providersToEnv environment variable mapping
 
 import { describe, expect, test } from "bun:test";
-import { type ProviderCredentials, providersToEnv, validateSecrets, type WorkspaceSecretsDecrypted } from "./secrets";
+import {
+  buildOpenCodeProviderConfig,
+  type ProviderCredentials,
+  providersToEnv,
+  validateSecrets,
+  type WorkspaceSecretsDecrypted,
+} from "./secrets";
 
 describe("validateSecrets", () => {
   test("accepts valid empty secrets", () => {
@@ -53,7 +59,7 @@ describe("validateSecrets", () => {
 });
 
 describe("providersToEnv", () => {
-  test("maps Tier 1 simple providers correctly", () => {
+  test("keeps only env-backed providers", () => {
     const providers: ProviderCredentials = {
       anthropic: { api_key: "sk-ant-123" },
       openai: { api_key: "sk-openai-456" },
@@ -69,44 +75,69 @@ describe("providersToEnv", () => {
       together: { api_key: "together-yz" },
       zai: { api_key: "zai-abc" },
       fireworks: { api_key: "fw-xyz" },
+      aws: {
+        access_key_id: "AKIAIOSFODNN7EXAMPLE",
+        secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+        region: "us-east-1",
+        session_token: "test-token",
+        profile: "default",
+      },
+      azure: {
+        resource_name: "my-resource",
+        api_key: "azure-key-123",
+      },
+      vertex: {
+        project: "my-project",
+        location: "us-central1",
+        credentials_path: "/path/to/credentials.json",
+      },
+      cloudflare: {
+        account_id: "account-123",
+        gateway_id: "gateway-456",
+        api_token: "token-789",
+      },
+      sap: {
+        service_key: "service-key-123",
+        deployment_id: "deployment-456",
+        resource_group: "rg-789",
+      },
     };
 
     const env = providersToEnv(providers);
 
-    expect(env.ANTHROPIC_API_KEY).toBe("sk-ant-123");
-    expect(env.OPENAI_API_KEY).toBe("sk-openai-456");
-    expect(env.GOOGLE_GENERATIVE_AI_API_KEY).toBe("google-789");
-    expect(env.OPENROUTER_API_KEY).toBe("or-abc");
-    expect(env.GROQ_API_KEY).toBe("groq-def");
-    expect(env.PERPLEXITY_API_KEY).toBe("pplx-ghi");
-    expect(env.XAI_API_KEY).toBe("xai-jkl");
-    expect(env.MISTRAL_API_KEY).toBe("mistral-mno");
-    expect(env.COHERE_API_KEY).toBe("cohere-pqr");
-    expect(env.DEEPINFRA_API_KEY).toBe("di-stu");
-    expect(env.CEREBRAS_API_KEY).toBe("cerebras-vwx");
-    expect(env.TOGETHER_API_KEY).toBe("together-yz");
-    expect(env.ZHIPU_API_KEY).toBe("zai-abc");
-    expect(env.FIREWORKS_API_KEY).toBe("fw-xyz");
+    expect(env.AWS_ACCESS_KEY_ID).toBe("AKIAIOSFODNN7EXAMPLE");
+    expect(env.AWS_SECRET_ACCESS_KEY).toBe("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
+    expect(env.AWS_REGION).toBe("us-east-1");
+    expect(env.AWS_SESSION_TOKEN).toBe("test-token");
+    expect(env.AWS_PROFILE).toBe("default");
+    expect(env.AZURE_RESOURCE_NAME).toBe("my-resource");
+    expect(env.AZURE_API_KEY).toBe("azure-key-123");
+    expect(env.VERTEX_PROJECT).toBe("my-project");
+    expect(env.VERTEX_LOCATION).toBe("us-central1");
+    expect(env.GOOGLE_APPLICATION_CREDENTIALS).toBe("/path/to/credentials.json");
+    expect(env.CLOUDFLARE_ACCOUNT_ID).toBe("account-123");
+    expect(env.CLOUDFLARE_GATEWAY_ID).toBe("gateway-456");
+    expect(env.CLOUDFLARE_API_TOKEN).toBe("token-789");
+    expect(env.SAP_SERVICE_KEY).toBe("service-key-123");
+    expect(env.SAP_DEPLOYMENT_ID).toBe("deployment-456");
+    expect(env.SAP_RESOURCE_GROUP).toBe("rg-789");
+
+    expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(env.OPENAI_API_KEY).toBeUndefined();
+    expect(env.GOOGLE_GENERATIVE_AI_API_KEY).toBeUndefined();
+    expect(env.GITHUB_TOKEN).toBeUndefined();
   });
 
-  test("maps zAI provider correctly", () => {
+  test("skips simple API-key providers", () => {
     const providers: ProviderCredentials = {
       zai: { api_key: "zhipu-key-123" },
-    };
-
-    const env = providersToEnv(providers);
-
-    expect(env.ZHIPU_API_KEY).toBe("zhipu-key-123");
-  });
-
-  test("maps Fireworks provider correctly", () => {
-    const providers: ProviderCredentials = {
       fireworks: { api_key: "fw-key-123" },
     };
 
     const env = providersToEnv(providers);
 
-    expect(env.FIREWORKS_API_KEY).toBe("fw-key-123");
+    expect(env.ZHIPU_API_KEY).toBeUndefined();
+    expect(env.FIREWORKS_API_KEY).toBeUndefined();
   });
 
   test("maps AWS provider correctly", () => {
@@ -176,7 +207,7 @@ describe("providersToEnv", () => {
     expect(env.GOOGLE_APPLICATION_CREDENTIALS).toBe("/path/to/credentials.json");
   });
 
-  test("maps GitHub provider correctly", () => {
+  test("skips GitHub provider", () => {
     const providers: ProviderCredentials = {
       github: {
         github_token: "ghp_test123",
@@ -185,7 +216,7 @@ describe("providersToEnv", () => {
 
     const env = providersToEnv(providers);
 
-    expect(env.GITHUB_TOKEN).toBe("ghp_test123");
+    expect(env.GITHUB_TOKEN).toBeUndefined();
   });
 
   test("maps Cloudflare provider correctly", () => {
@@ -240,10 +271,52 @@ describe("providersToEnv", () => {
 
     const env = providersToEnv(providers);
 
-    expect(env.ANTHROPIC_API_KEY).toBe("sk-ant-123");
     expect(env.AWS_ACCESS_KEY_ID).toBe("AKIAIOSFODNN7EXAMPLE");
     expect(env.AWS_SECRET_ACCESS_KEY).toBe("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
-    expect(env.GITHUB_TOKEN).toBe("ghp_test123");
-    expect(Object.keys(env).length).toBe(4);
+    expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(env.GITHUB_TOKEN).toBeUndefined();
+    expect(Object.keys(env).length).toBe(2);
+  });
+});
+
+describe("buildOpenCodeProviderConfig", () => {
+  test("builds enabled providers and config-based api keys for simple providers", () => {
+    const providers: ProviderCredentials = {
+      anthropic: { api_key: "sk-ant-123" },
+      openai: { api_key: "sk-openai-456" },
+      google: { api_key: "google-789" },
+      together: { api_key: "together-yz" },
+      fireworks: { api_key: "fw-xyz" },
+      github: { github_token: "ghp_test123" },
+      aws: {
+        access_key_id: "AKIAIOSFODNN7EXAMPLE",
+        secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      },
+    };
+
+    const result = buildOpenCodeProviderConfig(providers);
+
+    expect(result.enabledProviders).toEqual([
+      "anthropic",
+      "openai",
+      "google",
+      "togetherai",
+      "fireworks-ai",
+      "amazon-bedrock",
+    ]);
+    expect(result.provider).toEqual({
+      anthropic: { options: { apiKey: "sk-ant-123" } },
+      openai: { options: { apiKey: "sk-openai-456" } },
+      google: { options: { apiKey: "google-789" } },
+      togetherai: { options: { apiKey: "together-yz" } },
+      "fireworks-ai": { options: { apiKey: "fw-xyz" } },
+    });
+  });
+
+  test("returns empty provider config when no supported providers are configured", () => {
+    const result = buildOpenCodeProviderConfig({ github: { github_token: "ghp_test123" } });
+
+    expect(result.enabledProviders).toEqual([]);
+    expect(result.provider).toEqual({});
   });
 });

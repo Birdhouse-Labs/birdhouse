@@ -3,6 +3,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { TestDataDB } from "../test-utils/data-db-test";
+import { OpenCodeManager } from "./opencode-manager";
 import { providersToEnv } from "./secrets";
 
 /**
@@ -17,9 +18,11 @@ import { providersToEnv } from "./secrets";
 
 describe("OpenCodeManager environment configuration", () => {
   let dataDb: TestDataDB;
+  let manager: OpenCodeManager;
 
   beforeEach(() => {
     dataDb = new TestDataDB();
+    manager = new OpenCodeManager(dataDb, "/test/opencode", 3000);
   });
 
   afterEach(() => {
@@ -93,7 +96,7 @@ describe("OpenCodeManager environment configuration", () => {
   });
 
   describe("providersToEnv mapping", () => {
-    test("maps anthropic to ANTHROPIC_API_KEY", () => {
+    test("simple providers no longer map to child env", () => {
       const workspaceId = "ws_test_env_mapping";
       dataDb.insertWorkspace({
         workspace_id: workspaceId,
@@ -112,20 +115,95 @@ describe("OpenCodeManager environment configuration", () => {
       const config = dataDb.getWorkspaceConfig(workspaceId);
       expect(config?.providers?.anthropic?.api_key).toBe("test-anthropic-key");
       expect(config?.providers?.openai?.api_key).toBe("test-openai-key");
+
+      const env = providersToEnv(config?.providers || {});
+      expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+      expect(env.OPENAI_API_KEY).toBeUndefined();
+    });
+  });
+
+  describe("buildOpenCodeConfig", () => {
+    test("injects provider api keys into config and allowlists opencode plus configured providers", () => {
+      const workspaceId = "ws_config_injection";
+      dataDb.insertWorkspace({
+        workspace_id: workspaceId,
+        directory: "/test/path",
+        opencode_port: null,
+        opencode_pid: null,
+        created_at: new Date().toISOString(),
+        last_used: new Date().toISOString(),
+      });
+
+      dataDb.updateWorkspaceProviders(workspaceId, {
+        anthropic: { api_key: "sk-ant-test-key" },
+        openai: { api_key: "sk-openai-test-key" },
+        together: { api_key: "together-test-key" },
+        github: { github_token: "ghp-test-key" },
+      });
+
+      const workspace = dataDb.getWorkspaceById(workspaceId);
+      const managerWithBuildConfig = manager as unknown as {
+        buildOpenCodeConfig: (workspace: object) => Record<string, unknown>;
+      };
+      const config = managerWithBuildConfig.buildOpenCodeConfig(workspace ?? {});
+
+      expect(config.enabled_providers).toEqual(["opencode", "anthropic", "openai", "togetherai"]);
+      expect(config.provider).toEqual({
+        anthropic: {
+          options: {
+            apiKey: "sk-ant-test-key",
+            headers: {
+              "anthropic-beta":
+                "claude-code-20250219,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14",
+            },
+          },
+        },
+        openai: {
+          options: {
+            apiKey: "sk-openai-test-key",
+          },
+        },
+        togetherai: {
+          options: {
+            apiKey: "together-test-key",
+          },
+        },
+      });
+    });
+
+    test("keeps opencode enabled when no Birdhouse providers are configured", () => {
+      const workspaceId = "ws_opencode_only";
+      dataDb.insertWorkspace({
+        workspace_id: workspaceId,
+        directory: "/test/path",
+        opencode_port: null,
+        opencode_pid: null,
+        created_at: new Date().toISOString(),
+        last_used: new Date().toISOString(),
+      });
+
+      const workspace = dataDb.getWorkspaceById(workspaceId);
+      const managerWithBuildConfig = manager as unknown as {
+        buildOpenCodeConfig: (workspace: object) => Record<string, unknown>;
+      };
+      const config = managerWithBuildConfig.buildOpenCodeConfig(workspace ?? {});
+
+      expect(config.enabled_providers).toEqual(["opencode"]);
+      expect(config.provider).toBeUndefined();
     });
   });
 
   describe("environment override behavior", () => {
-    test("workspace-configured keys override shell environment", () => {
+    test("shell environment still passes through for tooling", () => {
       // Simulate the environment building logic in spawnOpenCode:
       // 1. Start with shell env (process.env)
-      // 2. Overlay workspace-configured keys
+      // 2. Overlay workspace env fallbacks for complex providers only
 
       const shellEnv = {
         PATH: "/usr/bin",
         HOME: "/home/user",
         GITHUB_TOKEN: "gh-token-from-shell", // Tool auth - should pass through
-        ANTHROPIC_API_KEY: "sk-ant-from-shell", // Provider key - should be overridden
+        ANTHROPIC_API_KEY: "sk-ant-from-shell", // Ambient shell key remains untouched
       };
 
       // Workspace has configured a different Anthropic key
@@ -135,22 +213,42 @@ describe("OpenCodeManager environment configuration", () => {
       const workspaceEnv = providersToEnv(workspaceProviders);
 
       // Build final env like spawnOpenCode does
-      const finalEnv = {
+      const finalEnv: Record<string, string> = {
         ...shellEnv,
-        ...workspaceEnv, // Workspace keys override shell
+        ...workspaceEnv,
       };
-
-      // Workspace-configured key wins
-      expect(finalEnv.ANTHROPIC_API_KEY).toBe("sk-ant-from-workspace-config");
 
       // Shell environment still flows through for tooling
       expect(finalEnv.GITHUB_TOKEN).toBe("gh-token-from-shell");
+      expect(finalEnv.ANTHROPIC_API_KEY).toBe("sk-ant-from-shell");
+      expect(finalEnv.PATH).toBe("/usr/bin");
+      expect(finalEnv.HOME).toBe("/home/user");
+    });
+
+    test("workspace simple providers are not added to child env", () => {
+      const shellEnv = {
+        PATH: "/usr/bin",
+        HOME: "/home/user",
+      };
+
+      const workspaceProviders = {
+        anthropic: { api_key: "sk-ant-from-workspace-config" },
+      };
+
+      const workspaceEnv = providersToEnv(workspaceProviders);
+
+      const finalEnv: Record<string, string> = {
+        ...shellEnv,
+        ...workspaceEnv,
+      };
+
+      expect(finalEnv.ANTHROPIC_API_KEY).toBeUndefined();
       expect(finalEnv.PATH).toBe("/usr/bin");
       expect(finalEnv.HOME).toBe("/home/user");
     });
 
     test("shell environment passes through when no workspace config", () => {
-      // When workspace has no configured providers, shell env is used as-is
+      // When workspace has no configured env-backed providers, shell env is used as-is
 
       const shellEnv = {
         PATH: "/usr/bin",

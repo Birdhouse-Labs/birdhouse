@@ -7,7 +7,7 @@ import { join } from "node:path";
 import type { DataDB, Workspace } from "./data-db";
 import { getOpenCodeDataDir } from "./database-paths";
 import { log } from "./logger";
-import { providersToEnv } from "./secrets";
+import { buildOpenCodeProviderConfig, providersToEnv } from "./secrets";
 
 interface OpenCodeInstance {
   port: number;
@@ -292,7 +292,7 @@ export class OpenCodeManager {
       mkdirSync(opencodeDataDir, { recursive: true });
     }
 
-    // Load workspace-specific provider API keys from encrypted DB
+    // Load workspace-specific env fallbacks from encrypted DB
     const workspaceEnv = await this.loadWorkspaceEnv(workspace);
 
     // Build OpenCode config (MCP servers + plugin)
@@ -300,12 +300,12 @@ export class OpenCodeManager {
 
     // Build environment:
     // 1. Start with user's shell environment (for tooling like gh, git, aws, etc.)
-    // 2. Overlay workspace-configured provider keys (explicit config wins over shell env)
+    // 2. Overlay workspace-configured env fallbacks for providers that still require env
     // 3. Add Birdhouse-specific configuration
     const env: Record<string, string> = {
       // User's full shell environment - preserves tool auth (GITHUB_TOKEN, SSH_AUTH_SOCK, etc.)
       ...(process.env as Record<string, string>),
-      // Workspace-configured provider API keys override any from shell environment
+      // Workspace-configured env fallbacks override ambient values when needed
       ...workspaceEnv,
       // OpenCode-specific XDG directories for isolation per workspace
       // Uses OPENCODE_XDG_* instead of standard XDG_* to avoid breaking child process tools
@@ -484,8 +484,8 @@ export class OpenCodeManager {
   }
 
   /**
-   * Load workspace-specific environment variables from encrypted secrets DB only.
-   * No fallbacks - OpenCode sees ONLY what's explicitly configured for this workspace.
+   * Load workspace-specific environment fallbacks from encrypted secrets DB only.
+   * Simple API-key providers are injected through config instead of env.
    */
   private async loadWorkspaceEnv(workspace: Workspace): Promise<Record<string, string>> {
     const config = this.dataDb.getWorkspaceConfig(workspace.workspace_id);
@@ -498,7 +498,7 @@ export class OpenCodeManager {
     const providerEnv = providersToEnv(config.providers);
     log.server.debug(
       { workspaceId: workspace.workspace_id, keysCount: Object.keys(providerEnv).length },
-      "Loaded provider API keys from encrypted database",
+      "Loaded provider environment fallbacks from encrypted database",
     );
 
     return providerEnv;
@@ -518,6 +518,7 @@ export class OpenCodeManager {
       permission: {
         external_directory: "allow",
       },
+      enabled_providers: ["opencode"],
     };
 
     // Load workspace config from encrypted database
@@ -531,6 +532,25 @@ export class OpenCodeManager {
         "Loaded MCP config from encrypted database",
       );
     }
+
+    const providerConfig = buildOpenCodeProviderConfig(secrets?.providers ?? {});
+    config.enabled_providers = ["opencode", ...providerConfig.enabledProviders];
+
+    if (Object.keys(providerConfig.provider).length > 0) {
+      config.provider = providerConfig.provider;
+    }
+
+    const getAnthropicProviderConfig = () => {
+      const configuredProviders = (config.provider ?? {}) as Record<string, Record<string, unknown>>;
+      const anthropic = (configuredProviders.anthropic ?? {}) as Record<string, unknown>;
+      const anthropicOptions = (anthropic.options ?? {}) as Record<string, unknown>;
+
+      anthropic.options = anthropicOptions;
+      configuredProviders.anthropic = anthropic;
+      config.provider = configuredProviders;
+
+      return { anthropic, anthropicOptions };
+    };
 
     // Build Anthropic provider config.
     // Standard betas kept in sync with OpenCode's hardcoded list in CUSTOM_LOADERS.anthropic.
@@ -559,22 +579,14 @@ export class OpenCodeManager {
         modelOverrides[modelId] = { limit: contextLimit };
       }
 
-      config.provider = {
-        anthropic: {
-          options: { headers: { "anthropic-beta": allBetas } },
-          models: modelOverrides,
-        },
-      };
+      const { anthropic, anthropicOptions } = getAnthropicProviderConfig();
+      anthropicOptions.headers = { "anthropic-beta": allBetas };
+      anthropic.models = modelOverrides;
 
       log.server.info({ workspaceId: workspace.workspace_id }, "Extended context (1M) enabled for Anthropic");
     } else if (secrets?.providers?.anthropic?.api_key) {
-      // Only add provider config if there's an API key configured
-      // This prevents OpenCode from listing providers that aren't actually usable
-      config.provider = {
-        anthropic: {
-          options: { headers: { "anthropic-beta": standardBetas.join(",") } },
-        },
-      };
+      const { anthropicOptions } = getAnthropicProviderConfig();
+      anthropicOptions.headers = { "anthropic-beta": standardBetas.join(",") };
     }
 
     return config;
