@@ -26,6 +26,8 @@ export interface ChatContainerProps {
   onInputChange: (value: string) => void;
   onSend: () => void;
   onStop: () => void;
+  stopTreeMode?: boolean;
+  onStopTreeModeChange?: (enabled: boolean) => void;
   attachments?: ComposerAttachment[];
   onRemoveAttachment?: (id: string) => void;
   onAttachmentsAdded?: (files: File[]) => void | Promise<void>;
@@ -112,18 +114,45 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
           </div>
 
           <Show when={props.isStreaming && !hasDraftContent()}>
-            <button
-              type="button"
-              onClick={props.onStop}
-              class="rounded-lg px-4 py-2 font-medium bg-gradient-to-r from-gradient-from to-gradient-to text-text-on-accent transition-opacity"
-              classList={{
-                [sizeClasses().text]: true,
-              }}
-              data-ph-capture-attribute-button-type="stop-streaming"
-              data-ph-capture-attribute-agent-id={props.agentId}
-            >
-              Stop
-            </button>
+            <div class="flex">
+              <button
+                type="button"
+                onClick={props.onStop}
+                class="px-4 py-2 font-medium bg-gradient-to-r from-gradient-from to-gradient-to text-text-on-accent transition-opacity"
+                classList={{
+                  [sizeClasses().text]: true,
+                  "rounded-lg": !props.onStopTreeModeChange,
+                  "rounded-l-lg": !!props.onStopTreeModeChange,
+                }}
+                data-ph-capture-attribute-button-type={props.stopTreeMode ? "stop-tree" : "stop-streaming"}
+                data-ph-capture-attribute-agent-id={props.agentId}
+                data-ph-capture-attribute-stop-tree-mode={props.stopTreeMode ? "true" : "false"}
+              >
+                {props.stopTreeMode ? "Stop Tree" : "Stop"}
+              </button>
+              <Show when={props.onStopTreeModeChange}>
+                <button
+                  type="button"
+                  onClick={() => props.onStopTreeModeChange?.(!props.stopTreeMode)}
+                  disabled={props.isSendDisabled}
+                  class="px-3 py-2 font-medium bg-gradient-to-l from-gradient-from to-gradient-to text-text-on-accent transition-opacity border-l border-white/20 rounded-r-lg flex items-center justify-center"
+                  classList={{
+                    "opacity-50 cursor-not-allowed": props.isSendDisabled,
+                    "hover:opacity-90": !props.isSendDisabled,
+                  }}
+                  aria-label={props.stopTreeMode ? "Disable stop tree mode" : "Enable stop tree mode"}
+                  title={props.stopTreeMode ? "Switch to stop current agent" : "Switch to stop the whole tree"}
+                  data-ph-capture-attribute-button-type="toggle-stop-tree-mode"
+                  data-ph-capture-attribute-agent-id={props.agentId}
+                  data-ph-capture-attribute-current-state={props.stopTreeMode ? "enabled" : "disabled"}
+                  data-ph-capture-attribute-action={props.stopTreeMode ? "disable" : "enable"}
+                >
+                  <Show when={props.stopTreeMode} fallback={<Split size={18} />}>
+                    <X size={18} />
+                  </Show>
+                </button>
+              </Show>
+            </div>
           </Show>
           <Show when={!props.isStreaming || hasDraftContent()}>
             <div class="flex">

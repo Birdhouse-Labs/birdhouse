@@ -1,7 +1,7 @@
 // ABOUTME: Tests draft skill attachment preview behavior in the chat composer.
 // ABOUTME: Verifies attached skill state clears when linked skill text is removed.
 
-import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
+import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { createSignal } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 import type { ComposerAttachment } from "../../types/composer-attachments";
@@ -35,6 +35,10 @@ vi.mock("../../contexts/SkillCacheContext", () => ({
 
 vi.mock("../../services/skill-attachments-api", () => ({
   previewSkillAttachments: (workspaceId: string, text: string) => previewSkillAttachments(workspaceId, text),
+}));
+
+vi.mock("../../services/agents-api", () => ({
+  fetchAgentsForTypeahead: vi.fn(async () => []),
 }));
 
 describe("ChatContainer", () => {
@@ -111,5 +115,49 @@ describe("ChatContainer", () => {
     ));
 
     expect(screen.getByRole("alert")).toHaveTextContent("Only images and PDFs can be attached.");
+  });
+
+  it("switches the stop button into stop tree mode", async () => {
+    const onStopTreeModeChange = vi.fn();
+
+    render(() => (
+      <ChatContainer
+        messages={[]}
+        agentId="agent_test"
+        inputValue=""
+        isStreaming={true}
+        onInputChange={() => {}}
+        onSend={() => {}}
+        onStop={() => {}}
+        stopTreeMode={false}
+        onStopTreeModeChange={onStopTreeModeChange}
+      />
+    ));
+
+    expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Enable stop tree mode" }));
+
+    expect(onStopTreeModeChange).toHaveBeenCalledWith(true);
+
+    cleanup();
+
+    render(() => (
+      <ChatContainer
+        messages={[]}
+        agentId="agent_test"
+        inputValue=""
+        isStreaming={true}
+        onInputChange={() => {}}
+        onSend={() => {}}
+        onStop={() => {}}
+        stopTreeMode={true}
+        onStopTreeModeChange={onStopTreeModeChange}
+      />
+    ));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Stop Tree" })).toBeInTheDocument();
+    });
   });
 });
