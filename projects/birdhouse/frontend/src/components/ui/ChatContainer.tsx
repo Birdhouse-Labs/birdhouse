@@ -1,7 +1,7 @@
 // ABOUTME: Chat container with input at top and message list below (newest-at-top architecture)
 // ABOUTME: Orchestrates message rendering and input handling
 
-import { LibraryBig, Network, Split, Square, X } from "lucide-solid";
+import { LibraryBig, Network, Split, X } from "lucide-solid";
 import { type Accessor, type Component, createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { findPendingAssistantId, isMessageQueued } from "../../domain/message-queue";
@@ -79,16 +79,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
   const [dialogOpen, setDialogOpen] = createSignal(false);
   const hasDraftContent = createMemo(() => !!props.inputValue.trim() || (props.attachments?.length ?? 0) > 0);
 
-  const StopTreeModeIcon: Component = () => (
-    <span class="relative flex h-[18px] w-[18px] items-center justify-center overflow-visible">
-      <span class="translate-y-[1px] -translate-x-[1px]">
-        <Network size={15} />
-      </span>
-      <span class="absolute -right-[1px] -top-[1px] flex h-[9px] w-[9px] items-center justify-center rounded-[3px] bg-danger text-white ring-1 ring-surface-raised">
-        <Square size={6} fill="currentColor" stroke-width={3} />
-      </span>
-    </span>
-  );
+  const StopTreeModeIcon: Component = () => <Network size={18} />;
 
   // Find the pending assistant message ID for queue detection
   const pendingAssistantId = createMemo(() => findPendingAssistantId(props.messages));
