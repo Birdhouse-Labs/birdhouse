@@ -1,7 +1,7 @@
 // ABOUTME: Agent typeahead dropdown for message input with keyboard navigation
 // ABOUTME: Shows agent suggestions when user types @@, displays last message context
 
-import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
+import { autoUpdate, flip, offset, shift, size } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { type Component, createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { useZIndex } from "../../contexts/ZIndexContext";
@@ -137,10 +137,21 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
 
   // Setup floating UI for dropdown positioning
   const [floating, setFloating] = createSignal<HTMLElement>();
+  const [maxWidth, setMaxWidth] = createSignal<number | undefined>();
 
   const position = useFloating(() => props.referenceElement, floating, {
     placement: "top-start",
-    middleware: [offset(4), flip(), shift({ padding: 8 })],
+    middleware: [
+      offset(4),
+      flip(),
+      shift({ padding: 8 }),
+      size({
+        padding: 16,
+        apply({ availableWidth }) {
+          setMaxWidth(availableWidth);
+        },
+      }),
+    ],
     whileElementsMounted: autoUpdate,
   });
 
@@ -246,13 +257,16 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
           listRef = el;
           setFloating(el);
         }}
-        class="rounded-xl border shadow-xl overflow-y-auto bg-surface-overlay border-border max-w-2xl"
+        class="rounded-xl border shadow-xl overflow-y-auto bg-surface-overlay border-border"
         style={{
           position: position.strategy,
           top: `${position.y ?? 0}px`,
           left: `${position.x ?? 0}px`,
           "max-height": "min(80vh, 36rem)",
-          "min-width": "20rem",
+          "min-width": "min(20rem, 85vw)",
+          "max-width": maxWidth() !== undefined
+            ? `min(${maxWidth()}px, 42rem)`
+            : "min(calc(100vw - 2rem), 42rem)",
           "z-index": baseZIndex,
         }}
       >
