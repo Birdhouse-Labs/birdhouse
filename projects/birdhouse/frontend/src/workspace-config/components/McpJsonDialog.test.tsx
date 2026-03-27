@@ -12,7 +12,9 @@ vi.mock("corvu/dialog", () => ({
   default: Object.assign(
     (props: { open?: boolean; onOpenChange?: (open: boolean) => void; children: JSX.Element }) =>
       props.open === false ? null : (
-        <DialogContext.Provider value={{ onOpenChange: props.onOpenChange }}>{props.children}</DialogContext.Provider>
+        <DialogContext.Provider value={props.onOpenChange ? { onOpenChange: props.onOpenChange } : {}}>
+          {props.children}
+        </DialogContext.Provider>
       ),
     {
       Portal: (props: { children: JSX.Element }) => <>{props.children}</>,
