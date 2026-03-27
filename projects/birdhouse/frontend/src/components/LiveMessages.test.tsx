@@ -148,5 +148,4 @@ describe("LiveMessages reset restoration", () => {
       expect(screen.getByTestId("chat-attachments-count")).toHaveTextContent("1");
     });
   });
-
 });
