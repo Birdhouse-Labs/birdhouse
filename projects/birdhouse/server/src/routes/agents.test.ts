@@ -363,6 +363,7 @@ describe("POST /api/agents - Create root agent", () => {
       expect(capturedSystemPrompt).toBeDefined();
       expect(capturedSystemPrompt).toContain("Agent Management Tools");
       expect(capturedSystemPrompt).toContain("agent_create");
+      expect(capturedSystemPrompt).toContain("birdhouse:model/");
       expect(capturedSystemPrompt).toContain("Birdhouse");
 
       // Verify response includes message parts (because wait=true)

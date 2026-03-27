@@ -135,7 +135,7 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
       return id;
     };
 
-    // Override link renderer to detect skill and agent links
+    // Override link renderer to detect Birdhouse-specific reference links.
     const originalLink = renderer.link.bind(renderer);
     renderer.link = (token: { href: string; text: string; tokens?: unknown[]; type?: string; raw?: string }) => {
       if (token.href.startsWith("birdhouse:skill/")) {
@@ -145,6 +145,16 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
         const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="lucide lucide-library-big"><rect width="8" height="18" x="3" y="3" rx="1"></rect><path d="M7 3v18"></path><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"></path></svg>`;
 
         return `<button data-skill-link="${skillName}" class="agent-btn inline-flex items-center gap-1 rounded font-medium cursor-pointer" style="transition: transform 100ms ease-in-out;" onmousemove="const rect = this.getBoundingClientRect(); const x = event.clientX - rect.left; const percent = (x / rect.width * 100); this.style.setProperty('--mouse-x', percent + '%');" onmouseleave="this.style.removeProperty('--mouse-x');">${icon}${escapedText}</button>`;
+      }
+
+      if (token.href.startsWith("birdhouse:model/")) {
+        const modelId = token.href.replace("birdhouse:model/", "");
+        const escapedText = escapeHtml(token.text);
+        const escapedModelId = escapeHtml(modelId);
+
+        const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="lucide lucide-cpu"><rect width="16" height="16" x="4" y="4" rx="2"></rect><rect width="6" height="6" x="9" y="9" rx="1"></rect><path d="M15 2v2"></path><path d="M15 20v2"></path><path d="M2 15h2"></path><path d="M2 9h2"></path><path d="M20 15h2"></path><path d="M20 9h2"></path><path d="M9 2v2"></path><path d="M9 20v2"></path></svg>`;
+
+        return `<span data-model-link="${escapedModelId}" class="inline-flex items-center gap-1 rounded font-medium text-text-primary">${icon}${escapedText}</span>`;
       }
 
       if (token.href.startsWith("birdhouse:agent/")) {
