@@ -80,10 +80,10 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
   const hasDraftContent = createMemo(() => !!props.inputValue.trim() || (props.attachments?.length ?? 0) > 0);
 
   const StopTreeModeIcon: Component = () => (
-    <span class="relative flex h-[18px] w-[18px] items-center justify-center">
-      <Network size={18} />
-      <span class="absolute -bottom-[1px] -right-[1px] rounded-[3px] bg-gradient-to-r from-gradient-from to-gradient-to p-[1px] text-text-on-accent">
-        <Square size={7} fill="currentColor" stroke-width={2.5} />
+    <span class="relative flex h-[18px] w-[18px] items-center justify-center overflow-visible">
+      <Network size={16} />
+      <span class="absolute -bottom-[2px] -right-[2px] flex h-[11px] w-[11px] items-center justify-center rounded-[3px] bg-danger text-white ring-1 ring-surface-raised">
+        <Square size={8} fill="currentColor" stroke-width={3} />
       </span>
     </span>
   );
