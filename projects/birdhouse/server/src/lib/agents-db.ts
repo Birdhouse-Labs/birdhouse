@@ -152,6 +152,11 @@ export interface AgentsDB {
     sortDir?: SortDirection,
   ): { rows: AgentRow[]; matchedAgentIds: string[] };
 
+  /** Get recent agents sorted by updated_at, optionally filtered by query */
+  getRecentAgents(limit: number, query?: string): AgentRow[];
+
+  /** Get all agents that belong to the same tree */
+  getAgentsByTreeId(treeId: string): AgentRow[];
   /** Update agent's updated_at timestamp (called when messages are sent) */
   updateAgentTimestamp(agentId: string): void;
 
@@ -700,6 +705,56 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
       const rows = db.prepare(sortQuery).all(...treeIds) as AgentRow[];
 
       return { rows, matchedAgentIds };
+    },
+
+    getRecentAgents(limit: number, query?: string): AgentRow[] {
+      // Get recent agents sorted by updated_at desc, excluding archived
+      const sql = `
+        SELECT 
+          id, session_id, parent_id, tree_id, level,
+          title, project_id, directory, model,
+          created_at, updated_at, cloned_from, cloned_at, archived_at
+        FROM agents
+        WHERE archived_at IS NULL
+        ORDER BY updated_at DESC
+        LIMIT ?
+      `;
+
+      const rows = db.prepare(sql).all(limit) as AgentRow[];
+
+      // If no query, return all results
+      if (!query || query.trim() === "") {
+        return rows;
+      }
+
+      // Filter by fuzzy search on title, id, project_id
+      const terms = parseQuery(query);
+      if (terms.length === 0) {
+        return rows;
+      }
+
+      return rows
+        .map((agent) => {
+          const score = matchAllTerms(terms, agent);
+          return { agent, score };
+        })
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(({ agent }) => agent);
+    },
+
+    getAgentsByTreeId(treeId: string): AgentRow[] {
+      return db
+        .query<AgentRow, [string]>(`
+          SELECT
+            id, session_id, parent_id, tree_id, level,
+            title, project_id, directory, model,
+            created_at, updated_at, cloned_from, cloned_at, archived_at
+          FROM agents
+          WHERE tree_id = ?
+          ORDER BY level ASC, created_at ASC
+        `)
+        .all(treeId) as AgentRow[];
     },
 
     updateAgentTimestamp(agentId: string): void {

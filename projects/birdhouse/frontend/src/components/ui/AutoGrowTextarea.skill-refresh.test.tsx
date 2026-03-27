@@ -21,7 +21,7 @@ vi.mock("../../lib/routing", () => ({
 }));
 
 vi.mock("../../services/agents-api", () => ({
-  fetchAgentsForTypeahead: async () => [],
+  fetchRecentAgents: async () => [],
 }));
 
 vi.mock("../../skills/services/skill-library-api", () => ({

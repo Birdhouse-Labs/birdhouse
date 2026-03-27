@@ -37,6 +37,9 @@ vi.mock("../../services/skill-attachments-api", () => ({
   previewSkillAttachments: (workspaceId: string, text: string) => previewSkillAttachments(workspaceId, text),
 }));
 
+vi.mock("../../services/agents-api", () => ({
+  fetchRecentAgents: vi.fn(async () => []),
+}));
 describe("ChatContainer", () => {
   it("clears attached skill preview when linked skill text is deleted", async () => {
     const Wrapper = () => {

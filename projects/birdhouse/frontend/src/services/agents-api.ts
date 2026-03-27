@@ -14,6 +14,28 @@ export interface AgentForTypeahead {
 }
 
 /**
+ * Recent agent with message context for typeahead
+ */
+export interface RecentAgentForTypeahead {
+  id: string;
+  title: string;
+  session_id: string;
+  parent_id: string | null;
+  tree_id: string;
+  lastMessageAt: number | null;
+  lastUserMessage: string | null;
+  lastAgentMessage: string | null;
+}
+
+/**
+ * Response from recent agents endpoint
+ */
+export interface RecentAgentsResponse {
+  agents: RecentAgentForTypeahead[];
+  total: number;
+}
+
+/**
  * Search response from backend
  */
 export interface SearchResponse {
@@ -215,5 +237,46 @@ export async function fetchAgentsForTypeahead(workspaceId: string): Promise<Agen
     return agents;
   } catch (error) {
     throw new Error(`Failed to fetch agents: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+/**
+ * Fetch recent agents with message context for typeahead
+ * @param workspaceId The workspace ID
+ * @param query Optional search query to filter agents
+ * @returns Array of recent agents with last message context
+ */
+export async function fetchRecentAgents(workspaceId: string, query?: string): Promise<RecentAgentForTypeahead[]> {
+  const params = new URLSearchParams();
+  if (query?.trim()) {
+    params.set("q", query.trim());
+  }
+
+  const url = `${buildWorkspaceUrl(workspaceId, "/agents/recent")}?${params}`;
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const responseBody = await response.text();
+      let errorMessage = `Failed to fetch recent agents: ${response.statusText}`;
+
+      // Try to extract error from JSON response
+      try {
+        const errorData = JSON.parse(responseBody);
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // Response wasn't JSON, use status text
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    const data = (await response.json()) as RecentAgentsResponse;
+    return data.agents;
+  } catch (error) {
+    throw new Error(`Failed to fetch recent agents: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }

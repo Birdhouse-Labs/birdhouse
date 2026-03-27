@@ -1,17 +1,21 @@
 // ABOUTME: Agent typeahead dropdown for message input with keyboard navigation
-// ABOUTME: Shows agent suggestions when user types @@, supports instant arrow key selection
+// ABOUTME: Shows agent suggestions when user types @@, displays last message context
 
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { type Component, createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { uiSize } from "../../theme";
-import { getRecentlyViewedAgents } from "../../utils/agent-navigation";
 
-interface Agent {
+export interface Agent {
   id: string;
   title: string;
-  status?: { type: "idle" | "busy" | "retry" };
+  session_id: string;
+  parent_id: string | null;
+  tree_id: string;
+  lastMessageAt: number | null;
+  lastUserMessage: string | null;
+  lastAgentMessage: string | null;
 }
 
 export interface AgentTypeaheadProps {
@@ -48,57 +52,27 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
     startIndex: number; // Where @@ starts in the input
   }
 
-  // Build list of recently viewed agents, excluding current agent
-  const getRecentAgentsList = (): Agent[] => {
-    const recent = getRecentlyViewedAgents();
-    const result: Agent[] = [];
-    const seenIds = new Set<string>();
-
-    for (const record of recent) {
-      // Skip the current agent
-      if (props.currentAgentId && record.agentId === props.currentAgentId) {
-        continue;
-      }
-
-      const agent = props.agents.find((a) => a.id === record.agentId);
-      if (agent && !seenIds.has(agent.id)) {
-        seenIds.add(agent.id);
-        result.push(agent);
-      }
+  // Filter agents by query text (searches title)
+  const filterAgentsByQuery = (agents: Agent[], query: string): Agent[] => {
+    if (!query.trim()) {
+      return agents;
     }
-
-    return result;
+    const queryLower = query.toLowerCase();
+    return agents.filter((agent) => agent.title.toLowerCase().includes(queryLower));
   };
 
   // Find agents matching text after @@
-  const findMatchesForText = (recentAgents: Agent[], textAfterTrigger: string, startIndex: number): MatchResult[] => {
+  const findMatchesForText = (agents: Agent[], textAfterTrigger: string, startIndex: number): MatchResult[] => {
     const textLower = textAfterTrigger.toLowerCase();
-    const results: MatchResult[] = [];
 
-    // If nothing typed, return all recent agents
-    if (textLower.length === 0) {
-      for (const agent of recentAgents) {
-        results.push({
-          agent,
-          matchedText: "",
-          startIndex,
-        });
-      }
-      return results;
-    }
+    // Filter agents by typed text (or return all if nothing typed)
+    const filteredAgents = filterAgentsByQuery(agents, textLower);
 
-    // Filter agents by typed text
-    for (const agent of recentAgents) {
-      if (agent.title.toLowerCase().startsWith(textLower)) {
-        results.push({
-          agent,
-          matchedText: textAfterTrigger,
-          startIndex,
-        });
-      }
-    }
-
-    return results;
+    return filteredAgents.map((agent) => ({
+      agent,
+      matchedText: textAfterTrigger,
+      startIndex,
+    }));
   };
 
   const findMatches = (_agents: Agent[]): MatchResult[] => {
@@ -113,8 +87,8 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
     const maxLookback = 50;
     const lookbackStart = Math.max(0, cursor - maxLookback);
 
-    // Get recently viewed agents list once
-    const recentAgents = getRecentAgentsList();
+    // Filter out current agent from the list
+    const availableAgents = props.agents.filter((a) => a.id !== props.currentAgentId);
 
     // Try each possible starting position in the lookback window
     for (let start = lookbackStart; start < cursor; start++) {
@@ -123,7 +97,7 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
       // Check if this position has @@ trigger (but not @@@ which is the model trigger)
       if (substring.startsWith("@@") && textBeforeCursor[start - 1] !== "@") {
         const matchedAfterTrigger = substring.substring(2); // Everything after @@
-        const results = findMatchesForText(recentAgents, matchedAfterTrigger, start);
+        const results = findMatchesForText(availableAgents, matchedAfterTrigger, start);
 
         // Return results if we found any or nothing was typed after @@
         if (results.length > 0) {
@@ -236,29 +210,30 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
     const size = uiSize();
     return {
       option: size === "sm" ? "text-xs" : size === "md" ? "text-sm" : "text-base",
-      status: size === "sm" ? "text-xs" : size === "md" ? "text-xs" : "text-xs",
+      meta: size === "sm" ? "text-[10px]" : size === "md" ? "text-xs" : "text-sm",
     };
   };
 
-  // Get status display
-  const getStatusDisplay = (status?: { type: "idle" | "busy" | "retry" }) => {
-    if (!status) return "unknown";
-    return status.type;
+  // Format timestamp for display
+  const formatTimestamp = (timestamp: number | null): string => {
+    if (!timestamp) return "No messages";
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
   };
 
-  // Get status color
-  const getStatusColor = (status?: { type: "idle" | "busy" | "retry" }) => {
-    if (!status) return "text-text-muted";
-    switch (status.type) {
-      case "idle":
-        return "text-text-secondary";
-      case "busy":
-        return "text-accent";
-      case "retry":
-        return "text-warn";
-      default:
-        return "text-text-muted";
-    }
+  // Truncate message text
+  const truncateMessage = (text: string | null): string | null => {
+    if (!text) return null;
+    if (text.length <= 60) return text;
+    return `${text.slice(0, 60)}...`;
   };
 
   const shouldShow = () => {
@@ -318,10 +293,20 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
                 setHighlightedIndex(index());
               }}
             >
-              <div>
+              <div class="flex flex-col gap-0.5">
                 <div class="font-medium text-text-primary">{agent.title}</div>
-                <div class={`${sizeClasses().status} mt-0.5 ${getStatusColor(agent.status)}`}>
-                  {getStatusDisplay(agent.status)}
+                <div class={`${sizeClasses().meta} text-text-secondary flex items-center gap-2`}>
+                  <span>{formatTimestamp(agent.lastMessageAt)}</span>
+                  {agent.lastUserMessage && (
+                    <span class="truncate max-w-[150px]" title={agent.lastUserMessage}>
+                      You: {truncateMessage(agent.lastUserMessage)}
+                    </span>
+                  )}
+                  {agent.lastAgentMessage && (
+                    <span class="truncate max-w-[150px]" title={agent.lastAgentMessage}>
+                      Agent: {truncateMessage(agent.lastAgentMessage)}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
