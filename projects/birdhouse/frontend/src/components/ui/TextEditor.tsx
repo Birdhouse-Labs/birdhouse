@@ -55,7 +55,8 @@ const TextEditor: Component<TextEditorProps> = (props) => {
       ...defaultOptions,
       ...props.options,
       ...(props.ariaLabel ? { ariaLabel: props.ariaLabel } : {}),
-      fontFamily: "var(--font-prose-code, var(--font-prose-code-default)), ui-monospace, SFMono-Regular, Menlo, monospace",
+      fontFamily:
+        "var(--font-prose-code, var(--font-prose-code-default)), ui-monospace, SFMono-Regular, Menlo, monospace",
       language: props.language,
       readOnly: props.disabled ?? false,
       theme: resolvedCodeTheme(),
