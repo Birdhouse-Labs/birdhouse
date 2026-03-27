@@ -8,4 +8,10 @@ describe("buildModelMarkdownLink", () => {
   it("builds a canonical Birdhouse model link from a model id", () => {
     expect(buildModelMarkdownLink("openai/gpt-5.4")).toBe("[openai/gpt-5.4](birdhouse:model/openai/gpt-5.4)");
   });
+
+  it("uses display text while keeping the canonical model id in the link target", () => {
+    expect(buildModelMarkdownLink("anthropic/claude-opus-4-6", "Claude Opus 4.6")).toBe(
+      "[Claude Opus 4.6](birdhouse:model/anthropic/claude-opus-4-6)",
+    );
+  });
 });

@@ -310,13 +310,13 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
    * Handle model selection from typeahead
    *
    * Replaces "@@@query" with a canonical Birdhouse model markdown reference
-   * (e.g. "[anthropic/claude-sonnet-4-6](birdhouse:model/anthropic/claude-sonnet-4-6)")
+   * (e.g. "[Claude Sonnet 4.6](birdhouse:model/anthropic/claude-sonnet-4-6)")
    * Uses document.execCommand to preserve undo stack
    */
   const handleModelSelect = (model: ModelItem, matchedText: string, matchStartIndex: number) => {
     if (!textareaRef) return;
 
-    const replacement = buildModelMarkdownLink(model.id);
+    const replacement = buildModelMarkdownLink(model.id, model.name);
 
     // Focus first
     textareaRef.focus();
