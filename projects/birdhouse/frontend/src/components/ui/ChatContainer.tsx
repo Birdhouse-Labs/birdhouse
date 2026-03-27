@@ -1,7 +1,7 @@
 // ABOUTME: Chat container with input at top and message list below (newest-at-top architecture)
 // ABOUTME: Orchestrates message rendering and input handling
 
-import { LibraryBig, Split, X } from "lucide-solid";
+import { LibraryBig, Network, Square, X } from "lucide-solid";
 import { type Accessor, type Component, createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { findPendingAssistantId, isMessageQueued } from "../../domain/message-queue";
@@ -79,6 +79,15 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
   const [dialogOpen, setDialogOpen] = createSignal(false);
   const hasDraftContent = createMemo(() => !!props.inputValue.trim() || (props.attachments?.length ?? 0) > 0);
 
+  const StopTreeModeIcon: Component = () => (
+    <span class="relative flex h-[18px] w-[18px] items-center justify-center">
+      <Network size={18} />
+      <span class="absolute -bottom-[1px] -right-[1px] rounded-[3px] bg-gradient-to-r from-gradient-from to-gradient-to p-[1px] text-text-on-accent">
+        <Square size={7} fill="currentColor" stroke-width={2.5} />
+      </span>
+    </span>
+  );
+
   // Find the pending assistant message ID for queue detection
   const pendingAssistantId = createMemo(() => findPendingAssistantId(props.messages));
 
@@ -147,7 +156,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
                   data-ph-capture-attribute-current-state={props.stopTreeMode ? "enabled" : "disabled"}
                   data-ph-capture-attribute-action={props.stopTreeMode ? "disable" : "enable"}
                 >
-                  <Show when={props.stopTreeMode} fallback={<Split size={18} />}>
+                  <Show when={props.stopTreeMode} fallback={<StopTreeModeIcon />}>
                     <X size={18} />
                   </Show>
                 </button>
