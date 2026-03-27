@@ -2,7 +2,8 @@
 // ABOUTME: Uses marked's custom renderer API for proper code block extraction
 
 import { marked, type Tokens } from "marked";
-import { type Component, createMemo, For, Suspense } from "solid-js";
+import { type Component, createEffect, createMemo, For, onCleanup, Suspense } from "solid-js";
+import { render } from "solid-js/web";
 import { borderColor, cardSurface } from "../styles/containerStyles";
 import { codeTheme, isDark, uiSize } from "../theme";
 import { resolveCodeTheme } from "../theme/codeThemes";
@@ -16,10 +17,9 @@ interface CodeBlockInfo {
 }
 
 interface MarkdownPart {
-  type: "html" | "codeblock" | "modelref";
+  type: "html" | "codeblock";
   content: string;
   codeInfo?: CodeBlockInfo;
-  modelInfo?: { id: string; label: string };
 }
 
 export interface GlobalReference {
@@ -93,6 +93,8 @@ const CodeBlockSkeleton: Component<{ language: string }> = (props) => {
 };
 
 export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
+  let contentRef: HTMLDivElement | undefined;
+  let modelReferenceDisposers: Array<() => void> = [];
   const sizeClasses = createMemo(() => {
     const size = uiSize();
     return {
@@ -104,7 +106,6 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
   const parsedParts = createMemo(() => {
     const parts: MarkdownPart[] = [];
     const codeBlocks: CodeBlockInfo[] = [];
-    const modelRefs: Array<{ id: string; label: string; placeholder: string }> = [];
     let currentId = 0;
 
     // Create a fresh renderer for this parse to avoid mutation issues
@@ -152,9 +153,10 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 
       if (token.href.startsWith("birdhouse:model/")) {
         const modelId = token.href.replace("birdhouse:model/", "");
-        const id = `__MODEL_REF_${currentId++}__`;
-        modelRefs.push({ id: modelId, label: token.text, placeholder: id });
-        return id;
+        const escapedModelId = escapeHtml(modelId);
+        const escapedText = escapeHtml(token.text);
+
+        return `<span data-model-reference data-model-id="${escapedModelId}" data-model-label="${escapedText}"></span>`;
       }
 
       if (token.href.startsWith("birdhouse:agent/")) {
@@ -194,31 +196,18 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
       breaks: false,
     }) as string;
 
-    const placeholders = [
-      ...codeBlocks.map((block) => ({ kind: "codeblock" as const, id: block.id, codeInfo: block })),
-      ...modelRefs.map((modelRef) => ({
-        kind: "modelref" as const,
-        id: modelRef.placeholder,
-        modelInfo: { id: modelRef.id, label: modelRef.label },
-      })),
-    ].sort((a, b) => html.indexOf(a.id) - html.indexOf(b.id));
-
     // Split HTML by our placeholders and reconstruct with components
     let remainingHtml = html;
-    placeholders.forEach((placeholder) => {
-      const parts_split = remainingHtml.split(placeholder.id);
+    codeBlocks.forEach((block) => {
+      const parts_split = remainingHtml.split(block.id);
       const before = parts_split[0];
-      const after = parts_split.slice(1).join(placeholder.id); // Handle if placeholder appears in content
+      const after = parts_split.slice(1).join(block.id); // Handle if placeholder appears in content
 
       if (before) {
         parts.push({ type: "html", content: before });
       }
 
-      if (placeholder.kind === "codeblock") {
-        parts.push({ type: "codeblock", content: "", codeInfo: placeholder.codeInfo });
-      } else {
-        parts.push({ type: "modelref", content: "", modelInfo: placeholder.modelInfo });
-      }
+      parts.push({ type: "codeblock", content: "", codeInfo: block });
 
       remainingHtml = after;
     });
@@ -236,6 +225,40 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 
   // Memoize isDark to avoid repeated reactive reads
   const proseInvert = createMemo(() => isDark());
+
+  const mountModelReferences = () => {
+    if (!contentRef) {
+      return;
+    }
+
+    for (const dispose of modelReferenceDisposers) {
+      dispose();
+    }
+
+    const mounts = Array.from(contentRef.querySelectorAll<HTMLElement>("[data-model-reference]"));
+    modelReferenceDisposers = mounts.map((mount) => {
+      const modelId = mount.dataset["modelId"];
+      const label = mount.dataset["modelLabel"];
+
+      if (!modelId || !label) {
+        return () => {};
+      }
+
+      return render(() => <ModelReferenceButton modelId={modelId} label={label} />, mount);
+    });
+  };
+
+  createEffect(() => {
+    parsedParts();
+    queueMicrotask(mountModelReferences);
+
+    onCleanup(() => {
+      for (const dispose of modelReferenceDisposers) {
+        dispose();
+      }
+      modelReferenceDisposers = [];
+    });
+  });
 
   const handleReferenceClick = (e: Event) => {
     if (e instanceof KeyboardEvent && e.key !== "Enter" && e.key !== " ") {
@@ -338,6 +361,10 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 
       {/* biome-ignore lint/a11y/noStaticElementInteractions: Event delegation for dynamically generated skill links in markdown */}
       <div
+        ref={(el) => {
+          contentRef = el;
+          queueMicrotask(mountModelReferences);
+        }}
         class={`prose max-w-none ${props.class || ""}`}
         classList={{
           [sizeClasses().prose]: true,
@@ -371,9 +398,6 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
                   </Suspense>
                 </div>
               );
-            }
-            if (part.type === "modelref" && part.modelInfo) {
-              return <ModelReferenceButton label={part.modelInfo.label} modelId={part.modelInfo.id} />;
             }
             return null;
           }}
