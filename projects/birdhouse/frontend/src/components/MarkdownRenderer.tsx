@@ -7,6 +7,7 @@ import { borderColor, cardSurface } from "../styles/containerStyles";
 import { codeTheme, isDark, uiSize } from "../theme";
 import { resolveCodeTheme } from "../theme/codeThemes";
 import { CodeBlockContainer } from "./ui";
+import ModelReferenceButton from "./ui/ModelReferenceButton";
 
 interface CodeBlockInfo {
   code: string;
@@ -15,9 +16,10 @@ interface CodeBlockInfo {
 }
 
 interface MarkdownPart {
-  type: "html" | "codeblock";
+  type: "html" | "codeblock" | "modelref";
   content: string;
   codeInfo?: CodeBlockInfo;
+  modelInfo?: { id: string; label: string };
 }
 
 export interface GlobalReference {
@@ -102,6 +104,7 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
   const parsedParts = createMemo(() => {
     const parts: MarkdownPart[] = [];
     const codeBlocks: CodeBlockInfo[] = [];
+    const modelRefs: Array<{ id: string; label: string; placeholder: string }> = [];
     let currentId = 0;
 
     // Create a fresh renderer for this parse to avoid mutation issues
@@ -149,10 +152,9 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 
       if (token.href.startsWith("birdhouse:model/")) {
         const modelId = token.href.replace("birdhouse:model/", "");
-        const escapedModelId = escapeHtml(modelId);
-        const escapedText = escapeHtml(token.text);
-
-        return `<span class="model-popover"><button type="button" class="model-ref inline-flex items-center rounded font-semibold cursor-pointer">${escapedText}</button><span class="model-popover-content"><span class="model-popover-label">Model ID</span><span class="model-popover-id">${escapedModelId}</span></span></span>`;
+        const id = `__MODEL_REF_${currentId++}__`;
+        modelRefs.push({ id: modelId, label: token.text, placeholder: id });
+        return id;
       }
 
       if (token.href.startsWith("birdhouse:agent/")) {
@@ -192,17 +194,32 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
       breaks: false,
     }) as string;
 
+    const placeholders = [
+      ...codeBlocks.map((block) => ({ kind: "codeblock" as const, id: block.id, codeInfo: block })),
+      ...modelRefs.map((modelRef) => ({
+        kind: "modelref" as const,
+        id: modelRef.placeholder,
+        modelInfo: { id: modelRef.id, label: modelRef.label },
+      })),
+    ].sort((a, b) => html.indexOf(a.id) - html.indexOf(b.id));
+
     // Split HTML by our placeholders and reconstruct with components
     let remainingHtml = html;
-    codeBlocks.forEach((block) => {
-      const parts_split = remainingHtml.split(block.id);
+    placeholders.forEach((placeholder) => {
+      const parts_split = remainingHtml.split(placeholder.id);
       const before = parts_split[0];
-      const after = parts_split.slice(1).join(block.id); // Handle if placeholder appears in content
+      const after = parts_split.slice(1).join(placeholder.id); // Handle if placeholder appears in content
 
       if (before) {
         parts.push({ type: "html", content: before });
       }
-      parts.push({ type: "codeblock", content: "", codeInfo: block });
+
+      if (placeholder.kind === "codeblock") {
+        parts.push({ type: "codeblock", content: "", codeInfo: placeholder.codeInfo });
+      } else {
+        parts.push({ type: "modelref", content: "", modelInfo: placeholder.modelInfo });
+      }
+
       remainingHtml = after;
     });
 
@@ -317,50 +334,6 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
         .model-ref:hover {
           color: var(--theme-gradient-to);
         }
-
-        .model-popover {
-          position: relative;
-          display: inline-flex;
-        }
-
-        .model-popover-content {
-          display: none;
-          position: absolute;
-          top: calc(100% + 0.5rem);
-          left: 0;
-          min-width: 18rem;
-          max-width: min(24rem, calc(100vw - 2rem));
-          padding: 0.75rem;
-          border: 1px solid var(--color-border);
-          border-radius: 0.5rem;
-          background: var(--color-surface-raised);
-          box-shadow: var(--shadow-lg);
-          z-index: 60;
-        }
-
-        .model-popover:focus-within .model-popover-content {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-
-        .model-popover-label {
-          font-size: 0.75rem;
-          font-weight: 500;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          color: var(--color-text-secondary);
-        }
-
-        .model-popover-id {
-          border-radius: 0.375rem;
-          background: var(--color-surface);
-          padding: 0.375rem 0.5rem;
-          font-family: var(--font-mono);
-          font-size: 0.875rem;
-          color: var(--color-text-primary);
-          overflow-wrap: anywhere;
-        }
       `}</style>
 
       {/* biome-ignore lint/a11y/noStaticElementInteractions: Event delegation for dynamically generated skill links in markdown */}
@@ -398,6 +371,9 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
                   </Suspense>
                 </div>
               );
+            }
+            if (part.type === "modelref" && part.modelInfo) {
+              return <ModelReferenceButton label={part.modelInfo.label} modelId={part.modelInfo.id} />;
             }
             return null;
           }}
