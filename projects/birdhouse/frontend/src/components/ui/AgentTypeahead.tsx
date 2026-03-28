@@ -319,9 +319,9 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
                         class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[85%] relative`}
                         style={{
                           background: "var(--theme-surface-raised)",
-                          boxShadow: "0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)",
-                          lineHeight: "1.35",
-                          maxHeight: "4em",
+                          "box-shadow": "0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)",
+                          "line-height": "1.35",
+                          "max-height": "4em",
                           overflow: "hidden",
                         }}
                         title={agent.lastAgentMessage}
@@ -350,10 +350,10 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
                                 color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised)),
                                 color-mix(in srgb, var(--theme-gradient-to) 20%, var(--theme-surface-raised))
                               )`,
-                              boxShadow: `0 0 0 1px color-mix(in srgb, var(--theme-gradient-via) 40%, transparent),
+                              "box-shadow": `0 0 0 1px color-mix(in srgb, var(--theme-gradient-via) 40%, transparent),
                                              0 2px 8px -2px color-mix(in srgb, var(--theme-gradient-via) 25%, transparent)`,
-                              lineHeight: "1.35",
-                              maxHeight: "4em",
+                              "line-height": "1.35",
+                              "max-height": "4em",
                               overflow: "hidden",
                             }}
                             title={agent.lastUserMessage.text}
@@ -377,10 +377,10 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
                             class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[85%] relative`}
                             style={{
                               background: "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",
-                              boxShadow: `0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
+                              "box-shadow": `0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
                                              0 2px 8px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent)`,
-                              lineHeight: "1.35",
-                              maxHeight: "4em",
+                              "line-height": "1.35",
+                              "max-height": "4em",
                               overflow: "hidden",
                             }}
                             title={agent.lastUserMessage.text}
