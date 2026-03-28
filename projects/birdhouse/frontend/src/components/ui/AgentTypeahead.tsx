@@ -250,6 +250,20 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
     return props.visible && displayed.length > 0;
   };
 
+  // Helper to detect overflow for gradient fade
+  const useOverflowDetection = () => {
+    const [isOverflowing, setIsOverflowing] = createSignal(false);
+    let ref: HTMLDivElement | undefined;
+
+    createEffect(() => {
+      if (ref) {
+        setIsOverflowing(ref.scrollHeight > ref.clientHeight);
+      }
+    });
+
+    return { ref, isOverflowing };
+  };
+
   return (
     <Show when={shouldShow()}>
       <div
@@ -315,25 +329,33 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
                   {/* Agent message first (older, higher up) - mini bubble left */}
                   {agent.lastAgentMessage && (
                     <div class="flex justify-start">
-                      <div
-                        class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[85%] relative`}
-                        style={{
-                          background: "var(--theme-surface-raised)",
-                          "box-shadow": "0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)",
-                          "line-height": "1.35",
-                          "max-height": "4em",
-                          overflow: "hidden",
-                        }}
-                        title={agent.lastAgentMessage}
-                      >
-                        {agent.lastAgentMessage}
-                        <div
-                          class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
-                          style={{
-                            background: "linear-gradient(to bottom, transparent, var(--theme-surface-raised))",
-                          }}
-                        />
-                      </div>
+                      {(() => {
+                        const { ref, isOverflowing } = useOverflowDetection();
+                        return (
+                          <div
+                            ref={ref}
+                            class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[85%] relative`}
+                            style={{
+                              background: "var(--theme-surface-raised)",
+                              "box-shadow": "0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)",
+                              "line-height": "1.35",
+                              "max-height": "4em",
+                              overflow: "hidden",
+                            }}
+                            title={agent.lastAgentMessage}
+                          >
+                            {agent.lastAgentMessage}
+                            <Show when={isOverflowing()}>
+                              <div
+                                class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
+                                style={{
+                                  background: "linear-gradient(to bottom, transparent, var(--theme-surface-raised))",
+                                }}
+                              />
+                            </Show>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                   {/* User message second (newer, lower down) */}
@@ -342,60 +364,76 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
                       {/* Agent-sent: centered with gradient (like main chat) */}
                       {agent.lastUserMessage.isAgentSent ? (
                         <div class="flex justify-center">
-                          <div
-                            class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[90%] relative`}
-                            style={{
-                              background: `linear-gradient(to right,
-                                color-mix(in srgb, var(--theme-gradient-from) 20%, var(--theme-surface-raised)),
-                                color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised)),
-                                color-mix(in srgb, var(--theme-gradient-to) 20%, var(--theme-surface-raised))
-                              )`,
-                              "box-shadow": `0 0 0 1px color-mix(in srgb, var(--theme-gradient-via) 40%, transparent),
-                                             0 2px 8px -2px color-mix(in srgb, var(--theme-gradient-via) 25%, transparent)`,
-                              "line-height": "1.35",
-                              "max-height": "4em",
-                              overflow: "hidden",
-                            }}
-                            title={agent.lastUserMessage.text}
-                          >
-                            {agent.lastUserMessage.text}
-                            <div
-                              class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
-                              style={{
-                                background: `linear-gradient(to bottom,
-                                  transparent,
-                                  color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised))
-                                )`,
-                              }}
-                            />
-                          </div>
+                          {(() => {
+                            const { ref, isOverflowing } = useOverflowDetection();
+                            return (
+                              <div
+                                ref={ref}
+                                class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[90%] relative`}
+                                style={{
+                                  background: `linear-gradient(to right,
+                                    color-mix(in srgb, var(--theme-gradient-from) 20%, var(--theme-surface-raised)),
+                                    color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised)),
+                                    color-mix(in srgb, var(--theme-gradient-to) 20%, var(--theme-surface-raised))
+                                  )`,
+                                  "box-shadow": `0 0 0 1px color-mix(in srgb, var(--theme-gradient-via) 40%, transparent),
+                                                 0 2px 8px -2px color-mix(in srgb, var(--theme-gradient-via) 25%, transparent)`,
+                                  "line-height": "1.35",
+                                  "max-height": "4em",
+                                  overflow: "hidden",
+                                }}
+                                title={agent.lastUserMessage.text}
+                              >
+                                {agent.lastUserMessage.text}
+                                <Show when={isOverflowing()}>
+                                  <div
+                                    class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
+                                    style={{
+                                      background: `linear-gradient(to bottom,
+                                        transparent,
+                                        color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised))
+                                      )`,
+                                    }}
+                                  />
+                                </Show>
+                              </div>
+                            );
+                          })()}
                         </div>
                       ) : (
                         /* Human user message: right-aligned with accent tint */
                         <div class="flex justify-end">
-                          <div
-                            class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[85%] relative`}
-                            style={{
-                              background: "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",
-                              "box-shadow": `0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
-                                             0 2px 8px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent)`,
-                              "line-height": "1.35",
-                              "max-height": "4em",
-                              overflow: "hidden",
-                            }}
-                            title={agent.lastUserMessage.text}
-                          >
-                            {agent.lastUserMessage.text}
-                            <div
-                              class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
-                              style={{
-                                background: `linear-gradient(to bottom,
-                                  transparent,
-                                  color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))
-                                )`,
-                              }}
-                            />
-                          </div>
+                          {(() => {
+                            const { ref, isOverflowing } = useOverflowDetection();
+                            return (
+                              <div
+                                ref={ref}
+                                class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[85%] relative`}
+                                style={{
+                                  background: "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",
+                                  "box-shadow": `0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
+                                                 0 2px 8px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent)`,
+                                  "line-height": "1.35",
+                                  "max-height": "4em",
+                                  overflow: "hidden",
+                                }}
+                                title={agent.lastUserMessage.text}
+                              >
+                                {agent.lastUserMessage.text}
+                                <Show when={isOverflowing()}>
+                                  <div
+                                    class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
+                                    style={{
+                                      background: `linear-gradient(to bottom,
+                                        transparent,
+                                        color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))
+                                      )`,
+                                    }}
+                                  />
+                                </Show>
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
                     </>
