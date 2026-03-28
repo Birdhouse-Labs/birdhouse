@@ -1,11 +1,12 @@
 // ABOUTME: Get recent agents with message context for @@ typeahead
-// ABOUTME: Returns agents sorted by activity with last message snippets
+// ABOUTME: Returns agents from last 30 days with last message snippets
 
 import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
 import type { Message } from "../../lib/opencode-client";
 
-const MAX_AGENTS = 100;
+// TODO(agent-search): Move search to db once we are setup for searching agents better
+const DAYS_LOOKBACK = 30;
 const MAX_SNIPPET_LENGTH = 200;
 
 interface RecentAgentResponse {
@@ -56,7 +57,7 @@ export async function getRecentAgents(c: Context, deps: Pick<Deps, "agentsDB" | 
     const query = c.req.query("q") || "";
 
     // Get recent agents from database (filtered by query if provided)
-    const agents = agentsDB.getRecentAgents(MAX_AGENTS, query);
+    const agents = agentsDB.getRecentAgents(query);
 
     // Fetch message context for each agent
     const agentsWithContext: RecentAgentResponse[] = await Promise.all(
