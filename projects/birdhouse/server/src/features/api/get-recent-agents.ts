@@ -63,7 +63,7 @@ export async function getRecentAgents(c: Context, deps: Pick<Deps, "agentsDB" | 
     const agentsWithContext: RecentAgentResponse[] = await Promise.all(
       agents.map(async (agent) => {
         try {
-          const messages = await getMessagesFromOpenCode(agent.session_id);
+          const messages = await getMessagesFromOpenCode(agent.session_id, 100);
 
           if (messages.length === 0) {
             return {
