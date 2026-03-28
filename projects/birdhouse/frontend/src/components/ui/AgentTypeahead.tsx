@@ -43,6 +43,20 @@ export interface AgentTypeaheadProps {
   onHighlightChange?: (index: number) => void;
 }
 
+// Helper to detect overflow for gradient fade
+const useOverflowDetection = () => {
+  const [isOverflowing, setIsOverflowing] = createSignal(false);
+  let ref: HTMLDivElement | undefined;
+
+  createEffect(() => {
+    if (ref) {
+      setIsOverflowing(ref.scrollHeight > ref.clientHeight);
+    }
+  });
+
+  return { ref, isOverflowing };
+};
+
 export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
   const baseZIndex = useZIndex();
   const [highlightedIndex, setHighlightedIndex] = createSignal(0);
@@ -250,20 +264,6 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
     return props.visible && displayed.length > 0;
   };
 
-  // Helper to detect overflow for gradient fade
-  const useOverflowDetection = () => {
-    const [isOverflowing, setIsOverflowing] = createSignal(false);
-    let ref: HTMLDivElement | undefined;
-
-    createEffect(() => {
-      if (ref) {
-        setIsOverflowing(ref.scrollHeight > ref.clientHeight);
-      }
-    });
-
-    return { ref, isOverflowing };
-  };
-
   return (
     <Show when={shouldShow()}>
       <div
@@ -410,7 +410,8 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
                                 ref={ref}
                                 class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[85%] relative`}
                                 style={{
-                                  background: "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",
+                                  background:
+                                    "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",
                                   "box-shadow": `0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
                                                  0 2px 8px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent)`,
                                   "line-height": "1.35",
