@@ -87,15 +87,13 @@ export async function getRecentAgents(c: Context, deps: Pick<Deps, "agentsDB" | 
             const msg = messages[i];
             if (msg.info.role === "user") {
               const text = extractMessageText(msg, MAX_SNIPPET_LENGTH);
-              
               // Check if this message was sent by an agent (not human)
               // Look for sent_by_agent_id or sent_by_agent_title in first text part metadata
-              const firstTextPart = msg.parts.find((p) => p.type === "text") as 
+              const firstTextPart = msg.parts.find((p) => p.type === "text") as
                 | { type: "text"; text: string; metadata?: Record<string, unknown> }
                 | undefined;
               const metadata = firstTextPart?.metadata;
               const isAgentSent = !!(metadata?.sent_by_agent_id || metadata?.sent_by_agent_title);
-              
               lastUserMessage = {
                 text,
                 isAgentSent,

@@ -264,9 +264,7 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
           left: `${position.x ?? 0}px`,
           "max-height": "min(80vh, 36rem)",
           "min-width": "min(20rem, 85vw)",
-          "max-width": maxWidth() !== undefined
-            ? `min(${maxWidth()}px, 42rem)`
-            : "min(calc(100vw - 2rem), 42rem)",
+          "max-width": maxWidth() !== undefined ? `min(${maxWidth()}px, 42rem)` : "min(calc(100vw - 2rem), 42rem)",
           "z-index": baseZIndex,
         }}
       >
@@ -317,22 +315,22 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
                   {/* Agent message first (older, higher up) - mini bubble left */}
                   {agent.lastAgentMessage && (
                     <div class="flex justify-start">
-                      <div 
+                      <div
                         class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[85%] relative`}
                         style={{
-                          "background": "var(--theme-surface-raised)",
-                          "box-shadow": "0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)",
-                          "line-height": "1.35",
-                          "max-height": "4em",
-                          "overflow": "hidden"
+                          background: "var(--theme-surface-raised)",
+                          boxShadow: "0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)",
+                          lineHeight: "1.35",
+                          maxHeight: "4em",
+                          overflow: "hidden",
                         }}
                         title={agent.lastAgentMessage}
                       >
                         {agent.lastAgentMessage}
-                        <div 
+                        <div
                           class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
                           style={{
-                            "background": "linear-gradient(to bottom, transparent, var(--theme-surface-raised))"
+                            background: "linear-gradient(to bottom, transparent, var(--theme-surface-raised))",
                           }}
                         />
                       </div>
@@ -344,30 +342,30 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
                       {/* Agent-sent: centered with gradient (like main chat) */}
                       {agent.lastUserMessage.isAgentSent ? (
                         <div class="flex justify-center">
-                          <div 
+                          <div
                             class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[90%] relative`}
                             style={{
-                              "background": `linear-gradient(to right,
+                              background: `linear-gradient(to right,
                                 color-mix(in srgb, var(--theme-gradient-from) 20%, var(--theme-surface-raised)),
                                 color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised)),
                                 color-mix(in srgb, var(--theme-gradient-to) 20%, var(--theme-surface-raised))
                               )`,
-                              "box-shadow": `0 0 0 1px color-mix(in srgb, var(--theme-gradient-via) 40%, transparent),
+                              boxShadow: `0 0 0 1px color-mix(in srgb, var(--theme-gradient-via) 40%, transparent),
                                              0 2px 8px -2px color-mix(in srgb, var(--theme-gradient-via) 25%, transparent)`,
-                              "line-height": "1.35",
-                              "max-height": "4em",
-                              "overflow": "hidden"
+                              lineHeight: "1.35",
+                              maxHeight: "4em",
+                              overflow: "hidden",
                             }}
                             title={agent.lastUserMessage.text}
                           >
                             {agent.lastUserMessage.text}
-                            <div 
+                            <div
                               class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
                               style={{
-                                "background": `linear-gradient(to bottom, 
-                                  transparent, 
+                                background: `linear-gradient(to bottom,
+                                  transparent,
                                   color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised))
-                                )`
+                                )`,
                               }}
                             />
                           </div>
@@ -375,26 +373,26 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
                       ) : (
                         /* Human user message: right-aligned with accent tint */
                         <div class="flex justify-end">
-                          <div 
+                          <div
                             class={`${sizeClasses().message} text-text-primary rounded-xl px-2.5 py-1.5 max-w-[85%] relative`}
                             style={{
-                              "background": "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",
-                              "box-shadow": `0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
+                              background: "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",
+                              boxShadow: `0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
                                              0 2px 8px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent)`,
-                              "line-height": "1.35",
-                              "max-height": "4em",
-                              "overflow": "hidden"
+                              lineHeight: "1.35",
+                              maxHeight: "4em",
+                              overflow: "hidden",
                             }}
                             title={agent.lastUserMessage.text}
                           >
                             {agent.lastUserMessage.text}
-                            <div 
+                            <div
                               class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
                               style={{
-                                "background": `linear-gradient(to bottom, 
-                                  transparent, 
+                                background: `linear-gradient(to bottom,
+                                  transparent,
                                   color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))
-                                )`
+                                )`,
                               }}
                             />
                           </div>

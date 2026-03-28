@@ -16,7 +16,11 @@ interface RecentAgentResponse {
     parent_id: string | null;
     tree_id: string;
     lastMessageAt: number | null;
-    lastUserMessage: string | null;
+    lastUserMessage: {
+      text: string;
+      isAgentSent: boolean;
+      sentByAgentTitle?: string;
+    } | null;
     lastAgentMessage: string | null;
   }>;
   total: number;
@@ -326,12 +330,12 @@ describe("GET /api/agents/recent - Message context", () => {
 
       const result = data.agents[0];
       expect(result.lastMessageAt).toBe(now);
-      expect(result.lastUserMessage).toBe("Latest user message content");
+      expect(result.lastUserMessage).toEqual({ text: "Latest user message content", isAgentSent: false });
       expect(result.lastAgentMessage).toBe("Agent response here");
     });
   });
 
-  test("truncates long messages to 100 chars with ellipsis", async () => {
+  test("truncates long messages to 200 chars with ellipsis", async () => {
     const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
@@ -343,7 +347,7 @@ describe("GET /api/agents/recent - Message context", () => {
       updated_at: now,
     });
 
-    const longMessage = "a".repeat(200);
+    const longMessage = "a".repeat(250);
 
     const deps = await createTestDeps({
       getMessages: async () =>
@@ -362,7 +366,7 @@ describe("GET /api/agents/recent - Message context", () => {
 
       expect(res.status).toBe(200);
       const data = (await res.json()) as RecentAgentResponse;
-      expect(data.agents[0].lastUserMessage).toBe(`${"a".repeat(97)}...`);
+      expect(data.agents[0].lastUserMessage).toEqual({ text: `${"a".repeat(197)}...`, isAgentSent: false });
     });
   });
 
@@ -463,7 +467,7 @@ describe("GET /api/agents/recent - Message context", () => {
       expect(res.status).toBe(200);
       const data = (await res.json()) as RecentAgentResponse;
       // Should join text parts with space separator and skip tool parts
-      expect(data.agents[0].lastUserMessage).toBe("First part  second part");
+      expect(data.agents[0].lastUserMessage).toEqual({ text: "First part  second part", isAgentSent: false });
     });
   });
 
@@ -509,7 +513,7 @@ describe("GET /api/agents/recent - Message context", () => {
       expect(res.status).toBe(200);
       const data = (await res.json()) as RecentAgentResponse;
       expect(data.agents[0].lastMessageAt).toBe(now);
-      expect(data.agents[0].lastUserMessage).toBe("Middle user");
+      expect(data.agents[0].lastUserMessage).toEqual({ text: "Middle user", isAgentSent: false });
       expect(data.agents[0].lastAgentMessage).toBe("Latest agent reply");
     });
   });
