@@ -119,20 +119,28 @@ describe("GET /api/agents/recent - Basic behavior", () => {
     });
   });
 
-  test("respects the 100 agent limit", async () => {
+  test("excludes agents older than 30 days", async () => {
     const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
 
-    // Create 105 agents
-    for (let i = 0; i < 105; i++) {
-      createRootAgent(agentsDB, {
-        id: `agent_${i}`,
-        session_id: `ses_${i}`,
-        title: `Agent ${i}`,
-        created_at: now - i * 100,
-        updated_at: now - i * 100,
-      });
-    }
+    // Create a recent agent (within 30 days)
+    createRootAgent(agentsDB, {
+      id: "agent_recent",
+      session_id: "ses_recent",
+      title: "Recent Agent",
+      created_at: now - 1000,
+      updated_at: now - 1000,
+    });
+
+    // Create an old agent (older than 30 days)
+    createRootAgent(agentsDB, {
+      id: "agent_old",
+      session_id: "ses_old",
+      title: "Old Agent",
+      created_at: now - thirtyDaysMs - 1000,
+      updated_at: now - thirtyDaysMs - 1000,
+    });
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
@@ -143,8 +151,8 @@ describe("GET /api/agents/recent - Basic behavior", () => {
 
       expect(res.status).toBe(200);
       const data = (await res.json()) as RecentAgentResponse;
-      expect(data.total).toBe(100);
-      expect(data.agents).toHaveLength(100);
+      expect(data.total).toBe(1);
+      expect(data.agents[0].id).toBe("agent_recent");
     });
   });
 });
