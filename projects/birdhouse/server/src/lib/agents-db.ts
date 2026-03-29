@@ -152,6 +152,10 @@ export interface AgentsDB {
     sortDir?: SortDirection,
   ): { rows: AgentRow[]; matchedAgentIds: string[] };
 
+  /** Get recent agents from last 30 days, optionally filtered by query */
+  // TODO(agent-search): Revisit this when we implement the new search feature
+  getRecentAgents(query?: string): AgentRow[];
+
   /** Get all agents that belong to the same tree */
   getAgentsByTreeId(treeId: string): AgentRow[];
 
@@ -703,6 +707,46 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
       const rows = db.prepare(sortQuery).all(...treeIds) as AgentRow[];
 
       return { rows, matchedAgentIds };
+    },
+
+    getRecentAgents(query?: string): AgentRow[] {
+      // TODO(agent-search): Move search to db once we are setup for searching agents better
+      // Get agents from last 30 days to provide relevant recent context
+      // while keeping query bounded (avoids fetching entire db for search)
+      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+      const sql = `
+        SELECT 
+          id, session_id, parent_id, tree_id, level,
+          title, project_id, directory, model,
+          created_at, updated_at, cloned_from, cloned_at, archived_at
+        FROM agents
+        WHERE archived_at IS NULL
+          AND updated_at > ?
+        ORDER BY updated_at DESC
+      `;
+
+      const rows = db.prepare(sql).all(thirtyDaysAgo) as AgentRow[];
+
+      // If no query, return all results
+      if (!query || query.trim() === "") {
+        return rows;
+      }
+
+      // Filter by fuzzy search on title, id, project_id
+      const terms = parseQuery(query);
+      if (terms.length === 0) {
+        return rows;
+      }
+
+      return rows
+        .map((agent) => {
+          const score = matchAllTerms(terms, agent);
+          return { agent, score };
+        })
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(({ agent }) => agent);
     },
 
     getAgentsByTreeId(treeId: string): AgentRow[] {

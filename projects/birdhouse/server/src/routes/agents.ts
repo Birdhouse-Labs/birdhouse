@@ -16,6 +16,9 @@ export function createAgentRoutes() {
   // GET /api/agents/search - Search agents by query with fuzzy matching and sorting
   app.get("/search", (c) => handlers.searchAgents(c, getDepsFromContext(c)));
 
+  // GET /api/agents/recent - Get recent agents with message context for typeahead
+  app.get("/recent", (c) => handlers.getRecentAgents(c, getDepsFromContext(c)));
+
   // GET /api/agents - Load all agent trees
   app.get("/", (c) => handlers.getAgents(c, getDepsFromContext(c)));
 
