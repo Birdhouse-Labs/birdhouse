@@ -2,7 +2,7 @@
 // ABOUTME: Shows agent title, model, context donut, and working state with gradient pulse
 
 import Popover from "corvu/popover";
-import { Archive, Download, Edit, Hammer, Lightbulb, MoreVertical, X } from "lucide-solid";
+import { Archive, Download, Edit, FileText, Hammer, Lightbulb, MoreVertical, X } from "lucide-solid";
 import { type Component, createEffect, createMemo, createResource, createSignal, onCleanup, Show } from "solid-js";
 import { API_ENDPOINT_BASE, buildWorkspaceUrl } from "../config/api";
 import { useStreaming } from "../contexts/StreamingContext";
@@ -12,6 +12,7 @@ import { aggregateTokenStats } from "../domain/token-aggregation";
 import { borderColor } from "../styles/containerStyles";
 import type { Message } from "../types/messages";
 import ArchiveAgentDialog from "./ArchiveAgentDialog";
+import AgentNotesDialog from "./AgentNotesDialog";
 import ContextUsageIndicator from "./ContextUsageIndicator";
 import EditAgentDialog from "./EditAgentDialog";
 import UnarchiveAgentDialog from "./UnarchiveAgentDialog";
@@ -39,6 +40,7 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
   const [isArchiveDialogOpen, setIsArchiveDialogOpen] = createSignal(false);
   const [isUnarchiveDialogOpen, setIsUnarchiveDialogOpen] = createSignal(false);
   const [isPopoverOpen, setIsPopoverOpen] = createSignal(false);
+  const [isNotesDialogOpen, setIsNotesDialogOpen] = createSignal(false);
   const [currentTitle, setCurrentTitle] = createSignal(props.title);
   const [showClickFeedback, setShowClickFeedback] = createSignal(false);
   const [isExporting, setIsExporting] = createSignal(false);
@@ -287,6 +289,24 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              setIsNotesDialogOpen(true);
+            }}
+            class="relative z-10 flex items-center justify-center w-7 h-7 rounded-lg transition-all text-text-secondary hover:bg-surface-overlay hover:text-text-primary"
+            classList={{
+              "!text-text-on-accent hover:bg-white/20": isWorking(),
+            }}
+            aria-label="Open agent notes"
+            title="Open agent notes"
+            data-ph-capture-attribute-button-type="open-agent-notes"
+            data-ph-capture-attribute-agent-id={props.agentId}
+          >
+            <FileText size={14} />
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
               props.onModeChange(props.mode === "build" ? "plan" : "build");
             }}
             class="relative z-10 flex items-center justify-center w-7 h-7 rounded-lg transition-all"
@@ -399,6 +419,13 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
         open={isEditDialogOpen()}
         onOpenChange={setIsEditDialogOpen}
         onSuccess={handleEditSuccess}
+      />
+
+      <AgentNotesDialog
+        agentId={props.agentId}
+        workspaceId={props.workspaceId}
+        open={isNotesDialogOpen()}
+        onOpenChange={setIsNotesDialogOpen}
       />
 
       {/* Archive Dialog */}
