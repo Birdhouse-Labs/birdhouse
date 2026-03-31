@@ -1,5 +1,5 @@
 // ABOUTME: Tests the agent header scratchpad entry point for agent notes.
-// ABOUTME: Verifies the notes button renders and opens the notes dialog.
+// ABOUTME: Verifies the notes button renders in the agent header.
 
 import { render, screen } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
