@@ -1,12 +1,11 @@
 // ABOUTME: Dialog for storing private scratchpad notes on an individual agent.
-// ABOUTME: Loads notes on open and autosaves them through the existing draft backend.
+// ABOUTME: Loads notes on open and saves them when the user closes the scratchpad.
 
 import Dialog from "corvu/dialog";
-import { type Component, createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js";
+import { type Component, createEffect, createSignal, Show } from "solid-js";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { clearAgentNote, getAgentNote, saveAgentNote } from "../services/agent-notes-api";
 import { borderColor, cardSurfaceFlat } from "../styles/containerStyles";
-import { createDebouncedSave } from "../utils/draft-persistence";
 
 export interface AgentNotesDialogProps {
   agentId: string;
@@ -15,8 +14,7 @@ export interface AgentNotesDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type SaveState = "idle" | "loading" | "saving" | "saved" | "error";
-const SAVED_FEEDBACK_MS = 1400;
+type SaveState = "idle" | "loading" | "saving" | "error";
 
 const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
   const baseZIndex = useZIndex();
@@ -26,28 +24,12 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
   let textareaRef: HTMLTextAreaElement | undefined;
   let lastPersistedText = "";
   let activeLoad = 0;
-  let suppressAutosave = false;
-  let savedFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
+  let isClosing = false;
 
-  const clearSavedFeedbackTimer = () => {
-    if (savedFeedbackTimer === null) {
-      return;
+  const persistNote = async (currentText: string) => {
+    if (!hasLoaded() || currentText === lastPersistedText) {
+      return true;
     }
-    clearTimeout(savedFeedbackTimer);
-    savedFeedbackTimer = null;
-  };
-
-  const showSavedFeedback = () => {
-    clearSavedFeedbackTimer();
-    setSaveState("saved");
-    savedFeedbackTimer = setTimeout(() => {
-      savedFeedbackTimer = null;
-      setSaveState("idle");
-    }, SAVED_FEEDBACK_MS);
-  };
-
-  const persistNote = async () => {
-    const currentText = text();
 
     try {
       if (currentText === "") {
@@ -56,28 +38,33 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
         await saveAgentNote(props.workspaceId, props.agentId, currentText);
       }
       lastPersistedText = currentText;
-      showSavedFeedback();
+      setSaveState("idle");
+      return true;
     } catch {
-      clearSavedFeedbackTimer();
       setSaveState("error");
+      return false;
     }
   };
 
-  const draftSave = createDebouncedSave(() => {
-    setSaveState("saving");
-    void persistNote();
-  });
+  const handleSaveAndClose = async () => {
+    if (isClosing) {
+      return;
+    }
 
-  onCleanup(() => {
-    draftSave.flush();
-    clearSavedFeedbackTimer();
-  });
+    isClosing = true;
+    setSaveState("saving");
+    const didSave = await persistNote(text());
+    isClosing = false;
+
+    if (didSave) {
+      props.onOpenChange(false);
+    }
+  };
 
   createEffect(() => {
     if (!props.open) {
       activeLoad += 1;
-      clearSavedFeedbackTimer();
-      draftSave.flush();
+      isClosing = false;
       return;
     }
 
@@ -88,14 +75,12 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
     getAgentNote(props.workspaceId, props.agentId)
       .then((note) => {
         if (loadId !== activeLoad) return;
-        clearSavedFeedbackTimer();
         lastPersistedText = note;
         setText(note);
         setSaveState("idle");
       })
       .catch(() => {
         if (loadId !== activeLoad) return;
-        clearSavedFeedbackTimer();
         setSaveState("error");
       })
       .finally(() => {
@@ -105,56 +90,24 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
   });
 
   createEffect(() => {
-    if (!props.open || !hasLoaded()) return;
-    if (suppressAutosave) return;
-
-    const currentText = text();
-    if (currentText === lastPersistedText) return;
-
-    draftSave.schedule();
-  });
-
-  createEffect(() => {
     if (!props.open || !hasLoaded() || !textareaRef) return;
     textareaRef.focus();
   });
 
-  const handleClear = async () => {
-    draftSave.cancel();
-    suppressAutosave = true;
-    setText("");
-    setSaveState("saving");
-
-    try {
-      await clearAgentNote(props.workspaceId, props.agentId);
-      lastPersistedText = "";
-      showSavedFeedback();
-      textareaRef?.focus();
-    } catch {
-      clearSavedFeedbackTimer();
-      setSaveState("error");
-    } finally {
-      suppressAutosave = false;
-    }
-  };
-
-  const statusText = createMemo(() => {
-    switch (saveState()) {
-      case "loading":
-        return "Loading notes...";
-      case "saving":
-        return "Saving...";
-      case "saved":
-        return "Saved to scratchpad";
-      case "error":
-        return "Autosave failed. Changes are still in this tab.";
-      default:
-        return "Private scratchpad for this agent";
-    }
-  });
-
   return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange} closeOnOutsideFocus={false} preventScroll={false}>
+    <Dialog
+      open={props.open}
+      onOpenChange={(open) => {
+        if (open) {
+          props.onOpenChange(true);
+          return;
+        }
+
+        void handleSaveAndClose();
+      }}
+      closeOnOutsideFocus={false}
+      preventScroll={false}
+    >
       <Dialog.Portal>
         <Dialog.Overlay class="fixed inset-0 bg-black/60 backdrop-blur-sm" style={{ "z-index": baseZIndex }} />
         <Dialog.Content
@@ -166,14 +119,18 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
               <Dialog.Label class="text-lg font-semibold text-heading">Agent Notes</Dialog.Label>
               <p class="mt-1 text-sm text-text-secondary">Jot down anything you want to remember for this agent.</p>
             </div>
-            <Dialog.Close
+            <button
+              type="button"
+              onClick={() => {
+                void handleSaveAndClose();
+              }}
               class="rounded-lg p-2 hover:bg-surface-overlay transition-colors text-text-muted hover:text-text-primary"
               aria-label="Close notes"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </Dialog.Close>
+            </button>
           </div>
 
           <div class="p-5">
@@ -187,28 +144,22 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
               placeholder="Scratchpad notes for this agent"
             />
 
-            <div class="mt-3 flex items-center justify-between gap-3 text-sm">
-              <span
-                classList={{
-                  "text-text-secondary": saveState() !== "error",
-                  "text-danger": saveState() === "error",
-                }}
-              >
-                {statusText()}
-              </span>
+            <Show when={saveState() === "error"}>
+              <p class="mt-3 text-sm text-danger">Save failed. Your changes are still here.</p>
+            </Show>
 
-              <Show when={text() !== ""}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleClear();
-                  }}
-                  class="rounded-lg px-3 py-2 text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary"
-                  aria-label="Clear notes"
-                >
-                  Clear
-                </button>
-              </Show>
+            <div class="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  void handleSaveAndClose();
+                }}
+                class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-text-on-accent transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={saveState() === "saving"}
+                aria-busy={saveState() === "saving" ? "true" : "false"}
+              >
+                Save & Close
+              </button>
             </div>
           </div>
         </Dialog.Content>

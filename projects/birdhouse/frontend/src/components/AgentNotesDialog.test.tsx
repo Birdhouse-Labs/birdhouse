@@ -1,7 +1,7 @@
 // ABOUTME: Tests the per-agent notes dialog backed by draft persistence.
-// ABOUTME: Covers loading, autosaving, and clearing notes from the scratchpad UI.
+// ABOUTME: Covers loading notes and the explicit save action in the scratchpad UI.
 
-import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
+import { render, screen, waitFor } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as agentNotesApi from "../services/agent-notes-api";
 import AgentNotesDialog from "./AgentNotesDialog";
@@ -34,8 +34,12 @@ describe("AgentNotesDialog", () => {
     vi.mocked(agentNotesApi.clearAgentNote).mockResolvedValue(undefined);
   });
 
-  const renderDialog = () =>
-    render(() => <AgentNotesDialog agentId="agent-123" workspaceId="test-workspace" open={true} onOpenChange={() => {}} />);
+  const renderDialog = (onOpenChange = vi.fn()) => {
+    const result = render(() => (
+      <AgentNotesDialog agentId="agent-123" workspaceId="test-workspace" open={true} onOpenChange={onOpenChange} />
+    ));
+    return { ...result, onOpenChange };
+  };
 
   it("loads notes when opened", async () => {
     renderDialog();
@@ -45,24 +49,12 @@ describe("AgentNotesDialog", () => {
     });
   });
 
-  it("autosaves notes after typing", async () => {
-    vi.useFakeTimers();
+  it("renders a Save & Close action", async () => {
     renderDialog();
 
-    const textarea = await screen.findByRole("textbox");
-    fireEvent.input(textarea, { target: { value: "Investigate notes persistence" } });
-
-    await vi.advanceTimersByTimeAsync(500);
-
     await waitFor(() => {
-      expect(agentNotesApi.saveAgentNote).toHaveBeenCalledWith(
-        "test-workspace",
-        "agent-123",
-        "Investigate notes persistence",
-      );
+      expect(screen.getByRole("button", { name: "Save & Close" })).toBeInTheDocument();
     });
-
-    vi.useRealTimers();
   });
 
 });
