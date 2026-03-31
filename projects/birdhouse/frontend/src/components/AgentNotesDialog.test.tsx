@@ -56,5 +56,4 @@ describe("AgentNotesDialog", () => {
       expect(screen.getByRole("button", { name: "Save & Close" })).toBeInTheDocument();
     });
   });
-
 });

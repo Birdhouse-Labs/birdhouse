@@ -2,8 +2,8 @@
 // ABOUTME: Verifies note keys are namespaced and notes remain text-only.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as draftsApi from "./drafts-api";
 import { clearAgentNote, getAgentNote, saveAgentNote } from "./agent-notes-api";
+import * as draftsApi from "./drafts-api";
 
 vi.mock("./drafts-api", () => ({
   clearDraft: vi.fn(),

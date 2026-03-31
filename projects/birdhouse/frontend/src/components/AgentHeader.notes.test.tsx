@@ -62,9 +62,7 @@ function renderHeader() {
     onModeChange: vi.fn(),
   };
 
-  return render(() => (
-    <AgentHeader {...props} />
-  ));
+  return render(() => <AgentHeader {...props} />);
 }
 
 describe("AgentHeader notes button", () => {
@@ -81,5 +79,4 @@ describe("AgentHeader notes button", () => {
 
     expect(screen.getByLabelText("Open agent notes")).toBeInTheDocument();
   });
-
 });

@@ -114,23 +114,11 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
           class={`fixed left-1/2 top-1/2 w-[min(92vw,42rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl ${cardSurfaceFlat} shadow-2xl`}
           style={{ "z-index": baseZIndex }}
         >
-          <div class={`flex items-center justify-between border-b px-5 py-4 ${borderColor}`}>
+          <div class={`border-b px-5 py-4 ${borderColor}`}>
             <div>
               <Dialog.Label class="text-lg font-semibold text-heading">Agent Notes</Dialog.Label>
               <p class="mt-1 text-sm text-text-secondary">Jot down anything you want to remember for this agent.</p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                void handleSaveAndClose();
-              }}
-              class="rounded-lg p-2 hover:bg-surface-overlay transition-colors text-text-muted hover:text-text-primary"
-              aria-label="Close notes"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
 
           <div class="p-5">

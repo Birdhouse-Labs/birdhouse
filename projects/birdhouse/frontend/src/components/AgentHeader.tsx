@@ -12,8 +12,8 @@ import { getAgentNote } from "../services/agent-notes-api";
 
 import { borderColor } from "../styles/containerStyles";
 import type { Message } from "../types/messages";
-import ArchiveAgentDialog from "./ArchiveAgentDialog";
 import AgentNotesDialog from "./AgentNotesDialog";
+import ArchiveAgentDialog from "./ArchiveAgentDialog";
 import ContextUsageIndicator from "./ContextUsageIndicator";
 import EditAgentDialog from "./EditAgentDialog";
 import UnarchiveAgentDialog from "./UnarchiveAgentDialog";
