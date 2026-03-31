@@ -2,12 +2,13 @@
 // ABOUTME: Shows agent title, model, context donut, and working state with gradient pulse
 
 import Popover from "corvu/popover";
-import { Archive, Download, Edit, FileText, Hammer, Lightbulb, MoreVertical, X } from "lucide-solid";
+import { Archive, Download, Edit, Hammer, Lightbulb, MoreVertical, Notebook, NotebookText, X } from "lucide-solid";
 import { type Component, createEffect, createMemo, createResource, createSignal, onCleanup, Show } from "solid-js";
 import { API_ENDPOINT_BASE, buildWorkspaceUrl } from "../config/api";
 import { useStreaming } from "../contexts/StreamingContext";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { aggregateTokenStats } from "../domain/token-aggregation";
+import { getAgentNote } from "../services/agent-notes-api";
 
 import { borderColor } from "../styles/containerStyles";
 import type { Message } from "../types/messages";
@@ -41,6 +42,7 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
   const [isUnarchiveDialogOpen, setIsUnarchiveDialogOpen] = createSignal(false);
   const [isPopoverOpen, setIsPopoverOpen] = createSignal(false);
   const [isNotesDialogOpen, setIsNotesDialogOpen] = createSignal(false);
+  const [hasNotes, setHasNotes] = createSignal(false);
   const [currentTitle, setCurrentTitle] = createSignal(props.title);
   const [showClickFeedback, setShowClickFeedback] = createSignal(false);
   const [isExporting, setIsExporting] = createSignal(false);
@@ -113,6 +115,28 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
     });
 
     onCleanup(unsubscribe);
+  });
+
+  createEffect(() => {
+    const agentId = props.agentId;
+    const workspaceId = props.workspaceId;
+    let cancelled = false;
+
+    getAgentNote(workspaceId, agentId)
+      .then((note) => {
+        if (!cancelled) {
+          setHasNotes(note.trim().length > 0);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHasNotes(false);
+        }
+      });
+
+    onCleanup(() => {
+      cancelled = true;
+    });
   });
 
   // Handle mouse down/up for click feedback
@@ -208,6 +232,18 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
     setCurrentTitle(newTitle);
   };
 
+  const handleNotesDialogOpenChange = (open: boolean) => {
+    setIsNotesDialogOpen(open);
+
+    if (open) {
+      return;
+    }
+
+    getAgentNote(props.workspaceId, props.agentId)
+      .then((note) => setHasNotes(note.trim().length > 0))
+      .catch(() => setHasNotes(false));
+  };
+
   const handleHeaderClick = (e: MouseEvent) => {
     // Don't trigger header click if clicking on buttons (but allow clicking header itself)
     const target = e.target as HTMLElement;
@@ -294,13 +330,17 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
             class="relative z-10 flex items-center justify-center w-7 h-7 rounded-lg transition-all text-text-secondary hover:bg-surface-overlay hover:text-text-primary"
             classList={{
               "!text-text-on-accent hover:bg-white/20": isWorking(),
+              "bg-accent/15 text-accent hover:bg-accent/25": hasNotes() && !isWorking(),
             }}
             aria-label="Open agent notes"
             title="Open agent notes"
             data-ph-capture-attribute-button-type="open-agent-notes"
             data-ph-capture-attribute-agent-id={props.agentId}
+            data-ph-capture-attribute-has-notes={hasNotes() ? "true" : "false"}
           >
-            <FileText size={14} />
+            <Show when={hasNotes()} fallback={<Notebook size={14} />}>
+              <NotebookText size={14} />
+            </Show>
           </button>
 
           <button
@@ -425,7 +465,7 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
         agentId={props.agentId}
         workspaceId={props.workspaceId}
         open={isNotesDialogOpen()}
-        onOpenChange={setIsNotesDialogOpen}
+        onOpenChange={handleNotesDialogOpenChange}
       />
 
       {/* Archive Dialog */}

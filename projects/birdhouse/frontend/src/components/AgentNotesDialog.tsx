@@ -16,6 +16,7 @@ export interface AgentNotesDialogProps {
 }
 
 type SaveState = "idle" | "loading" | "saving" | "saved" | "error";
+const SAVED_FEEDBACK_MS = 1400;
 
 const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
   const baseZIndex = useZIndex();
@@ -26,6 +27,24 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
   let lastPersistedText = "";
   let activeLoad = 0;
   let suppressAutosave = false;
+  let savedFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const clearSavedFeedbackTimer = () => {
+    if (savedFeedbackTimer === null) {
+      return;
+    }
+    clearTimeout(savedFeedbackTimer);
+    savedFeedbackTimer = null;
+  };
+
+  const showSavedFeedback = () => {
+    clearSavedFeedbackTimer();
+    setSaveState("saved");
+    savedFeedbackTimer = setTimeout(() => {
+      savedFeedbackTimer = null;
+      setSaveState("idle");
+    }, SAVED_FEEDBACK_MS);
+  };
 
   const persistNote = async () => {
     const currentText = text();
@@ -37,8 +56,9 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
         await saveAgentNote(props.workspaceId, props.agentId, currentText);
       }
       lastPersistedText = currentText;
-      setSaveState("saved");
+      showSavedFeedback();
     } catch {
+      clearSavedFeedbackTimer();
       setSaveState("error");
     }
   };
@@ -48,11 +68,15 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
     void persistNote();
   });
 
-  onCleanup(() => draftSave.flush());
+  onCleanup(() => {
+    draftSave.flush();
+    clearSavedFeedbackTimer();
+  });
 
   createEffect(() => {
     if (!props.open) {
       activeLoad += 1;
+      clearSavedFeedbackTimer();
       draftSave.flush();
       return;
     }
@@ -64,12 +88,14 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
     getAgentNote(props.workspaceId, props.agentId)
       .then((note) => {
         if (loadId !== activeLoad) return;
+        clearSavedFeedbackTimer();
         lastPersistedText = note;
         setText(note);
         setSaveState("idle");
       })
       .catch(() => {
         if (loadId !== activeLoad) return;
+        clearSavedFeedbackTimer();
         setSaveState("error");
       })
       .finally(() => {
@@ -102,9 +128,10 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
     try {
       await clearAgentNote(props.workspaceId, props.agentId);
       lastPersistedText = "";
-      setSaveState("saved");
+      showSavedFeedback();
       textareaRef?.focus();
     } catch {
+      clearSavedFeedbackTimer();
       setSaveState("error");
     } finally {
       suppressAutosave = false;
@@ -118,9 +145,9 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
       case "saving":
         return "Saving...";
       case "saved":
-        return "Saved";
+        return "Saved to scratchpad";
       case "error":
-        return "Save failed";
+        return "Autosave failed. Changes are still in this tab.";
       default:
         return "Private scratchpad for this agent";
     }
@@ -140,10 +167,12 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
               <p class="mt-1 text-sm text-text-secondary">Jot down anything you want to remember for this agent.</p>
             </div>
             <Dialog.Close
-              class="flex h-8 w-8 items-center justify-center rounded text-text-muted transition-colors hover:text-text-primary"
+              class="rounded-lg p-2 hover:bg-surface-overlay transition-colors text-text-muted hover:text-text-primary"
               aria-label="Close notes"
             >
-              <span class="text-xl leading-none select-none">x</span>
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </Dialog.Close>
           </div>
 
