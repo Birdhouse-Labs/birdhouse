@@ -14,20 +14,38 @@ export interface AgentNotesDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type SaveState = "idle" | "loading" | "saving" | "error";
+type SaveState = "idle" | "saving" | "error";
+
+export function getAgentNotesDialogUiState(hasLoaded: boolean, loadFailed: boolean, saveState: SaveState) {
+  return {
+    errorMessage: loadFailed
+      ? "Failed to load notes. Check your connection and try again."
+      : saveState === "error"
+        ? "Save failed. Your changes are still here."
+        : null,
+    isSaveDisabled: saveState === "saving" || !hasLoaded,
+    isTextareaDisabled: !hasLoaded,
+  };
+}
 
 const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
   const baseZIndex = useZIndex();
   const [text, setText] = createSignal("");
   const [saveState, setSaveState] = createSignal<SaveState>("idle");
   const [hasLoaded, setHasLoaded] = createSignal(false);
+  const [loadFailed, setLoadFailed] = createSignal(false);
   let textareaRef: HTMLTextAreaElement | undefined;
   let lastPersistedText = "";
   let activeLoad = 0;
   let isClosing = false;
 
   const persistNote = async (currentText: string) => {
-    if (!hasLoaded() || currentText === lastPersistedText) {
+    if (!hasLoaded()) {
+      return false;
+    }
+
+    if (currentText === lastPersistedText) {
+      setSaveState("idle");
       return true;
     }
 
@@ -70,22 +88,22 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
 
     const loadId = ++activeLoad;
     setHasLoaded(false);
-    setSaveState("loading");
+    setLoadFailed(false);
+    setSaveState("idle");
+    setText("");
+    lastPersistedText = "";
 
     getAgentNote(props.workspaceId, props.agentId)
       .then((note) => {
         if (loadId !== activeLoad) return;
         lastPersistedText = note;
         setText(note);
+        setHasLoaded(true);
         setSaveState("idle");
       })
       .catch(() => {
         if (loadId !== activeLoad) return;
-        setSaveState("error");
-      })
-      .finally(() => {
-        if (loadId !== activeLoad) return;
-        setHasLoaded(true);
+        setLoadFailed(true);
       });
   });
 
@@ -93,6 +111,8 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
     if (!props.open || !hasLoaded() || !textareaRef) return;
     textareaRef.focus();
   });
+
+  const uiState = () => getAgentNotesDialogUiState(hasLoaded(), loadFailed(), saveState());
 
   return (
     <Dialog
@@ -128,12 +148,13 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
               }}
               value={text()}
               onInput={(e) => setText(e.currentTarget.value)}
+              disabled={uiState().isTextareaDisabled}
               class="min-h-64 w-full resize-y rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-accent"
               placeholder="Scratchpad notes for this agent"
             />
 
-            <Show when={saveState() === "error"}>
-              <p class="mt-3 text-sm text-danger">Save failed. Your changes are still here.</p>
+            <Show when={uiState().errorMessage}>
+              {(message) => <p class="mt-3 text-sm text-danger">{message()}</p>}
             </Show>
 
             <div class="mt-4 flex justify-end">
@@ -143,7 +164,7 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
                   void handleSaveAndClose();
                 }}
                 class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-text-on-accent transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={saveState() === "saving"}
+                disabled={uiState().isSaveDisabled}
                 aria-busy={saveState() === "saving" ? "true" : "false"}
               >
                 Save & Close
