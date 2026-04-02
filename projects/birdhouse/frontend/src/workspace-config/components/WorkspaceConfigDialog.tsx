@@ -1,5 +1,5 @@
 // ABOUTME: Main workspace configuration dialog orchestrating all config sections
-// ABOUTME: Integrates workspace title, AI providers, and MCP tools with save & restart functionality
+// ABOUTME: Integrates workspace title, AI providers, MCP tools, and env vars with save & restart functionality
 
 import Dialog from "corvu/dialog";
 import { type Component, createEffect, createMemo, createResource, createSignal, Show } from "solid-js";
@@ -11,6 +11,7 @@ import type { Workspace } from "../../types/workspace";
 import { fetchWorkspaceConfig, updateWorkspaceConfig } from "../services/workspace-config-api";
 import type { AnthropicOptions, McpServers, WorkspaceConfig, WorkspaceConfigUpdate } from "../types/config-types";
 import { PROVIDERS } from "../types/provider-registry";
+import EnvVarsSection from "./EnvVarsSection";
 import McpConfigSection from "./McpConfigSection";
 import McpJsonDialog from "./McpJsonDialog";
 import ProviderDeleteDialog from "./ProviderDeleteDialog";
@@ -18,6 +19,30 @@ import ProviderDialog from "./ProviderDialog";
 import ProvidersList from "./ProvidersList";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import WorkspaceTitleSection from "./WorkspaceTitleSection";
+
+/**
+ * Produces a diff map for env vars: entries that changed or were added, plus
+ * empty strings for any keys that were present in the original but are now gone.
+ */
+function buildEnvVarsUpdate(current: Map<string, string>, original: Map<string, string>): Map<string, string> {
+  const update = new Map<string, string>();
+
+  // Add/update entries present in current
+  for (const [key, value] of current) {
+    if (!original.has(key) || original.get(key) !== value) {
+      update.set(key, value);
+    }
+  }
+
+  // Mark deleted entries with empty string (server convention)
+  for (const key of original.keys()) {
+    if (!current.has(key)) {
+      update.set(key, "");
+    }
+  }
+
+  return update;
+}
 
 export interface WorkspaceConfigDialogProps {
   open: boolean;
@@ -59,6 +84,7 @@ const WorkspaceConfigDialog: Component<WorkspaceConfigDialogProps> = (props) => 
   const [mcpServers, setMcpServers] = createSignal<McpServers | null>(null);
   const [pendingProviderUpdates, setPendingProviderUpdates] = createSignal<Map<string, string>>(new Map());
   const [anthropicOptions, setAnthropicOptions] = createSignal<AnthropicOptions>({ extended_context: false });
+  const [pendingEnvVars, setPendingEnvVars] = createSignal<Map<string, string>>(new Map());
 
   // ===== Dialog States =====
   const [editingProvider, setEditingProvider] = createSignal<string | null>(null);
@@ -70,7 +96,7 @@ const WorkspaceConfigDialog: Component<WorkspaceConfigDialogProps> = (props) => 
   const [isSaving, setIsSaving] = createSignal(false);
   const [saveError, setSaveError] = createSignal<string | null>(null);
 
-  // ===== Sync MCP and Anthropic Options State with Config =====
+  // ===== Sync local state with loaded config =====
   createEffect(() => {
     // Guard against errors - accessing config() when in error state throws
     if (config.error) return;
@@ -78,6 +104,7 @@ const WorkspaceConfigDialog: Component<WorkspaceConfigDialogProps> = (props) => 
     if (currentConfig) {
       setMcpServers(currentConfig.mcpServers);
       setAnthropicOptions(currentConfig.anthropicOptions);
+      setPendingEnvVars(new Map(currentConfig.envVars));
     }
   });
 
@@ -87,6 +114,7 @@ const WorkspaceConfigDialog: Component<WorkspaceConfigDialogProps> = (props) => 
       setPendingProviderUpdates(new Map());
       setMcpServers(null);
       setAnthropicOptions({ extended_context: false });
+      setPendingEnvVars(new Map());
       setSaveError(null);
     }
   });
@@ -146,6 +174,11 @@ const WorkspaceConfigDialog: Component<WorkspaceConfigDialogProps> = (props) => 
     setShowMcpDialog(false);
   };
 
+  // ===== Env Var Handlers =====
+  const handleEnvVarsChange = (updated: Map<string, string>) => {
+    setPendingEnvVars(updated);
+  };
+
   // ===== Save & Restart =====
   const handleSave = async () => {
     setIsSaving(true);
@@ -173,6 +206,13 @@ const WorkspaceConfigDialog: Component<WorkspaceConfigDialogProps> = (props) => 
         if (currentMcp !== null) {
           update.mcpServers = currentMcp;
         }
+      }
+
+      // Add env var updates if changed
+      const currentEnvVars = pendingEnvVars();
+      const originalEnvVars = config()?.envVars ?? new Map();
+      if (JSON.stringify([...currentEnvVars]) !== JSON.stringify([...originalEnvVars])) {
+        update.envVars = buildEnvVarsUpdate(currentEnvVars, originalEnvVars);
       }
 
       // Send update if there are changes
@@ -277,6 +317,11 @@ const WorkspaceConfigDialog: Component<WorkspaceConfigDialogProps> = (props) => 
     const originalMcp = config()?.mcpServers;
     if (JSON.stringify(currentMcp) !== JSON.stringify(originalMcp)) return true;
 
+    // Has env var changes
+    const currentEnvVars = pendingEnvVars();
+    const originalEnvVars = config()?.envVars ?? new Map();
+    if (JSON.stringify([...currentEnvVars]) !== JSON.stringify([...originalEnvVars])) return true;
+
     return false;
   });
 
@@ -378,6 +423,22 @@ const WorkspaceConfigDialog: Component<WorkspaceConfigDialogProps> = (props) => 
                     onToggle={handleMcpToggle}
                     onConfigureJson={() => setShowMcpDialog(true)}
                   />
+                </Show>
+              </section>
+
+              {/* Environment Variables Section */}
+              <section>
+                <h2 class="text-xl font-semibold text-text-primary mb-4 pb-2 border-b border-border">
+                  Environment Variables
+                </h2>
+                <Show
+                  when={!config.error && configData()}
+                  fallback={<div class="text-text-muted">Loading configuration...</div>}
+                >
+                  <p class="text-sm text-text-muted mb-4">
+                    These variables are injected into the agent environment when the workspace starts.
+                  </p>
+                  <EnvVarsSection envVars={pendingEnvVars()} onChange={handleEnvVarsChange} />
                 </Show>
               </section>
 

@@ -15,6 +15,7 @@ describe("adaptWorkspaceConfig", () => {
           anthropic: { api_key: "sk-ant-456" },
         },
         mcp: null,
+        env: null,
       };
 
       const result = adaptWorkspaceConfig(api);
@@ -29,6 +30,7 @@ describe("adaptWorkspaceConfig", () => {
       const api: WorkspaceConfigResponseAPI = {
         providers: {},
         mcp: null,
+        env: null,
       };
 
       const result = adaptWorkspaceConfig(api);
@@ -47,6 +49,7 @@ describe("adaptWorkspaceConfig", () => {
           perplexity: { api_key: "perplexity-key" },
         },
         mcp: null,
+        env: null,
       };
 
       const result = adaptWorkspaceConfig(api);
@@ -79,6 +82,7 @@ describe("adaptWorkspaceConfig", () => {
       const api: WorkspaceConfigResponseAPI = {
         providers: {},
         mcp: mcpServers,
+        env: null,
       };
 
       const result = adaptWorkspaceConfig(api);
@@ -91,6 +95,7 @@ describe("adaptWorkspaceConfig", () => {
       const api: WorkspaceConfigResponseAPI = {
         providers: { openai: { api_key: "sk-test" } },
         mcp: null,
+        env: null,
       };
 
       const result = adaptWorkspaceConfig(api);
@@ -116,6 +121,7 @@ describe("adaptWorkspaceConfig", () => {
       const api: WorkspaceConfigResponseAPI = {
         providers: {},
         mcp: mcpServers,
+        env: null,
       };
 
       const result = adaptWorkspaceConfig(api);
@@ -149,6 +155,7 @@ describe("adaptWorkspaceConfig", () => {
             enabled: true,
           },
         },
+        env: null,
       };
 
       const result = adaptWorkspaceConfig(api);
@@ -333,6 +340,7 @@ describe("round-trip transformations", () => {
           anthropic: { api_key: "sk-existing-ant" },
         },
         mcp: null,
+        env: null,
       };
 
       const _uiConfig = adaptWorkspaceConfig(apiResponse);
@@ -364,6 +372,7 @@ describe("round-trip transformations", () => {
       const apiResponse: WorkspaceConfigResponseAPI = {
         providers: {},
         mcp: mcpServers,
+        env: null,
       };
 
       const uiConfig = adaptWorkspaceConfig(apiResponse);
@@ -452,5 +461,95 @@ describe("round-trip transformations", () => {
       expect(result.providers["alpha"]).toEqual({ api_key: "key-a" });
       expect(result.providers["beta"]).toEqual({ api_key: "key-b" });
     });
+  });
+});
+
+describe("adaptWorkspaceConfig env vars", () => {
+  it("converts env Record to Map", () => {
+    const api: WorkspaceConfigResponseAPI = {
+      providers: {},
+      mcp: null,
+      env: { TAVILY_API_KEY: "tvly-abc123", MY_VAR: "hello" },
+    };
+
+    const result = adaptWorkspaceConfig(api);
+
+    expect(result.envVars).toBeInstanceOf(Map);
+    expect(result.envVars.size).toBe(2);
+    expect(result.envVars.get("TAVILY_API_KEY")).toBe("tvly-abc123");
+    expect(result.envVars.get("MY_VAR")).toBe("hello");
+  });
+
+  it("returns empty Map when env is null", () => {
+    const api: WorkspaceConfigResponseAPI = {
+      providers: {},
+      mcp: null,
+      env: null,
+    };
+
+    const result = adaptWorkspaceConfig(api);
+
+    expect(result.envVars).toBeInstanceOf(Map);
+    expect(result.envVars.size).toBe(0);
+  });
+
+  it("returns empty Map when env is empty object", () => {
+    const api: WorkspaceConfigResponseAPI = {
+      providers: {},
+      mcp: null,
+      env: {},
+    };
+
+    const result = adaptWorkspaceConfig(api);
+
+    expect(result.envVars.size).toBe(0);
+  });
+});
+
+describe("toWorkspaceConfigUpdateAPI env vars", () => {
+  it("converts envVars Map to env Record", () => {
+    const update: WorkspaceConfigUpdate = {
+      envVars: new Map([
+        ["TAVILY_API_KEY", "tvly-abc123"],
+        ["MY_VAR", "hello"],
+      ]),
+    };
+
+    const result = toWorkspaceConfigUpdateAPI(update);
+
+    expect(result.env).toEqual({
+      TAVILY_API_KEY: "tvly-abc123",
+      MY_VAR: "hello",
+    });
+  });
+
+  it("passes empty string through (server interprets as deletion)", () => {
+    const update: WorkspaceConfigUpdate = {
+      envVars: new Map([["TO_DELETE", ""]]),
+    };
+
+    const result = toWorkspaceConfigUpdateAPI(update);
+
+    expect(result.env).toEqual({ TO_DELETE: "" });
+  });
+
+  it("omits env field when envVars not in update", () => {
+    const update: WorkspaceConfigUpdate = {
+      providers: new Map([["openai", "sk-key"]]),
+    };
+
+    const result = toWorkspaceConfigUpdateAPI(update);
+
+    expect(result.env).toBeUndefined();
+  });
+
+  it("handles empty envVars Map", () => {
+    const update: WorkspaceConfigUpdate = {
+      envVars: new Map(),
+    };
+
+    const result = toWorkspaceConfigUpdateAPI(update);
+
+    expect(result.env).toEqual({});
   });
 });
