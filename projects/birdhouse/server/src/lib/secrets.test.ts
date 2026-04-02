@@ -7,17 +7,17 @@ import {
   type ProviderCredentials,
   providersToEnv,
   validateSecrets,
-  type WorkspaceSecretsDecrypted,
+  type WorkspaceConfig,
 } from "./secrets";
 
 describe("validateSecrets", () => {
-  test("accepts valid empty secrets", () => {
-    const valid: WorkspaceSecretsDecrypted = {};
+  test("accepts valid empty config", () => {
+    const valid: WorkspaceConfig = {};
     expect(validateSecrets(valid)).toBe(true);
   });
 
-  test("accepts valid secrets with providers", () => {
-    const valid: WorkspaceSecretsDecrypted = {
+  test("accepts valid config with providers", () => {
+    const valid: WorkspaceConfig = {
       providers: {
         anthropic: { api_key: "test" },
       },
@@ -25,10 +25,20 @@ describe("validateSecrets", () => {
     expect(validateSecrets(valid)).toBe(true);
   });
 
-  test("accepts valid secrets with MCP", () => {
-    const valid: WorkspaceSecretsDecrypted = {
+  test("accepts valid config with MCP", () => {
+    const valid: WorkspaceConfig = {
       mcp: {
         test: { type: "local", command: "test" },
+      },
+    };
+    expect(validateSecrets(valid)).toBe(true);
+  });
+
+  test("accepts valid config with env vars", () => {
+    const valid: WorkspaceConfig = {
+      env: {
+        TAVILY_API_KEY: "tvly-abc123",
+        MY_CUSTOM_VAR: "some-value",
       },
     };
     expect(validateSecrets(valid)).toBe(true);
@@ -55,6 +65,13 @@ describe("validateSecrets", () => {
     expect(validateSecrets({ mcp: "not an object" })).toBe(false);
     expect(validateSecrets({ mcp: null })).toBe(false);
     expect(validateSecrets({ mcp: 123 })).toBe(false);
+  });
+
+  test("rejects invalid env type", () => {
+    expect(validateSecrets({ env: "not an object" })).toBe(false);
+    expect(validateSecrets({ env: null })).toBe(false);
+    expect(validateSecrets({ env: 123 })).toBe(false);
+    expect(validateSecrets({ env: [] })).toBe(false);
   });
 });
 

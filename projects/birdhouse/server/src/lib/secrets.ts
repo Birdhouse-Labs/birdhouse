@@ -1,4 +1,4 @@
-// ABOUTME: Type definitions and utilities for workspace secrets (provider API keys and MCP config)
+// ABOUTME: Type definitions and utilities for workspace configuration (provider keys, MCP, env vars)
 // ABOUTME: Provides validation plus OpenCode config and environment mappings for provider credentials
 
 /**
@@ -72,11 +72,12 @@ export interface ProviderCredentials {
 }
 
 /**
- * Workspace secrets structure (plain JSON)
+ * Workspace configuration stored as plain JSON
  */
-export interface WorkspaceSecretsDecrypted {
+export interface WorkspaceConfig {
   providers?: ProviderCredentials;
   mcp?: McpServers;
+  env?: Record<string, string>;
 }
 
 interface OpenCodeProviderConfigEntry {
@@ -91,7 +92,7 @@ export interface OpenCodeProviderConfig {
 /**
  * Validate secrets structure (basic type checking)
  */
-export function validateSecrets(secrets: unknown): secrets is WorkspaceSecretsDecrypted {
+export function validateSecrets(secrets: unknown): secrets is WorkspaceConfig {
   if (!secrets || typeof secrets !== "object" || Array.isArray(secrets)) {
     return false;
   }
@@ -106,6 +107,9 @@ export function validateSecrets(secrets: unknown): secrets is WorkspaceSecretsDe
     return false;
   }
   if (s.mcp !== undefined && (typeof s.mcp !== "object" || s.mcp === null || Array.isArray(s.mcp))) {
+    return false;
+  }
+  if (s.env !== undefined && (typeof s.env !== "object" || s.env === null || Array.isArray(s.env))) {
     return false;
   }
 

@@ -51,6 +51,7 @@ vi.mock("../../components/LogViewer", () => ({ default: () => <div>Log Viewer</d
 vi.mock("./WorkspaceTitleSection", () => ({ default: () => <div>Workspace Title Section</div> }));
 vi.mock("./ProvidersList", () => ({ default: () => <div>Providers List</div> }));
 vi.mock("./McpConfigSection", () => ({ default: () => <div>MCP Config Section</div> }));
+vi.mock("./EnvVarsSection", () => ({ default: () => <div>Env Vars Section</div> }));
 vi.mock("./ProviderDialog", () => ({ default: () => <div>Provider</div> }));
 vi.mock("./ProviderDeleteDialog", () => ({ default: () => <div>Delete Provider</div> }));
 vi.mock("./McpJsonDialog", () => ({ default: () => null }));
@@ -69,6 +70,7 @@ describe("WorkspaceConfigDialog", () => {
     providers: new Map([["anthropic", "sk-ant-test-123"]]),
     anthropicOptions: { extended_context: false },
     mcpServers: {},
+    envVars: new Map(),
   };
 
   const props = {

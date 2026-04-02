@@ -3,7 +3,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { TestDataDB } from "../test-utils/data-db-test";
-import type { ProviderCredentials, WorkspaceSecretsDecrypted } from "./secrets";
+import type { ProviderCredentials, WorkspaceConfig } from "./secrets";
 
 describe("DataDB", () => {
   let dataDb: TestDataDB;
@@ -143,7 +143,7 @@ describe("DataDB", () => {
     });
 
     test("updateWorkspaceConfig creates and retrieves config", () => {
-      const updates: WorkspaceSecretsDecrypted = {
+      const updates: WorkspaceConfig = {
         providers: {
           anthropic: { api_key: "sk-ant-test123" },
           openai: { api_key: "sk-openai-test456" },
@@ -339,6 +339,67 @@ describe("DataDB", () => {
 
       // Note: Can't directly verify secrets are gone since workspace doesn't exist
       // But CASCADE should handle it
+    });
+
+    test("updateWorkspaceEnv stores and retrieves env vars", () => {
+      dataDb.updateWorkspaceEnv("ws_test123", {
+        TAVILY_API_KEY: "tvly-abc123",
+        MY_CUSTOM_VAR: "some-value",
+      });
+
+      const env = dataDb.getWorkspaceEnv("ws_test123");
+      expect(env).toEqual({
+        TAVILY_API_KEY: "tvly-abc123",
+        MY_CUSTOM_VAR: "some-value",
+      });
+    });
+
+    test("updateWorkspaceEnv merges with existing env vars", () => {
+      dataDb.updateWorkspaceEnv("ws_test123", { TAVILY_API_KEY: "tvly-abc123" });
+      dataDb.updateWorkspaceEnv("ws_test123", { GITHUB_TOKEN: "ghp_xyz" });
+
+      const env = dataDb.getWorkspaceEnv("ws_test123");
+      expect(env?.TAVILY_API_KEY).toBe("tvly-abc123");
+      expect(env?.GITHUB_TOKEN).toBe("ghp_xyz");
+    });
+
+    test("updateWorkspaceEnv removes var when value is empty string", () => {
+      dataDb.updateWorkspaceEnv("ws_test123", {
+        TAVILY_API_KEY: "tvly-abc123",
+        TO_DELETE: "will-be-removed",
+      });
+
+      dataDb.updateWorkspaceEnv("ws_test123", { TO_DELETE: "" });
+
+      const env = dataDb.getWorkspaceEnv("ws_test123");
+      expect(env?.TAVILY_API_KEY).toBe("tvly-abc123");
+      expect(env?.TO_DELETE).toBeUndefined();
+    });
+
+    test("updateWorkspaceEnv preserves providers and MCP", () => {
+      dataDb.updateWorkspaceConfig("ws_test123", {
+        providers: { anthropic: { api_key: "sk-ant-test" } },
+        mcp: { test: { type: "local", command: "test" } },
+      });
+
+      dataDb.updateWorkspaceEnv("ws_test123", { TAVILY_API_KEY: "tvly-abc123" });
+
+      const config = dataDb.getWorkspaceConfig("ws_test123");
+      expect(config?.providers?.anthropic?.api_key).toBe("sk-ant-test");
+      expect(config?.mcp?.test).toBeDefined();
+      expect(config?.env?.TAVILY_API_KEY).toBe("tvly-abc123");
+    });
+
+    test("getWorkspaceEnv returns null when no env vars configured", () => {
+      expect(dataDb.getWorkspaceEnv("ws_test123")).toBeNull();
+    });
+
+    test("updateWorkspaceEnv removes env field when all vars deleted", () => {
+      dataDb.updateWorkspaceEnv("ws_test123", { ONLY_VAR: "value" });
+      dataDb.updateWorkspaceEnv("ws_test123", { ONLY_VAR: "" });
+
+      const config = dataDb.getWorkspaceConfig("ws_test123");
+      expect(config?.env).toBeUndefined();
     });
   });
 

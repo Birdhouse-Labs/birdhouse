@@ -34,6 +34,7 @@ describe("fetchWorkspaceConfig", () => {
         enabled: true,
       },
     },
+    env: null,
   };
   const mockAdaptedConfig: WorkspaceConfig = {
     providers: new Map([
@@ -49,6 +50,7 @@ describe("fetchWorkspaceConfig", () => {
         enabled: true,
       },
     },
+    envVars: new Map(),
   };
 
   it("should successfully fetch and adapt workspace config", async () => {

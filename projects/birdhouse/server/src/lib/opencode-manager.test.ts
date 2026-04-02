@@ -76,7 +76,7 @@ describe("OpenCodeManager environment configuration", () => {
       //   const envPath = join(workspace.directory, ".env");
       //   if (existsSync(envPath)) { ... }
       //
-      // Now loadWorkspaceEnv ONLY reads from the encrypted database.
+      // loadWorkspaceEnv ONLY reads from the database.
       // Even if a .env file exists in the workspace directory, it's ignored.
 
       const workspaceId = "ws_test_no_env_fallback";
@@ -268,6 +268,73 @@ describe("OpenCodeManager environment configuration", () => {
       // Shell env flows through
       expect(finalEnv.ANTHROPIC_API_KEY).toBe("sk-ant-from-shell");
       expect(finalEnv.GITHUB_TOKEN).toBe("gh-token-from-shell");
+    });
+
+    test("user-defined env vars are injected into workspace environment", () => {
+      const workspaceId = "ws_user_env_vars";
+      dataDb.insertWorkspace({
+        workspace_id: workspaceId,
+        directory: "/test/path",
+        opencode_port: null,
+        opencode_pid: null,
+        created_at: new Date().toISOString(),
+        last_used: new Date().toISOString(),
+      });
+
+      dataDb.updateWorkspaceEnv(workspaceId, {
+        TAVILY_API_KEY: "tvly-abc123",
+        MY_CUSTOM_VAR: "my-value",
+      });
+
+      const config = dataDb.getWorkspaceConfig(workspaceId);
+      expect(config?.env?.TAVILY_API_KEY).toBe("tvly-abc123");
+      expect(config?.env?.MY_CUSTOM_VAR).toBe("my-value");
+    });
+
+    test("user env vars override shell environment", () => {
+      const shellEnv = {
+        TAVILY_API_KEY: "tvly-from-shell",
+        PATH: "/usr/bin",
+      };
+
+      const userEnv = {
+        TAVILY_API_KEY: "tvly-from-workspace",
+      };
+
+      const finalEnv = { ...shellEnv, ...userEnv };
+
+      expect(finalEnv.TAVILY_API_KEY).toBe("tvly-from-workspace");
+      expect(finalEnv.PATH).toBe("/usr/bin");
+    });
+
+    test("user env vars and provider env vars are both included", () => {
+      const workspaceId = "ws_combined_env";
+      dataDb.insertWorkspace({
+        workspace_id: workspaceId,
+        directory: "/test/path",
+        opencode_port: null,
+        opencode_pid: null,
+        created_at: new Date().toISOString(),
+        last_used: new Date().toISOString(),
+      });
+
+      dataDb.updateWorkspaceProviders(workspaceId, {
+        aws: {
+          access_key_id: "AKIAIOSFODNN7EXAMPLE",
+          secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+        },
+      });
+      dataDb.updateWorkspaceEnv(workspaceId, {
+        TAVILY_API_KEY: "tvly-abc123",
+      });
+
+      const config = dataDb.getWorkspaceConfig(workspaceId);
+      const providerEnv = providersToEnv(config?.providers ?? {});
+      const userEnv = config?.env ?? {};
+      const combined = { ...providerEnv, ...userEnv };
+
+      expect(combined.AWS_ACCESS_KEY_ID).toBe("AKIAIOSFODNN7EXAMPLE");
+      expect(combined.TAVILY_API_KEY).toBe("tvly-abc123");
     });
 
     test("documents OPENCODE_XDG isolation per workspace", () => {

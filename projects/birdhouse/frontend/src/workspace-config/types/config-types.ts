@@ -15,6 +15,7 @@ export interface WorkspaceConfig {
   providers: Map<string, string>; // providerId → apiKey
   anthropicOptions: AnthropicOptions;
   mcpServers: McpServers | null;
+  envVars: Map<string, string>; // varName → varValue
 }
 
 /**
@@ -43,4 +44,5 @@ export interface WorkspaceConfigUpdate {
   providers?: Map<string, string>; // providerId → newApiKey
   anthropicOptions?: AnthropicOptions;
   mcpServers?: McpServers;
+  envVars?: Map<string, string>; // varName → varValue (empty string = delete)
 }

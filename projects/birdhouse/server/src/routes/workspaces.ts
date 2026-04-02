@@ -147,7 +147,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
         }
 
         dataDb.updateWorkspaceProviders(workspace.workspace_id, providers);
-        log.server.info({ workspaceId: workspace.workspace_id }, "API keys encrypted and stored");
+        log.server.info({ workspaceId: workspace.workspace_id }, "API keys stored");
       }
 
       log.server.info({ workspaceId: workspace.workspace_id, directory }, "Workspace created");
@@ -641,14 +641,16 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
       return c.json({
         providers: {},
         mcp: null,
+        env: null,
       });
     }
 
-    // Return actual provider credentials (decrypted from database)
+    // Return actual provider credentials and env vars
     // This is a local desktop app - user has full filesystem access anyway
     return c.json({
       providers: config.providers || {},
       mcp: config.mcp || null,
+      env: config.env || null,
     });
   });
 

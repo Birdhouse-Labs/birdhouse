@@ -7,6 +7,7 @@
 export interface WorkspaceConfigResponseAPI {
   providers: Record<string, ProviderCredentialsAPI>; // providerId → credentials
   mcp: McpServersAPI | null;
+  env: Record<string, string> | null;
 }
 
 /**
@@ -42,6 +43,7 @@ export interface McpServerConfigAPI {
 export interface WorkspaceConfigUpdateRequestAPI {
   providers?: Record<string, ProviderUpdateAPI>;
   mcp?: McpServersAPI;
+  env?: Record<string, string>;
 }
 
 /**

@@ -20,10 +20,19 @@ export function adaptWorkspaceConfig(api: WorkspaceConfigResponseAPI): Workspace
     extended_context: api.providers["anthropic"]?.extended_context ?? false,
   };
 
+  // Transform env vars { VAR_NAME: "value" } → Map<varName, varValue>
+  const envVarsMap = new Map<string, string>();
+  if (api.env) {
+    for (const [key, value] of Object.entries(api.env)) {
+      envVarsMap.set(key, value);
+    }
+  }
+
   return {
     providers: providersMap,
     anthropicOptions,
     mcpServers: api.mcp, // MCP structure is same in API and UI
+    envVars: envVarsMap,
   };
 }
 
@@ -54,6 +63,13 @@ export function toWorkspaceConfigUpdateAPI(update: WorkspaceConfigUpdate): Works
 
   if (update.mcpServers) {
     api.mcp = update.mcpServers;
+  }
+
+  if (update.envVars) {
+    api.env = {};
+    for (const [key, value] of update.envVars) {
+      api.env[key] = value; // Empty string signals deletion to the server
+    }
   }
 
   return api;
