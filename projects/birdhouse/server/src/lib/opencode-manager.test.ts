@@ -270,7 +270,6 @@ describe("OpenCodeManager environment configuration", () => {
       expect(finalEnv.GITHUB_TOKEN).toBe("gh-token-from-shell");
     });
 
-
     test("user-defined env vars are injected into workspace environment", () => {
       const workspaceId = "ws_user_env_vars";
       dataDb.insertWorkspace({

@@ -312,7 +312,6 @@ export class DataDB {
     });
   }
 
-
   /**
    * Get just the env vars for a workspace
    */

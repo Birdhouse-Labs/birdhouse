@@ -401,7 +401,6 @@ describe("DataDB", () => {
       const config = dataDb.getWorkspaceConfig("ws_test123");
       expect(config?.env).toBeUndefined();
     });
-
   });
 
   describe("User profile operations", () => {
