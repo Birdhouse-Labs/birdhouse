@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { nanoid } from "nanoid";
 import { log } from "./logger";
 import { runMigrations } from "./migrations/run-migrations";
-import { type McpServers, type ProviderCredentials, validateSecrets, type WorkspaceSecretsDecrypted } from "./secrets";
+import { type McpServers, type ProviderCredentials, validateSecrets, type WorkspaceConfig } from "./secrets";
 
 /**
  * Get platform-appropriate data directory for Birdhouse
@@ -178,10 +178,10 @@ export class DataDB {
   // ==================== High-Level Secrets API ====================
 
   /**
-   * Get workspace configuration (providers + MCP)
-   * Returns null if no secrets exist or JSON is invalid
+   * Get workspace configuration (providers, MCP, env vars)
+   * Returns null if no config exists or JSON is invalid
    */
-  getWorkspaceConfig(workspaceId: string): WorkspaceSecretsDecrypted | null {
+  getWorkspaceConfig(workspaceId: string): WorkspaceConfig | null {
     const json = this.getWorkspaceSecrets(workspaceId);
     if (!json) {
       return null;
@@ -205,9 +205,9 @@ export class DataDB {
 
   /**
    * Update workspace configuration (partial update)
-   * Merges with existing config, encrypts, and stores
+   * Merges with existing config and stores
    */
-  updateWorkspaceConfig(workspaceId: string, updates: Partial<WorkspaceSecretsDecrypted>): void {
+  updateWorkspaceConfig(workspaceId: string, updates: Partial<WorkspaceConfig>): void {
     // DIAGNOSTIC: Log what we received
     log.server.debug(
       {
@@ -224,7 +224,7 @@ export class DataDB {
     const existing = this.getWorkspaceConfig(workspaceId) || {};
 
     // Merge updates
-    const merged: WorkspaceSecretsDecrypted = {
+    const merged: WorkspaceConfig = {
       ...existing,
     };
 
@@ -250,12 +250,28 @@ export class DataDB {
       merged.mcp = updates.mcp;
     }
 
+    // Handle env merge — empty string value signals deletion, non-empty strings are upserts
+    if (updates.env !== undefined) {
+      const base: Record<string, string> = { ...(existing.env ?? {}) };
+      for (const [key, value] of Object.entries(updates.env)) {
+        if (value === "") {
+          delete base[key];
+        } else {
+          base[key] = value;
+        }
+      }
+      merged.env = base;
+    }
+
     // Remove undefined or empty top-level keys
     if (merged.providers !== undefined && Object.keys(merged.providers).length === 0) {
       delete merged.providers;
     }
     if (merged.mcp === undefined) {
       delete merged.mcp;
+    }
+    if (merged.env !== undefined && Object.keys(merged.env).length === 0) {
+      delete merged.env;
     }
 
     // Serialize and store
@@ -294,6 +310,22 @@ export class DataDB {
     this.updateWorkspaceConfig(workspaceId, {
       mcp: mcp === null ? undefined : mcp,
     });
+  }
+
+
+  /**
+   * Get just the env vars for a workspace
+   */
+  getWorkspaceEnv(workspaceId: string): Record<string, string> | null {
+    const config = this.getWorkspaceConfig(workspaceId);
+    return config?.env || null;
+  }
+
+  /**
+   * Update env vars for a workspace (partial update - merges vars, empty string removes)
+   */
+  updateWorkspaceEnv(workspaceId: string, env: Record<string, string>): void {
+    this.updateWorkspaceConfig(workspaceId, { env });
   }
 
   // ==================== Skill Trigger Phrase Operations ====================
@@ -435,4 +467,4 @@ export function getDataDB(): DataDB {
 }
 
 export { DATA_DIR, DB_PATH as DATA_DB_PATH };
-export type { McpServerConfig, McpServers, ProviderCredentials, WorkspaceSecretsDecrypted } from "./secrets";
+export type { McpServerConfig, McpServers, ProviderCredentials, WorkspaceConfig } from "./secrets";

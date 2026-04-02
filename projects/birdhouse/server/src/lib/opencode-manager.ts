@@ -292,7 +292,7 @@ export class OpenCodeManager {
       mkdirSync(opencodeDataDir, { recursive: true });
     }
 
-    // Load workspace-specific env fallbacks from encrypted DB
+    // Load workspace-specific env vars from DB
     const workspaceEnv = await this.loadWorkspaceEnv(workspace);
 
     // Build OpenCode config (MCP servers + plugin)
@@ -300,12 +300,12 @@ export class OpenCodeManager {
 
     // Build environment:
     // 1. Start with user's shell environment (for tooling like gh, git, aws, etc.)
-    // 2. Overlay workspace-configured env fallbacks for providers that still require env
+    // 2. Overlay workspace-configured env vars (provider fallbacks + user-defined env)
     // 3. Add Birdhouse-specific configuration
     const env: Record<string, string> = {
       // User's full shell environment - preserves tool auth (GITHUB_TOKEN, SSH_AUTH_SOCK, etc.)
       ...(process.env as Record<string, string>),
-      // Workspace-configured env fallbacks override ambient values when needed
+      // Workspace-configured env vars override ambient values
       ...workspaceEnv,
       // OpenCode-specific XDG directories for isolation per workspace
       // Uses OPENCODE_XDG_* instead of standard XDG_* to avoid breaking child process tools
@@ -484,24 +484,33 @@ export class OpenCodeManager {
   }
 
   /**
-   * Load workspace-specific environment fallbacks from encrypted secrets DB only.
-   * Simple API-key providers are injected through config instead of env.
+   * Load workspace-specific environment variables from DB.
+   * Includes provider env fallbacks (complex providers only) and user-defined env vars.
+   * Simple API-key providers are injected through OpenCode config instead of env.
    */
   private async loadWorkspaceEnv(workspace: Workspace): Promise<Record<string, string>> {
     const config = this.dataDb.getWorkspaceConfig(workspace.workspace_id);
 
-    if (!config?.providers) {
-      log.server.debug({ workspaceId: workspace.workspace_id }, "No provider API keys configured for workspace");
+    if (!config) {
+      log.server.debug({ workspaceId: workspace.workspace_id }, "No workspace config found");
       return {};
     }
 
-    const providerEnv = providersToEnv(config.providers);
+    const providerEnv = config.providers ? providersToEnv(config.providers) : {};
+    const userEnv = config.env ?? {};
+
+    const combined = { ...providerEnv, ...userEnv };
+
     log.server.debug(
-      { workspaceId: workspace.workspace_id, keysCount: Object.keys(providerEnv).length },
-      "Loaded provider environment fallbacks from encrypted database",
+      {
+        workspaceId: workspace.workspace_id,
+        providerEnvCount: Object.keys(providerEnv).length,
+        userEnvCount: Object.keys(userEnv).length,
+      },
+      "Loaded workspace environment variables from database",
     );
 
-    return providerEnv;
+    return combined;
   }
 
   /**
@@ -521,7 +530,7 @@ export class OpenCodeManager {
       enabled_providers: ["opencode"],
     };
 
-    // Load workspace config from encrypted database
+    // Load workspace config
     const secrets = this.dataDb.getWorkspaceConfig(workspace.workspace_id);
 
     // Load MCP config
@@ -529,7 +538,7 @@ export class OpenCodeManager {
       config.mcp = secrets.mcp;
       log.server.debug(
         { workspaceId: workspace.workspace_id, serverCount: Object.keys(secrets.mcp).length },
-        "Loaded MCP config from encrypted database",
+        "Loaded MCP config from database",
       );
     }
 
