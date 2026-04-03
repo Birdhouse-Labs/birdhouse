@@ -332,6 +332,7 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
         project_id: session.projectID,
         directory: session.directory,
         model,
+        harness_type: deps.harness.kind,
         created_at: now,
         updated_at: now,
         cloned_from: null, // Not a clone

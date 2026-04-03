@@ -3,7 +3,7 @@
 
 import type { Context } from "hono";
 import { type Deps, depsContext } from "../dependencies";
-import { OpenCodeAgentHarness } from "../harness/opencode-adapter";
+import { OpenCodeAgentHarness } from "../harness";
 import { getDataDB } from "./data-db";
 import { log } from "./logger";
 import { createLiveOpenCodeClient } from "./opencode-client";

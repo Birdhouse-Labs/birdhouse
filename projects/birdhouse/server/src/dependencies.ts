@@ -3,15 +3,15 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { EventEmitter } from "node:events";
-import type { AgentHarness } from "./harness/agent-harness";
-import { createTestAgentHarness } from "./harness/test-harness";
 import type {
+  AgentHarness,
   BirdhouseQuestionRequest,
   BirdhouseSkill,
   BirdhouseMessage as Message,
   BirdhouseProvidersResponse as ProvidersResponse,
   BirdhouseSession as Session,
-} from "./harness/types";
+} from "./harness";
+import { createTestAgentHarness } from "./harness";
 import { type AgentsDB, getDefaultDatabasePath, initAgentsDB } from "./lib/agents-db";
 import type { DataDB } from "./lib/data-db";
 import { type CapturedLog, createLiveLogger, createTestLogger, type LoggerDeps } from "./lib/logger";

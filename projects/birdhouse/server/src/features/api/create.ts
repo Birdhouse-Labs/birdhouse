@@ -17,12 +17,8 @@ import "../../types/context";
  * POST /agents - Create a new agent with optional first message
  */
 export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
-  const {
-    harness: { createSession },
-    agentsDB,
-    log,
-    telemetry,
-  } = deps;
+  const { harness, agentsDB, log, telemetry } = deps;
+  const { createSession } = harness;
 
   try {
     // 1. Parse and validate request body
@@ -101,6 +97,7 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
       project_id: session.projectID,
       directory: session.directory,
       model,
+      harness_type: harness.kind,
       created_at: now,
       updated_at: now,
       cloned_from: null, // Not a clone

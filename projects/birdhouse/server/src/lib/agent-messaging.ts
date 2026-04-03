@@ -2,7 +2,7 @@
 // ABOUTME: Encapsulates blocking vs fire-and-forget modes and model parsing
 
 import type { Deps } from "../dependencies";
-import type { BirdhouseFilePart } from "../harness/types";
+import type { BirdhouseFilePart } from "../harness";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "./birdhouse-system-prompt";
 import { buildPromptParts } from "./message-parts";
 import { parseModelId } from "./model-validator";

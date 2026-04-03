@@ -1,7 +1,7 @@
 // ABOUTME: Shared timeline item types for system events and Birdhouse-owned harness messages.
 // ABOUTME: Defines the message-plus-event union returned by agent timeline endpoints.
 
-import type { BirdhouseMessage } from "../harness/types";
+import type { BirdhouseMessage } from "../harness";
 
 /**
  * Event type discriminator for system timeline events (action-centric model)

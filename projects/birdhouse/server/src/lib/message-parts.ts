@@ -1,7 +1,7 @@
 // ABOUTME: Builds and restores Birdhouse prompt parts for composer flows.
 // ABOUTME: Keeps text and accepted composer attachments aligned with harness-owned part types.
 
-import type { BirdhouseFilePart, BirdhouseInputPart, BirdhousePart, BirdhouseTextPart } from "../harness/types";
+import type { BirdhouseFilePart, BirdhouseInputPart, BirdhousePart, BirdhouseTextPart } from "../harness";
 
 function isRestorableComposerAttachmentMime(mime: string): boolean {
   return mime.startsWith("image/") || mime === "application/pdf";

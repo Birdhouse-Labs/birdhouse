@@ -1,7 +1,7 @@
 // ABOUTME: Shared helpers for markdown export functionality
 // ABOUTME: Used by both /api/export-markdown and /aapi/export-markdown endpoints
 
-import type { BirdhouseMessage as Message } from "../../harness/types";
+import type { BirdhouseMessage as Message } from "../../harness";
 import type { AgentRow } from "../../lib/agents-db";
 import type { EventType, TimelineItem } from "../../types/agent-events";
 

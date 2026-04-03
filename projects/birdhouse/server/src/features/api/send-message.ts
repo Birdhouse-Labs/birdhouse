@@ -5,7 +5,7 @@ import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
 import { cloneAgent } from "../../domain/agent-lifecycle";
 import { findSafeClonePoint } from "../../domain/clone-point";
-import type { BirdhouseFilePart } from "../../harness/types";
+import type { AgentHarness, BirdhouseFilePart } from "../../harness";
 import type { AgentRow } from "../../lib/agents-db";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "../../lib/birdhouse-system-prompt";
 import { buildPromptParts, parseFileAttachments } from "../../lib/message-parts";
@@ -371,7 +371,7 @@ async function generateAndUpdateTitleForClone(
   _workspaceId: string,
   opencodeBase: string,
   workspaceDir: string,
-  harness: Pick<import("../../harness/agent-harness").AgentHarness, "updateSessionTitle">,
+  harness: Pick<AgentHarness, "updateSessionTitle">,
 ): Promise<void> {
   const { agentsDB, log } = deps;
 

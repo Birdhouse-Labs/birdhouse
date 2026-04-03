@@ -1,7 +1,7 @@
 // ABOUTME: Anonymous telemetry pushes to Supabase for marketing aggregate counters
 // ABOUTME: Fire-and-forget — never throws, never blocks
 
-import type { BirdhouseMessage as Message } from "../harness/types";
+import type { BirdhouseMessage as Message } from "../harness";
 import type { DataDB } from "./data-db";
 
 const SUPABASE_URL = "https://hzqxwcbohrtxyvmmamsn.supabase.co";

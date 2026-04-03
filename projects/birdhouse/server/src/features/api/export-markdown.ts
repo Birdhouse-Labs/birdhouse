@@ -7,7 +7,7 @@ import type {
   BirdhouseAssistantMessageInfo,
   BirdhousePart as Part,
   BirdhouseUserMessageInfo as UserMessage,
-} from "../../harness/types";
+} from "../../harness";
 import type { SystemEvent, TimelineItem } from "../../types/agent-events";
 import { generateFilenameWithTimestamp, generateMarkdownContent } from "../aapi/export-helpers";
 

@@ -41,6 +41,7 @@ export interface AgentRow {
   project_id: string;
   directory: string;
   model: string;
+  harness_type: string;
   created_at: number;
   updated_at: number;
   cloned_from: string | null;
@@ -109,6 +110,7 @@ export interface AgentNode {
   project_id: string;
   directory: string;
   model: string;
+  harness_type: string;
   created_at: number;
   updated_at: number;
   cloned_from: string | null;
@@ -131,7 +133,7 @@ export interface AgentTree {
  */
 export interface AgentsDB {
   /** Insert a new agent */
-  insertAgent(agent: Omit<AgentRow, "id"> & { id?: string }): AgentRow;
+  insertAgent(agent: Omit<AgentRow, "id" | "harness_type"> & { id?: string; harness_type?: string }): AgentRow;
 
   /** Get all agents sorted by specified order */
   getAllAgents(sortBy?: SortOrder, sortDir?: SortDirection): AgentRow[];
@@ -291,11 +293,11 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
   const insertQuery = db.query(`
     INSERT INTO agents (
       id, session_id, parent_id, tree_id, level,
-      title, project_id, directory, model,
+      title, project_id, directory, model, harness_type,
       created_at, updated_at, cloned_from, cloned_at, archived_at
     ) VALUES (
       $id, $session_id, $parent_id, $tree_id, $level,
-      $title, $project_id, $directory, $model,
+      $title, $project_id, $directory, $model, $harness_type,
       $created_at, $updated_at, $cloned_from, $cloned_at, $archived_at
     )
   `);
@@ -308,7 +310,7 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
       return `
         SELECT 
           id, session_id, parent_id, tree_id, level,
-          title, project_id, directory, model,
+          title, project_id, directory, model, harness_type,
           created_at, updated_at, cloned_from, cloned_at, archived_at
         FROM agents
         WHERE archived_at IS NULL
@@ -322,7 +324,7 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
       return `
         SELECT 
           id, session_id, parent_id, tree_id, level,
-          title, project_id, directory, model,
+          title, project_id, directory, model, harness_type,
           created_at, updated_at, cloned_from, cloned_at, archived_at
         FROM agents
         WHERE archived_at IS NULL
@@ -338,7 +340,7 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
   const getBySessionIdQuery = db.query(`
     SELECT 
       id, session_id, parent_id, tree_id, level,
-      title, project_id, directory, model,
+      title, project_id, directory, model, harness_type,
       created_at, updated_at, cloned_from, cloned_at, archived_at
     FROM agents
     WHERE session_id = $session_id
@@ -347,7 +349,7 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
   const getByIdQuery = db.query(`
     SELECT 
       id, session_id, parent_id, tree_id, level,
-      title, project_id, directory, model,
+      title, project_id, directory, model, harness_type,
       created_at, updated_at, cloned_from, cloned_at, archived_at
     FROM agents
     WHERE id = $id
@@ -536,7 +538,7 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
   };
 
   return {
-    insertAgent(agent: Omit<AgentRow, "id"> & { id?: string }): AgentRow {
+    insertAgent(agent: Omit<AgentRow, "id" | "harness_type"> & { id?: string; harness_type?: string }): AgentRow {
       // Generate ID if not provided
       const id = agent.id || generateAgentId();
 
@@ -572,6 +574,7 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
         const fullAgent: AgentRow = {
           ...agent,
           id,
+          harness_type: agent.harness_type ?? "opencode",
           archived_at,
         };
 
@@ -586,6 +589,7 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
           $project_id: fullAgent.project_id,
           $directory: fullAgent.directory,
           $model: fullAgent.model,
+          $harness_type: fullAgent.harness_type,
           $created_at: fullAgent.created_at,
           $updated_at: fullAgent.updated_at,
           $cloned_from: fullAgent.cloned_from,
@@ -678,7 +682,7 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
           ? `
         SELECT 
           id, session_id, parent_id, tree_id, level,
-          title, project_id, directory, model,
+          title, project_id, directory, model, harness_type,
           created_at, updated_at, cloned_from, cloned_at, archived_at
         FROM agents
         WHERE tree_id IN (${treeIds.map(() => "?").join(",")})
@@ -692,7 +696,7 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
           : `
         SELECT 
           id, session_id, parent_id, tree_id, level,
-          title, project_id, directory, model,
+          title, project_id, directory, model, harness_type,
           created_at, updated_at, cloned_from, cloned_at, archived_at
         FROM agents
         WHERE tree_id IN (${treeIds.map(() => "?").join(",")})
@@ -718,7 +722,7 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
       const sql = `
         SELECT 
           id, session_id, parent_id, tree_id, level,
-          title, project_id, directory, model,
+          title, project_id, directory, model, harness_type,
           created_at, updated_at, cloned_from, cloned_at, archived_at
         FROM agents
         WHERE archived_at IS NULL
@@ -754,7 +758,7 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
         .query<AgentRow, [string]>(`
           SELECT
             id, session_id, parent_id, tree_id, level,
-            title, project_id, directory, model,
+            title, project_id, directory, model, harness_type,
             created_at, updated_at, cloned_from, cloned_at, archived_at
           FROM agents
           WHERE tree_id = ?

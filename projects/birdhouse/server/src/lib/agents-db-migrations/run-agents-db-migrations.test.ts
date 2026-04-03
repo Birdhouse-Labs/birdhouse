@@ -85,6 +85,7 @@ describe("runAgentsDbMigrations — fresh database", () => {
     expect(cols).toContain("project_id");
     expect(cols).toContain("directory");
     expect(cols).toContain("model");
+    expect(cols).toContain("harness_type");
     expect(cols).toContain("created_at");
     expect(cols).toContain("updated_at");
     expect(cols).toContain("cloned_from");
@@ -127,6 +128,7 @@ describe("runAgentsDbMigrations — fresh database", () => {
     const migrations = getMigrationNames(dbPath);
     expect(migrations).toContain("20260320000000_initial_schema");
     expect(migrations).toContain("20260321144612_composer_drafts");
+    expect(migrations).toContain("20260403173314_harness_type");
   });
 
   test("creates composer_drafts and composer_draft_attachments tables", async () => {
@@ -210,14 +212,18 @@ describe("runAgentsDbMigrations — demo-snapshot.db", () => {
   test("applies composer_drafts migration to existing DB", async () => {
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toEqual(["20260320000000_initial_schema", "20260321144612_composer_drafts"]);
+    expect(migrations).toEqual([
+      "20260320000000_initial_schema",
+      "20260321144612_composer_drafts",
+      "20260403173314_harness_type",
+    ]);
   });
 
   test("is idempotent — running twice does not error or change state", async () => {
     await runAgentsDbMigrations(dbPath);
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toHaveLength(2);
+    expect(migrations).toHaveLength(3);
   });
 });
 
@@ -248,13 +254,17 @@ describe("runAgentsDbMigrations — small-snapshot.db", () => {
   test("applies composer_drafts migration to existing DB", async () => {
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toEqual(["20260320000000_initial_schema", "20260321144612_composer_drafts"]);
+    expect(migrations).toEqual([
+      "20260320000000_initial_schema",
+      "20260321144612_composer_drafts",
+      "20260403173314_harness_type",
+    ]);
   });
 
   test("is idempotent — running twice does not error or change state", async () => {
     await runAgentsDbMigrations(dbPath);
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toHaveLength(2);
+    expect(migrations).toHaveLength(3);
   });
 });

@@ -1,7 +1,7 @@
 // ABOUTME: Domain operations for agent lifecycle management
 // ABOUTME: Enforces invariants like event emission when agents are created
 
-import type { BirdhouseSession as Session } from "../harness/types";
+import type { BirdhouseSession as Session } from "../harness";
 import type { AgentRow, AgentsDB } from "../lib/agents-db";
 import type { DataDB } from "../lib/data-db";
 import type { OpenCodeStream } from "../lib/opencode-stream";
@@ -176,6 +176,7 @@ export async function cloneAgent(
     project_id: session.projectID,
     directory: session.directory,
     model: options?.model ?? sourceAgent.model,
+    harness_type: sourceAgent.harness_type,
     created_at: now,
     updated_at: now,
     cloned_from: sourceAgent.id, // Always set to source agent

@@ -1,7 +1,7 @@
 // ABOUTME: Centralized helper for updating agent titles in both Birdhouse and OpenCode
 // ABOUTME: Handles OpenCode sync with graceful error handling (best effort, non-blocking)
 
-import type { AgentHarness } from "../harness/agent-harness";
+import type { AgentHarness } from "../harness";
 import type { AgentRow, AgentsDB } from "./agents-db";
 import type { LoggerDeps } from "./logger";
 import { getWorkspaceStream } from "./opencode-stream";
