@@ -111,6 +111,8 @@ export interface BirdhouseMessageSummary {
   diffs?: BirdhouseMessageSummaryDiff[];
 }
 
+export type BirdhouseMessageSummaryState = boolean | BirdhouseMessageSummary;
+
 export interface BirdhouseBaseMessageInfo {
   id: string;
   sessionID: string;
@@ -138,7 +140,7 @@ export interface BirdhouseAssistantMessageInfo extends BirdhouseBaseMessageInfo 
   path?: BirdhouseMessagePath;
   finish?: string;
   error?: BirdhouseMessageError;
-  summary?: BirdhouseMessageSummary;
+  summary?: BirdhouseMessageSummaryState;
 }
 
 export type BirdhouseMessageInfo = BirdhouseUserMessageInfo | BirdhouseAssistantMessageInfo;
