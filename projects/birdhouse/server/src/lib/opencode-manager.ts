@@ -285,48 +285,8 @@ export class OpenCodeManager {
    * Spawn OpenCode process for workspace
    */
   private async spawnOpenCode(workspace: Workspace, port: number): Promise<ChildProcess> {
+    const env = await this.buildSpawnEnv(workspace, port);
     const opencodeDataDir = getOpenCodeDataDir(workspace.workspace_id);
-
-    // Ensure data directory structure exists
-    if (!existsSync(opencodeDataDir)) {
-      mkdirSync(opencodeDataDir, { recursive: true });
-    }
-
-    // Load workspace-specific env vars from DB
-    const workspaceEnv = await this.loadWorkspaceEnv(workspace);
-
-    // Build OpenCode config (MCP servers + plugin)
-    const opencodeConfig = this.buildOpenCodeConfig(workspace);
-
-    // Build environment:
-    // 1. Start with user's shell environment (for tooling like gh, git, aws, etc.)
-    // 2. Overlay workspace-configured env vars (provider fallbacks + user-defined env)
-    // 3. Add Birdhouse-specific configuration
-    const env: Record<string, string> = {
-      // User's full shell environment - preserves tool auth (GITHUB_TOKEN, SSH_AUTH_SOCK, etc.)
-      ...(process.env as Record<string, string>),
-      // Workspace-configured env vars override ambient values
-      ...workspaceEnv,
-      // OpenCode-specific XDG directories for isolation per workspace
-      // Uses OPENCODE_XDG_* instead of standard XDG_* to avoid breaking child process tools
-      OPENCODE_XDG_DATA_HOME: join(opencodeDataDir, "data"), // Sessions, snapshots, bin, logs, auth
-      OPENCODE_XDG_CONFIG_HOME: join(opencodeDataDir, "config"), // Configuration files
-      OPENCODE_XDG_STATE_HOME: join(opencodeDataDir, "state"), // State files
-      OPENCODE_XDG_CACHE_HOME: join(opencodeDataDir, "cache"), // Cache files, models.json
-      // Birdhouse-specific env vars
-      OPENCODE_CLIENT: "acp",
-      OPENCODE_ENABLE_QUESTION_TOOL: "true",
-      OPENCODE_WORKSPACE_ROOT: workspace.directory,
-      BIRDHOUSE_SERVER: `http://localhost:${this.serverPort}`,
-      BIRDHOUSE_WORKSPACE_ID: workspace.workspace_id, // For plugin to know which workspace it's in
-      // OpenCode configuration injection
-      OPENCODE_DISABLE_GLOBAL_CONFIG: "true", // Block ~/.config/opencode reads
-      OPENCODE_DISABLE_AUTOCOMPACT: "true", // Disable automatic message compaction
-      OPENCODE_DISABLE_PRUNE: "true", // Disable message pruning
-      OPENCODE_PROJECT_ID: workspace.workspace_id, // Workspace identifier for OpenCode
-      OPENCODE_CONFIG_CONTENT: JSON.stringify(opencodeConfig), // Programmatic config
-      PORT: port.toString(),
-    };
 
     log.server.info(
       {
@@ -481,6 +441,38 @@ export class OpenCodeManager {
     });
 
     return proc;
+  }
+
+  private async buildSpawnEnv(workspace: Workspace, port: number): Promise<Record<string, string>> {
+    const opencodeDataDir = getOpenCodeDataDir(workspace.workspace_id);
+
+    if (!existsSync(opencodeDataDir)) {
+      mkdirSync(opencodeDataDir, { recursive: true });
+    }
+
+    const workspaceEnv = await this.loadWorkspaceEnv(workspace);
+    const opencodeConfig = this.buildOpenCodeConfig(workspace);
+
+    return {
+      ...(process.env as Record<string, string>),
+      ...workspaceEnv,
+      OPENCODE_XDG_DATA_HOME: join(opencodeDataDir, "data"),
+      OPENCODE_XDG_CONFIG_HOME: join(opencodeDataDir, "config"),
+      OPENCODE_XDG_STATE_HOME: join(opencodeDataDir, "state"),
+      OPENCODE_XDG_CACHE_HOME: join(opencodeDataDir, "cache"),
+      OPENCODE_CLIENT: "acp",
+      OPENCODE_ENABLE_QUESTION_TOOL: "true",
+      OPENCODE_WORKSPACE_ROOT: workspace.directory,
+      BIRDHOUSE_SERVER: `http://localhost:${this.serverPort}`,
+      BIRDHOUSE_WORKSPACE_ID: workspace.workspace_id,
+      OPENCODE_DISABLE_GLOBAL_CONFIG: "true",
+      OPENCODE_DISABLE_CHANNEL_DB: "true",
+      OPENCODE_DISABLE_AUTOCOMPACT: "true",
+      OPENCODE_DISABLE_PRUNE: "true",
+      OPENCODE_PROJECT_ID: workspace.workspace_id,
+      OPENCODE_CONFIG_CONTENT: JSON.stringify(opencodeConfig),
+      PORT: port.toString(),
+    };
   }
 
   /**

@@ -362,6 +362,30 @@ describe("OpenCodeManager environment configuration", () => {
 
       expect(true).toBe(true); // Documentation test
     });
+
+    test("builds spawn env with channel db disabled for workspace isolation", async () => {
+      const workspaceId = "ws_spawn_env";
+      dataDb.insertWorkspace({
+        workspace_id: workspaceId,
+        directory: "/test/path",
+        opencode_port: null,
+        opencode_pid: null,
+        created_at: new Date().toISOString(),
+        last_used: new Date().toISOString(),
+      });
+
+      const workspace = dataDb.getWorkspaceById(workspaceId);
+      const managerWithBuildEnv = manager as unknown as {
+        buildSpawnEnv: (workspace: object, port: number) => Promise<Record<string, string>>;
+      };
+
+      const env = await managerWithBuildEnv.buildSpawnEnv(workspace ?? {}, 4310);
+
+      expect(env.OPENCODE_PROJECT_ID).toBe(workspaceId);
+      expect(env.OPENCODE_DISABLE_GLOBAL_CONFIG).toBe("true");
+      expect(env.OPENCODE_DISABLE_CHANNEL_DB).toBe("true");
+      expect(env.PORT).toBe("4310");
+    });
   });
 });
 
