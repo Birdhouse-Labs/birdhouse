@@ -5,6 +5,7 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSyn
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import pino, { type Logger } from "pino";
+import { createPosthogLogTransport } from "./posthog-log-transport";
 
 export type { Logger };
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal" | "silent";
@@ -163,8 +164,21 @@ export const currentLogFile = logFile;
 export const logDirectory = getLogDir();
 
 /**
- * Create a write stream that outputs to both console and file
- * Uses sync writes for simplicity (acceptable for local desktop app)
+ * PostHog log transport — active in prod only, ships warn/error/fatal to PostHog.
+ * Undefined in dev and test so we don't pollute PostHog with local noise.
+ */
+const posthogTransport = !isDev && !isTest ? createPosthogLogTransport() : undefined;
+
+/** Flush PostHog transport on process exit so we don't lose the last batch */
+if (posthogTransport) {
+  process.on("exit", () => {
+    void posthogTransport.shutdown();
+  });
+}
+
+/**
+ * Create a write stream that outputs to stdout, file, and (prod-only) PostHog.
+ * Uses sync writes for simplicity (acceptable for local desktop app).
  */
 function createDualWriteStream(): NodeJS.WritableStream {
   return {
@@ -178,6 +192,9 @@ function createDualWriteStream(): NodeJS.WritableStream {
       if (logFile) {
         appendFileSync(logFile, str);
       }
+
+      // Forward to PostHog in prod
+      posthogTransport?.write(str);
 
       return true;
     },
