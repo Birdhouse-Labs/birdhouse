@@ -42,14 +42,15 @@ export function createSkillRoutes(dataDb: DataDB) {
   const app = new Hono();
 
   app.post("/attachments/preview", async (c) => {
-    const { opencode } = getDepsFromContext(c);
+    const { harness } = getDepsFromContext(c);
+    const skillsCapability = harness.capabilities.skills;
     const body = await c.req.json();
 
     if (typeof body.text !== "string") {
       return c.json({ error: "text is required and must be a string" }, 400);
     }
 
-    const skills = await opencode.listSkills();
+    const skills = (await skillsCapability?.listSkills()) ?? [];
     const attachments = buildSkillAttachmentPreview(
       body.text,
       skills.map((skill) => ({
@@ -62,9 +63,10 @@ export function createSkillRoutes(dataDb: DataDB) {
   });
 
   app.get("/", async (c) => {
-    const { opencode } = getDepsFromContext(c);
+    const { harness } = getDepsFromContext(c);
+    const skillsCapability = harness.capabilities.skills;
     const workspace = c.get("workspace");
-    const skills = await opencode.listSkills();
+    const skills = (await skillsCapability?.listSkills()) ?? [];
 
     return c.json({
       skills: skills
@@ -74,10 +76,11 @@ export function createSkillRoutes(dataDb: DataDB) {
   });
 
   app.get("/:skillName", async (c) => {
-    const { opencode } = getDepsFromContext(c);
+    const { harness } = getDepsFromContext(c);
+    const skillsCapability = harness.capabilities.skills;
     const workspace = c.get("workspace");
     const skillName = c.req.param("skillName");
-    const skills = await opencode.listSkills();
+    const skills = (await skillsCapability?.listSkills()) ?? [];
     const skill = findSkillByName(skills, skillName);
 
     if (!skill) {
@@ -88,15 +91,17 @@ export function createSkillRoutes(dataDb: DataDB) {
   });
 
   app.post("/reload", async (c) => {
-    const { opencode } = getDepsFromContext(c);
+    const { harness } = getDepsFromContext(c);
+    const skillsCapability = harness.capabilities.skills;
 
-    await opencode.reloadSkillState();
+    await skillsCapability?.reloadSkills();
 
     return c.json({ success: true });
   });
 
   app.patch("/:skillName/trigger-phrases", async (c) => {
-    const { opencode } = getDepsFromContext(c);
+    const { harness } = getDepsFromContext(c);
+    const skillsCapability = harness.capabilities.skills;
     const skillName = c.req.param("skillName");
     const body = await c.req.json();
     const validated = validateTriggerPhrases(body.trigger_phrases);
@@ -105,7 +110,7 @@ export function createSkillRoutes(dataDb: DataDB) {
       return c.json({ error: validated.error }, 400);
     }
 
-    const skills = await opencode.listSkills();
+    const skills = (await skillsCapability?.listSkills()) ?? [];
     const skill = findSkillByName(skills, skillName);
     if (!skill) {
       return c.json({ error: `Skill ${skillName} not found` }, 404);
@@ -123,9 +128,10 @@ export function createSkillRoutes(dataDb: DataDB) {
   });
 
   app.post("/:skillName/reveal", async (c) => {
-    const { opencode } = getDepsFromContext(c);
+    const { harness } = getDepsFromContext(c);
+    const skillsCapability = harness.capabilities.skills;
     const skillName = c.req.param("skillName");
-    const skills = await opencode.listSkills();
+    const skills = (await skillsCapability?.listSkills()) ?? [];
     const skill = findSkillByName(skills, skillName);
 
     if (!skill) {

@@ -40,7 +40,7 @@ describe("GET /api/agents/:id with revert state", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getSession = async () => mockSession;
+    deps.harness.getSession = async () => mockSession;
 
     await withDeps(deps, async () => {
       const app = await createTestApp({ agentsDb: agentsDB });
@@ -78,7 +78,7 @@ describe("GET /api/agents/:id with revert state", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getSession = async () => mockSession;
+    deps.harness.getSession = async () => mockSession;
 
     await withDeps(deps, async () => {
       const app = await createTestApp({ agentsDb: agentsDB });

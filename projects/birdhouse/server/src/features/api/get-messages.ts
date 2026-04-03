@@ -7,12 +7,12 @@ import type { TimelineItem } from "../../types/agent-events";
 
 /**
  * GET /agents/:id/messages - Get timeline items for agent (messages + events)
- * Returns TimelineItem[] - a discriminated union of OpenCode messages and system events
+ * Returns TimelineItem[] - a discriminated union of harness messages and system events
  */
-export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "opencode">) {
+export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "harness">) {
   const {
     agentsDB,
-    opencode: { getMessages: getMessagesFromOpenCode },
+    harness: { getMessages: getMessagesFromHarness },
   } = deps;
 
   const agentId = c.req.param("id");
@@ -27,8 +27,7 @@ export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "ope
     const limitParam = c.req.query("limit");
     const limit = limitParam ? Number.parseInt(limitParam, 10) : undefined;
 
-    // Fetch messages from OpenCode using session_id
-    const messages = await getMessagesFromOpenCode(agent.session_id, limit);
+    const messages = await getMessagesFromHarness(agent.session_id, limit);
 
     // Fetch events from events database
     const events = agentsDB.getEventsByAgentId(agentId);

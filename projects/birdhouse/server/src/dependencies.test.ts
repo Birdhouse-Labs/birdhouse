@@ -94,8 +94,8 @@ describe("Dependencies", () => {
 
     await withDeps(deps, async () => {
       const cleanup = onWithDeps<string>(emitter, "test-event", (data) => {
-        const { opencode } = useDeps(); // Should work!
-        expect(opencode).toBeDefined();
+        const { harness } = useDeps(); // Should work!
+        expect(harness).toBeDefined();
         received.push(data);
       });
 
@@ -115,7 +115,7 @@ describe("Dependencies", () => {
     const deps = await createTestDeps();
     await withDeps(deps, async () => {
       const {
-        opencode: { getSession },
+        harness: { getSession },
       } = useDeps();
       const session = await getSession("ses_123");
 
@@ -139,7 +139,7 @@ describe("Dependencies", () => {
 
     await withDeps(customDeps, async () => {
       const {
-        opencode: { getSession },
+        harness: { getSession },
       } = useDeps();
       const session = await getSession("any");
       expect(session.title).toBe("Custom Mock");
@@ -153,8 +153,8 @@ describe("Dependencies", () => {
 
     await withDeps(deps, async () => {
       setTimeoutWithDeps(() => {
-        const { opencode } = useDeps(); // Should work!
-        expect(opencode).toBeDefined();
+        const { harness } = useDeps(); // Should work!
+        expect(harness).toBeDefined();
         calls.push("timeout-fired");
       }, 10);
 
@@ -168,20 +168,20 @@ describe("Dependencies", () => {
     const deps = await createMockDeps();
 
     async function level1() {
-      const { opencode } = useDeps();
-      expect(opencode).toBeDefined();
+      const { harness } = useDeps();
+      expect(harness).toBeDefined();
       return level2();
     }
 
     async function level2() {
-      const { opencode } = useDeps();
-      expect(opencode).toBeDefined();
+      const { harness } = useDeps();
+      expect(harness).toBeDefined();
       await level3();
     }
 
     async function level3() {
       const {
-        opencode: { getSession },
+        harness: { getSession },
       } = useDeps();
       const session = await getSession("ses_nested");
       expect(session.id).toBe("ses_nested");
@@ -199,19 +199,19 @@ describe("Dependencies", () => {
       const results = await Promise.all([
         (async () => {
           const {
-            opencode: { getSession },
+            harness: { getSession },
           } = useDeps();
           return getSession("ses_1");
         })(),
         (async () => {
           const {
-            opencode: { getSession },
+            harness: { getSession },
           } = useDeps();
           return getSession("ses_2");
         })(),
         (async () => {
           const {
-            opencode: { getSession },
+            harness: { getSession },
           } = useDeps();
           return getSession("ses_3");
         })(),

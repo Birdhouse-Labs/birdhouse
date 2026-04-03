@@ -16,9 +16,9 @@ import "../../types/context";
 /**
  * POST /agents - Create a new agent with optional first message
  */
-export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
+export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
   const {
-    opencode: { createSession },
+    harness: { createSession },
     agentsDB,
     log,
     telemetry,
@@ -158,7 +158,7 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
             workspaceId,
             opencodeBase,
             workspaceDir,
-            deps.opencode,
+            deps.harness,
           ).catch((error) => {
             log.server.error(
               {
@@ -223,13 +223,13 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
  * Generate title and update agent (async helper)
  */
 async function generateAndUpdateTitle(
-  deps: Pick<Deps, "agentsDB" | "log" | "opencode">,
+  deps: Pick<Deps, "agentsDB" | "log" | "harness">,
   agentId: string,
   message: string,
   _workspaceId: string,
   opencodeBase: string,
   workspaceDir: string,
-  opencodeClient: import("../../lib/opencode-client").OpenCodeClient,
+  harness: Pick<import("../../harness/agent-harness").AgentHarness, "updateSessionTitle">,
   _sourceTitle?: string,
 ): Promise<void> {
   const { agentsDB, log } = deps;
@@ -250,7 +250,7 @@ async function generateAndUpdateTitle(
     await syncAgentTitle(
       {
         agentsDB,
-        opencodeClient,
+        harness,
         opencodeBase,
         workspaceDir,
         log,

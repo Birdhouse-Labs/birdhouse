@@ -22,7 +22,7 @@ describe("Helpers Integration", () => {
       const cleanup = onWithDeps<{ sessionId: string }>(emitter, "session.created", async (event) => {
         // Can use useDeps() pattern here!
         const {
-          opencode: { getSession },
+          harness: { getSession },
         } = useDeps();
 
         const session = await getSession(event.sessionId);
@@ -53,7 +53,7 @@ describe("Helpers Integration", () => {
       // Schedule background job with deps preserved
       setTimeoutWithDeps(async () => {
         const {
-          opencode: { getSession },
+          harness: { getSession },
         } = useDeps();
 
         const session = await getSession("ses_123");
@@ -79,7 +79,7 @@ describe("Helpers Integration", () => {
     await withDeps(deps, async () => {
       const cleanup1 = onWithDeps<string>(emitter, "event", async (data) => {
         const {
-          opencode: { getSession },
+          harness: { getSession },
         } = useDeps();
         const session = await getSession(data);
         results.handler1.push(session.title);
@@ -87,7 +87,7 @@ describe("Helpers Integration", () => {
 
       const cleanup2 = onWithDeps<string>(emitter, "event", async (data) => {
         const {
-          opencode: { getSession },
+          harness: { getSession },
         } = useDeps();
         const session = await getSession(data);
         results.handler2.push(session.title);

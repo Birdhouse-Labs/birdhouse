@@ -12,7 +12,7 @@ import { getWorkspaceStream } from "../../lib/opencode-stream";
  */
 export async function cloneAgent(
   c: Context,
-  deps: Pick<Deps, "agentsDB" | "dataDb" | "opencode" | "log" | "telemetry">,
+  deps: Pick<Deps, "agentsDB" | "dataDb" | "harness" | "log" | "telemetry">,
 ) {
   const { agentsDB, log } = deps;
   const agentId = c.req.param("id");

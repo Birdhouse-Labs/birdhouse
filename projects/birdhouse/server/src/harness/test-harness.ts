@@ -282,7 +282,17 @@ export function createTestAgentHarness(options: TestAgentHarnessOptions = {}): T
     async getSession(sessionId) {
       const session = sessions.get(sessionId);
       if (!session) {
-        throw new Error(`Session ${sessionId} not found`);
+        return {
+          id: sessionId,
+          title: `Session ${sessionId}`,
+          projectID: "test-project",
+          directory: "/test",
+          version: "1.0.0",
+          time: {
+            created: Date.now(),
+            updated: Date.now(),
+          },
+        };
       }
 
       return { ...session, time: { ...session.time } };

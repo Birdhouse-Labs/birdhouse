@@ -1,8 +1,8 @@
 // ABOUTME: Shared helpers for markdown export functionality
 // ABOUTME: Used by both /api/export-markdown and /aapi/export-markdown endpoints
 
+import type { BirdhouseMessage as Message } from "../../harness/types";
 import type { AgentRow } from "../../lib/agents-db";
-import type { Message } from "../../lib/opencode-client";
 import type { EventType, TimelineItem } from "../../types/agent-events";
 
 /**
@@ -12,13 +12,13 @@ import type { EventType, TimelineItem } from "../../types/agent-events";
 export async function generateMarkdownContent(
   agent: AgentRow,
   agentsDB: { getEventsByAgentId: (id: string) => unknown[] },
-  opencode: { getMessages: (sessionId: string) => Promise<Message[]> },
+  harness: { getMessages: (sessionId: string) => Promise<Message[]> },
   formatters: {
     formatTimelineItem: (item: TimelineItem) => string;
   },
 ): Promise<string> {
   // Fetch timeline items (messages + events)
-  const messages = await opencode.getMessages(agent.session_id);
+  const messages = await harness.getMessages(agent.session_id);
   const events = agentsDB.getEventsByAgentId(agent.id);
 
   // Convert to TimelineItems

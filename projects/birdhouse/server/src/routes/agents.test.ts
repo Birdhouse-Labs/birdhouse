@@ -6,7 +6,6 @@ import { createTestDeps, withDeps } from "../dependencies";
 import type { AgentNode, AgentRow, AgentTree } from "../lib/agents-db";
 import { initAgentsDB } from "../lib/agents-db";
 import type { Message, Session } from "../lib/opencode-client";
-import { setMockSessionPrompt } from "../lib/opencode-client";
 import { createAgentTree, createChildAgent, createRootAgent, withWorkspaceContext } from "../test-utils";
 import { createAgentRoutes } from "./agents";
 
@@ -965,45 +964,37 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
+    deps.harness.sendMessage = async (_sessionId, _text) => ({
+      info: {
+        id: "msg_response",
+        role: "assistant",
+        sessionID: "ses_send123",
+        time: { created: Date.now(), completed: Date.now() },
+        parentID: "msg_user",
+        modelID: "claude-sonnet-4",
+        providerID: "anthropic",
+        mode: "build",
+        cost: 0,
+        tokens: {
+          input: 100,
+          output: 50,
+          reasoning: 0,
+          cache: { read: 0, write: 0 },
+        },
+        path: { cwd: "/", root: "/" },
+      },
+      parts: [
+        {
+          type: "text",
+          text: "Response",
+          id: "part_1",
+          sessionID: "ses_send123",
+          messageID: "msg_response",
+        },
+      ],
+    });
 
     await withDeps(deps, async () => {
-      // Set mock to verify the request was made with correct params
-      setMockSessionPrompt(async (options) => {
-        expect(options.path?.id).toBe("ses_send123");
-        expect(options.body?.parts?.[0]?.text).toBe("Hello agent");
-        return {
-          data: {
-            info: {
-              id: "msg_response",
-              role: "assistant",
-              sessionID: "ses_send123",
-              time: { created: Date.now(), completed: Date.now() },
-              parentID: "msg_user",
-              modelID: "claude-sonnet-4",
-              providerID: "anthropic",
-              mode: "build",
-              cost: 0,
-              tokens: {
-                input: 100,
-                output: 50,
-                reasoning: 0,
-                cache: { read: 0, write: 0 },
-              },
-              path: { cwd: "/", root: "/" },
-            },
-            parts: [
-              {
-                type: "text",
-                text: "Response",
-                id: "part_1",
-                sessionID: "ses_send123",
-                messageID: "msg_response",
-              },
-            ],
-          },
-        };
-      });
-
       const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
 
       const beforeTimestamp = agentsDB.getAgentById("agent_send123")?.updated_at;
@@ -1024,9 +1015,6 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
       const afterTimestamp = agentsDB.getAgentById("agent_send123")?.updated_at;
       expect(afterTimestamp).toBeDefined();
       expect(afterTimestamp).toBeGreaterThan(beforeTimestamp ?? 0);
-
-      // Reset mock
-      setMockSessionPrompt(undefined);
     });
   });
 
@@ -1060,13 +1048,11 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
+    deps.harness.sendMessage = async () => {
+      throw new Error("OpenCode API failure");
+    };
 
     await withDeps(deps, async () => {
-      // Set mock to throw an error
-      setMockSessionPrompt(async () => {
-        throw new Error("OpenCode API failure");
-      });
-
       const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_error/messages", {
         method: "POST",
@@ -1075,9 +1061,6 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
       });
 
       expect(res.status).toBe(500);
-
-      // Reset mock
-      setMockSessionPrompt(undefined);
     });
   });
 });
@@ -1753,8 +1736,8 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
     let capturedTitle = "";
 
     // Wrap the opencode client to spy on updateSessionTitle
-    const originalUpdateSessionTitle = deps.opencode.updateSessionTitle.bind(deps.opencode);
-    deps.opencode.updateSessionTitle = async (sessionId: string, title: string) => {
+    const originalUpdateSessionTitle = deps.harness.updateSessionTitle.bind(deps.harness);
+    deps.harness.updateSessionTitle = async (sessionId: string, title: string) => {
       updateSessionTitleCalled = true;
       capturedSessionId = sessionId;
       capturedTitle = title;
@@ -1822,7 +1805,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
     deps.agentsDB = agentsDB;
 
     // Make updateSessionTitle throw an error
-    deps.opencode.updateSessionTitle = async (_sessionId: string, _title: string) => {
+    deps.harness.updateSessionTitle = async (_sessionId: string, _title: string) => {
       throw new Error("OpenCode is down");
     };
 

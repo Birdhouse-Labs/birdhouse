@@ -27,7 +27,7 @@ export function createAgentRoutes() {
 
   // GET /api/agents/:id - Get agent by ID
   app.get("/:id", async (c) => {
-    const { agentsDB, opencode } = getDepsFromContext(c);
+    const { agentsDB, harness } = getDepsFromContext(c);
     const agentId = c.req.param("id");
 
     try {
@@ -37,7 +37,7 @@ export function createAgentRoutes() {
       }
 
       // Fetch session to check for revert state
-      const session = await opencode.getSession(agent.session_id);
+      const session = await harness.getSession(agent.session_id);
 
       // Include revert state if present
       const response = session.revert ? { ...agent, revert: session.revert } : agent;
@@ -86,7 +86,7 @@ export function createAgentRoutes() {
       const updatedAgent = await syncAgentTitle(
         {
           agentsDB,
-          opencodeClient: deps.opencode,
+          harness: deps.harness,
           opencodeBase,
           workspaceDir: workspace.directory,
           log: deps.log,

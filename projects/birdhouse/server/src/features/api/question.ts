@@ -6,16 +6,13 @@ import type { Deps } from "../../dependencies";
 
 /**
  * GET /agents/:id/questions - List pending questions for an agent
- * Fetches all pending questions from OpenCode and filters to those matching the agent's session.
+ * Fetches all pending questions from the harness and filters to those matching the agent's session.
  * Returns empty array if the session is idle — a pending question on an idle session is a leaked
  * OpenCode promise from an aborted run and cannot be answered.
  */
-export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" | "opencode" | "log">) {
-  const {
-    agentsDB,
-    opencode: { listPendingQuestions, getSessionStatus },
-    log,
-  } = deps;
+export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
+  const { agentsDB, harness, log } = deps;
+  const questionsCapability = harness.capabilities.questions;
   const agentId = c.req.param("id");
 
   const agent = agentsDB.getAgentById(agentId);
@@ -24,7 +21,14 @@ export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" 
   }
 
   try {
-    const [allQuestions, allStatuses] = await Promise.all([listPendingQuestions(), getSessionStatus()]);
+    if (!questionsCapability) {
+      return c.json({ error: "Questions not supported by harness" }, 501);
+    }
+
+    const [allQuestions, allStatuses] = await Promise.all([
+      questionsCapability.listPendingQuestions(),
+      harness.getSessionStatus(),
+    ]);
 
     // If the session is idle, any pending questions are leaked from an aborted run — not answerable
     const sessionStatus = allStatuses[agent.session_id] ?? { type: "idle" };
@@ -48,8 +52,9 @@ export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" 
  * POST /agents/:id/questions/:requestId/reply - Reply to a pending question
  * Validates the reply body and forwards it to OpenCode
  */
-export async function replyToAgentQuestion(c: Context, deps: Pick<Deps, "agentsDB" | "opencode" | "log">) {
-  const { agentsDB, opencode, log } = deps;
+export async function replyToAgentQuestion(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
+  const { agentsDB, harness, log } = deps;
+  const questionsCapability = harness.capabilities.questions;
   const agentId = c.req.param("id");
   const requestId = c.req.param("requestId");
 
@@ -73,11 +78,15 @@ export async function replyToAgentQuestion(c: Context, deps: Pick<Deps, "agentsD
     return c.json({ error: "answers is required and must be an array" }, 400);
   }
 
-  log.server.info({ agentId, requestId, answerCount: answers.length }, "Forwarding question reply to OpenCode");
+  log.server.info({ agentId, requestId, answerCount: answers.length }, "Forwarding question reply to harness");
 
   try {
-    await opencode.replyToQuestion(requestId, answers as string[][]);
-    log.server.info({ agentId, requestId }, "Question reply forwarded to OpenCode successfully");
+    if (!questionsCapability) {
+      return c.json({ error: "Questions not supported by harness" }, 501);
+    }
+
+    await questionsCapability.replyToQuestion(requestId, answers as string[][]);
+    log.server.info({ agentId, requestId }, "Question reply forwarded to harness successfully");
     return c.json({ ok: true });
   } catch (error) {
     log.server.error({ agentId, requestId, error }, "Failed to forward question reply to OpenCode");

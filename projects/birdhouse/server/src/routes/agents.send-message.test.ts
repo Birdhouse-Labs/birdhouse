@@ -48,13 +48,9 @@ describe("POST /agents/:id/messages — token recording", () => {
     const agent = createRootAgent(agentsDB, { session_id: "ses_test_tokens" });
     const message = makeAssistantMessage("ses_test_tokens");
 
-    const mockClient = {
-      session: { prompt: async () => ({ data: message }) },
-    };
-
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.client = mockClient as never;
+    deps.harness.sendMessage = async () => message;
     deps.telemetry = mockTelemetry;
 
     await withDeps(deps, async () => {
@@ -81,13 +77,9 @@ describe("POST /agents/:id/messages — token recording", () => {
     const agent = createRootAgent(agentsDB, { session_id: "ses_telemetry_fail" });
     const message = makeAssistantMessage("ses_telemetry_fail");
 
-    const mockClient = {
-      session: { prompt: async () => ({ data: message }) },
-    };
-
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.client = mockClient as never;
+    deps.harness.sendMessage = async () => message;
     deps.telemetry = mockTelemetry;
 
     let responseStatus: number | undefined;

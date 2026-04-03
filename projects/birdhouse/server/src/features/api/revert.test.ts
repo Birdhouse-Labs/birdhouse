@@ -71,7 +71,7 @@ describe("API revert", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => mockMessages;
+    deps.harness.getMessages = async () => mockMessages;
 
     await withDeps(deps, async () => {
       const app = await withWorkspaceContext(
@@ -148,7 +148,7 @@ describe("API revert", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => mockMessages;
+    deps.harness.getMessages = async () => mockMessages;
 
     await withDeps(deps, async () => {
       const app = await withWorkspaceContext(
@@ -226,7 +226,7 @@ describe("API revert", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => []; // No messages
+    deps.harness.getMessages = async () => []; // No messages
 
     await withDeps(deps, async () => {
       const app = await withWorkspaceContext(
@@ -288,7 +288,7 @@ describe("API revert", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => mockMessages;
+    deps.harness.getMessages = async () => mockMessages;
 
     await withDeps(deps, async () => {
       const app = await withWorkspaceContext(

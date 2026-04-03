@@ -12,8 +12,8 @@ import { generateFilenameWithAgentId, generateMarkdownContent } from "./export-h
  * POST /aapi/agents/:id/export - Export agent timeline to file
  * Returns filepath metadata (NOT markdown content to avoid context pollution)
  */
-export async function exportMarkdown(c: Context, deps: Pick<Deps, "agentsDB" | "opencode">) {
-  const { agentsDB, opencode } = deps;
+export async function exportMarkdown(c: Context, deps: Pick<Deps, "agentsDB" | "harness">) {
+  const { agentsDB, harness } = deps;
   const agentId = c.req.param("id");
 
   try {
@@ -33,7 +33,7 @@ export async function exportMarkdown(c: Context, deps: Pick<Deps, "agentsDB" | "
     }
 
     // Generate markdown content using shared helper
-    const markdown = await generateMarkdownContent(agent, agentsDB, opencode, {
+    const markdown = await generateMarkdownContent(agent, agentsDB, harness, {
       formatTimelineItem,
     });
 

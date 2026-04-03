@@ -85,18 +85,12 @@ describe("API send-message with clone_and_send", () => {
         ],
       };
 
-      const mockClient = {
-        session: {
-          prompt: async ({ body }: { body: { parts: Array<{ text: string }> } }) => {
-            capturedPrompt = body.parts[0]?.text ?? "";
-            return { data: mockMessage };
-          },
-        },
-      };
-
       const deps = await createTestDeps({ listSkills: async () => visibleSkills });
       deps.agentsDB = agentsDB;
-      deps.opencode.client = mockClient as never;
+      deps.harness.sendMessage = async (_sessionId, _text, options) => {
+        capturedPrompt = (options?.parts?.[0] as { text?: string } | undefined)?.text ?? "";
+        return mockMessage;
+      };
       deps.dataDb.setSkillTriggerPhrases("find-docs", ["docs please"]);
 
       await withDeps(deps, async () => {
@@ -160,18 +154,12 @@ describe("API send-message with clone_and_send", () => {
         parts: [],
       };
 
-      const mockClient = {
-        session: {
-          prompt: async ({ body }: { body: { parts: typeof capturedParts } }) => {
-            capturedParts = body.parts;
-            return { data: mockMessage };
-          },
-        },
-      };
-
       const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
-      deps.opencode.client = mockClient as never;
+      deps.harness.sendMessage = async (_sessionId, _text, options) => {
+        capturedParts = (options?.parts as typeof capturedParts | undefined) ?? [];
+        return mockMessage;
+      };
 
       await withDeps(deps, async () => {
         const app = await withWorkspaceContext(
@@ -274,18 +262,12 @@ describe("API send-message with clone_and_send", () => {
         ],
       };
 
-      const mockClient = {
-        session: {
-          prompt: async ({ body }: { body: { parts: Array<{ text: string }> } }) => {
-            capturedPrompt = body.parts[0]?.text ?? "";
-            return { data: mockMessage };
-          },
-        },
-      };
-
       const deps = await createTestDeps({ listSkills: async () => visibleSkills });
       deps.agentsDB = agentsDB;
-      deps.opencode.client = mockClient as never;
+      deps.harness.sendMessage = async (_sessionId, _text, options) => {
+        capturedPrompt = (options?.parts?.[0] as { text?: string } | undefined)?.text ?? "";
+        return mockMessage;
+      };
       deps.dataDb.setSkillTriggerPhrases("find-docs", ["docs please"]);
 
       await withDeps(deps, async () => {
@@ -352,17 +334,9 @@ describe("API send-message with clone_and_send", () => {
         ],
       };
 
-      const mockClient = {
-        session: {
-          prompt: async () => {
-            return { data: mockMessage };
-          },
-        },
-      };
-
       const deps = await createTestDeps({ forkSession: mockForkSession });
       deps.agentsDB = agentsDB;
-      deps.opencode.client = mockClient as never;
+      deps.harness.sendMessage = async () => mockMessage;
 
       await withDeps(deps, async () => {
         const { events, cleanup } = await captureStreamEvents();
@@ -479,17 +453,9 @@ describe("API send-message with clone_and_send", () => {
         ],
       };
 
-      const mockClient = {
-        session: {
-          prompt: async () => {
-            return { data: mockMessage };
-          },
-        },
-      };
-
       const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
-      deps.opencode.client = mockClient as never;
+      deps.harness.sendMessage = async () => mockMessage;
 
       await withDeps(deps, async () => {
         const app = await withWorkspaceContext(

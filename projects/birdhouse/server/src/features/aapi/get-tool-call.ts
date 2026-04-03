@@ -5,10 +5,10 @@ import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
 import { filterMessage } from "./helpers/message-filter";
 
-export async function getToolCall(c: Context, deps: Pick<Deps, "agentsDB" | "opencode">) {
+export async function getToolCall(c: Context, deps: Pick<Deps, "agentsDB" | "harness">) {
   const {
     agentsDB,
-    opencode: { getMessages: getMessagesFromOpenCode },
+    harness: { getMessages: getMessagesFromHarness },
   } = deps;
 
   const agentId = c.req.param("id");
@@ -20,7 +20,7 @@ export async function getToolCall(c: Context, deps: Pick<Deps, "agentsDB" | "ope
       return c.json({ error: `Agent ${agentId} not found` }, 404);
     }
 
-    const messages = await getMessagesFromOpenCode(agent.session_id);
+    const messages = await getMessagesFromHarness(agent.session_id);
 
     for (const message of messages) {
       const matchingPart = message.parts.find(

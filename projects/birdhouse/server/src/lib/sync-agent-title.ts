@@ -1,14 +1,14 @@
 // ABOUTME: Centralized helper for updating agent titles in both Birdhouse and OpenCode
 // ABOUTME: Handles OpenCode sync with graceful error handling (best effort, non-blocking)
 
+import type { AgentHarness } from "../harness/agent-harness";
 import type { AgentRow, AgentsDB } from "./agents-db";
 import type { LoggerDeps } from "./logger";
-import type { OpenCodeClient } from "./opencode-client";
 import { getWorkspaceStream } from "./opencode-stream";
 
 export interface SyncAgentTitleDeps {
   agentsDB: AgentsDB;
-  opencodeClient: OpenCodeClient;
+  harness: Pick<AgentHarness, "updateSessionTitle">;
   opencodeBase: string;
   workspaceDir: string;
   log: LoggerDeps;
@@ -24,14 +24,14 @@ export interface SyncAgentTitleDeps {
  * - Birdhouse DB is source of truth
  * - SSE event fires regardless of OpenCode sync status
  *
- * @param deps - Dependencies (agentsDB, opencodeClient, opencodeBase, workspaceDir, log)
+ * @param deps - Dependencies (agentsDB, harness, opencodeBase, workspaceDir, log)
  * @param agentId - Agent ID to update
  * @param newTitle - New title to set
  * @returns Updated agent row from database
  * @throws Error if Birdhouse DB update fails (NOT if OpenCode sync fails)
  */
 export async function syncAgentTitle(deps: SyncAgentTitleDeps, agentId: string, newTitle: string): Promise<AgentRow> {
-  const { agentsDB, opencodeClient, opencodeBase, workspaceDir, log } = deps;
+  const { agentsDB, harness, opencodeBase, workspaceDir, log } = deps;
 
   // 1. Update Birdhouse DB (source of truth)
   const updatedAgent = agentsDB.updateAgentTitle(agentId, newTitle);
@@ -41,7 +41,7 @@ export async function syncAgentTitle(deps: SyncAgentTitleDeps, agentId: string, 
 
   // 2. Sync to OpenCode (best effort - don't fail if this breaks)
   try {
-    await opencodeClient.updateSessionTitle(updatedAgent.session_id, newTitle);
+    await harness.updateSessionTitle(updatedAgent.session_id, newTitle);
     log.server.debug(
       {
         agentId,

@@ -3,16 +3,18 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { EventEmitter } from "node:events";
+import type { AgentHarness } from "./harness/agent-harness";
+import { createTestAgentHarness } from "./harness/test-harness";
+import type {
+  BirdhouseQuestionRequest,
+  BirdhouseSkill,
+  BirdhouseMessage as Message,
+  BirdhouseProvidersResponse as ProvidersResponse,
+  BirdhouseSession as Session,
+} from "./harness/types";
 import { type AgentsDB, getDefaultDatabasePath, initAgentsDB } from "./lib/agents-db";
 import type { DataDB } from "./lib/data-db";
 import { type CapturedLog, createLiveLogger, createTestLogger, type LoggerDeps } from "./lib/logger";
-import {
-  createTestOpenCodeClient,
-  type Message,
-  type OpenCodeClient,
-  type ProvidersResponse,
-  type Session,
-} from "./lib/opencode-client";
 import { getOpenCodeStream, type OpenCodeStream } from "./lib/opencode-stream";
 import { createLivePosthogProxy, createTestPosthogProxy, type PosthogProxy } from "./lib/posthog-proxy";
 import { createTestTelemetryClient, type TelemetryClient } from "./lib/telemetry";
@@ -25,9 +27,25 @@ import { TestDataDB } from "./test-utils/data-db-test";
 // Re-export types from implementations
 export type { AgentsDB, CapturedLog, DataDB, LoggerDeps, Message, ProvidersResponse, Session, TelemetryClient };
 
-// Dependencies interface - OpenCode client, logger, agents database, and stream factory
+type LegacyHarnessOverrides = Partial<Deps["harness"]> & {
+  listSkills?: () => Promise<BirdhouseSkill[]>;
+  reloadSkillState?: () => Promise<void>;
+  generate?: (options: {
+    prompt?: string;
+    system?: string[];
+    message: string;
+    small?: boolean;
+    maxTokens?: number;
+  }) => Promise<string>;
+  listPendingQuestions?: () => Promise<BirdhouseQuestionRequest[]>;
+  replyToQuestion?: (requestId: string, answers: string[][]) => Promise<void>;
+  revertSession?: (sessionId: string, messageId: string) => Promise<void>;
+  unrevertSession?: (sessionId: string) => Promise<void>;
+};
+
+// Dependencies interface - harness client, logger, agents database, and stream factory
 export interface Deps {
-  opencode: OpenCodeClient;
+  harness: AgentHarness;
   log: LoggerDeps;
   agentsDB: AgentsDB;
   dataDb: DataDB;
@@ -163,15 +181,90 @@ export function clearCapturedLogs(): void {
 }
 
 /**
- * Create test deps with optional opencode overrides
+ * Create test deps with optional harness overrides
  * Includes test logger and in-memory database automatically
  */
-export async function createTestDeps(opencode?: Partial<Deps["opencode"]>): Promise<Deps> {
-  return {
-    opencode: {
-      ...createTestOpenCodeClient(),
-      ...opencode,
+export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides): Promise<Deps> {
+  const harness = createTestAgentHarness({
+    enableRevert: true,
+    enableSkills: true,
+    enableGenerate: true,
+    enableQuestions: true,
+    generatedText: "Mock Generated Title",
+    providers: {
+      providers: [
+        {
+          id: "anthropic",
+          name: "Anthropic",
+          models: {
+            "claude-sonnet-4": {
+              id: "claude-sonnet-4",
+              name: "Claude Sonnet 4",
+            },
+            "claude-sonnet-4-5": {
+              id: "claude-sonnet-4-5",
+              name: "Claude Sonnet 4.5",
+            },
+            "claude-haiku-4": {
+              id: "claude-haiku-4",
+              name: "Claude Haiku 4",
+            },
+            "claude-opus-4": {
+              id: "claude-opus-4",
+              name: "Claude Opus 4",
+            },
+          },
+        },
+      ],
     },
+  });
+
+  if (harnessOverrides) {
+    Object.assign(harness, harnessOverrides);
+
+    if (harnessOverrides.capabilities) {
+      harness.capabilities = {
+        ...harness.capabilities,
+        ...harnessOverrides.capabilities,
+      };
+    }
+
+    if (harnessOverrides.listSkills || harnessOverrides.reloadSkillState) {
+      harness.capabilities.skills = {
+        listSkills: harnessOverrides.listSkills ?? harness.capabilities.skills?.listSkills ?? (async () => []),
+        reloadSkills:
+          harnessOverrides.reloadSkillState ?? harness.capabilities.skills?.reloadSkills ?? (async () => {}),
+      };
+    }
+
+    if (harnessOverrides.generate) {
+      harness.capabilities.generate = {
+        generate: harnessOverrides.generate,
+      };
+    }
+
+    if (harnessOverrides.listPendingQuestions || harnessOverrides.replyToQuestion) {
+      harness.capabilities.questions = {
+        listPendingQuestions:
+          harnessOverrides.listPendingQuestions ??
+          harness.capabilities.questions?.listPendingQuestions ??
+          (async () => []),
+        replyToQuestion:
+          harnessOverrides.replyToQuestion ?? harness.capabilities.questions?.replyToQuestion ?? (async () => {}),
+      };
+    }
+
+    if (harnessOverrides.revertSession || harnessOverrides.unrevertSession) {
+      harness.capabilities.revert = {
+        revertSession: harnessOverrides.revertSession ?? harness.capabilities.revert?.revertSession ?? (async () => {}),
+        unrevertSession:
+          harnessOverrides.unrevertSession ?? harness.capabilities.revert?.unrevertSession ?? (async () => {}),
+      };
+    }
+  }
+
+  return {
+    harness,
     log: testLoggerInstance.log,
     agentsDB: await initAgentsDB(":memory:"),
     dataDb: new TestDataDB(),
@@ -186,7 +279,7 @@ export async function createTestDeps(opencode?: Partial<Deps["opencode"]>): Prom
 
 export async function createPosthogDeps(): Promise<Deps> {
   return {
-    opencode: createTestOpenCodeClient(),
+    harness: createTestAgentHarness(),
     log: createLiveLogger(),
     agentsDB: await initAgentsDB(getDefaultDatabasePath(undefined)),
     dataDb: new TestDataDB(),

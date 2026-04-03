@@ -87,7 +87,7 @@ describe("exportMarkdown", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => [userMessage];
+    deps.harness.getMessages = async () => [userMessage];
 
     await withDeps(deps, async () => {
       const app = new Hono();
@@ -135,7 +135,7 @@ describe("exportMarkdown", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => [agentMessage];
+    deps.harness.getMessages = async () => [agentMessage];
 
     await withDeps(deps, async () => {
       const app = new Hono();
@@ -188,7 +188,7 @@ describe("exportMarkdown", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => [assistantMessage];
+    deps.harness.getMessages = async () => [assistantMessage];
 
     await withDeps(deps, async () => {
       const app = new Hono();
@@ -241,7 +241,7 @@ describe("exportMarkdown", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => [assistantMessage];
+    deps.harness.getMessages = async () => [assistantMessage];
 
     await withDeps(deps, async () => {
       const app = new Hono();
@@ -309,7 +309,7 @@ describe("exportMarkdown", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => [assistantMessage];
+    deps.harness.getMessages = async () => [assistantMessage];
 
     await withDeps(deps, async () => {
       const app = new Hono();
@@ -377,7 +377,7 @@ describe("exportMarkdown", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => [assistantMessage];
+    deps.harness.getMessages = async () => [assistantMessage];
 
     await withDeps(deps, async () => {
       const app = new Hono();

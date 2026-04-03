@@ -1,13 +1,13 @@
-// ABOUTME: Builds and restores OpenCode prompt parts for Birdhouse composer flows.
-// ABOUTME: Keeps text and accepted composer attachments aligned with the SDK file-part contract.
+// ABOUTME: Builds and restores Birdhouse prompt parts for composer flows.
+// ABOUTME: Keeps text and accepted composer attachments aligned with harness-owned part types.
 
-import type { FilePartInput, Part, TextPartInput } from "@opencode-ai/sdk/client";
+import type { BirdhouseFilePart, BirdhouseInputPart, BirdhousePart, BirdhouseTextPart } from "../harness/types";
 
 function isRestorableComposerAttachmentMime(mime: string): boolean {
   return mime.startsWith("image/") || mime === "application/pdf";
 }
 
-export function parseFileAttachments(value: unknown): FilePartInput[] {
+export function parseFileAttachments(value: unknown): BirdhouseFilePart[] {
   if (value === undefined) {
     return [];
   }
@@ -49,23 +49,23 @@ export function parseFileAttachments(value: unknown): FilePartInput[] {
       mime: typedAttachment.mime,
       url: typedAttachment.url,
       ...(typedAttachment.filename ? { filename: typedAttachment.filename } : {}),
-    } satisfies FilePartInput;
+    } satisfies BirdhouseFilePart;
   });
 }
 
 export function buildPromptParts(
   text: string,
-  attachments: FilePartInput[],
+  attachments: BirdhouseFilePart[],
   metadata?: Record<string, unknown>,
-): Array<TextPartInput | FilePartInput> {
-  const parts: Array<TextPartInput | FilePartInput> = [];
+): BirdhouseInputPart[] {
+  const parts: BirdhouseInputPart[] = [];
 
   if (text) {
     parts.push({
       type: "text",
       text,
       ...(metadata ? { metadata } : {}),
-    });
+    } satisfies BirdhouseTextPart);
   }
 
   parts.push(...attachments);
@@ -73,7 +73,7 @@ export function buildPromptParts(
   return parts;
 }
 
-export function extractRestorableComposerFileAttachments(parts: Part[]): FilePartInput[] {
+export function extractRestorableComposerFileAttachments(parts: BirdhousePart[]): BirdhouseFilePart[] {
   return parts.flatMap((part) => {
     if (part.type !== "file") {
       return [];
@@ -93,7 +93,7 @@ export function extractRestorableComposerFileAttachments(parts: Part[]): FilePar
         mime: part.mime,
         url: part.url,
         ...(typeof part.filename === "string" && part.filename ? { filename: part.filename } : {}),
-      } satisfies FilePartInput,
+      } satisfies BirdhouseFilePart,
     ];
   });
 }

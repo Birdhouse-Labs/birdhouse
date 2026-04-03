@@ -109,8 +109,8 @@ function buildTreeStructure(treeAgents: AgentRow[]): AgentNode {
 /**
  * POST /aapi/agents/:id/export-tree - Export entire agent tree
  */
-export async function exportTree(c: Context, deps: Pick<Deps, "agentsDB" | "opencode" | "log">) {
-  const { agentsDB, opencode, log } = deps;
+export async function exportTree(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
+  const { agentsDB, harness, log } = deps;
   const agentId = c.req.param("id");
 
   try {
@@ -180,7 +180,7 @@ export async function exportTree(c: Context, deps: Pick<Deps, "agentsDB" | "open
         log.server.info({ agent_id: agentToExport.id }, "Exporting agent");
 
         // Generate markdown content
-        const markdown = await generateMarkdownContent(agentToExport, agentsDB, opencode, { formatTimelineItem });
+        const markdown = await generateMarkdownContent(agentToExport, agentsDB, harness, { formatTimelineItem });
 
         // Generate filename with agent_id
         const filename = `${agentToExport.id}.md`;

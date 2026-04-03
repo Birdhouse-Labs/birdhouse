@@ -1,4 +1,4 @@
-// ABOUTME: Generate agent title using Birdhouse-owned title rules via OpenCode
+// ABOUTME: Generate agent title using Birdhouse-owned title rules via the harness.
 // ABOUTME: Used by POST /api/title/generate endpoint
 
 import type { Context } from "hono";
@@ -8,7 +8,7 @@ import { generateTitle as generateTitleService } from "../../lib/title-generator
 /**
  * POST /api/title/generate - Generate a title for a message
  */
-export async function generateTitle(c: Context, deps: Pick<Deps, "opencode" | "log">) {
+export async function generateTitle(c: Context, deps: Pick<Deps, "harness" | "log">) {
   const { log } = deps;
 
   try {

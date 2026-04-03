@@ -22,7 +22,7 @@ function getCallingAgent(c: Context, agentsDB: Deps["agentsDB"]): AgentRow | nul
  */
 export async function sendMessage(
   c: Context,
-  deps: Pick<Deps, "agentsDB" | "dataDb" | "opencode" | "log" | "telemetry">,
+  deps: Pick<Deps, "agentsDB" | "dataDb" | "harness" | "log" | "telemetry">,
 ) {
   const { agentsDB } = deps;
 

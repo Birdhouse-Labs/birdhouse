@@ -1,11 +1,11 @@
 // ABOUTME: Send a message to an agent (blocking or async mode, with optional cloning)
 // ABOUTME: Used by /api/agents/:id/messages POST endpoint
 
-import type { FilePartInput } from "@opencode-ai/sdk/client";
 import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
 import { cloneAgent } from "../../domain/agent-lifecycle";
 import { findSafeClonePoint } from "../../domain/clone-point";
+import type { BirdhouseFilePart } from "../../harness/types";
 import type { AgentRow } from "../../lib/agents-db";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "../../lib/birdhouse-system-prompt";
 import { buildPromptParts, parseFileAttachments } from "../../lib/message-parts";
@@ -21,14 +21,9 @@ import "../../types/context";
  */
 export async function sendMessage(
   c: Context,
-  deps: Pick<Deps, "agentsDB" | "dataDb" | "opencode" | "log" | "telemetry">,
+  deps: Pick<Deps, "agentsDB" | "dataDb" | "harness" | "log" | "telemetry">,
 ) {
-  const {
-    agentsDB,
-    opencode: { client },
-    log,
-    telemetry,
-  } = deps;
+  const { agentsDB, harness, log, telemetry } = deps;
 
   // Get workspace context for stream creation
   const opencodeBase = c.get("opencodeBase");
@@ -42,7 +37,7 @@ export async function sendMessage(
   const agentId = c.req.param("id");
   const { text, agent: agentName, clone_and_send, metadata, attachments } = await c.req.json();
   const rawText = typeof text === "string" ? text : "";
-  let requestAttachments: FilePartInput[];
+  let requestAttachments: BirdhouseFilePart[];
   try {
     requestAttachments = parseFileAttachments(attachments);
   } catch (error) {
@@ -50,7 +45,7 @@ export async function sendMessage(
     return c.json({ error: message }, 400);
   }
   const workspaceRoot = workspaceDir;
-  const visibleSkills = await deps.opencode.listSkills();
+  const visibleSkills = (await harness.capabilities.skills?.listSkills()) ?? [];
   const enrichedText = enrichMessageWithSkillAttachments(
     rawText,
     buildSkillAttachmentPreview(
@@ -88,7 +83,7 @@ export async function sendMessage(
 
     // Find safe clone point to avoid copying incomplete work
     // This is especially important when cloning a busy agent
-    const messages = await deps.opencode.getMessages(sourceAgent.session_id);
+    const messages = await harness.getMessages(sourceAgent.session_id);
 
     // DEBUG: Log message order received from OpenCode
     log.server.info(
@@ -246,7 +241,7 @@ export async function sendMessage(
       workspaceId,
       opencodeBase,
       workspaceDir,
-      deps.opencode,
+      harness,
     ).catch((error) => {
       log.server.error(
         {
@@ -289,22 +284,15 @@ export async function sendMessage(
   if (!shouldWait) {
     // Async mode: Fire-and-forget (detach from the process)
     // Build collaboration context if tagged agents are present
-    client.session
-      .prompt({
-        body: {
-          model: { providerID, modelID },
-          agent: agentName,
-          system: BIRDHOUSE_SYSTEM_PROMPT,
-          parts: messageParts,
-        },
-        path: {
-          id: targetAgent.session_id,
-        },
-        query: {
-          directory: workspaceRoot,
-        },
+    harness
+      .sendMessage(targetAgent.session_id, enrichedText, {
+        model: { providerID, modelID },
+        agent: agentName,
+        system: BIRDHOUSE_SYSTEM_PROMPT,
+        parts: messageParts,
+        noReply: true,
       })
-      .then(({ data: messageResponse }) => {
+      .then((messageResponse) => {
         agentsDB.updateAgentTimestamp(targetAgent.id);
         if (messageResponse) telemetry.recordMessageTokens(targetAgent.id, messageResponse);
         log.server.info(
@@ -339,19 +327,11 @@ export async function sendMessage(
     return c.json(response);
   }
 
-  const { data: messageResponse } = await client.session.prompt({
-    body: {
-      model: { providerID, modelID },
-      agent: agentName,
-      system: BIRDHOUSE_SYSTEM_PROMPT,
-      parts: messageParts,
-    },
-    path: {
-      id: targetAgent.session_id,
-    },
-    query: {
-      directory: workspaceRoot,
-    },
+  const messageResponse = await harness.sendMessage(targetAgent.session_id, enrichedText, {
+    model: { providerID, modelID },
+    agent: agentName,
+    system: BIRDHOUSE_SYSTEM_PROMPT,
+    parts: messageParts,
   });
 
   if (!messageResponse) {
@@ -384,14 +364,14 @@ export async function sendMessage(
  * Generate title for cloned agent and update (async helper)
  */
 async function generateAndUpdateTitleForClone(
-  deps: Pick<Deps, "agentsDB" | "log" | "opencode">,
+  deps: Pick<Deps, "agentsDB" | "log" | "harness">,
   agentId: string,
   message: string,
   sourceTitle: string,
   _workspaceId: string,
   opencodeBase: string,
   workspaceDir: string,
-  opencodeClient: import("../../lib/opencode-client").OpenCodeClient,
+  harness: Pick<import("../../harness/agent-harness").AgentHarness, "updateSessionTitle">,
 ): Promise<void> {
   const { agentsDB, log } = deps;
 
@@ -414,7 +394,7 @@ async function generateAndUpdateTitleForClone(
     await syncAgentTitle(
       {
         agentsDB,
-        opencodeClient,
+        harness,
         opencodeBase,
         workspaceDir,
         log,

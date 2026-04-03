@@ -1,7 +1,7 @@
 // ABOUTME: Message filtering for plugin/agent consumption - removes internal IDs and metadata
 // ABOUTME: Keeps only information useful for agents learning from other agents' work
 
-import type { Message } from "../../../lib/opencode-client";
+import type { BirdhouseMessage as Message } from "../../../harness/types";
 
 export type FilterView = "default" | "full" | "exchange" | "tool_call";
 

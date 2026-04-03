@@ -3,6 +3,7 @@
 
 import type { Context } from "hono";
 import { type Deps, depsContext } from "../dependencies";
+import { OpenCodeAgentHarness } from "../harness/opencode-adapter";
 import { getDataDB } from "./data-db";
 import { log } from "./logger";
 import { createLiveOpenCodeClient } from "./opencode-client";
@@ -27,7 +28,7 @@ export function getDepsFromContext(c: Context): Deps {
   }
 
   // In tests, use existing test deps if available (from withDeps)
-  // This allows tests to mock opencode client while still using workspace-specific agentsDB
+  // This allows tests to mock the harness while still using workspace-specific agentsDB
   const existingDeps = depsContext.getStore();
   if (existingDeps) {
     return {
@@ -36,10 +37,10 @@ export function getDepsFromContext(c: Context): Deps {
     };
   }
 
-  // Production path: create live OpenCode client and stream factory
+  // Production path: create live OpenCode harness and stream factory
   const dataDb = getDataDB();
   return {
-    opencode: createLiveOpenCodeClient(opencodeBase, workspace.directory),
+    harness: new OpenCodeAgentHarness(createLiveOpenCodeClient(opencodeBase, workspace.directory), workspace.directory),
     log,
     agentsDB,
     dataDb,

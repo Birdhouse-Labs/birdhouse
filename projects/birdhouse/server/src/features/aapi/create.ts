@@ -25,9 +25,9 @@ async function getCurrentAgentBySession(c: Context, deps: Pick<Deps, "agentsDB">
 /**
  * POST /aapi/agents - Create agent with optional cloning
  */
-export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
+export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
   const {
-    opencode: { getMessages, createSession },
+    harness: { getMessages, createSession },
     agentsDB,
     log,
     telemetry,
@@ -157,7 +157,7 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
 
       // Validate model if explicitly provided
       if (requestModel) {
-        const modelError = await validateModel(model, deps.opencode);
+        const modelError = await validateModel(model, deps.harness);
         if (modelError) {
           return c.json({ error: modelError }, 400);
         }
@@ -304,7 +304,7 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
           : currentAgent.model;
 
       // Validate model
-      const modelError = await validateModel(model, deps.opencode);
+      const modelError = await validateModel(model, deps.harness);
       if (modelError) {
         return c.json({ error: modelError }, 400);
       }

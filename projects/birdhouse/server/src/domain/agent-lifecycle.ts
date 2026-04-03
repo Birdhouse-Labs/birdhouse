@@ -1,9 +1,9 @@
 // ABOUTME: Domain operations for agent lifecycle management
 // ABOUTME: Enforces invariants like event emission when agents are created
 
+import type { BirdhouseSession as Session } from "../harness/types";
 import type { AgentRow, AgentsDB } from "../lib/agents-db";
 import type { DataDB } from "../lib/data-db";
-import type { Session } from "../lib/opencode-client";
 import type { OpenCodeStream } from "../lib/opencode-stream";
 import type { TelemetryClient } from "../lib/telemetry";
 
@@ -88,7 +88,7 @@ export function createAgent(
 export async function cloneAgent(
   sourceAgent: AgentRow,
   deps: {
-    opencode: {
+    harness: {
       forkSession: (sessionId: string, messageId?: string) => Promise<Session>;
     };
     agentsDB: AgentsDB;
@@ -108,7 +108,7 @@ export async function cloneAgent(
     callingAgentId?: string;
   },
 ): Promise<AgentRow> {
-  const { opencode, agentsDB, log } = deps;
+  const { harness, agentsDB, log } = deps;
 
   // Fork the OpenCode session
   log.server.info(
@@ -121,7 +121,7 @@ export async function cloneAgent(
     "Forking OpenCode session for clone",
   );
 
-  const session = await opencode.forkSession(sourceAgent.session_id, options?.messageId);
+  const session = await harness.forkSession(sourceAgent.session_id, options?.messageId);
 
   log.server.info({ original_session: sourceAgent.session_id, forked_session: session.id }, "OpenCode session forked");
 

@@ -349,7 +349,7 @@ describe("AAPI export-tree", () => {
 
       const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
-      deps.opencode.getMessages = async () => [userMessage];
+      deps.harness.getMessages = async () => [userMessage];
 
       await withDeps(deps, async () => {
         const app = new Hono();
@@ -540,7 +540,7 @@ describe("AAPI export-tree", () => {
       deps.agentsDB = agentsDB;
 
       // Mock getMessages to fail for child agent
-      deps.opencode.getMessages = async (sessionId: string) => {
+      deps.harness.getMessages = async (sessionId: string) => {
         if (sessionId === child.session_id) {
           throw new Error("Failed to fetch messages");
         }
@@ -605,7 +605,7 @@ describe("AAPI export-tree", () => {
       deps.agentsDB = agentsDB;
 
       // Mock to fail for child
-      deps.opencode.getMessages = async (sessionId: string) => {
+      deps.harness.getMessages = async (sessionId: string) => {
         if (sessionId === child.session_id) {
           throw new Error("Mock failure");
         }
@@ -988,7 +988,7 @@ describe("AAPI export-tree", () => {
 
       const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
-      deps.opencode.getMessages = async () => [userMessage];
+      deps.harness.getMessages = async () => [userMessage];
 
       await withDeps(deps, async () => {
         const app = new Hono();

@@ -113,7 +113,7 @@ describe("AAPI export-markdown", () => {
 
       const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
-      deps.opencode.getMessages = async () => [userMessage];
+      deps.harness.getMessages = async () => [userMessage];
 
       await withDeps(deps, async () => {
         const app = new Hono();
@@ -428,7 +428,7 @@ describe("AAPI export-markdown", () => {
 
       const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
-      deps.opencode.getMessages = async () => [userMessage];
+      deps.harness.getMessages = async () => [userMessage];
 
       await withDeps(deps, async () => {
         const app = new Hono();
@@ -517,7 +517,7 @@ describe("AAPI export-markdown", () => {
 
       const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
-      deps.opencode.getMessages = async () => [userMessage];
+      deps.harness.getMessages = async () => [userMessage];
 
       await withDeps(deps, async () => {
         const app = new Hono();

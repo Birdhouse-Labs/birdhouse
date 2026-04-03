@@ -3,17 +3,10 @@
 
 import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
-import { getWorkspaceRoot } from "../../dependencies";
 
-export async function stopAgentTree(c: Context, deps: Pick<Deps, "agentsDB" | "opencode" | "log">) {
-  const {
-    agentsDB,
-    opencode: { client },
-    log,
-  } = deps;
+export async function stopAgentTree(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
+  const { agentsDB, harness, log } = deps;
 
-  const workspace = c.get("workspace");
-  const workspaceRoot = workspace?.directory || (await getWorkspaceRoot());
   const agentId = c.req.param("id");
 
   const agent = agentsDB.getAgentById(agentId);
@@ -33,14 +26,7 @@ export async function stopAgentTree(c: Context, deps: Pick<Deps, "agentsDB" | "o
   );
 
   for (const treeAgent of treeAgents) {
-    await client.session.abort({
-      path: {
-        id: treeAgent.session_id,
-      },
-      query: {
-        directory: workspaceRoot,
-      },
-    });
+    await harness.abortSession(treeAgent.session_id);
 
     agentsDB.updateAgentTimestamp(treeAgent.id);
   }

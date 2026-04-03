@@ -3,17 +3,17 @@
 
 import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
-import type { Message } from "../../lib/opencode-client";
+import type { BirdhouseMessage as Message } from "../../harness/types";
 import { filterMessagesForView } from "./helpers/message-filter";
 
 /**
  * GET /agents/:id/messages - Get filtered and selected messages for plugin consumption
  * Supports mode parameter for message selection
  */
-export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "opencode">) {
+export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "harness">) {
   const {
     agentsDB,
-    opencode: { getMessages: getMessagesFromOpenCode },
+    harness: { getMessages: getMessagesFromHarness },
   } = deps;
 
   const agentId = c.req.param("id");
@@ -38,7 +38,7 @@ export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "ope
     }
 
     const historyLimit = mode === "last" ? 1000 : undefined;
-    const allMessages = await getMessagesFromOpenCode(agent.session_id, historyLimit);
+    const allMessages = await getMessagesFromHarness(agent.session_id, historyLimit);
 
     // SELECT messages based on mode
     let selected: Message[];
