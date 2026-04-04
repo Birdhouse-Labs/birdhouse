@@ -156,6 +156,57 @@ describe("GET /api/events (SSE)", () => {
     });
   });
 
+  test("preserves ordering across harness and Birdhouse event sources", async () => {
+    const _deps = await createTestDeps();
+    await withDeps(_deps, async () => {
+      const app = await withWorkspaceContext(createEventRoutes);
+      const stream = getOpenCodeStream();
+      const bus = getWorkspaceEventBus("/test/workspace");
+
+      const request = new Request("http://localhost:3000/");
+      const responsePromise = app.request(request);
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      stream.emit("*", {
+        payload: {
+          type: "session.idle",
+          properties: { sessionID: "ses_mixed_1" },
+        },
+      });
+
+      bus.emit({
+        type: "birdhouse.agent.created",
+        properties: {
+          agentId: "agent_mixed_1",
+          agent: { id: "agent_mixed_1", title: "Mixed Agent" },
+        },
+      });
+
+      const response = await responsePromise;
+      const events = await Promise.race([
+        readSSEEvents(response, 2),
+        new Promise<string[]>((r) => setTimeout(() => r([]), 100)),
+      ]);
+
+      expect(events).toHaveLength(2);
+
+      const [harnessEvent, birdhouseEvent] = events.map((event) => JSON.parse(event));
+
+      expect(harnessEvent).toEqual({
+        type: "session.idle",
+        properties: { sessionID: "ses_mixed_1" },
+      });
+      expect(birdhouseEvent).toEqual({
+        type: "birdhouse.agent.created",
+        properties: {
+          agentId: "agent_mixed_1",
+          agent: { id: "agent_mixed_1", title: "Mixed Agent" },
+        },
+      });
+    });
+  });
+
   test("handles multiple events in sequence", async () => {
     const _deps = await createTestDeps();
     await withDeps(_deps, async () => {
