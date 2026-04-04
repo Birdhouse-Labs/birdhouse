@@ -130,7 +130,7 @@ describe("getAgentQuestions", () => {
     });
   });
 
-  test("returns empty array when session is idle even if OpenCode has pending questions", async () => {
+  test("returns empty array when session is idle even if the harness still has pending questions", async () => {
     const agent = createRootAgent(agentsDB, {
       id: "agent_1",
       session_id: "ses_1",

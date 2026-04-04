@@ -72,8 +72,8 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
       log.server.info({ agent_id, title, level }, "Creating root agent");
     }
 
-    // 3. Create OpenCode session via API
-    log.server.info({ title }, "Creating OpenCode session");
+    // 3. Create harness session via API
+    log.server.info({ title }, "Creating harness session");
     const session = await createSession(title);
     log.server.info(
       {
@@ -81,7 +81,7 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
         projectID: session.projectID,
         directory: session.directory,
       },
-      "OpenCode session created",
+      "Harness session created",
     );
 
     // 4. Insert into agents database
@@ -243,7 +243,7 @@ async function generateAndUpdateTitle(
 
     log.server.info({ agentId, generatedTitle }, "Title generated successfully");
 
-    // Update agent title in Birdhouse, sync to OpenCode, and emit SSE event
+    // Update agent title in Birdhouse, sync to the harness session, and emit SSE event
     await syncAgentTitle(
       {
         agentsDB,

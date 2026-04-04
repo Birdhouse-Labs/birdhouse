@@ -85,7 +85,7 @@ export async function sendMessage(
     // This is especially important when cloning a busy agent
     const messages = await harness.getMessages(sourceAgent.session_id);
 
-    // DEBUG: Log message order received from OpenCode
+    // DEBUG: Log message order returned by the harness
     log.server.info(
       {
         source_agent_id: sourceAgent.id,
@@ -98,7 +98,7 @@ export async function sendMessage(
           finish: m.info.role === "assistant" ? ("finish" in m.info ? m.info.finish : "none") : "n/a",
         })),
       },
-      "Messages received from OpenCode (should be chronological/oldest-first)",
+      "Messages received from harness (should be chronological/oldest-first)",
     );
 
     const clonePointMessageId = findSafeClonePoint(messages);
@@ -341,7 +341,7 @@ export async function sendMessage(
   });
 
   if (!messageResponse) {
-    throw new Error("No message response received from OpenCode");
+    throw new Error("No message response received from harness");
   }
 
   // Update agent's updated_at timestamp
@@ -396,7 +396,7 @@ async function generateAndUpdateTitleForClone(
 
     log.server.info({ agentId, generatedTitle, sourceTitle }, "Clone title generated successfully");
 
-    // Update agent title in Birdhouse, sync to OpenCode, and emit SSE event
+    // Update agent title in Birdhouse, sync to the harness session, and emit SSE event
     await syncAgentTitle(
       {
         agentsDB,

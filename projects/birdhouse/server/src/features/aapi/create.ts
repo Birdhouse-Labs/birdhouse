@@ -312,8 +312,8 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
         return c.json({ error: modelError }, 400);
       }
 
-      // Create new OpenCode session
-      log.server.info({ title }, "Creating OpenCode session");
+      // Create new harness session
+      log.server.info({ title }, "Creating harness session");
       session = await createSession(title.trim());
       log.server.info(
         {
@@ -321,7 +321,7 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
           projectID: session.projectID,
           directory: session.directory,
         },
-        "OpenCode session created",
+        "Harness session created",
       );
 
       // Insert as child of current agent

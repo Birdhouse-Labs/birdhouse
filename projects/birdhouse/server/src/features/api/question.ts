@@ -8,7 +8,7 @@ import type { Deps } from "../../dependencies";
  * GET /agents/:id/questions - List pending questions for an agent
  * Fetches all pending questions from the harness and filters to those matching the agent's session.
  * Returns empty array if the session is idle — a pending question on an idle session is a leaked
- * OpenCode promise from an aborted run and cannot be answered.
+ * prompt from an aborted run and cannot be answered.
  */
 export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
   const { agentsDB, harness, log } = deps;
@@ -50,7 +50,7 @@ export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" 
 
 /**
  * POST /agents/:id/questions/:requestId/reply - Reply to a pending question
- * Validates the reply body and forwards it to OpenCode
+ * Validates the reply body and forwards it to the harness question capability
  */
 export async function replyToAgentQuestion(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
   const { agentsDB, harness, log } = deps;
@@ -89,7 +89,7 @@ export async function replyToAgentQuestion(c: Context, deps: Pick<Deps, "agentsD
     log.server.info({ agentId, requestId }, "Question reply forwarded to harness successfully");
     return c.json({ ok: true });
   } catch (error) {
-    log.server.error({ agentId, requestId, error }, "Failed to forward question reply to OpenCode");
+    log.server.error({ agentId, requestId, error }, "Failed to forward question reply to harness");
     return c.json({ error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
 }

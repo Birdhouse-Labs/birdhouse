@@ -1,5 +1,5 @@
-// ABOUTME: Tests for SSE event streaming endpoint
-// ABOUTME: Simple proxy that forwards all OpenCode events to clients
+// ABOUTME: Tests for SSE event streaming endpoint.
+// ABOUTME: Verifies merged runtime and Birdhouse event delivery over the frontend SSE contract.
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { createTestDeps, useDeps, withDeps } from "../dependencies";
@@ -62,7 +62,7 @@ describe("GET /api/events (SSE)", () => {
 
       await new Promise((r) => setTimeout(r, 10));
 
-      // Emit events via wildcard (how OpenCodeStream emits them)
+      // Emit events via wildcard, matching how the adapter-backed stream forwards runtime events
       stream.emit("*", {
         payload: {
           type: "message.part.updated",

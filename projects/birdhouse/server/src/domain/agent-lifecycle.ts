@@ -67,10 +67,10 @@ export function createAgent(
 }
 
 /**
- * Clone an agent by forking its OpenCode session
+ * Clone an agent by forking its harness session
  *
  * Creates a new agent as a child of the calling agent by:
- * 1. Forking the OpenCode session (optionally from a specific message ID)
+ * 1. Forking the harness session (optionally from a specific message ID)
  * 2. Creating a new agent record as a child of the calling agent (if provided) or source agent
  * 3. Setting cloned_from to point to the source agent
  *
@@ -80,7 +80,7 @@ export function createAgent(
  * - cloned_from ALWAYS = sourceAgent.id (tracks the cloning relationship)
  *
  * @param sourceAgent The agent to clone from
- * @param deps Dependencies (opencode, agentsDB, log)
+ * @param deps Dependencies (harness, agentsDB, log)
  * @param options Optional configuration
  * @param options.messageId Optional message ID to fork from
  * @param options.title Optional title override (defaults to source title)
@@ -113,7 +113,7 @@ export async function cloneAgent(
 ): Promise<AgentRow> {
   const { harness, agentsDB, log } = deps;
 
-  // Fork the OpenCode session
+  // Fork the harness session
   log.server.info(
     {
       source_session: sourceAgent.session_id,
@@ -121,12 +121,12 @@ export async function cloneAgent(
       title: options?.title,
       calling_agent_id: options?.callingAgentId,
     },
-    "Forking OpenCode session for clone",
+    "Forking harness session for clone",
   );
 
   const session = await harness.forkSession(sourceAgent.session_id, options?.messageId);
 
-  log.server.info({ original_session: sourceAgent.session_id, forked_session: session.id }, "OpenCode session forked");
+  log.server.info({ original_session: sourceAgent.session_id, forked_session: session.id }, "Harness session forked");
 
   // Determine parent, tree_id, and level based on calling agent (if provided)
   let parent_id: string;
