@@ -48,31 +48,6 @@ We introduced an "Agent Harness" abstraction layer so Birdhouse can support mult
 
 <!-- The sections below were populated by an audit of the full codebase -->
 
-### Server test files still importing OpenCode types (Fix Before Pi)
-
-#### Feature and route tests still use `lib/opencode-client` types for fixtures
-
-- **Files:**
-  - `server/src/features/api/question.test.ts:8`
-  - `server/src/features/api/revert.test.ts:9`
-  - `server/src/routes/agents.test.ts:8`
-  - `server/src/features/api/send-message.test.ts:8`
-  - `server/src/features/aapi/send-message.test.ts:7`
-  - `server/src/features/aapi/create.test.ts:8`
-  - `server/src/routes/agents.send-message.test.ts:8`
-  - `server/src/routes/agents.get-by-id.test.ts:7`
-  - `server/src/features/aapi/export-tree.test.ts:12`
-  - `server/src/features/api/export-markdown.test.ts:8`
-  - `server/src/features/aapi/export-markdown.test.ts:11`
-  - `server/src/routes/skills.test.ts:11`
-  - `server/src/routes/aapi-agents.create-clone.test.ts:7`
-  - `server/src/routes/aapi-agents.test.ts:8`
-  - `server/src/features/aapi/helpers/message-filter.test.ts:5`
-  - `server/src/domain/clone-point.test.ts:5`
-- **Problem:** These tests are outside `server/src/harness/` but still anchor their fixtures to `lib/opencode-client` types like `Message`, `Session`, `Skill`, and `QuestionRequest`.
-- **Fix:** Convert the fixtures to use Birdhouse-owned harness types from `server/src/harness/` wherever possible. For pure fixture data, prefer `BirdhouseMessage`, `BirdhouseSession`, `BirdhouseSkill`, and related helpers from `createTestAgentHarness()`.
-- **Priority:** `Fix Before Pi`
-
 ### Frontend OpenCode type dependencies (Future / Frontend)
 
 #### Core frontend message model still exposes OpenCode message info
