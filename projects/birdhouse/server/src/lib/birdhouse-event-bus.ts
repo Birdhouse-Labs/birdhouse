@@ -12,6 +12,10 @@ export interface BirdhouseEventBus {
   emit(event: BirdhouseWorkspaceEvent): void;
 }
 
+interface BirdhouseEventBusOptions {
+  forceWorkspaceScope?: boolean;
+}
+
 class WorkspaceBirdhouseEventBus implements BirdhouseEventBus {
   private readonly listeners = new Set<(event: BirdhouseWorkspaceEvent) => void | Promise<void>>();
 
@@ -33,10 +37,13 @@ class WorkspaceBirdhouseEventBus implements BirdhouseEventBus {
 let testBus: WorkspaceBirdhouseEventBus | null = null;
 const workspaceBuses = new Map<string, WorkspaceBirdhouseEventBus>();
 
-export function getWorkspaceEventBus(workspaceDirectory: string): BirdhouseEventBus {
+export function getWorkspaceEventBus(
+  workspaceDirectory: string,
+  options: BirdhouseEventBusOptions = {},
+): BirdhouseEventBus {
   const isTest = process.env.NODE_ENV === "test" || (typeof Bun !== "undefined" && Bun?.main?.includes(".test."));
 
-  if (isTest) {
+  if (isTest && !options.forceWorkspaceScope) {
     if (!testBus) {
       testBus = new WorkspaceBirdhouseEventBus();
     }
