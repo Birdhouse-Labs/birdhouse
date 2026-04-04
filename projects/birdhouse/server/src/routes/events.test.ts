@@ -3,6 +3,7 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { createTestDeps, useDeps, withDeps } from "../dependencies";
+import { getWorkspaceEventBus, resetBirdhouseEventBus } from "../lib/birdhouse-event-bus";
 import { getOpenCodeStream, resetStream } from "../lib/opencode-stream";
 import { withWorkspaceContext } from "../test-utils";
 import { createRootAgent } from "../test-utils/agent-factories";
@@ -46,6 +47,7 @@ async function readSSEEvents(response: Response, count: number, skipConnectionEv
 
 afterEach(() => {
   resetStream();
+  resetBirdhouseEventBus();
 });
 
 describe("GET /api/events (SSE)", () => {
@@ -118,6 +120,39 @@ describe("GET /api/events (SSE)", () => {
       const eventData = JSON.parse(events[0]);
       expect(eventData.type).toBe("session.idle");
       expect(eventData.properties.sessionID).toBe("ses_complete");
+    });
+  });
+
+  test("forwards Birdhouse synthetic events from the workspace bus", async () => {
+    const _deps = await createTestDeps();
+    await withDeps(_deps, async () => {
+      const app = await withWorkspaceContext(createEventRoutes);
+      const bus = getWorkspaceEventBus("/test/workspace");
+
+      const request = new Request("http://localhost:3000/");
+      const responsePromise = app.request(request);
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      bus.emit({
+        type: "birdhouse.agent.created",
+        properties: {
+          agentId: "agent_created_1",
+          agent: { id: "agent_created_1", title: "Created Agent" },
+        },
+      });
+
+      const response = await responsePromise;
+      const events = await Promise.race([
+        readSSEEvents(response, 1),
+        new Promise<string[]>((r) => setTimeout(() => r([]), 100)),
+      ]);
+
+      expect(events).toHaveLength(1);
+      const eventData = JSON.parse(events[0]);
+      expect(eventData.type).toBe("birdhouse.agent.created");
+      expect(eventData.properties.agentId).toBe("agent_created_1");
+      expect(eventData.properties.agent.title).toBe("Created Agent");
     });
   });
 
@@ -305,6 +340,47 @@ describe("GET /api/events (SSE)", () => {
 
         expect(eventData.properties.agentId).toBe("agent_error");
         expect(eventData.properties.sessionID).toBe("ses_error_123");
+      });
+    });
+
+    test("adds agentId to Birdhouse bus events when sessionID is provided", async () => {
+      const _deps = await createTestDeps();
+      await withDeps(_deps, async () => {
+        const { agentsDB } = useDeps();
+
+        createRootAgent(agentsDB, {
+          id: "agent_bus_123",
+          session_id: "ses_bus_123",
+          model: "test-model",
+        });
+
+        const app = await withWorkspaceContext(createEventRoutes, { agentsDb: agentsDB });
+        const bus = getWorkspaceEventBus("/test/workspace");
+
+        const request = new Request("http://localhost:3000/");
+        const responsePromise = app.request(request);
+
+        await new Promise((r) => setTimeout(r, 10));
+
+        bus.emit({
+          type: "birdhouse.agent.updated",
+          sessionID: "ses_bus_123",
+          properties: {
+            agent: { id: "agent_bus_123", title: "Updated Agent" },
+          },
+        });
+
+        const response = await responsePromise;
+        const events = await Promise.race([
+          readSSEEvents(response, 1),
+          new Promise<string[]>((r) => setTimeout(() => r([]), 100)),
+        ]);
+
+        expect(events).toHaveLength(1);
+        const eventData = JSON.parse(events[0]);
+        expect(eventData.type).toBe("birdhouse.agent.updated");
+        expect(eventData.properties.agentId).toBe("agent_bus_123");
+        expect(eventData.properties.agent.title).toBe("Updated Agent");
       });
     });
 

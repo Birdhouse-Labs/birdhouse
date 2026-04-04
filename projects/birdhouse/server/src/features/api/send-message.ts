@@ -7,10 +7,10 @@ import { cloneAgent } from "../../domain/agent-lifecycle";
 import { findSafeClonePoint } from "../../domain/clone-point";
 import type { AgentHarness, BirdhouseFilePart } from "../../harness";
 import type { AgentRow } from "../../lib/agents-db";
+import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "../../lib/birdhouse-system-prompt";
 import { buildPromptParts, parseFileAttachments } from "../../lib/message-parts";
 import { parseModelId } from "../../lib/model-validator";
-import { getWorkspaceStream } from "../../lib/opencode-stream";
 import { buildSkillAttachmentPreview, enrichMessageWithSkillAttachments } from "../../lib/skill-attachments";
 import { syncAgentTitle } from "../../lib/sync-agent-title";
 import { generateTitle as generateTitleService } from "../../lib/title-generator";
@@ -129,10 +129,10 @@ export async function sendMessage(
 
     // Clone with temporary title (will be replaced after message sent)
     const workspaceDir = workspace.directory || workspaceRoot;
-    const stream = getWorkspaceStream(opencodeBase, workspaceDir);
+    const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
     clonedAgent = await cloneAgent(
       sourceAgent,
-      { ...deps, stream },
+      { ...deps, birdhouseEventBus },
       {
         title: "Cloning Agent...",
         messageId: clonePointMessageId,
@@ -152,7 +152,7 @@ export async function sendMessage(
     // Insert timeline events for clone_and_send (action-centric model)
     try {
       const now = Date.now();
-      const stream = getWorkspaceStream(opencodeBase, workspaceDir);
+      const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
 
       // Common event data for both events (human-initiated, so actor is null)
       const eventData = {
@@ -173,19 +173,22 @@ export async function sendMessage(
         ...eventData,
       });
 
-      stream.emitCustomEvent("birdhouse.event.created", {
-        agentId: sourceAgent.id,
-        event: {
-          id: sourceEvent.id,
-          event_type: sourceEvent.event_type,
-          timestamp: sourceEvent.timestamp,
-          actor_agent_id: sourceEvent.actor_agent_id,
-          actor_agent_title: sourceEvent.actor_agent_title,
-          source_agent_id: sourceEvent.source_agent_id,
-          source_agent_title: sourceEvent.source_agent_title,
-          target_agent_id: sourceEvent.target_agent_id,
-          target_agent_title: sourceEvent.target_agent_title,
-          metadata: sourceEvent.metadata ? JSON.parse(sourceEvent.metadata) : undefined,
+      birdhouseEventBus.emit({
+        type: "birdhouse.event.created",
+        properties: {
+          agentId: sourceAgent.id,
+          event: {
+            id: sourceEvent.id,
+            event_type: sourceEvent.event_type,
+            timestamp: sourceEvent.timestamp,
+            actor_agent_id: sourceEvent.actor_agent_id,
+            actor_agent_title: sourceEvent.actor_agent_title,
+            source_agent_id: sourceEvent.source_agent_id,
+            source_agent_title: sourceEvent.source_agent_title,
+            target_agent_id: sourceEvent.target_agent_id,
+            target_agent_title: sourceEvent.target_agent_title,
+            metadata: sourceEvent.metadata ? JSON.parse(sourceEvent.metadata) : undefined,
+          },
         },
       });
 
@@ -195,19 +198,22 @@ export async function sendMessage(
         ...eventData,
       });
 
-      stream.emitCustomEvent("birdhouse.event.created", {
-        agentId: clonedAgent.id,
-        event: {
-          id: targetEvent.id,
-          event_type: targetEvent.event_type,
-          timestamp: targetEvent.timestamp,
-          actor_agent_id: targetEvent.actor_agent_id,
-          actor_agent_title: targetEvent.actor_agent_title,
-          source_agent_id: targetEvent.source_agent_id,
-          source_agent_title: targetEvent.source_agent_title,
-          target_agent_id: targetEvent.target_agent_id,
-          target_agent_title: targetEvent.target_agent_title,
-          metadata: targetEvent.metadata ? JSON.parse(targetEvent.metadata) : undefined,
+      birdhouseEventBus.emit({
+        type: "birdhouse.event.created",
+        properties: {
+          agentId: clonedAgent.id,
+          event: {
+            id: targetEvent.id,
+            event_type: targetEvent.event_type,
+            timestamp: targetEvent.timestamp,
+            actor_agent_id: targetEvent.actor_agent_id,
+            actor_agent_title: targetEvent.actor_agent_title,
+            source_agent_id: targetEvent.source_agent_id,
+            source_agent_title: targetEvent.source_agent_title,
+            target_agent_id: targetEvent.target_agent_id,
+            target_agent_title: targetEvent.target_agent_title,
+            metadata: targetEvent.metadata ? JSON.parse(targetEvent.metadata) : undefined,
+          },
         },
       });
 
@@ -369,7 +375,7 @@ async function generateAndUpdateTitleForClone(
   message: string,
   sourceTitle: string,
   _workspaceId: string,
-  opencodeBase: string,
+  _opencodeBase: string,
   workspaceDir: string,
   harness: Pick<AgentHarness, "updateSessionTitle">,
 ): Promise<void> {
@@ -395,7 +401,6 @@ async function generateAndUpdateTitleForClone(
       {
         agentsDB,
         harness,
-        opencodeBase,
         workspaceDir,
         log,
       },

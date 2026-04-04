@@ -6,8 +6,8 @@ import type { Deps, Session } from "../../dependencies";
 import { cloneAgent, createAgent } from "../../domain/agent-lifecycle";
 import { sendFirstMessage } from "../../lib/agent-messaging";
 import type { AgentRow } from "../../lib/agents-db";
+import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
 import { validateModel } from "../../lib/model-validator";
-import { getWorkspaceStream } from "../../lib/opencode-stream";
 
 /**
  * Helper: Get current agent by session ID (for from_self)
@@ -175,12 +175,12 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
       }
 
       const workspaceDir = workspace.directory;
-      const stream = getWorkspaceStream(opencodeBase, workspaceDir);
+      const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
 
       // Clone the agent using the helper function
       newAgent = await cloneAgent(
         sourceAgent,
-        { ...deps, stream },
+        { ...deps, birdhouseEventBus },
         {
           messageId: actualMessageId,
           title: title.trim(),
@@ -229,19 +229,22 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
             ...eventData,
           });
 
-          stream.emitCustomEvent("birdhouse.event.created", {
-            agentId: agentId,
-            event: {
-              id: event.id,
-              event_type: event.event_type,
-              timestamp: event.timestamp,
-              actor_agent_id: event.actor_agent_id,
-              actor_agent_title: event.actor_agent_title,
-              source_agent_id: event.source_agent_id,
-              source_agent_title: event.source_agent_title,
-              target_agent_id: event.target_agent_id,
-              target_agent_title: event.target_agent_title,
-              metadata: event.metadata ? JSON.parse(event.metadata) : undefined,
+          birdhouseEventBus.emit({
+            type: "birdhouse.event.created",
+            properties: {
+              agentId,
+              event: {
+                id: event.id,
+                event_type: event.event_type,
+                timestamp: event.timestamp,
+                actor_agent_id: event.actor_agent_id,
+                actor_agent_title: event.actor_agent_title,
+                source_agent_id: event.source_agent_id,
+                source_agent_title: event.source_agent_title,
+                target_agent_id: event.target_agent_id,
+                target_agent_title: event.target_agent_title,
+                metadata: event.metadata ? JSON.parse(event.metadata) : undefined,
+              },
             },
           });
 
@@ -348,8 +351,8 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
       }
 
       const workspaceDir = workspace.directory;
-      const stream = getWorkspaceStream(opencodeBase, workspaceDir);
-      newAgent = createAgent(agentsDB, agentData, stream, telemetry, deps.dataDb);
+      const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
+      newAgent = createAgent(agentsDB, agentData, birdhouseEventBus, telemetry, deps.dataDb);
 
       log.server.info(
         {

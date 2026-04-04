@@ -3,8 +3,8 @@
 
 import type { BirdhouseSession as Session } from "../harness";
 import type { AgentRow, AgentsDB } from "../lib/agents-db";
+import type { BirdhouseEventBus } from "../lib/birdhouse-event-bus";
 import type { DataDB } from "../lib/data-db";
-import type { OpenCodeStream } from "../lib/opencode-stream";
 import type { TelemetryClient } from "../lib/telemetry";
 
 /**
@@ -28,13 +28,13 @@ function sanitizeTitle(title: string): string {
  *
  * @param agentsDB Database instance
  * @param agentData Agent data to insert
- * @param stream OpenCode stream for emitting events
+ * @param birdhouseEventBus Birdhouse event bus for emitting synthetic events
  * @returns The created agent
  */
 export function createAgent(
   agentsDB: AgentsDB,
   agentData: Omit<AgentRow, "id"> & { id?: string },
-  stream: OpenCodeStream,
+  birdhouseEventBus: BirdhouseEventBus,
   telemetry: TelemetryClient,
   dataDb: DataDB,
 ): AgentRow {
@@ -47,9 +47,12 @@ export function createAgent(
   const agent = agentsDB.insertAgent(sanitizedData);
 
   // Notify system that agent was created
-  stream.emitCustomEvent("birdhouse.agent.created", {
-    agentId: agent.id,
-    agent: agent,
+  birdhouseEventBus.emit({
+    type: "birdhouse.agent.created",
+    properties: {
+      agentId: agent.id,
+      agent,
+    },
   });
 
   // Anonymous telemetry: count agents created across all installations
@@ -98,7 +101,7 @@ export async function cloneAgent(
         info: (meta: Record<string, unknown>, msg: string) => void;
       };
     };
-    stream: OpenCodeStream;
+    birdhouseEventBus: BirdhouseEventBus;
     telemetry: TelemetryClient;
   },
   options?: {
@@ -184,7 +187,7 @@ export async function cloneAgent(
     archived_at: null,
   };
 
-  const clonedAgent = createAgent(agentsDB, agentData, deps.stream, deps.telemetry, deps.dataDb);
+  const clonedAgent = createAgent(agentsDB, agentData, deps.birdhouseEventBus, deps.telemetry, deps.dataDb);
 
   log.server.info(
     {

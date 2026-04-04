@@ -10,7 +10,7 @@ export type {
   HarnessSkillsCapability,
   SendMessageOptions,
 } from "./agent-harness";
-export type { HarnessEvent, HarnessEventStream, HarnessEventType } from "./harness-events";
+export type { BirdhouseEvent, HarnessEvent, HarnessEventStream, HarnessEventType } from "./harness-events";
 export type { HarnessHealth, HarnessLifecycle, HarnessRuntimeStatus, HarnessStartOptions } from "./harness-lifecycle";
 export { OpenCodeAgentHarness } from "./opencode-adapter";
 export type { TestAgentHarness, TestHarnessEventStream } from "./test-harness";

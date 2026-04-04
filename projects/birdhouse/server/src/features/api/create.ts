@@ -7,8 +7,8 @@ import { createAgent } from "../../domain/agent-lifecycle";
 import { sendFirstMessage } from "../../lib/agent-messaging";
 import type { AgentRow } from "../../lib/agents-db";
 import { generateAgentId } from "../../lib/agents-db";
+import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
 import { parseFileAttachments } from "../../lib/message-parts";
-import { getWorkspaceStream } from "../../lib/opencode-stream";
 import { syncAgentTitle } from "../../lib/sync-agent-title";
 import { generateTitle as generateTitleService } from "../../lib/title-generator";
 import "../../types/context";
@@ -112,9 +112,9 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
       throw new Error("Workspace context not available");
     }
     const workspaceDir = workspace.directory;
-    const stream = getWorkspaceStream(opencodeBase, workspaceDir);
+    const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
 
-    const agent = createAgent(agentsDB, agentData, stream, telemetry, deps.dataDb);
+    const agent = createAgent(agentsDB, agentData, birdhouseEventBus, telemetry, deps.dataDb);
 
     log.server.info(
       {
@@ -224,7 +224,7 @@ async function generateAndUpdateTitle(
   agentId: string,
   message: string,
   _workspaceId: string,
-  opencodeBase: string,
+  _opencodeBase: string,
   workspaceDir: string,
   harness: Pick<import("../../harness/agent-harness").AgentHarness, "updateSessionTitle">,
   _sourceTitle?: string,
@@ -248,7 +248,6 @@ async function generateAndUpdateTitle(
       {
         agentsDB,
         harness,
-        opencodeBase,
         workspaceDir,
         log,
       },

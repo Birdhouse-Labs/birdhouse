@@ -80,14 +80,12 @@ export function createAgentRoutes() {
 
       // Update agent title in Birdhouse, sync to OpenCode, and emit SSE event
       const deps = getDepsFromContext(c);
-      const opencodeBase = c.get("opencodeBase");
       const workspace = c.get("workspace");
 
       const updatedAgent = await syncAgentTitle(
         {
           agentsDB,
           harness: deps.harness,
-          opencodeBase,
           workspaceDir: workspace.directory,
           log: deps.log,
         },

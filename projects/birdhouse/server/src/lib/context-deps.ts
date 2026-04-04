@@ -4,6 +4,8 @@
 import type { Context } from "hono";
 import { type Deps, depsContext } from "../dependencies";
 import { OpenCodeAgentHarness } from "../harness";
+import { OpenCodeHarnessEventStream } from "../harness/opencode-event-adapter";
+import { getWorkspaceEventBus } from "./birdhouse-event-bus";
 import { getDataDB } from "./data-db";
 import { log } from "./logger";
 import { createLiveOpenCodeClient } from "./opencode-client";
@@ -51,5 +53,9 @@ export function getDepsFromContext(c: Context): Deps {
       // This ensures the same stream instance is used for both emitting and listening
       return getWorkspaceStream(streamOpencodeBase, workspaceDirectory);
     },
+    getHarnessEventStream: (streamOpencodeBase: string, workspaceDirectory: string) => {
+      return new OpenCodeHarnessEventStream(getWorkspaceStream(streamOpencodeBase, workspaceDirectory));
+    },
+    getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
   };
 }

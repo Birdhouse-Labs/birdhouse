@@ -20,6 +20,11 @@ export type HarnessEventType =
   | "todo.updated"
   | (string & {});
 
+export interface BirdhouseEvent {
+  type: string;
+  properties: Record<string, unknown>;
+}
+
 export interface HarnessEventEnvelope {
   type: HarnessEventType;
   sessionID?: string;

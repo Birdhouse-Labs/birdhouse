@@ -3,13 +3,12 @@
 
 import type { AgentHarness } from "../harness";
 import type { AgentRow, AgentsDB } from "./agents-db";
+import { getWorkspaceEventBus } from "./birdhouse-event-bus";
 import type { LoggerDeps } from "./logger";
-import { getWorkspaceStream } from "./opencode-stream";
 
 export interface SyncAgentTitleDeps {
   agentsDB: AgentsDB;
   harness: Pick<AgentHarness, "updateSessionTitle">;
-  opencodeBase: string;
   workspaceDir: string;
   log: LoggerDeps;
 }
@@ -24,14 +23,14 @@ export interface SyncAgentTitleDeps {
  * - Birdhouse DB is source of truth
  * - SSE event fires regardless of OpenCode sync status
  *
- * @param deps - Dependencies (agentsDB, harness, opencodeBase, workspaceDir, log)
+ * @param deps - Dependencies (agentsDB, harness, workspaceDir, log)
  * @param agentId - Agent ID to update
  * @param newTitle - New title to set
  * @returns Updated agent row from database
  * @throws Error if Birdhouse DB update fails (NOT if OpenCode sync fails)
  */
 export async function syncAgentTitle(deps: SyncAgentTitleDeps, agentId: string, newTitle: string): Promise<AgentRow> {
-  const { agentsDB, harness, opencodeBase, workspaceDir, log } = deps;
+  const { agentsDB, harness, workspaceDir, log } = deps;
 
   // 1. Update Birdhouse DB (source of truth)
   const updatedAgent = agentsDB.updateAgentTitle(agentId, newTitle);
@@ -65,10 +64,13 @@ export async function syncAgentTitle(deps: SyncAgentTitleDeps, agentId: string, 
   }
 
   // 3. Emit SSE event for frontend (always happens, even if OpenCode sync failed)
-  const stream = getWorkspaceStream(opencodeBase, workspaceDir);
-  stream.emitCustomEvent("birdhouse.agent.updated", {
-    agentId,
-    agent: updatedAgent,
+  const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
+  birdhouseEventBus.emit({
+    type: "birdhouse.agent.updated",
+    properties: {
+      agentId,
+      agent: updatedAgent,
+    },
   });
 
   return updatedAgent;

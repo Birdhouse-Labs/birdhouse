@@ -207,18 +207,15 @@ describe("POST /api/agents - Create root agent", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const { getOpenCodeStream } = await import("../lib/opencode-stream");
-      const stream = getOpenCodeStream();
+      const { getWorkspaceEventBus } = await import("../lib/birdhouse-event-bus");
+      const bus = getWorkspaceEventBus("/test/workspace");
 
-      // Spy on emitCustomEvent
       let capturedEventType: string | undefined;
       let capturedEventData: Record<string, unknown> | undefined;
-      const originalEmit = stream.emitCustomEvent.bind(stream);
-      stream.emitCustomEvent = (type: string, properties: Record<string, unknown>) => {
-        capturedEventType = type;
-        capturedEventData = properties;
-        originalEmit(type, properties);
-      };
+      const unsubscribe = bus.subscribe((event) => {
+        capturedEventType = event.type;
+        capturedEventData = event.properties;
+      });
 
       const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
@@ -239,8 +236,7 @@ describe("POST /api/agents - Create root agent", () => {
       expect(capturedEventData?.agentId).toBe(agent.id);
       expect(capturedEventData?.agent).toEqual(agent);
 
-      // Restore original function
-      stream.emitCustomEvent = originalEmit;
+      unsubscribe();
     });
   });
 
@@ -1745,18 +1741,15 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
     };
 
     await withDeps(deps, async () => {
-      const { getOpenCodeStream } = await import("../lib/opencode-stream");
-      const stream = getOpenCodeStream();
+      const { getWorkspaceEventBus } = await import("../lib/birdhouse-event-bus");
+      const bus = getWorkspaceEventBus("/test/workspace");
 
-      // Spy on emitCustomEvent
       let capturedEventType: string | undefined;
       let capturedEventData: Record<string, unknown> | undefined;
-      const originalEmit = stream.emitCustomEvent.bind(stream);
-      stream.emitCustomEvent = (type: string, properties: Record<string, unknown>) => {
-        capturedEventType = type;
-        capturedEventData = properties;
-        originalEmit(type, properties);
-      };
+      const unsubscribe = bus.subscribe((event) => {
+        capturedEventType = event.type;
+        capturedEventData = event.properties;
+      });
 
       const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_sync_test", {
@@ -1782,8 +1775,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
       expect(capturedEventData?.agentId).toBe("agent_sync_test");
       expect(capturedEventData?.agent).toEqual(updatedAgent);
 
-      // Restore original function
-      stream.emitCustomEvent = originalEmit;
+      unsubscribe();
     });
   });
 
@@ -1810,18 +1802,15 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
     };
 
     await withDeps(deps, async () => {
-      const { getOpenCodeStream } = await import("../lib/opencode-stream");
-      const stream = getOpenCodeStream();
+      const { getWorkspaceEventBus } = await import("../lib/birdhouse-event-bus");
+      const bus = getWorkspaceEventBus("/test/workspace");
 
-      // Spy on emitCustomEvent
       let capturedEventType: string | undefined;
       let capturedEventData: Record<string, unknown> | undefined;
-      const originalEmit = stream.emitCustomEvent.bind(stream);
-      stream.emitCustomEvent = (type: string, properties: Record<string, unknown>) => {
-        capturedEventType = type;
-        capturedEventData = properties;
-        originalEmit(type, properties);
-      };
+      const unsubscribe = bus.subscribe((event) => {
+        capturedEventType = event.type;
+        capturedEventData = event.properties;
+      });
 
       const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_fail_test", {
@@ -1847,8 +1836,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
       expect(capturedEventData?.agentId).toBe("agent_fail_test");
       expect(capturedEventData?.agent).toEqual(updatedAgent);
 
-      // Restore original function
-      stream.emitCustomEvent = originalEmit;
+      unsubscribe();
     });
   });
 });

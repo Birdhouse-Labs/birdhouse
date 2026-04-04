@@ -7,12 +7,15 @@ import type {
   AgentHarness,
   BirdhouseQuestionRequest,
   BirdhouseSkill,
+  HarnessEventStream,
   BirdhouseMessage as Message,
   BirdhouseProvidersResponse as ProvidersResponse,
   BirdhouseSession as Session,
 } from "./harness";
 import { createTestAgentHarness } from "./harness";
+import { OpenCodeHarnessEventStream } from "./harness/opencode-event-adapter";
 import { type AgentsDB, getDefaultDatabasePath, initAgentsDB } from "./lib/agents-db";
+import { type BirdhouseEventBus, getWorkspaceEventBus } from "./lib/birdhouse-event-bus";
 import type { DataDB } from "./lib/data-db";
 import { type CapturedLog, createLiveLogger, createTestLogger, type LoggerDeps } from "./lib/logger";
 import { getOpenCodeStream, type OpenCodeStream } from "./lib/opencode-stream";
@@ -52,6 +55,8 @@ export interface Deps {
   posthog: PosthogProxy;
   telemetry: TelemetryClient;
   getStream: (opencodeBase: string, workspaceDirectory: string) => OpenCodeStream;
+  getHarnessEventStream: (opencodeBase: string, workspaceDirectory: string) => HarnessEventStream;
+  getBirdhouseEventBus: (workspaceDirectory: string) => BirdhouseEventBus;
 }
 
 // ============================================================================
@@ -274,6 +279,10 @@ export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides):
       // Tests: Return singleton so test events flow through to route
       return getOpenCodeStream();
     },
+    getHarnessEventStream: (_opencodeBase: string, workspaceDirectory: string) => {
+      return new OpenCodeHarnessEventStream(getOpenCodeStream("http://test", workspaceDirectory));
+    },
+    getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
   };
 }
 
@@ -286,5 +295,9 @@ export async function createPosthogDeps(): Promise<Deps> {
     posthog: createLivePosthogProxy(),
     telemetry: createTestTelemetryClient(),
     getStream: (_opencodeBase: string, _workspaceDirectory: string) => getOpenCodeStream(),
+    getHarnessEventStream: (opencodeBase: string, workspaceDirectory: string) => {
+      return new OpenCodeHarnessEventStream(getOpenCodeStream(opencodeBase, workspaceDirectory));
+    },
+    getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
   };
 }
