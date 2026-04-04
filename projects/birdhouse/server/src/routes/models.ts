@@ -1,7 +1,8 @@
-// ABOUTME: Model routes for fetching available AI models
-// ABOUTME: Proxies requests to OpenCode's provider endpoints and transforms responses
+// ABOUTME: Model routes for fetching available AI models.
+// ABOUTME: Reads provider/model data through the harness and reshapes it for the frontend.
 
 import { Hono } from "hono";
+import { getDepsFromContext } from "../lib/context-deps";
 import "../types/context";
 
 interface Provider {
@@ -49,15 +50,8 @@ export function createModelRoutes() {
   // GET /api/models - Get list of available models
   app.get("/", async (c) => {
     try {
-      const opencodeBase = c.get("opencodeBase");
-      // Fetch providers from OpenCode
-      const response = await fetch(`${opencodeBase}/config/providers`);
-
-      if (!response.ok) {
-        throw new Error(`Model provider API error: ${response.statusText}`);
-      }
-
-      const data = (await response.json()) as { providers: Provider[] };
+      const { harness } = getDepsFromContext(c);
+      const data = (await harness.getProviders()) as { providers: Provider[] };
       const providers: Provider[] = data.providers || [];
 
       // Transform to simple model list
