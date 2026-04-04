@@ -4,8 +4,8 @@
 import { dirname } from "node:path";
 import { Hono } from "hono";
 import { getDepsFromContext } from "../lib/context-deps";
+import { getWorkspaceEventBus } from "../lib/birdhouse-event-bus";
 import type { DataDB } from "../lib/data-db";
-import { broadcastToAllWorkspaces } from "../lib/opencode-stream";
 import { buildSkillAttachmentPreview } from "../lib/skill-attachments";
 import {
   findSkillByName,
@@ -102,6 +102,7 @@ export function createSkillRoutes(dataDb: DataDB) {
   app.patch("/:skillName/trigger-phrases", async (c) => {
     const { harness } = getDepsFromContext(c);
     const skillsCapability = harness.capabilities.skills;
+    const workspace = c.get("workspace");
     const skillName = c.req.param("skillName");
     const body = await c.req.json();
     const validated = validateTriggerPhrases(body.trigger_phrases);
@@ -117,8 +118,12 @@ export function createSkillRoutes(dataDb: DataDB) {
     }
 
     dataDb.setSkillTriggerPhrases(skill.name, validated.triggerPhrases);
-    broadcastToAllWorkspaces("birdhouse.skill.updated", {
-      skillName: skill.name,
+    const birdhouseEventBus = getWorkspaceEventBus(workspace.directory);
+    birdhouseEventBus.emit({
+      type: "birdhouse.skill.updated",
+      properties: {
+        skillName: skill.name,
+      },
     });
 
     return c.json({
