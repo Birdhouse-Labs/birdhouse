@@ -1,5 +1,5 @@
 // ABOUTME: Composer attachment types shared across new-agent and reply inputs.
-// ABOUTME: Keeps pre-send attachment preview state aligned with OpenCode file-part fields.
+// ABOUTME: Keeps pre-send attachment preview state aligned with harness attachment fields.
 
 export interface ComposerAttachment {
   id: string;

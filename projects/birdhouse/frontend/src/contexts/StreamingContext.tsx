@@ -143,7 +143,7 @@ export type ConnectionEstablishedHandler = () => void;
 
 /**
  * Handler function for workspace restarting events
- * Fires when a workspace restart is initiated — before OpenCode shuts down
+ * Fires when a workspace restart is initiated — before the workspace harness shuts down
  */
 export type WorkspaceRestartingHandler = () => void;
 
@@ -154,7 +154,7 @@ export type WorkspaceRestartingHandler = () => void;
 export type SkillUpdatedHandler = (payload: { skillName: string }) => void;
 
 /**
- * Handler function for question asked events (OpenCode question tool)
+ * Handler function for question asked events (harness question tool)
  * Fires when an AI agent pauses to ask the human a question
  */
 export type QuestionAskedHandler = (question: QuestionRequest) => void;
@@ -282,7 +282,7 @@ interface StreamingContextValue {
 
   /**
    * Subscribe to workspace restarting events
-   * Fires when a workspace restart is initiated — before OpenCode shuts down
+   * Fires when a workspace restart is initiated — before the workspace harness shuts down
    * @returns Cleanup function to unsubscribe
    */
   subscribeToWorkspaceRestarting: (handler: WorkspaceRestartingHandler) => () => void;

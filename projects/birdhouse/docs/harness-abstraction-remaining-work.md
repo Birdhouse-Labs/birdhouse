@@ -48,19 +48,14 @@ We introduced an "Agent Harness" abstraction layer so Birdhouse can support mult
 
 <!-- The sections below were populated by an audit of the full codebase -->
 
-#### Frontend workspace and config types still expose OpenCode runtime/config concepts
+#### Frontend workspace log source labels still expose OpenCode runtime concepts
 
 - **Files:**
-  - `frontend/src/types/workspace.ts:13-15`
-  - `frontend/src/types/workspace.ts:55-60`
   - `frontend/src/types/workspace.ts:88`
-  - `frontend/src/workspace-config/types/config-types.ts:31-36`
-  - `frontend/src/workspace-config/types/api-types.ts:31-36`
-  - `frontend/src/services/workspaces-api.ts:288-323`
-  - `frontend/src/utils/composerAttachments.ts:2`
-  - `frontend/src/types/composer-attachments.ts:2`
-- **Problem:** The frontend still exposes `opencode_running`, `opencode_base`, log source `"opencode"`, and OpenCode-specific config terminology in user-facing types and comments.
-- **Fix:** If Birdhouse is going to support multiple harness runtimes, these should be generalized to runtime- or harness-oriented names. If OpenCode remains the only workspace runtime, keep the backend fields but isolate the naming to workspace runtime/admin surfaces.
+  - `frontend/src/components/LogViewer.tsx:22`
+  - `frontend/src/components/LogViewer.test.tsx:36-82`
+- **Problem:** Workspace details, health, config, and composer surfaces now use harness-generic names, but recent log filtering still exposes an `"opencode"` source label in the frontend.
+- **Fix:** Decide whether recent logs should use a generic `"harness"` source label or keep `"opencode"` while only the OpenCode runtime exists.
 - **Priority:** `Future / Frontend`
 
 ### Informational / expected items

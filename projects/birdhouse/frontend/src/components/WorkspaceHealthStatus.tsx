@@ -39,9 +39,9 @@ const WorkspaceHealthStatus: Component<WorkspaceHealthStatusProps> = (props) => 
     }
 
     const lines: string[] = [];
-    lines.push(`Status: ${props.health.opencodeRunning ? "Online" : "Offline"}`);
+    lines.push(`Status: ${props.health.harnessRunning ? "Online" : "Offline"}`);
 
-    if (props.health.opencodeRunning) {
+    if (props.health.harnessRunning) {
       if (props.health.port !== null) {
         lines.push(`Port: ${props.health.port}`);
       }
@@ -68,7 +68,7 @@ const WorkspaceHealthStatus: Component<WorkspaceHealthStatusProps> = (props) => 
       return "Unknown";
     }
 
-    if (props.health.opencodeRunning) {
+    if (props.health.harnessRunning) {
       return "Online";
     }
 
@@ -85,7 +85,7 @@ const WorkspaceHealthStatus: Component<WorkspaceHealthStatusProps> = (props) => 
       return "text-text-muted";
     }
 
-    return props.health.opencodeRunning ? "text-success" : "text-danger";
+    return props.health.harnessRunning ? "text-success" : "text-danger";
   };
 
   return (

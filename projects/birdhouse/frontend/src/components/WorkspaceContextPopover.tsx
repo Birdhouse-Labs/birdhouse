@@ -33,7 +33,7 @@ const HealthDot: Component<{ health: WorkspaceHealthResponse | undefined; isLoad
     if (props.isLoading || !props.health) {
       return "text-text-muted";
     }
-    return props.health.opencodeRunning ? "text-success" : "text-danger";
+    return props.health.harnessRunning ? "text-success" : "text-danger";
   };
 
   return <span class={`text-xs ${colorClass()}`}>●</span>;

@@ -1,5 +1,5 @@
 // ABOUTME: Unit tests for workspace health tooltip content
-// ABOUTME: Verifies online tooltip details include OpenCode port and PID order
+// ABOUTME: Verifies online tooltip details include harness port and PID order
 
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
@@ -13,7 +13,7 @@ describe("WorkspaceHealthStatus", () => {
         health={{
           workspaceId: "ws-123",
           title: "Test",
-          opencodeRunning: true,
+          harnessRunning: true,
           port: 3001,
           pid: 12345,
           error: null,

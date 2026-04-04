@@ -34,7 +34,7 @@ const McpConfigSection: Component<McpConfigSectionProps> = (props) => {
 
     // Local server - show command (can be string or array)
     if (config.command) {
-      // Handle command as array (OpenCode format) or string
+      // Handle command as an argument array or a single command string
       if (Array.isArray(config.command)) {
         return config.command.join(" ");
       }

@@ -1,5 +1,5 @@
 // ABOUTME: Converts accepted pasted, dropped, and restored files into composer attachment previews.
-// ABOUTME: Produces data URLs so the send layer can forward OpenCode-style file parts.
+// ABOUTME: Produces data URLs so the send layer can forward harness file parts.
 
 import type { ComposerAttachment, ComposerAttachmentPayload } from "../types/composer-attachments";
 

@@ -285,7 +285,7 @@ export async function restartWorkspace(workspaceId: string): Promise<{ success: 
 }
 
 /**
- * Trigger OpenCode spawn for workspace (fire-and-forget on server side)
+ * Trigger workspace harness startup for workspace (fire-and-forget on server side)
  * Returns once the request is accepted (202)
  * @param workspaceId Workspace ID to start
  */
@@ -318,8 +318,8 @@ export async function startWorkspace(workspaceId: string): Promise<void> {
 }
 
 /**
- * Fetch recent structured log lines from Birdhouse and optionally OpenCode
- * @param workspaceId Workspace ID to include OpenCode logs (optional)
+ * Fetch recent structured log lines from Birdhouse and optionally the workspace harness
+ * @param workspaceId Workspace ID to include harness logs (optional)
  * @returns Recent log lines and truncation flag
  */
 export async function fetchRecentLogs(workspaceId?: string): Promise<RecentLogsResponse> {

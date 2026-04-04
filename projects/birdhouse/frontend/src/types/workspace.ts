@@ -10,8 +10,8 @@ export interface Workspace {
   title?: string | null;
   created_at: number;
   last_used: number;
-  opencode_running?: boolean;
-  opencode_base?: string;
+  harness_running?: boolean;
+  harness_base?: string;
 }
 
 /**
@@ -52,11 +52,11 @@ export interface WorkspaceDeleteResponse {
 export interface WorkspaceHealthResponse {
   workspaceId: string;
   title: string | null;
-  opencodeRunning: boolean;
+  harnessRunning: boolean;
   port: number | null;
   pid: number | null;
   error: string | null;
-  /** Set when OpenCode is running but has an invalid config (e.g. broken MCP server) */
+  /** Set when the workspace harness is running but has an invalid config (e.g. broken MCP server) */
   configError: string | null;
 }
 
