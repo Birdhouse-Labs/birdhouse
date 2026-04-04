@@ -3,8 +3,8 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, type Session, withDeps } from "../dependencies";
+import type { BirdhouseMessage as Message } from "../harness";
 import { type AgentRow, type AgentsDB, initAgentsDB } from "../lib/agents-db";
-import type { Message } from "../lib/opencode-client";
 import { captureStreamEvents, withWorkspaceContext } from "../test-utils";
 import { createRootAgent } from "../test-utils/agent-factories";
 import { createAAPIAgentRoutes } from "./aapi-agents";

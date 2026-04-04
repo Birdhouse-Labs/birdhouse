@@ -2,12 +2,16 @@
 // ABOUTME: Validates error field is preserved in filtered messages
 
 import { describe, expect, it } from "bun:test";
-import type { AssistantMessage, Message } from "../../../lib/opencode-client";
+import type { BirdhouseAssistantMessageInfo as AssistantMessage, BirdhouseMessage as Message } from "../../../harness";
 import { filterMessage } from "./message-filter";
+
+function asMessage(message: unknown): Message {
+  return message as Message;
+}
 
 describe("filterMessage", () => {
   it("should preserve error field with data.message format", () => {
-    const message: Message = {
+    const message = asMessage({
       info: {
         id: "msg_123",
         sessionID: "ses_123",
@@ -36,7 +40,7 @@ describe("filterMessage", () => {
         },
       } as AssistantMessage,
       parts: [],
-    };
+    });
 
     const result = filterMessage(message);
 
@@ -46,7 +50,7 @@ describe("filterMessage", () => {
   });
 
   it("should preserve error field with direct message format", () => {
-    const message: Message = {
+    const message = asMessage({
       info: {
         id: "msg_456",
         sessionID: "ses_123",
@@ -76,7 +80,7 @@ describe("filterMessage", () => {
         },
       } as AssistantMessage,
       parts: [],
-    };
+    });
 
     const result = filterMessage(message);
 
@@ -86,7 +90,7 @@ describe("filterMessage", () => {
   });
 
   it("should not include error field when not present", () => {
-    const message: Message = {
+    const message = asMessage({
       info: {
         id: "msg_789",
         sessionID: "ses_123",
@@ -117,7 +121,7 @@ describe("filterMessage", () => {
           messageID: "msg_test_1",
         },
       ],
-    };
+    });
 
     const result = filterMessage(message);
 
@@ -125,7 +129,7 @@ describe("filterMessage", () => {
   });
 
   it("should filter out cost and tokens while preserving error", () => {
-    const message: Message = {
+    const message = asMessage({
       info: {
         id: "msg_cost_test",
         sessionID: "ses_123",
@@ -155,7 +159,7 @@ describe("filterMessage", () => {
         },
       } as AssistantMessage,
       parts: [],
-    };
+    });
 
     const result = filterMessage(message);
 
@@ -169,7 +173,7 @@ describe("filterMessage", () => {
   });
 
   it("full view strips reasoning, patches, and noisy tool details", () => {
-    const message: Message = {
+    const message = asMessage({
       info: {
         id: "msg_full_bash",
         sessionID: "ses_123",
@@ -214,7 +218,7 @@ describe("filterMessage", () => {
         { type: "patch", text: "*** Begin Patch" } as never,
         { type: "step-finish", reason: "stop" } as never,
       ],
-    };
+    });
 
     const result = filterMessage(message, "full");
 
@@ -238,7 +242,7 @@ describe("filterMessage", () => {
   });
 
   it("full view keeps compact agent tool input and drops verbose prompt text", () => {
-    const message: Message = {
+    const message = asMessage({
       info: {
         id: "msg_full_agent_create",
         sessionID: "ses_123",
@@ -271,7 +275,7 @@ describe("filterMessage", () => {
           },
         } as never,
       ],
-    };
+    });
 
     const result = filterMessage(message, "full");
 
@@ -293,7 +297,7 @@ describe("filterMessage", () => {
   });
 
   it("full view summarizes agent_read and read tool calls with drill-down ids", () => {
-    const message: Message = {
+    const message = asMessage({
       info: {
         id: "msg_full_mixed_tools",
         sessionID: "ses_123",
@@ -341,7 +345,7 @@ describe("filterMessage", () => {
           },
         } as never,
       ],
-    };
+    });
 
     const result = filterMessage(message, "full");
 
@@ -382,7 +386,7 @@ describe("filterMessage", () => {
 
   it("full view marks large tool output as truncated", () => {
     const longOutput = "0123456789".repeat(60);
-    const message: Message = {
+    const message = asMessage({
       info: {
         id: "msg_large_output",
         sessionID: "ses_123",
@@ -415,7 +419,7 @@ describe("filterMessage", () => {
           },
         } as never,
       ],
-    };
+    });
 
     const result = filterMessage(message, "full");
     const toolState = result.parts[0]?.state as Record<string, unknown>;
@@ -426,7 +430,7 @@ describe("filterMessage", () => {
   });
 
   it("tool_call view preserves full filtered tool state for drill-down", () => {
-    const message: Message = {
+    const message = asMessage({
       info: {
         id: "msg_tool_call_view",
         sessionID: "ses_123",
@@ -462,7 +466,7 @@ describe("filterMessage", () => {
           },
         } as never,
       ],
-    };
+    });
 
     const result = filterMessage(message, "tool_call");
 
@@ -485,7 +489,7 @@ describe("filterMessage", () => {
   });
 
   it("full view strips verbose diff bodies from user message summaries", () => {
-    const message: Message = {
+    const message = asMessage({
       info: {
         id: "msg_user_summary",
         sessionID: "ses_123",
@@ -514,7 +518,7 @@ describe("filterMessage", () => {
           messageID: "msg_user_summary",
         },
       ],
-    };
+    });
 
     const result = filterMessage(message, "full");
 
@@ -532,7 +536,7 @@ describe("filterMessage", () => {
 
   it("latest exchange view keeps bash command while using compact tool filtering", () => {
     const longOutput = "0123456789".repeat(60);
-    const message: Message = {
+    const message = asMessage({
       info: {
         id: "msg_latest_exchange",
         sessionID: "ses_123",
@@ -569,7 +573,7 @@ describe("filterMessage", () => {
           },
         } as never,
       ],
-    };
+    });
 
     const result = filterMessage(message, "exchange");
 

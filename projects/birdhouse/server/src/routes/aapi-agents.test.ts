@@ -3,9 +3,9 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
+import type { BirdhouseMessage as Message, BirdhouseSession as Session } from "../harness";
 import type { FilteredMessage } from "../features/aapi/helpers/message-filter";
 import { type AgentsDB, initAgentsDB } from "../lib/agents-db";
-import type { Message, Session } from "../lib/opencode-client";
 import { captureStreamEvents, withWorkspaceContext } from "../test-utils";
 import { createRootAgent } from "../test-utils/agent-factories";
 import { createAAPIAgentRoutes } from "./aapi-agents";
@@ -978,7 +978,7 @@ describe("AAPI Agent Routes", () => {
           title: "Missing Tool Call Test",
         });
 
-        const deps = await createTestDeps({ getMessages: async () => [] as Message[] });
+        const deps = await createTestDeps({ getMessages: async () => [] as unknown as Message[] });
         deps.agentsDB = agentsDB;
 
         await withDeps(deps, async () => {
@@ -1214,7 +1214,7 @@ describe("AAPI Agent Routes", () => {
         time: { created: Date.now(), updated: Date.now() },
       };
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_1",
           sessionID: "ses_new_with_prompt",
@@ -1242,7 +1242,7 @@ describe("AAPI Agent Routes", () => {
             messageID: "msg_1",
           },
         ],
-      };
+      } as Message;
 
       let capturedSystemPrompt: string | undefined;
 
@@ -1300,7 +1300,7 @@ describe("AAPI Agent Routes", () => {
         time: { created: Date.now(), updated: Date.now() },
       };
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_2",
           sessionID: "ses_exact_prompt",
@@ -1328,7 +1328,7 @@ describe("AAPI Agent Routes", () => {
             messageID: "msg_1",
           },
         ],
-      };
+      } as Message;
 
       let capturedSystemPrompt: string | undefined;
 
@@ -1380,7 +1380,7 @@ describe("AAPI Agent Routes", () => {
         time: { created: Date.now(), updated: Date.now() },
       };
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_3",
           sessionID: "ses_async_prompt",
@@ -1408,7 +1408,7 @@ describe("AAPI Agent Routes", () => {
             messageID: "msg_1",
           },
         ],
-      };
+      } as Message;
 
       let capturedSystemPrompt: string | undefined;
 
@@ -1531,7 +1531,7 @@ describe("AAPI Agent Routes", () => {
         time: { created: Date.now(), updated: Date.now() },
       };
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_clone",
           sessionID: "ses_cloned",
@@ -1559,7 +1559,7 @@ describe("AAPI Agent Routes", () => {
             messageID: "msg_1",
           },
         ],
-      };
+      } as Message;
 
       let capturedSystemPrompt: string | undefined;
 
@@ -1625,7 +1625,7 @@ describe("AAPI Agent Routes", () => {
         time: { created: Date.now(), updated: Date.now() },
       };
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_fresh",
           sessionID: "ses_fresh_event",
@@ -1653,7 +1653,7 @@ describe("AAPI Agent Routes", () => {
             messageID: "msg_1",
           },
         ],
-      };
+      } as Message;
 
       const deps = await createTestDeps({
         createSession: async () => mockSession,
