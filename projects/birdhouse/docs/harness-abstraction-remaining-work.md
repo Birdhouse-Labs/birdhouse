@@ -48,22 +48,6 @@ We introduced an "Agent Harness" abstraction layer so Birdhouse can support mult
 
 <!-- The sections below were populated by an audit of the full codebase -->
 
-### Server-side harness bypasses (Fix Now)
-
-#### Models route still bypasses the harness provider API
-
-- **Files:** `server/src/routes/models.ts:52-60`
-- **Problem:** The models route still calls `${opencodeBase}/config/providers` with `fetch()` instead of going through `deps.harness.getProviders()`.
-- **Fix:** Build the route from `getDepsFromContext(c)` and use `harness.getProviders()` as the source of truth. Keep the existing response shaping and pinned model ordering on top of the Birdhouse-owned provider response.
-- **Priority:** `Fix Now`
-
-#### Skill update broadcast still depends on `opencode-stream`
-
-- **Files:** `server/src/routes/skills.ts:8`, `server/src/routes/skills.ts:120-123`, `server/src/lib/opencode-stream.ts:115`
-- **Problem:** A Birdhouse-owned event (`birdhouse.skill.updated`) is still broadcast through `broadcastToAllWorkspaces()` in `lib/opencode-stream.ts`, which keeps Birdhouse synthetic events coupled to OpenCode stream infrastructure.
-- **Fix:** Move this broadcast to a Birdhouse-owned cross-workspace event path. The smallest version would be a Birdhouse event-bus helper that fan-outs to workspace buses without depending on `opencode-stream.ts`.
-- **Priority:** `Fix Now`
-
 ### Server test files still importing OpenCode types (Fix Before Pi)
 
 #### Feature and route tests still use `lib/opencode-client` types for fixtures
