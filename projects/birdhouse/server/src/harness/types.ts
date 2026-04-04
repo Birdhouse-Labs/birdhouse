@@ -145,38 +145,61 @@ export interface BirdhouseAssistantMessageInfo extends BirdhouseBaseMessageInfo 
 
 export type BirdhouseMessageInfo = BirdhouseUserMessageInfo | BirdhouseAssistantMessageInfo;
 
-export interface BirdhouseTextPart {
+export interface BirdhouseBasePart {
+  id: string;
+  sessionID: string;
+  messageID: string;
+  time?: Record<string, unknown>;
+}
+
+export interface BirdhouseTextPart extends BirdhouseBasePart {
   type: "text";
   text: string;
   metadata?: Record<string, unknown>;
+  time?: {
+    start: number;
+    end?: number;
+  };
 }
 
-export interface BirdhouseReasoningPart {
+export interface BirdhouseReasoningPart extends BirdhouseBasePart {
   type: "reasoning";
   text: string;
+  time?: {
+    start: number;
+    end?: number;
+  };
 }
 
-export interface BirdhouseToolPart {
+export interface BirdhouseToolPart extends BirdhouseBasePart {
   type: "tool";
   tool?: string;
   callID?: string;
   state?: Record<string, unknown>;
   summary?: string;
+  time?: {
+    start: number;
+    end?: number;
+  };
 }
 
-export interface BirdhouseFilePart {
+export interface BirdhouseFilePart extends BirdhouseBasePart {
   type: "file";
   mime: string;
   url: string;
   filename?: string;
 }
 
-export interface BirdhousePatchPart {
+export interface BirdhousePatchPart extends BirdhouseBasePart {
   type: "patch";
   text?: string;
+  time?: {
+    start: number;
+    end?: number;
+  };
 }
 
-export interface BirdhouseUnknownPart {
+export interface BirdhouseUnknownPart extends BirdhouseBasePart {
   type: string;
   [key: string]: unknown;
 }
@@ -194,7 +217,25 @@ export interface BirdhouseMessage {
   parts: BirdhousePart[];
 }
 
-export type BirdhouseInputPart = BirdhouseTextPart | BirdhouseFilePart | BirdhouseUnknownPart;
+export interface BirdhouseInputTextPart {
+  type: "text";
+  text: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface BirdhouseInputFilePart {
+  type: "file";
+  mime: string;
+  url: string;
+  filename?: string;
+}
+
+export interface BirdhouseInputUnknownPart {
+  type: string;
+  [key: string]: unknown;
+}
+
+export type BirdhouseInputPart = BirdhouseInputTextPart | BirdhouseInputFilePart | BirdhouseInputUnknownPart;
 
 export interface BirdhouseGenerateOptions {
   prompt?: string;

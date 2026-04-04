@@ -1,16 +1,15 @@
 // ABOUTME: Tests for message adapter functions
 // ABOUTME: Validates server message to UI message conversion and system events
 
-import type { AssistantMessage } from "@opencode-ai/sdk";
 import { describe, expect, it } from "vitest";
-import type { Message as OCMessage } from "../../../server/src/lib/opencode-client";
+import type { BirdhouseAssistantMessageInfo, BirdhouseMessage } from "../../../server/src/harness/types";
 import type { SystemEvent, TimelineItem } from "../../../server/src/types/agent-events";
 import { isAgentEventBlock, isSystemMessage } from "../types/messages";
 import { mapMessage, mapMessages } from "./message-adapter";
 
 describe("mapMessage", () => {
   it("should map a basic text message from user", () => {
-    const ocMessage: OCMessage = {
+    const ocMessage: BirdhouseMessage = {
       info: {
         id: "msg_user_123",
         sessionID: "ses_123",
@@ -43,11 +42,11 @@ describe("mapMessage", () => {
       expect(firstBlock.id).toBe("part_1");
     }
     expect(result.timestamp).toEqual(new Date("2024-01-01T00:00:00.000Z"));
-    expect(result.opencodeMessage).toEqual(ocMessage.info);
+    expect(result.messageInfo).toEqual(ocMessage.info);
   });
 
   it("should map assistant message with model/provider", () => {
-    const ocMessage: OCMessage = {
+    const ocMessage: BirdhouseMessage = {
       info: {
         id: "msg_asst_456",
         sessionID: "ses_123",
@@ -85,11 +84,11 @@ describe("mapMessage", () => {
     expect(result.role).toBe("assistant");
     expect(result.model).toBe("claude-sonnet-4");
     expect(result.provider).toBe("anthropic");
-    expect(result.opencodeMessage).toEqual(ocMessage.info);
+    expect(result.messageInfo).toEqual(ocMessage.info);
   });
 
   it("should map message with multiple text parts", () => {
-    const ocMessage: OCMessage = {
+    const ocMessage: BirdhouseMessage = {
       info: {
         id: "msg_123",
         sessionID: "ses_123",
@@ -123,7 +122,7 @@ describe("mapMessage", () => {
   });
 
   it("should map message with tool part", () => {
-    const ocMessage: OCMessage = {
+    const ocMessage: BirdhouseMessage = {
       info: {
         id: "msg_123",
         sessionID: "ses_123",
@@ -179,7 +178,7 @@ describe("mapMessage", () => {
   });
 
   it("should map message with reasoning part", () => {
-    const ocMessage: OCMessage = {
+    const ocMessage: BirdhouseMessage = {
       info: {
         id: "msg_123",
         sessionID: "ses_123",
@@ -225,7 +224,7 @@ describe("mapMessage", () => {
   });
 
   it("should skip empty reasoning parts", () => {
-    const ocMessage: OCMessage = {
+    const ocMessage: BirdhouseMessage = {
       info: {
         id: "msg_124",
         sessionID: "ses_123",
@@ -266,7 +265,7 @@ describe("mapMessage", () => {
   });
 
   it("should map message with file part", () => {
-    const ocMessage: OCMessage = {
+    const ocMessage: BirdhouseMessage = {
       info: {
         id: "msg_123",
         sessionID: "ses_123",
@@ -302,7 +301,7 @@ describe("mapMessage", () => {
   });
 
   it("should map assistant message with error (direct message format)", () => {
-    const ocMessage: OCMessage = {
+    const ocMessage: BirdhouseMessage = {
       info: {
         id: "msg_error_456",
         sessionID: "ses_123",
@@ -336,14 +335,14 @@ describe("mapMessage", () => {
 
     const result = mapMessage(ocMessage);
 
-    expect((result.opencodeMessage as AssistantMessage).error).toBeDefined();
-    expect((result.opencodeMessage as AssistantMessage).error?.data?.message).toBe("Network timeout");
+    expect((result.messageInfo as BirdhouseAssistantMessageInfo).error).toBeDefined();
+    expect((result.messageInfo as BirdhouseAssistantMessageInfo).error?.data?.["message"]).toBe("Network timeout");
   });
 });
 
 describe("mapMessages", () => {
   it("should map an array of messages", () => {
-    const ocMessages: OCMessage[] = [
+    const ocMessages: BirdhouseMessage[] = [
       {
         info: {
           id: "msg_1",
@@ -423,7 +422,7 @@ describe("mapMessages", () => {
 
 describe("mapMessage - metadata", () => {
   it("should preserve metadata from text parts", () => {
-    const ocMessage: OCMessage = {
+    const ocMessage: BirdhouseMessage = {
       info: {
         id: "msg_with_metadata",
         sessionID: "ses_123",
@@ -488,7 +487,7 @@ describe("mapMessages with TimelineItems", () => {
 
     expect(message?.id).toBe("evt_123");
     expect(message?.role).toBe("system");
-    expect(message?.opencodeMessage).toBeUndefined();
+    expect(message?.messageInfo).toBeUndefined();
     expect(message?.content).toBe("");
     expect(message?.timestamp).toEqual(new Date("2024-01-01T00:00:00.000Z"));
 
@@ -540,7 +539,7 @@ describe("mapMessages with TimelineItems", () => {
   });
 
   it("should map mixed timeline items (events + messages) and sort correctly", () => {
-    const message1: OCMessage = {
+    const message1: BirdhouseMessage = {
       info: {
         id: "msg_1",
         sessionID: "ses_123",
@@ -572,7 +571,7 @@ describe("mapMessages with TimelineItems", () => {
       target_agent_title: "Clone",
     };
 
-    const message2: OCMessage = {
+    const message2: BirdhouseMessage = {
       info: {
         id: "msg_2",
         sessionID: "ses_123",

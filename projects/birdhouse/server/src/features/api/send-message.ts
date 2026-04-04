@@ -5,7 +5,7 @@ import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
 import { cloneAgent } from "../../domain/agent-lifecycle";
 import { findSafeClonePoint } from "../../domain/clone-point";
-import type { AgentHarness, BirdhouseFilePart } from "../../harness";
+import type { AgentHarness, BirdhouseInputFilePart } from "../../harness";
 import type { AgentRow } from "../../lib/agents-db";
 import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "../../lib/birdhouse-system-prompt";
@@ -37,7 +37,7 @@ export async function sendMessage(
   const agentId = c.req.param("id");
   const { text, agent: agentName, clone_and_send, metadata, attachments } = await c.req.json();
   const rawText = typeof text === "string" ? text : "";
-  let requestAttachments: BirdhouseFilePart[];
+  let requestAttachments: BirdhouseInputFilePart[];
   try {
     requestAttachments = parseFileAttachments(attachments);
   } catch (error) {

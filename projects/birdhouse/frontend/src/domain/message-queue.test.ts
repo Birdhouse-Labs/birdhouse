@@ -1,10 +1,10 @@
 // ABOUTME: Tests for message queue detection utilities
 // ABOUTME: Validates logic for detecting queued user messages
 
-import type { AssistantMessage, UserMessage } from "@opencode-ai/sdk";
 import { describe, expect, it } from "vitest";
+import type { BirdhouseAssistantMessageInfo, BirdhouseUserMessageInfo } from "../../../server/src/harness/types";
 import type { Message } from "../types/messages";
-import { findPendingAssistantId, isMessageQueued } from "./message-queue";
+import { findPendingAssistant, isMessageQueued } from "./message-queue";
 
 /**
  * Helper to create a mock user message
@@ -15,14 +15,14 @@ function createUserMessage(id: string): Message {
     role: "user",
     content: "test message",
     timestamp: new Date(),
-    opencodeMessage: {
+    messageInfo: {
       id,
       sessionID: "session_test",
       role: "user",
       time: { created: Date.now() },
       agent: "test",
       model: { providerID: "test", modelID: "test" },
-    } as UserMessage,
+    } as BirdhouseUserMessageInfo,
   };
 }
 
@@ -35,7 +35,7 @@ function createAssistantMessage(id: string, completed?: number): Message {
     role: "assistant",
     content: "test response",
     timestamp: new Date(),
-    opencodeMessage: {
+    messageInfo: {
       id,
       sessionID: "session_test",
       role: "assistant",
@@ -56,18 +56,18 @@ function createAssistantMessage(id: string, completed?: number): Message {
         cache: { read: 0, write: 0 },
       },
       path: { cwd: "/", root: "/" },
-    } as AssistantMessage,
+    } as BirdhouseAssistantMessageInfo,
   };
 }
 
-describe("findPendingAssistantId", () => {
+describe("findPendingAssistant", () => {
   it("returns undefined when no messages", () => {
-    expect(findPendingAssistantId([])).toBeUndefined();
+    expect(findPendingAssistant([])).toBeUndefined();
   });
 
   it("returns undefined when only user messages", () => {
     const messages = [createUserMessage("msg_001"), createUserMessage("msg_002")];
-    expect(findPendingAssistantId(messages)).toBeUndefined();
+    expect(findPendingAssistant(messages)).toBeUndefined();
   });
 
   it("returns undefined when all assistant messages are completed", () => {
@@ -76,7 +76,7 @@ describe("findPendingAssistantId", () => {
       createAssistantMessage("msg_002", Date.now()),
       createUserMessage("msg_001"),
     ];
-    expect(findPendingAssistantId(messages)).toBeUndefined();
+    expect(findPendingAssistant(messages)).toBeUndefined();
   });
 
   it("returns the ID of an incomplete assistant message", () => {
@@ -85,7 +85,7 @@ describe("findPendingAssistantId", () => {
       createAssistantMessage("msg_002"), // No completed timestamp
       createUserMessage("msg_001"),
     ];
-    expect(findPendingAssistantId(messages)).toBe("msg_002");
+    expect(findPendingAssistant(messages)?.id).toBe("msg_002");
   });
 
   it("returns the first (newest) incomplete assistant message when multiple exist", () => {
@@ -96,7 +96,7 @@ describe("findPendingAssistantId", () => {
       createAssistantMessage("msg_002"), // Also incomplete
       createUserMessage("msg_001"),
     ];
-    expect(findPendingAssistantId(messages)).toBe("msg_004");
+    expect(findPendingAssistant(messages)?.id).toBe("msg_004");
   });
 
   it("ignores older completed assistant messages and finds the latest incomplete one", () => {
@@ -107,7 +107,7 @@ describe("findPendingAssistantId", () => {
       createAssistantMessage("msg_001", Date.now()), // Older completed assistant
     ];
 
-    expect(findPendingAssistantId(messages)).toBe("msg_003");
+    expect(findPendingAssistant(messages)?.id).toBe("msg_003");
   });
 
   it("returns undefined when the latest assistant is completed even if an older one is incomplete", () => {
@@ -118,7 +118,7 @@ describe("findPendingAssistantId", () => {
       createUserMessage("msg_001"),
     ];
 
-    expect(findPendingAssistantId(messages)).toBeUndefined();
+    expect(findPendingAssistant(messages)).toBeUndefined();
   });
 });
 
@@ -130,31 +130,51 @@ describe("isMessageQueued", () => {
 
   it("returns false for assistant messages", () => {
     const assistantMsg = createAssistantMessage("msg_003");
-    expect(isMessageQueued(assistantMsg, "msg_002")).toBe(false);
+    expect(isMessageQueued(assistantMsg, createAssistantMessage("msg_002"))).toBe(false);
   });
 
-  it("returns false for user message with ID less than pending assistant", () => {
+  it("returns false for user message created before pending assistant", () => {
+    const pendingAssistant = createAssistantMessage("msg_002");
+    pendingAssistant.timestamp = new Date("2024-01-01T00:01:00.000Z");
+
     const userMsg = createUserMessage("msg_001");
-    expect(isMessageQueued(userMsg, "msg_002")).toBe(false);
+    userMsg.timestamp = new Date("2024-01-01T00:00:00.000Z");
+
+    expect(isMessageQueued(userMsg, pendingAssistant)).toBe(false);
   });
 
-  it("returns false for user message with same ID as pending assistant", () => {
+  it("returns false for user message created at the same time as pending assistant", () => {
+    const pendingAssistant = createAssistantMessage("msg_002");
+    pendingAssistant.timestamp = new Date("2024-01-01T00:01:00.000Z");
+
     const userMsg = createUserMessage("msg_002");
-    expect(isMessageQueued(userMsg, "msg_002")).toBe(false);
+    userMsg.timestamp = new Date("2024-01-01T00:01:00.000Z");
+
+    expect(isMessageQueued(userMsg, pendingAssistant)).toBe(false);
   });
 
-  it("returns true for user message with ID greater than pending assistant", () => {
+  it("returns true for user message created after pending assistant", () => {
+    const pendingAssistant = createAssistantMessage("msg_002");
+    pendingAssistant.timestamp = new Date("2024-01-01T00:01:00.000Z");
+
     const userMsg = createUserMessage("msg_003");
-    expect(isMessageQueued(userMsg, "msg_002")).toBe(true);
+    userMsg.timestamp = new Date("2024-01-01T00:02:00.000Z");
+
+    expect(isMessageQueued(userMsg, pendingAssistant)).toBe(true);
   });
 
-  it("handles lexicographic ID comparison correctly", () => {
-    // Typical OpenCode IDs are lexicographically comparable
-    const userMsgEarlier = createUserMessage("msg_aaa");
-    const userMsgLater = createUserMessage("msg_bbb");
+  it("uses timestamps rather than message ID ordering", () => {
+    const pendingAssistant = createAssistantMessage("msg_zzz");
+    pendingAssistant.timestamp = new Date("2024-01-01T00:01:00.000Z");
 
-    expect(isMessageQueued(userMsgEarlier, "msg_aab")).toBe(false);
-    expect(isMessageQueued(userMsgLater, "msg_aab")).toBe(true);
+    const userMsgEarlier = createUserMessage("msg_later_lexicographically");
+    userMsgEarlier.timestamp = new Date("2024-01-01T00:00:00.000Z");
+
+    const userMsgLater = createUserMessage("msg_earlier_lexicographically");
+    userMsgLater.timestamp = new Date("2024-01-01T00:02:00.000Z");
+
+    expect(isMessageQueued(userMsgEarlier, pendingAssistant)).toBe(false);
+    expect(isMessageQueued(userMsgLater, pendingAssistant)).toBe(true);
   });
 });
 
@@ -162,24 +182,28 @@ describe("integration: queue detection flow", () => {
   it("correctly identifies queued messages in a typical conversation", () => {
     // Scenario: User sends message, assistant starts responding, user sends another message
     const queuedUserMsg = createUserMessage("msg_004"); // This should be queued
+    queuedUserMsg.timestamp = new Date("2024-01-01T00:03:00.000Z");
     const pendingAssistantMsg = createAssistantMessage("msg_003"); // Still processing (no completed)
+    pendingAssistantMsg.timestamp = new Date("2024-01-01T00:02:00.000Z");
     const earlierUserMsg = createUserMessage("msg_002");
+    earlierUserMsg.timestamp = new Date("2024-01-01T00:01:00.000Z");
     const completedAssistantMsg = createAssistantMessage("msg_001", Date.now()); // Completed
+    completedAssistantMsg.timestamp = new Date("2024-01-01T00:00:00.000Z");
 
     const messages = [queuedUserMsg, pendingAssistantMsg, earlierUserMsg, completedAssistantMsg];
 
-    const pendingId = findPendingAssistantId(messages);
-    expect(pendingId).toBe("msg_003");
+    const pendingAssistant = findPendingAssistant(messages);
+    expect(pendingAssistant?.id).toBe("msg_003");
 
     // User message before the pending assistant - not queued
-    expect(isMessageQueued(earlierUserMsg, pendingId)).toBe(false);
+    expect(isMessageQueued(earlierUserMsg, pendingAssistant)).toBe(false);
 
     // User message after the pending assistant - queued
-    expect(isMessageQueued(queuedUserMsg, pendingId)).toBe(true);
+    expect(isMessageQueued(queuedUserMsg, pendingAssistant)).toBe(true);
 
     // Assistant messages are never queued
-    expect(isMessageQueued(pendingAssistantMsg, pendingId)).toBe(false);
-    expect(isMessageQueued(completedAssistantMsg, pendingId)).toBe(false);
+    expect(isMessageQueued(pendingAssistantMsg, pendingAssistant)).toBe(false);
+    expect(isMessageQueued(completedAssistantMsg, pendingAssistant)).toBe(false);
   });
 
   it("no messages are queued when assistant completes", () => {
@@ -191,11 +215,11 @@ describe("integration: queue detection flow", () => {
 
     const messages = [userMsg1, assistantMsg1, userMsg2, assistantMsg2];
 
-    const pendingId = findPendingAssistantId(messages);
-    expect(pendingId).toBeUndefined();
+    const pendingAssistant = findPendingAssistant(messages);
+    expect(pendingAssistant).toBeUndefined();
 
     // No messages should be queued
-    expect(isMessageQueued(userMsg1, pendingId)).toBe(false);
-    expect(isMessageQueued(userMsg2, pendingId)).toBe(false);
+    expect(isMessageQueued(userMsg1, pendingAssistant)).toBe(false);
+    expect(isMessageQueued(userMsg2, pendingAssistant)).toBe(false);
   });
 });

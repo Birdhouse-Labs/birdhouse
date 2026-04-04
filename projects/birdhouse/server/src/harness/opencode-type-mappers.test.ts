@@ -93,7 +93,14 @@ describe("opencode type mappers", () => {
         text: "Hello",
         metadata: { source: "birdhouse" },
       } as unknown as Part,
-      { type: "reasoning", text: "Thinking" } as Part,
+      {
+        id: "part_reasoning",
+        sessionID: "ses_1",
+        messageID: "msg_assistant",
+        type: "reasoning",
+        text: "Thinking",
+        time: { start: 105, end: 110 },
+      } as Part,
       {
         id: "part_tool",
         sessionID: "ses_1",
@@ -104,7 +111,15 @@ describe("opencode type mappers", () => {
         state: { status: "completed" },
         summary: "Run bash",
       } as unknown as Part,
-      { type: "file", mime: "image/png", url: "https://example.com/image.png", filename: "image.png" } as Part,
+      {
+        id: "part_file",
+        sessionID: "ses_1",
+        messageID: "msg_assistant",
+        type: "file",
+        mime: "image/png",
+        url: "https://example.com/image.png",
+        filename: "image.png",
+      } as Part,
       {
         id: "part_patch",
         sessionID: "ses_1",
@@ -149,11 +164,48 @@ describe("opencode type mappers", () => {
       error: { name: "UnknownError", data: { message: "Tool failed" } },
     });
     expect(message.parts).toEqual([
-      { type: "text", text: "Hello", metadata: { source: "birdhouse" } },
-      { type: "reasoning", text: "Thinking" },
-      { type: "tool", tool: "bash", callID: "call_1", state: { status: "completed" }, summary: "Run bash" },
-      { type: "file", mime: "image/png", url: "https://example.com/image.png", filename: "image.png" },
-      { type: "patch", text: "diff --git a/file b/file" },
+      {
+        id: "part_text",
+        sessionID: "ses_1",
+        messageID: "msg_assistant",
+        type: "text",
+        text: "Hello",
+        metadata: { source: "birdhouse" },
+      },
+      {
+        id: "part_reasoning",
+        sessionID: "ses_1",
+        messageID: "msg_assistant",
+        type: "reasoning",
+        text: "Thinking",
+        time: { start: 105, end: 110 },
+      },
+      {
+        id: "part_tool",
+        sessionID: "ses_1",
+        messageID: "msg_assistant",
+        type: "tool",
+        tool: "bash",
+        callID: "call_1",
+        state: { status: "completed" },
+        summary: "Run bash",
+      },
+      {
+        id: "part_file",
+        sessionID: "ses_1",
+        messageID: "msg_assistant",
+        type: "file",
+        mime: "image/png",
+        url: "https://example.com/image.png",
+        filename: "image.png",
+      },
+      {
+        id: "part_patch",
+        sessionID: "ses_1",
+        messageID: "msg_assistant",
+        type: "patch",
+        text: "diff --git a/file b/file",
+      },
       {
         type: "step-start",
         foo: "bar",
@@ -176,11 +228,28 @@ describe("opencode type mappers", () => {
 
     const message = mapOpenCodeMessageToBirdhouseMessage({
       info,
-      parts: [{ type: "text", text: "Please help" } as Part],
+      parts: [
+        {
+          id: "part_user_text",
+          sessionID: "ses_1",
+          messageID: "msg_user",
+          type: "text",
+          text: "Please help",
+        } as Part,
+      ],
     });
 
     expect(message.info).toEqual(info);
-    expect(message.parts).toEqual([{ type: "text", text: "Please help", metadata: undefined }]);
+    expect(message.parts).toEqual([
+      {
+        id: "part_user_text",
+        sessionID: "ses_1",
+        messageID: "msg_user",
+        type: "text",
+        text: "Please help",
+        metadata: undefined,
+      },
+    ]);
   });
 
   it("maps Birdhouse input parts to OpenCode input parts", () => {

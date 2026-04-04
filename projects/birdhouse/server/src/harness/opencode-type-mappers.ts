@@ -22,6 +22,22 @@ import type {
   BirdhouseSkill,
 } from "./types";
 
+function mapOpenCodePartBaseToBirdhousePart(part: Part) {
+  return {
+    id: part.id,
+    sessionID: part.sessionID,
+    messageID: part.messageID,
+  };
+}
+
+function clonePartTime(part: Part): Record<string, unknown> | undefined {
+  if (!("time" in part) || part.time === undefined || part.time === null || typeof part.time !== "object") {
+    return undefined;
+  }
+
+  return structuredClone(part.time as Record<string, unknown>);
+}
+
 function mapOpenCodeMessageInfoToBirdhouseMessageInfo(info: UserMessage | AssistantMessage): BirdhouseMessageInfo {
   if (info.role === "user") {
     return {
@@ -95,57 +111,70 @@ function mapOpenCodeMessageInfoToBirdhouseMessageInfo(info: UserMessage | Assist
 export function mapOpenCodePartToBirdhousePart(part: Part): BirdhousePart {
   if (part.type === "text") {
     const metadata = part.metadata;
+    const time = clonePartTime(part);
 
     return {
+      ...mapOpenCodePartBaseToBirdhousePart(part),
       type: "text",
       text: part.text,
       ...(typeof metadata === "object" && metadata !== null && !Array.isArray(metadata)
         ? { metadata: metadata as Record<string, unknown> }
         : {}),
+      ...(time !== undefined ? { time: time as { start: number; end?: number } } : {}),
     };
   }
 
   if (part.type === "reasoning") {
+    const time = clonePartTime(part);
+
     return {
+      ...mapOpenCodePartBaseToBirdhousePart(part),
       type: "reasoning",
       text: part.text,
+      ...(time !== undefined ? { time: time as { start: number; end?: number } } : {}),
     };
   }
 
   if (part.type === "tool") {
     const toolPart = part as unknown as { summary?: string };
+    const time = clonePartTime(part);
 
     return {
+      ...mapOpenCodePartBaseToBirdhousePart(part),
       type: "tool",
       ...(part.tool !== undefined ? { tool: part.tool } : {}),
       ...(part.callID !== undefined ? { callID: part.callID } : {}),
       ...(part.state !== undefined ? { state: structuredClone(part.state) } : {}),
       ...(toolPart.summary !== undefined ? { summary: toolPart.summary } : {}),
+      ...(time !== undefined ? { time: time as { start: number; end?: number } } : {}),
     };
   }
 
   if (part.type === "file") {
+    const time = clonePartTime(part);
+
     return {
+      ...mapOpenCodePartBaseToBirdhousePart(part),
       type: "file",
       mime: part.mime,
       url: part.url,
       ...(part.filename !== undefined ? { filename: part.filename } : {}),
+      ...(time !== undefined ? { time } : {}),
     };
   }
 
   if (part.type === "patch") {
+    const time = clonePartTime(part);
+
     return {
+      ...mapOpenCodePartBaseToBirdhousePart(part),
       type: "patch",
       ...("text" in part && typeof part.text === "string" ? { text: part.text } : {}),
+      ...(time !== undefined ? { time: time as { start: number; end?: number } } : {}),
     };
   }
 
-  return {
-    ...(part as unknown as { type: string } & Record<string, unknown> satisfies { type: string } & Record<
-      string,
-      unknown
-    >),
-  };
+  return structuredClone(part) as unknown as BirdhousePart;
 }
 
 export function mapOpenCodeMessageToBirdhouseMessage(message: OpenCodeMessage): BirdhouseMessage {

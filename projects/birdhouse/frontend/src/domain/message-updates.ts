@@ -1,4 +1,4 @@
-// ABOUTME: Pure domain logic for applying streaming part updates to messages
+// ABOUTME: Pure domain logic for applying streaming harness part updates to messages
 // ABOUTME: Find-or-create pattern for messages and blocks with stable part IDs
 
 import type { SetStoreFunction } from "solid-js/store";
@@ -7,24 +7,21 @@ import { log } from "../lib/logger";
 import type { ContentBlock, Message } from "../types/messages";
 
 /**
- * OpenCode Part structure from streaming events
- * This is the ACTUAL structure from message.part.updated events
- * (not the simplified MessagePart from opencode-client.ts)
+ * Harness part structure from streaming events.
  */
 export interface StreamingPart {
-  id: string; // Stable unique part ID
+  id: string;
   sessionID: string;
   messageID: string;
-  type: string; // Can be any part type from OpenCode
+  type: string;
   time?: {
     start: number;
     end?: number;
   };
-  metadata?: Record<string, unknown>; // Part-level metadata (e.g., sender info for text parts)
-  // Type-specific fields
-  text?: string; // For text/reasoning
-  callID?: string; // For tools
-  tool?: string; // For tools
+  metadata?: Record<string, unknown>;
+  text?: string;
+  callID?: string;
+  tool?: string;
   state?: {
     status: "pending" | "running" | "completed" | "error";
     input?: Record<string, unknown>;
@@ -32,14 +29,14 @@ export interface StreamingPart {
     error?: string;
     title?: string;
     metadata?: Record<string, unknown>;
-  }; // For tools
-  mime?: string; // For files
-  filename?: string; // For files
-  url?: string; // For files
+  };
+  mime?: string;
+  filename?: string;
+  url?: string;
 }
 
 /**
- * OpenCode part types that we intentionally ignore (don't render, don't log)
+ * Harness part types that we intentionally ignore (don't render, don't log)
  * These are internal/metadata parts that don't need UI representation
  */
 const IGNORED_PART_TYPES = new Set([
@@ -54,7 +51,7 @@ const IGNORED_PART_TYPES = new Set([
 ]);
 
 /**
- * Convert OpenCode streaming part to UI ContentBlock
+ * Convert a streaming harness part to a UI ContentBlock
  * Returns null for unknown part types (e.g., step-start, subtask, patch)
  */
 export function partToBlock(part: StreamingPart): ContentBlock | null {
@@ -126,7 +123,7 @@ export function partToBlock(part: StreamingPart): ContentBlock | null {
     default:
       // Check if this is a known-ignorable part type
       if (IGNORED_PART_TYPES.has(part.type)) {
-        // Silently skip - these are internal OpenCode parts we don't render
+        // Silently skip - these are internal harness parts we don't render
         return null;
       }
 
@@ -153,7 +150,7 @@ function extractTextContent(blocks: ContentBlock[]): string {
 }
 
 /**
- * Incremental delta from OpenCode's message.part.delta event
+ * Incremental delta from the harness message.part.delta event
  * Emitted during streaming to append text/reasoning content character by character
  */
 export interface StreamingPartDelta {

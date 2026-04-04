@@ -4,7 +4,7 @@
 import { LibraryBig, Network, Split, X } from "lucide-solid";
 import { type Accessor, type Component, createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { findPendingAssistantId, isMessageQueued } from "../../domain/message-queue";
+import { findPendingAssistant, isMessageQueued } from "../../domain/message-queue";
 import { previewSkillAttachments } from "../../services/skill-attachments-api";
 import { uiSize } from "../../theme";
 import type { ComposerAttachment } from "../../types/composer-attachments";
@@ -81,8 +81,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
 
   const StopTreeModeIcon: Component = () => <Network size={18} />;
 
-  // Find the pending assistant message ID for queue detection
-  const pendingAssistantId = createMemo(() => findPendingAssistantId(props.messages));
+  const pendingAssistant = createMemo(() => findPendingAssistant(props.messages));
 
   return (
     <div class="flex flex-col flex-1 bg-surface overflow-hidden">
@@ -237,7 +236,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
               message={message}
               agentId={props.agentId}
               onOpenAgentModal={props.onOpenAgentModal}
-              isQueued={isMessageQueued(message, pendingAssistantId())}
+              isQueued={isMessageQueued(message, pendingAssistant())}
               onCloneFromMessage={props.onCloneFromMessage}
               onResetToMessage={props.onResetToMessage}
               {...(props.pendingQuestions !== undefined && { pendingQuestions: props.pendingQuestions })}

@@ -48,36 +48,6 @@ We introduced an "Agent Harness" abstraction layer so Birdhouse can support mult
 
 <!-- The sections below were populated by an audit of the full codebase -->
 
-### Frontend OpenCode type dependencies (Future / Frontend)
-
-#### Core frontend message model still exposes OpenCode message info
-
-- **Files:**
-  - `frontend/src/types/messages.ts:4`
-  - `frontend/src/types/messages.ts:156-157`
-  - `frontend/src/contexts/StreamingContext.tsx:4`
-  - `frontend/src/components/ui/MessageBubble.tsx:4`
-- **Problem:** Core UI message state still carries `opencodeMessage` and imports SDK message types directly, so the frontend is still coupled to OpenCode-native message metadata.
-- **Fix:** Introduce a Birdhouse-owned frontend message metadata shape and migrate consumers away from `opencodeMessage`. The UI should depend on server/frontend-owned contracts rather than the OpenCode SDK client types.
-- **Priority:** `Future / Frontend`
-
-#### Frontend adapters and streaming domain logic still model OpenCode parts directly
-
-- **Files:**
-  - `frontend/src/adapters/message-adapter.ts:4-5`
-  - `frontend/src/adapters/part-adapters/text-adapter.ts:4`
-  - `frontend/src/adapters/part-adapters/tool-adapter.ts:4`
-  - `frontend/src/adapters/part-adapters/file-adapter.ts:4`
-  - `frontend/src/adapters/part-adapters/reasoning-adapter.ts:4`
-  - `frontend/src/domain/message-updates.ts:9-18`
-  - `frontend/src/domain/message-updates.ts:41-58`
-  - `frontend/src/domain/message-updates.ts:156-157`
-  - `frontend/src/domain/message-queue.ts:19-28`
-  - `frontend/src/domain/message-queue.ts:48`
-- **Problem:** The adapter layer and streaming update logic still treat OpenCode part shapes and OpenCode message ID semantics as the native frontend model.
-- **Fix:** Define Birdhouse-owned frontend part/update types and make the adapters convert from server event payloads into those types. Message queue logic should rely on Birdhouse message semantics, not OpenCode ID ordering assumptions.
-- **Priority:** `Future / Frontend`
-
 #### Frontend workspace and config types still expose OpenCode runtime/config concepts
 
 - **Files:**

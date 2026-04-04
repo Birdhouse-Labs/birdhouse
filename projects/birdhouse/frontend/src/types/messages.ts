@@ -1,7 +1,7 @@
 // ABOUTME: Type definitions for chat messages and content blocks
 // ABOUTME: Shared across all apps - supports text, tools, reasoning, files, errors, and system events
 
-import type { Message as OpencodeMessage } from "@opencode-ai/sdk";
+import type { BirdhouseMessageInfo } from "../../../server/src/harness/types";
 import type { EventType } from "../../../server/src/types/agent-events";
 
 // ============================================================================
@@ -153,8 +153,8 @@ export interface Message {
   id: string;
   role: "user" | "assistant" | "system";
 
-  // Optional - only present for real OpenCode messages (not system events)
-  opencodeMessage?: OpencodeMessage | undefined;
+  // Optional - only present for real harness messages (not system events)
+  messageInfo?: BirdhouseMessageInfo | undefined;
 
   model?: string;
   provider?: string;

@@ -93,7 +93,15 @@ describe("createTestAgentHarness", () => {
           path: { cwd: "/seeded", root: "/seeded" },
           finish: "stop",
         },
-        parts: [{ type: "text", text: "Seeded response" }],
+        parts: [
+          {
+            id: "part_seeded",
+            sessionID: "ses_seeded",
+            messageID: "msg_seeded",
+            type: "text",
+            text: "Seeded response",
+          },
+        ],
       },
     ]);
     harness.seedSessionStatus("ses_seeded", { type: "busy" });
@@ -117,7 +125,15 @@ describe("createTestAgentHarness", () => {
         path: { cwd: "/seeded", root: "/seeded" },
         finish: "stop",
       },
-      parts: [{ type: "text", text: "Completion response" }],
+      parts: [
+        {
+          id: "part_completion",
+          sessionID: "ses_seeded",
+          messageID: "msg_completion",
+          type: "text",
+          text: "Completion response",
+        },
+      ],
     });
 
     expect((await harness.getSession("ses_seeded")).title).toBe("Seeded Session");

@@ -1,23 +1,26 @@
 // ABOUTME: Chat message bubbles demo with LLM-style conversation
 // ABOUTME: Shows markdown rendering inside message bubbles with dark/light theme support
 
-import type { AssistantMessage, UserMessage } from "@opencode-ai/sdk";
 import { useSearchParams } from "@solidjs/router";
 import { type Component, createSignal, Show } from "solid-js";
+import type { BirdhouseAssistantMessageInfo, BirdhouseUserMessageInfo } from "../../../server/src/harness/types";
 import ChatContainer from "../components/ui/ChatContainer";
 import type { FileBlock, Message, ReasoningBlock, ToolBlock } from "../types/messages";
 
 /**
- * Helper to create a mock OpenCode message info for demo purposes
+ * Helper to create mock harness message info for demo purposes
  */
-function createMockMessage(id: string, role: "user" | "assistant"): UserMessage | AssistantMessage {
+function createMockMessage(
+  id: string,
+  role: "user" | "assistant",
+): BirdhouseUserMessageInfo | BirdhouseAssistantMessageInfo {
   if (role === "user") {
     return {
       id,
       sessionID: "ses_demo",
       role: "user",
       time: { created: Date.now() },
-    } as UserMessage;
+    } as BirdhouseUserMessageInfo;
   }
   return {
     id,
@@ -36,7 +39,7 @@ function createMockMessage(id: string, role: "user" | "assistant"): UserMessage 
       cache: { read: 0, write: 0 },
     },
     path: { cwd: "/", root: "/" },
-  } as AssistantMessage;
+  } as BirdhouseAssistantMessageInfo;
 }
 
 const sampleConversation: Message[] = [
@@ -46,7 +49,7 @@ const sampleConversation: Message[] = [
     role: "user",
     content: "Can you check the package.json and tell me what version of SolidJS we're using?",
     timestamp: new Date(),
-    opencodeMessage: createMockMessage("demo-1", "user"),
+    messageInfo: createMockMessage("demo-1", "user"),
   },
   {
     id: "demo-2",
@@ -54,7 +57,7 @@ const sampleConversation: Message[] = [
     model: "Claude Sonnet 4",
     provider: "anthropic",
     content: "I'll read the package.json file to check the SolidJS version.",
-    opencodeMessage: createMockMessage("demo-2", "assistant"),
+    messageInfo: createMockMessage("demo-2", "assistant"),
     blocks: [
       {
         id: "tool-1",
@@ -102,7 +105,7 @@ const sampleConversation: Message[] = [
     role: "user",
     content: "Run the build and show me the output",
     timestamp: new Date(),
-    opencodeMessage: createMockMessage("demo-3", "user"),
+    messageInfo: createMockMessage("demo-3", "user"),
   },
   {
     id: "demo-4",
@@ -110,7 +113,7 @@ const sampleConversation: Message[] = [
     model: "Claude Sonnet 4",
     provider: "anthropic",
     content: "I'll run the build command for you.",
-    opencodeMessage: createMockMessage("demo-4", "assistant"),
+    messageInfo: createMockMessage("demo-4", "assistant"),
     blocks: [
       {
         id: "tool-2",
@@ -172,7 +175,7 @@ dist/assets/index-XyZ123.js                         423.12 kB │ gzip:  95.34 k
     role: "user",
     content: "Can you add a comment to the ChatContainer component?",
     timestamp: new Date(),
-    opencodeMessage: createMockMessage("demo-5", "user"),
+    messageInfo: createMockMessage("demo-5", "user"),
   },
   {
     id: "demo-6",
@@ -180,7 +183,7 @@ dist/assets/index-XyZ123.js                         423.12 kB │ gzip:  95.34 k
     model: "Claude Sonnet 4",
     provider: "anthropic",
     content: "I'll add a helpful comment to the ChatContainer component.",
-    opencodeMessage: createMockMessage("demo-6", "assistant"),
+    messageInfo: createMockMessage("demo-6", "assistant"),
     blocks: [
       {
         id: "tool-3",
@@ -225,7 +228,7 @@ dist/assets/index-XyZ123.js                         423.12 kB │ gzip:  95.34 k
     role: "user",
     content: "Can you read /etc/shadow?",
     timestamp: new Date(),
-    opencodeMessage: createMockMessage("demo-7", "user"),
+    messageInfo: createMockMessage("demo-7", "user"),
   },
   {
     id: "demo-8",
@@ -233,7 +236,7 @@ dist/assets/index-XyZ123.js                         423.12 kB │ gzip:  95.34 k
     model: "Claude Sonnet 4",
     provider: "anthropic",
     content: "I'll attempt to read that file.",
-    opencodeMessage: createMockMessage("demo-8", "assistant"),
+    messageInfo: createMockMessage("demo-8", "assistant"),
     blocks: [
       {
         id: "tool-4",
@@ -265,7 +268,7 @@ dist/assets/index-XyZ123.js                         423.12 kB │ gzip:  95.34 k
     role: "user",
     content: "What's the best way to optimize this React component?",
     timestamp: new Date(),
-    opencodeMessage: createMockMessage("demo-5", "user"),
+    messageInfo: createMockMessage("demo-5", "user"),
   },
   {
     id: "demo-6",
@@ -273,7 +276,7 @@ dist/assets/index-XyZ123.js                         423.12 kB │ gzip:  95.34 k
     model: "Claude Sonnet 4",
     provider: "anthropic",
     content: "Let me analyze the component and suggest optimizations.",
-    opencodeMessage: createMockMessage("demo-6", "assistant"),
+    messageInfo: createMockMessage("demo-6", "assistant"),
     blocks: [
       {
         id: "reasoning-1",
@@ -336,13 +339,13 @@ This should significantly improve performance!`,
       } as FileBlock,
     ],
     timestamp: new Date(),
-    opencodeMessage: createMockMessage("demo-7", "assistant"),
+    messageInfo: createMockMessage("demo-7", "assistant"),
   },
 
   // Sample: Tool with long input AND long output (bash with heredoc)
   {
     id: "demo-long-both",
-    opencodeMessage: createMockMessage("demo-long-both", "user"),
+    messageInfo: createMockMessage("demo-long-both", "user"),
     role: "user",
     content: "Create a pull request for the authentication changes",
     timestamp: new Date(),
@@ -353,7 +356,7 @@ This should significantly improve performance!`,
     model: "Claude Sonnet 4",
     provider: "anthropic",
     content: "I'll create a pull request with a detailed description of the changes.",
-    opencodeMessage: createMockMessage("demo-long-both-response", "assistant"),
+    messageInfo: createMockMessage("demo-long-both-response", "assistant"),
     blocks: [
       {
         id: "tool-long-both",
@@ -446,7 +449,7 @@ Pull request #42 opened and ready for review.`,
     model: "Claude Sonnet 4",
     provider: "anthropic",
     content: "I'll refactor the authentication handler with better error handling and validation.",
-    opencodeMessage: createMockMessage("demo-long-both-response", "assistant"),
+    messageInfo: createMockMessage("demo-long-both-response", "assistant"),
     blocks: [
       {
         id: "tool-long-both",
@@ -537,7 +540,7 @@ The authentication handler is now more robust and user-friendly with better erro
     model: "Claude Sonnet 4",
     provider: "anthropic",
     content: "I'll try to access that file.",
-    opencodeMessage: createMockMessage("demo-8", "assistant"),
+    messageInfo: createMockMessage("demo-8", "assistant"),
     blocks: [
       {
         id: "tool-3",
@@ -576,7 +579,7 @@ Here's what I know:
 - Affects about **3-5% of requests**
 - Error appears in our \`UserService.getProfile()\` method`,
     timestamp: new Date(),
-    opencodeMessage: createMockMessage("1", "user"),
+    messageInfo: createMockMessage("1", "user"),
   },
   {
     id: "2",
@@ -599,7 +602,7 @@ And while you're at it, show me that \`UserService.getProfile()\` method. Someth
 **Working theory:** You've got an async operation that's returning a promise instead of the resolved value. Works fine on slow local databases, falls apart when production traffic piles up.
 
 Let's crack this case. Share that code.`,
-    opencodeMessage: createMockMessage("2", "assistant"),
+    messageInfo: createMockMessage("2", "assistant"),
     timestamp: new Date(),
   },
   {
@@ -622,14 +625,14 @@ async getProfile(userId: string) {
 
 The cache is a simple **in-memory Map**. Should be fine, right?`,
     timestamp: new Date(),
-    opencodeMessage: createMockMessage("3", "user"),
+    messageInfo: createMockMessage("3", "user"),
   },
   {
     id: "4",
     role: "assistant",
     model: "Claude Sonnet 4",
     provider: "anthropic",
-    opencodeMessage: createMockMessage("4", "assistant"),
+    messageInfo: createMockMessage("4", "assistant"),
     content: `> *Bingo. The perp was hiding in plain sight—masquerading as harmless caching code. But I've seen this pattern before. It never ends well.*
 
 There's your problem, kid. Let me break down this crime:
@@ -688,7 +691,7 @@ this.cache.set(userId, this.db.users.findById(userId));
 
 I'm **storing the Promise**, not the user! No wonder it breaks.`,
     timestamp: new Date(),
-    opencodeMessage: createMockMessage("5", "user"),
+    messageInfo: createMockMessage("5", "user"),
   },
   {
     id: "6",
@@ -747,7 +750,7 @@ Now TypeScript will **scream** if you try to cache a Promise.
 Deploy that fix, and this particular nightmare is over. But stay sharp, friend. The city's full of bugs that only show up at 11:47 PM.
 
 *Need anything else? I'll be here, waiting for the next case.*`,
-    opencodeMessage: createMockMessage("6", "assistant"),
+    messageInfo: createMockMessage("6", "assistant"),
     timestamp: new Date(),
   },
 
@@ -757,7 +760,7 @@ Deploy that fix, and this particular nightmare is over. But stay sharp, friend. 
     role: "user",
     content: "Can you run npm install and show me the full output?",
     timestamp: new Date(),
-    opencodeMessage: createMockMessage("demo-16", "user"),
+    messageInfo: createMockMessage("demo-16", "user"),
   },
   {
     id: "demo-17",
@@ -765,7 +768,7 @@ Deploy that fix, and this particular nightmare is over. But stay sharp, friend. 
     model: "Claude Sonnet 4",
     provider: "anthropic",
     content: "I'll run npm install for you.",
-    opencodeMessage: createMockMessage("demo-17", "assistant"),
+    messageInfo: createMockMessage("demo-17", "assistant"),
     blocks: [
       {
         id: "tool-long",
@@ -898,7 +901,7 @@ Happy coding! 🚀`,
     role: "user",
     content: "Can you analyze this large codebase for security issues?",
     timestamp: new Date(),
-    opencodeMessage: createMockMessage("demo-error-1", "user"),
+    messageInfo: createMockMessage("demo-error-1", "user"),
   },
   {
     id: "demo-error-2",
@@ -916,20 +919,20 @@ Happy coding! 🚀`,
       isRetryable: true,
     },
     timestamp: new Date(),
-    opencodeMessage: createMockMessage("demo-error-2", "assistant"),
+    messageInfo: createMockMessage("demo-error-2", "assistant"),
   },
 
   // EDGE CASE: Very long word without spaces (could cause horizontal scroll)
   {
     id: "demo-long-word",
-    opencodeMessage: createMockMessage("demo-long-word", "user"),
+    messageInfo: createMockMessage("demo-long-word", "user"),
     role: "user",
     content: "What is supercalifragilisticexpialidociousantidisestablishmentarianismfloccinaucinihilipilification?",
     timestamp: new Date(),
   },
   {
     id: "demo-long-word-response",
-    opencodeMessage: createMockMessage("demo-long-word-response", "assistant"),
+    messageInfo: createMockMessage("demo-long-word-response", "assistant"),
     role: "assistant",
     model: "Claude Sonnet 4",
     provider: "anthropic",
@@ -942,7 +945,7 @@ Happy coding! 🚀`,
   // EDGE CASE: Long URL without spaces
   {
     id: "demo-long-url",
-    opencodeMessage: createMockMessage("demo-long-url", "user"),
+    messageInfo: createMockMessage("demo-long-url", "user"),
     role: "user",
     content:
       "Check this URL: https://example.com/very/long/path/with/many/segments/that/could/potentially/cause/horizontal/scrolling/issues/in/the/message/container/especially/on/mobile/devices",
@@ -952,7 +955,7 @@ Happy coding! 🚀`,
   // EDGE CASE: Long code line in inline code
   {
     id: "demo-long-code",
-    opencodeMessage: createMockMessage("demo-long-code", "assistant"),
+    messageInfo: createMockMessage("demo-long-code", "assistant"),
     role: "assistant",
     model: "Claude Sonnet 4",
     provider: "anthropic",
@@ -965,7 +968,7 @@ Happy coding! 🚀`,
   // EDGE CASE: Table with wide columns
   {
     id: "demo-wide-table",
-    opencodeMessage: createMockMessage("demo-wide-table", "assistant"),
+    messageInfo: createMockMessage("demo-wide-table", "assistant"),
     role: "assistant",
     model: "Claude Sonnet 4",
     provider: "anthropic",
@@ -982,7 +985,7 @@ Happy coding! 🚀`,
   // EDGE CASE: Unbroken string of characters
   {
     id: "demo-unbroken",
-    opencodeMessage: createMockMessage("demo-unbroken", "user"),
+    messageInfo: createMockMessage("demo-unbroken", "user"),
     role: "user",
     content:
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -1013,7 +1016,7 @@ const MessagesDemo: Component = () => {
       role: "user",
       content,
       timestamp: new Date(),
-      opencodeMessage: createMockMessage(Date.now().toString(), "user"),
+      messageInfo: createMockMessage(Date.now().toString(), "user"),
     };
 
     setMessages((prev) => [userMessage, ...prev]);
@@ -1034,7 +1037,7 @@ const MessagesDemo: Component = () => {
       provider: "anthropic",
       content: "",
       timestamp: new Date(),
-      opencodeMessage: createMockMessage((Date.now() + 1).toString(), "assistant"),
+      messageInfo: createMockMessage((Date.now() + 1).toString(), "assistant"),
     };
 
     setMessages((prev) => [assistantMessage, ...prev]);

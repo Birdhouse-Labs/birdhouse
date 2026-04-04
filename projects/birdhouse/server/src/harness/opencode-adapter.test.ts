@@ -188,7 +188,13 @@ describe("OpenCodeAgentHarness", () => {
     });
 
     expect(message.info.id).toBe("msg_ses_sdk");
-    expect(message.parts[0]).toEqual({ type: "text", text: "Adapter response", metadata: undefined });
+    expect(message.parts[0]).toMatchObject({
+      id: expect.any(String),
+      sessionID: "ses_sdk",
+      messageID: "msg_ses_sdk",
+      type: "text",
+      text: "Adapter response",
+    });
   });
 
   it("returns a placeholder assistant message when OpenCode noReply does not return data", async () => {

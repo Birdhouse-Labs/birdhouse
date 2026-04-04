@@ -4,28 +4,28 @@
 import type { Message } from "../types/messages";
 
 /**
- * Find the ID of the pending (incomplete) assistant message, if any.
+ * Find the pending (incomplete) assistant message, if any.
  *
  * A pending assistant message is the latest assistant message when it does not
  * have a completed timestamp (time.completed is undefined).
  *
  * @param messages Array of messages (newest-first order expected)
- * @returns The ID of the pending assistant message, or undefined if none
+ * @returns The pending assistant message, or undefined if none
  */
-export function findPendingAssistantId(messages: Message[]): string | undefined {
+export function findPendingAssistant(messages: Message[]): Message | undefined {
   // Messages are newest-first, so the first assistant message is the latest one.
   const latestAssistant = messages.find((m) => {
     if (m.role !== "assistant") return false;
-    const ocMessage = m.opencodeMessage;
-    if (!ocMessage || ocMessage.role !== "assistant") return false;
+    const messageInfo = m.messageInfo;
+    if (!messageInfo || messageInfo.role !== "assistant") return false;
     return true;
   });
 
-  if (!latestAssistant?.opencodeMessage || latestAssistant.opencodeMessage.role !== "assistant") {
+  if (!latestAssistant?.messageInfo || latestAssistant.messageInfo.role !== "assistant") {
     return undefined;
   }
 
-  return latestAssistant.opencodeMessage.time?.completed ? undefined : latestAssistant.id;
+  return latestAssistant.messageInfo.time.completed ? undefined : latestAssistant;
 }
 
 /**
@@ -34,17 +34,15 @@ export function findPendingAssistantId(messages: Message[]): string | undefined 
  * A user message is queued if:
  * - It is a user message
  * - There is a pending assistant message
- * - The user message's ID is greater than the pending assistant message's ID
- *   (meaning it was sent after the assistant started processing)
+ * - The user message was created after the pending assistant started processing
  *
  * @param message The message to check
- * @param pendingAssistantId The ID of the pending assistant message (from findPendingAssistantId)
+ * @param pendingAssistant The pending assistant message (from findPendingAssistant)
  * @returns true if the message is queued
  */
-export function isMessageQueued(message: Message, pendingAssistantId: string | undefined): boolean {
-  if (!pendingAssistantId) return false;
+export function isMessageQueued(message: Message, pendingAssistant: Message | undefined): boolean {
+  if (!pendingAssistant) return false;
   if (message.role !== "user") return false;
 
-  // Message IDs are lexicographically comparable (OpenCode generates them this way)
-  return message.id > pendingAssistantId;
+  return message.timestamp.getTime() > pendingAssistant.timestamp.getTime();
 }

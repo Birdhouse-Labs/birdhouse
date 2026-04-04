@@ -122,7 +122,12 @@ function createAssistantMessage(sessionId: string, text: string, options?: SendM
       },
       finish: "stop",
     },
-    parts: options?.parts?.map((part) => ({ ...part })) ?? [
+    parts: options?.parts?.map((part) => ({
+      ...part,
+      id: nextPartId(),
+      sessionID: sessionId,
+      messageID: messageId,
+    })) ?? [
       {
         type: "text",
         text,

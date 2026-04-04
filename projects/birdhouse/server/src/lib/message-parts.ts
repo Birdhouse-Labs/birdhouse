@@ -1,13 +1,13 @@
 // ABOUTME: Builds and restores Birdhouse prompt parts for composer flows.
 // ABOUTME: Keeps text and accepted composer attachments aligned with harness-owned part types.
 
-import type { BirdhouseFilePart, BirdhouseInputPart, BirdhousePart, BirdhouseTextPart } from "../harness";
+import type { BirdhouseFilePart, BirdhouseInputFilePart, BirdhouseInputPart, BirdhouseInputTextPart, BirdhousePart } from "../harness";
 
 function isRestorableComposerAttachmentMime(mime: string): boolean {
   return mime.startsWith("image/") || mime === "application/pdf";
 }
 
-export function parseFileAttachments(value: unknown): BirdhouseFilePart[] {
+export function parseFileAttachments(value: unknown): BirdhouseInputFilePart[] {
   if (value === undefined) {
     return [];
   }
@@ -49,13 +49,13 @@ export function parseFileAttachments(value: unknown): BirdhouseFilePart[] {
       mime: typedAttachment.mime,
       url: typedAttachment.url,
       ...(typedAttachment.filename ? { filename: typedAttachment.filename } : {}),
-    } satisfies BirdhouseFilePart;
+    } satisfies BirdhouseInputFilePart;
   });
 }
 
 export function buildPromptParts(
   text: string,
-  attachments: BirdhouseFilePart[],
+  attachments: BirdhouseInputFilePart[],
   metadata?: Record<string, unknown>,
 ): BirdhouseInputPart[] {
   const parts: BirdhouseInputPart[] = [];
@@ -65,7 +65,7 @@ export function buildPromptParts(
       type: "text",
       text,
       ...(metadata ? { metadata } : {}),
-    } satisfies BirdhouseTextPart);
+    } satisfies BirdhouseInputTextPart);
   }
 
   parts.push(...attachments);
@@ -73,7 +73,7 @@ export function buildPromptParts(
   return parts;
 }
 
-export function extractRestorableComposerFileAttachments(parts: BirdhousePart[]): BirdhouseFilePart[] {
+export function extractRestorableComposerFileAttachments(parts: BirdhousePart[]): BirdhouseInputFilePart[] {
   return parts.flatMap((part) => {
     if (part.type !== "file") {
       return [];
@@ -93,7 +93,7 @@ export function extractRestorableComposerFileAttachments(parts: BirdhousePart[])
         mime: part.mime,
         url: part.url,
         ...(typeof part.filename === "string" && part.filename ? { filename: part.filename } : {}),
-      } satisfies BirdhouseFilePart,
+      } satisfies BirdhouseInputFilePart,
     ];
   });
 }

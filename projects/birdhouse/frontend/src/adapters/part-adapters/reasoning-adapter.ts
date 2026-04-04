@@ -1,14 +1,14 @@
-// ABOUTME: Converts OpenCode reasoning parts to UI ReasoningBlock format
+// ABOUTME: Converts harness reasoning parts to UI ReasoningBlock format
 // ABOUTME: Handles LLM thinking/reasoning content
 
-import type { ReasoningPart } from "@opencode-ai/sdk";
+import type { BirdhouseReasoningPart } from "../../../../server/src/harness/types";
 import type { ReasoningBlock } from "../../types/messages";
 
 /**
- * Map OpenCode reasoning part to UI ReasoningBlock
+ * Map harness reasoning part to UI ReasoningBlock
  * Used for model's internal reasoning before generating response
  */
-export function mapReasoningPart(part: ReasoningPart): ReasoningBlock | null {
+export function mapReasoningPart(part: BirdhouseReasoningPart): ReasoningBlock | null {
   const content = part.text ?? "";
   if (!content.trim()) {
     return null;
@@ -18,7 +18,6 @@ export function mapReasoningPart(part: ReasoningPart): ReasoningBlock | null {
     id: part.id,
     type: "reasoning",
     content,
-    timestamp: new Date(),
-    time: part.time,
+    ...(part.time?.start !== undefined ? { timestamp: new Date(part.time.start), time: part.time } : {}),
   };
 }

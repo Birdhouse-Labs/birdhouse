@@ -1,23 +1,26 @@
 // ABOUTME: Tests for streaming part updates with race condition scenarios
 // ABOUTME: Validates deduplication logic when rapid events arrive
 
-import type { AssistantMessage, UserMessage } from "@opencode-ai/sdk";
 import { createStore } from "solid-js/store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { BirdhouseAssistantMessageInfo, BirdhouseUserMessageInfo } from "../../../server/src/harness/types";
 import type { Message, TextBlock, ToolBlock } from "../types/messages";
 import { handlePartDelta, handlePartUpdate, type StreamingPart, type StreamingPartDelta } from "./message-updates";
 
 /**
- * Helper to create mock OpenCode message info for tests
+ * Helper to create mock harness message info for tests
  */
-function createMockOpencodeMessage(id: string, role: "user" | "assistant"): UserMessage | AssistantMessage {
+function createMockMessageInfo(
+  id: string,
+  role: "user" | "assistant",
+): BirdhouseUserMessageInfo | BirdhouseAssistantMessageInfo {
   if (role === "user") {
     return {
       id,
       sessionID: "session_test",
       role: "user",
       time: { created: Date.now() },
-    } as UserMessage;
+    } as BirdhouseUserMessageInfo;
   }
   return {
     id,
@@ -36,7 +39,7 @@ function createMockOpencodeMessage(id: string, role: "user" | "assistant"): User
       cache: { read: 0, write: 0 },
     },
     path: { cwd: "/", root: "/" },
-  } as AssistantMessage;
+  } as BirdhouseAssistantMessageInfo;
 }
 
 describe("handlePartUpdate - race condition handling", () => {
@@ -53,7 +56,7 @@ describe("handlePartUpdate - race condition handling", () => {
         content: "",
         blocks: [],
         timestamp: new Date(),
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ]);
 
@@ -110,7 +113,7 @@ describe("handlePartUpdate - race condition handling", () => {
         content: "",
         blocks: [],
         timestamp: new Date(),
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ]);
 
@@ -180,7 +183,7 @@ describe("handlePartUpdate - race condition handling", () => {
         content: "",
         blocks: [],
         timestamp: new Date(),
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ]);
 
@@ -232,7 +235,7 @@ describe("handlePartUpdate - race condition handling", () => {
           },
         ],
         timestamp: new Date(),
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ]);
 
@@ -271,7 +274,7 @@ describe("handlePartUpdate - race condition handling", () => {
         content: "",
         blocks: [],
         timestamp: new Date(),
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ]);
 
@@ -338,7 +341,7 @@ describe("handlePartUpdate - race condition handling", () => {
         content: "",
         blocks: [],
         timestamp: new Date(),
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ]);
 
@@ -366,7 +369,7 @@ describe("handlePartDelta - incremental text streaming", () => {
         content: "Hello",
         blocks: [{ id: "part_text", type: "text", content: "Hello", isStreaming: true }],
         timestamp: new Date(),
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ]);
 
@@ -408,7 +411,7 @@ describe("handlePartDelta - incremental text streaming", () => {
         content: "",
         blocks: [],
         timestamp: new Date(),
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ]);
 
@@ -434,7 +437,7 @@ describe("handlePartDelta - incremental text streaming", () => {
         content: "Hello",
         blocks: [{ id: "part_text", type: "text", content: "Hello", isStreaming: true }],
         timestamp: new Date(),
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ]);
 
