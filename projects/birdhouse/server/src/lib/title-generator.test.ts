@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "bun:test";
 import { createTestDeps } from "../dependencies";
+import { createTestAgentHarness } from "../harness";
 import { buildTitleMessage, TITLE_PROMPT } from "./prompts/title-prompt";
 import { generateTitle } from "./title-generator";
 
@@ -68,5 +69,16 @@ describe("title-generator", () => {
       "Source agent: Authentication errors after refresh",
       "Consider both the original context and new direction when generating title",
     ]);
+  });
+
+  it("throws when generate capability is absent", async () => {
+    const deps = await createTestDeps();
+    deps.harness = createTestAgentHarness({ enableGenerate: false });
+
+    await expect(
+      generateTitle(deps, {
+        message: "Create a function to sort arrays",
+      }),
+    ).rejects.toThrow("Title generation not supported by harness");
   });
 });

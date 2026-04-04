@@ -3,6 +3,7 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../../dependencies";
+import { createTestAgentHarness } from "../../harness";
 import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
 import type { QuestionRequest } from "../../lib/opencode-client";
 import { createRootAgent, createTestApp } from "../../test-utils";
@@ -51,6 +52,28 @@ describe("getAgentQuestions", () => {
       expect(response.status).toBe(200);
       const data = (await response.json()) as QuestionRequest[];
       expect(data).toEqual([]);
+    });
+  });
+
+  test("returns 501 when questions capability is absent", async () => {
+    const agent = createRootAgent(agentsDB, {
+      id: "agent_1",
+      session_id: "ses_1",
+      title: "Test Agent",
+    });
+
+    const deps = await createTestDeps();
+    deps.agentsDB = agentsDB;
+    deps.harness = createTestAgentHarness({ enableQuestions: false });
+
+    await withDeps(deps, async () => {
+      const app = await createTestApp({ agentsDb: agentsDB });
+      app.get("/:id/questions", (c) => getAgentQuestions(c, deps));
+
+      const response = await app.request(`/${agent.id}/questions`);
+      expect(response.status).toBe(501);
+      const data = (await response.json()) as { error: string };
+      expect(data.error).toBe("Questions not supported by harness");
     });
   });
 
@@ -311,6 +334,32 @@ describe("replyToAgentQuestion", () => {
       expect(response.status).toBe(200);
       expect(capturedRequestID).toBe("req_42");
       expect(capturedAnswers).toEqual([["Option A"], ["custom answer"]]);
+    });
+  });
+
+  test("returns 501 when reply capability is absent", async () => {
+    const agent = createRootAgent(agentsDB, {
+      id: "agent_1",
+      session_id: "ses_1",
+      title: "Test Agent",
+    });
+
+    const deps = await createTestDeps();
+    deps.agentsDB = agentsDB;
+    deps.harness = createTestAgentHarness({ enableQuestions: false });
+
+    await withDeps(deps, async () => {
+      const app = await createTestApp({ agentsDb: agentsDB });
+      app.post("/:id/questions/:requestId/reply", (c) => replyToAgentQuestion(c, deps));
+
+      const response = await app.request(`/${agent.id}/questions/req_1/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: [["Option A"]] }),
+      });
+      expect(response.status).toBe(501);
+      const data = (await response.json()) as { error: string };
+      expect(data.error).toBe("Questions not supported by harness");
     });
   });
 
