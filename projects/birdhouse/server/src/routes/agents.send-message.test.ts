@@ -3,9 +3,9 @@
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
+import type { BirdhouseMessage as Message } from "../harness";
 import { sendMessage } from "../features/api/send-message";
 import { type AgentsDB, initAgentsDB } from "../lib/agents-db";
-import type { Message } from "../lib/opencode-client";
 import type { TelemetryClient } from "../lib/telemetry";
 import { createRootAgent } from "../test-utils/agent-factories";
 import { createTestApp } from "../test-utils/workspace-context";

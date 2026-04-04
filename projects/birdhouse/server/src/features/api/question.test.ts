@@ -3,9 +3,8 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../../dependencies";
-import { createTestAgentHarness } from "../../harness";
+import { createTestAgentHarness, type BirdhouseQuestionRequest as QuestionRequest } from "../../harness";
 import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
-import type { QuestionRequest } from "../../lib/opencode-client";
 import { createRootAgent, createTestApp } from "../../test-utils";
 import { getAgentQuestions, replyToAgentQuestion } from "./question";
 

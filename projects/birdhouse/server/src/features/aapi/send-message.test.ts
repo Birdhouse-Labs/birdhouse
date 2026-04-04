@@ -3,8 +3,8 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../../dependencies";
+import type { BirdhouseMessage as Message } from "../../harness";
 import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
-import type { Message } from "../../lib/opencode-client";
 import { createTestApp } from "../../test-utils";
 import { createRootAgent } from "../../test-utils/agent-factories";
 import { sendMessage } from "./send-message";
@@ -30,7 +30,7 @@ describe("AAPI send-message", () => {
         title: "Target Agent",
       });
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_response",
           sessionID: "ses_target",
@@ -58,7 +58,7 @@ describe("AAPI send-message", () => {
             messageID: "msg_1",
           },
         ],
-      };
+      } as Message;
 
       let capturedPart: { text: string; metadata?: Record<string, unknown> } | undefined;
 
@@ -106,7 +106,7 @@ describe("AAPI send-message", () => {
         title: "Target Agent",
       });
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_response",
           sessionID: "ses_target_no_sig",
@@ -134,7 +134,7 @@ describe("AAPI send-message", () => {
             messageID: "msg_1",
           },
         ],
-      };
+      } as Message;
 
       let capturedText: string | undefined;
 
@@ -174,7 +174,7 @@ describe("AAPI send-message", () => {
         title: "Target Agent",
       });
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_response",
           sessionID: "ses_target_invalid",
@@ -202,7 +202,7 @@ describe("AAPI send-message", () => {
             messageID: "msg_1",
           },
         ],
-      };
+      } as Message;
 
       let capturedText: string | undefined;
 

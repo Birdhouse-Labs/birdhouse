@@ -3,9 +3,9 @@
 
 import { describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
+import type { BirdhouseMessage as Message, BirdhouseSession as Session } from "../harness";
 import type { AgentNode, AgentRow, AgentTree } from "../lib/agents-db";
 import { initAgentsDB } from "../lib/agents-db";
-import type { Message, Session } from "../lib/opencode-client";
 import { createAgentTree, createChildAgent, createRootAgent, withWorkspaceContext } from "../test-utils";
 import { createAgentRoutes } from "./agents";
 
@@ -290,7 +290,7 @@ describe("POST /api/agents - Create root agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const mockMessage: Message = {
+    const mockMessage = {
       info: {
         id: "msg_first",
         sessionID: "ses_with_prompt",
@@ -318,7 +318,7 @@ describe("POST /api/agents - Create root agent", () => {
           messageID: "msg_1",
         },
       ],
-    };
+    } as Message;
 
     const agentsDB = await initAgentsDB(":memory:");
 
@@ -377,7 +377,7 @@ describe("POST /api/agents - Create root agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const mockMessage: Message = {
+    const mockMessage = {
       info: {
         id: "msg_with_image_prompt",
         sessionID: "ses_with_image_prompt",
@@ -397,7 +397,7 @@ describe("POST /api/agents - Create root agent", () => {
         path: { cwd: "/", root: "/" },
       },
       parts: [],
-    };
+    } as Message;
 
     const agentsDB = await initAgentsDB(":memory:");
 
@@ -469,7 +469,7 @@ describe("POST /api/agents - Create root agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const mockMessage: Message = {
+    const mockMessage = {
       info: {
         id: "msg_async",
         sessionID: "ses_async",
@@ -497,7 +497,7 @@ describe("POST /api/agents - Create root agent", () => {
           messageID: "msg_1",
         },
       ],
-    };
+    } as Message;
 
     const agentsDB = await initAgentsDB(":memory:");
 
@@ -888,7 +888,7 @@ describe("GET /api/agents/:id/messages - Get messages for agent", () => {
     const deps = await createTestDeps({
       getMessages: async (sessionId: string, _limit?: number) => {
         expect(sessionId).toBe("ses_msgs123");
-        return mockMessages as Message[];
+        return mockMessages as unknown as Message[];
       },
     });
     deps.agentsDB = agentsDB;

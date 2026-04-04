@@ -4,9 +4,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import { createTestDeps, withDeps } from "../../dependencies";
-import { createTestAgentHarness } from "../../harness";
+import { createTestAgentHarness, type BirdhouseMessage as Message } from "../../harness";
 import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
-import type { Message } from "../../lib/opencode-client";
 import { createRootAgent, withWorkspaceContext } from "../../test-utils";
 import { revert, unrevert } from "./revert";
 
@@ -26,7 +25,7 @@ describe("API revert", () => {
     });
 
     // Mock messages with a user message to revert to
-    const mockMessages: Message[] = [
+    const mockMessages = [
       {
         info: {
           id: "msg_user_1",
@@ -68,7 +67,7 @@ describe("API revert", () => {
           },
         ],
       },
-    ];
+    ] as Message[];
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
@@ -109,7 +108,7 @@ describe("API revert", () => {
       title: "Test Agent",
     });
 
-    const mockMessages: Message[] = [
+    const mockMessages = [
       {
         info: {
           id: "msg_user_with_image",
@@ -145,7 +144,7 @@ describe("API revert", () => {
           },
         ],
       },
-    ];
+    ] as Message[];
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
@@ -293,7 +292,7 @@ describe("API revert", () => {
     });
 
     // Mock messages with assistant message
-    const mockMessages: Message[] = [
+    const mockMessages = [
       {
         info: {
           id: "msg_assistant_1",
@@ -318,7 +317,7 @@ describe("API revert", () => {
           },
         ],
       },
-    ];
+    ] as Message[];
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;

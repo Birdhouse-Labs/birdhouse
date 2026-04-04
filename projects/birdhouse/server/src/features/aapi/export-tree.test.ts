@@ -7,9 +7,9 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Hono } from "hono";
 import { createTestDeps, withDeps } from "../../dependencies";
+import type { BirdhouseMessage as Message } from "../../harness";
 import type { AgentRow, AgentsDB } from "../../lib/agents-db";
 import { initAgentsDB } from "../../lib/agents-db";
-import type { Message } from "../../lib/opencode-client";
 import { createChildAgent, createRootAgent } from "../../test-utils/agent-factories";
 import { exportTree } from "./export-tree";
 
@@ -327,7 +327,7 @@ describe("AAPI export-tree", () => {
         updated_at: 1704153600000,
       });
 
-      const userMessage: Message = {
+      const userMessage = {
         info: {
           id: "msg_user",
           sessionID: agent.session_id,
@@ -345,7 +345,7 @@ describe("AAPI export-tree", () => {
             messageID: "msg_user",
           },
         ],
-      };
+      } as Message;
 
       const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
@@ -966,7 +966,7 @@ describe("AAPI export-tree", () => {
         title: "Test Agent",
       });
 
-      const userMessage: Message = {
+      const userMessage = {
         info: {
           id: "msg_user",
           sessionID: agent.session_id,
@@ -984,7 +984,7 @@ describe("AAPI export-tree", () => {
             messageID: "msg_user",
           },
         ],
-      };
+      } as Message;
 
       const deps = await createTestDeps();
       deps.agentsDB = agentsDB;

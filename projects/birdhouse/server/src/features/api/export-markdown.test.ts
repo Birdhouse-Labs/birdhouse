@@ -4,8 +4,8 @@
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import { createTestDeps, withDeps } from "../../dependencies";
+import type { BirdhouseMessage as Message } from "../../harness";
 import { initAgentsDB } from "../../lib/agents-db";
-import type { Message } from "../../lib/opencode-client";
 import { createRootAgent } from "../../test-utils/agent-factories";
 import { exportMarkdown } from "./export-markdown";
 
@@ -65,7 +65,7 @@ describe("exportMarkdown", () => {
       id: "agent_test",
     });
 
-    const userMessage: Message = {
+    const userMessage = {
       info: {
         id: "msg_user",
         sessionID: agent.session_id,
@@ -83,7 +83,7 @@ describe("exportMarkdown", () => {
           messageID: "msg_user",
         },
       ],
-    };
+    } as Message;
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
@@ -109,7 +109,7 @@ describe("exportMarkdown", () => {
       id: "agent_test",
     });
 
-    const agentMessage: Message = {
+    const agentMessage = {
       info: {
         id: "msg_user",
         sessionID: agent.session_id,
@@ -131,7 +131,7 @@ describe("exportMarkdown", () => {
           },
         },
       ],
-    };
+    } as Message;
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
@@ -156,7 +156,7 @@ describe("exportMarkdown", () => {
       id: "agent_test",
     });
 
-    const assistantMessage: Message = {
+    const assistantMessage = {
       info: {
         id: "msg_assistant",
         sessionID: agent.session_id,
@@ -184,7 +184,7 @@ describe("exportMarkdown", () => {
           messageID: "msg_assistant",
         },
       ],
-    };
+    } as Message;
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
@@ -209,7 +209,7 @@ describe("exportMarkdown", () => {
       id: "agent_test",
     });
 
-    const assistantMessage: Message = {
+    const assistantMessage = {
       info: {
         id: "msg_assistant",
         sessionID: agent.session_id,
@@ -237,7 +237,7 @@ describe("exportMarkdown", () => {
           messageID: "msg_assistant",
         },
       ],
-    };
+    } as Message;
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
@@ -262,7 +262,7 @@ describe("exportMarkdown", () => {
       id: "agent_test",
     });
 
-    const assistantMessage: Message = {
+    const assistantMessage = {
       info: {
         id: "msg_assistant",
         sessionID: agent.session_id,
@@ -305,7 +305,7 @@ describe("exportMarkdown", () => {
           },
         },
       ],
-    };
+    } as Message;
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
@@ -333,7 +333,7 @@ describe("exportMarkdown", () => {
       id: "agent_test",
     });
 
-    const assistantMessage: Message = {
+    const assistantMessage = {
       info: {
         id: "msg_assistant",
         sessionID: agent.session_id,
@@ -373,7 +373,7 @@ describe("exportMarkdown", () => {
           },
         },
       ],
-    };
+    } as Message;
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
