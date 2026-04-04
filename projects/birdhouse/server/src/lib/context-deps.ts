@@ -3,8 +3,7 @@
 
 import type { Context } from "hono";
 import { type Deps, depsContext } from "../dependencies";
-import { OpenCodeAgentHarness } from "../harness";
-import { OpenCodeHarnessEventStream } from "../harness/opencode-event-adapter";
+import { OpenCodeAgentHarness, OpenCodeHarnessEventStream } from "../harness";
 import { getWorkspaceEventBus } from "./birdhouse-event-bus";
 import { getDataDB } from "./data-db";
 import { log } from "./logger";
@@ -48,11 +47,6 @@ export function getDepsFromContext(c: Context): Deps {
     dataDb,
     posthog: createLivePosthogProxy(),
     telemetry: createLiveTelemetryClient(dataDb),
-    getStream: (streamOpencodeBase: string, workspaceDirectory: string) => {
-      // Production: Return workspace-scoped singleton stream
-      // This ensures the same stream instance is used for both emitting and listening
-      return getWorkspaceStream(streamOpencodeBase, workspaceDirectory);
-    },
     getHarnessEventStream: (streamOpencodeBase: string, workspaceDirectory: string) => {
       return new OpenCodeHarnessEventStream(getWorkspaceStream(streamOpencodeBase, workspaceDirectory));
     },

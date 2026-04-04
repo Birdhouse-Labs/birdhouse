@@ -3,7 +3,7 @@
 
 import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
-import type { BirdhouseMessage as Message } from "../../harness/types";
+import type { BirdhouseMessage as Message } from "../../harness";
 
 // TODO(agent-search): Move search to db once we are setup for searching agents better
 const MAX_SNIPPET_LENGTH = 200;

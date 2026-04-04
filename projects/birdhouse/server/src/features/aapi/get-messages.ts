@@ -3,7 +3,7 @@
 
 import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
-import type { BirdhouseMessage as Message } from "../../harness/types";
+import type { BirdhouseMessage as Message } from "../../harness";
 import { filterMessagesForView } from "./helpers/message-filter";
 
 /**

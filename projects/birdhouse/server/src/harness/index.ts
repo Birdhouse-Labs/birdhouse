@@ -13,6 +13,7 @@ export type {
 export type { BirdhouseEvent, HarnessEvent, HarnessEventStream, HarnessEventType } from "./harness-events";
 export type { HarnessHealth, HarnessLifecycle, HarnessRuntimeStatus, HarnessStartOptions } from "./harness-lifecycle";
 export { OpenCodeAgentHarness } from "./opencode-adapter";
+export { OpenCodeHarnessEventStream } from "./opencode-event-adapter";
 export type { TestAgentHarness, TestHarnessEventStream } from "./test-harness";
 export { createTestAgentHarness, createTestHarnessEventStream } from "./test-harness";
 export type { BirdhouseToolDefinition, ToolRegistrar, ToolRegistrationOptions } from "./tool-registrar";

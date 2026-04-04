@@ -1,7 +1,7 @@
 // ABOUTME: Message filtering for plugin/agent consumption - removes internal IDs and metadata
 // ABOUTME: Keeps only information useful for agents learning from other agents' work
 
-import type { BirdhouseMessage as Message } from "../../../harness/types";
+import type { BirdhouseMessage as Message } from "../../../harness";
 
 export type FilterView = "default" | "full" | "exchange" | "tool_call";
 
