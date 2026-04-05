@@ -46,48 +46,92 @@ We introduced an "Agent Harness" abstraction layer so Birdhouse can support mult
 
 ## Remaining Work
 
-<!-- The sections below were populated by an audit of the full codebase -->
+### Critical
 
-#### Frontend workspace log source labels still expose OpenCode runtime concepts
+#### Runtime selection is still hard-wired to OpenCode
 
-- **Files:**
-  - `frontend/src/types/workspace.ts:88`
-  - `frontend/src/components/LogViewer.tsx:22`
-  - `frontend/src/components/LogViewer.test.tsx:36-82`
-- **Problem:** Workspace details, health, config, and composer surfaces now use harness-generic names, but recent log filtering still exposes an `"opencode"` source label in the frontend.
-- **Fix:** Decide whether recent logs should use a generic `"harness"` source label or keep `"opencode"` while only the OpenCode runtime exists.
-- **Priority:** `Future / Frontend`
+Files: `server/src/middleware/workspace.ts`, `server/src/middleware/aapi.ts`, `server/src/lib/context-deps.ts`, `server/src/dependencies.ts`, `server/src/types/context.ts`, `server/src/routes/events.ts`, `server/src/routes/workspaces.ts`
 
-### Informational / expected items
+Problem: The server still assumes every workspace request is backed by an OpenCode process and an OpenCode base URL. Middleware always calls `getOrSpawnOpenCode(...)`, request context exposes `opencodePort` and `opencodeBase`, the deps layer builds `OpenCodeAgentHarness` directly, and the event stream factory still takes an OpenCode URL. This means Birdhouse cannot actually select or run a second harness yet, even though the `AgentHarness` interface exists.
 
-#### `opencode-manager.ts` is correctly scoped as an OpenCode-only runtime concern
+Fix: Introduce a harness runtime registry/factory at the composition layer. Middleware should resolve a harness runtime generically, inject harness-neutral context values, and the deps layer should build the correct `AgentHarness` and event stream from that selected runtime. Workspace APIs should stop exposing OpenCode transport details as the generic harness contract.
 
-- **Files:** `server/src/lib/opencode-manager.ts:1-320`, `server/src/lib/opencode-manager.ts:665-712`
-- **Problem:** None. This file is intentionally responsible for OpenCode process lifecycle, health checks, session probing, and spawn environment construction.
-- **Fix:** No action needed. Keep it as the runtime manager for the OpenCode-backed harness until there is a parallel manager for another harness.
-- **Priority:** `no action needed`
+#### Harness events are not typed strongly enough to protect the frontend contract
 
-#### `routes/files.ts` is still an intentional OpenCode passthrough
+Files: `server/src/harness/harness-events.ts`, `server/src/harness/opencode-event-adapter.ts`, `server/src/routes/events.ts`
 
-- **Files:** `server/src/routes/files.ts:1-69`
-- **Problem:** None for this branch. The file-search route still forwards directly to OpenCode file APIs by design.
-- **Fix:** No action needed unless file operations become part of a future generalized harness contract.
-- **Priority:** `no action needed`
+Problem: `HarnessEvent.properties` is still `Record<string, unknown>`. The frontend and SSE route depend on specific event payload shapes, but the abstraction does not encode those shapes. A Pi adapter could emit structurally different payloads and still type-check, causing silent runtime breakage instead of compile-time failures.
 
-#### Harness adapter tests are expected to construct OpenCode client/stream fixtures directly
+Fix: Define a typed, Birdhouse-owned event payload contract for the harness events that are forwarded to the frontend. Make adapters map their native events into those typed payloads, and add tests that lock the SSE payload shapes Birdhouse depends on.
 
-- **Files:**
-  - `server/src/harness/opencode-adapter.test.ts:7-13`, `server/src/harness/opencode-adapter.test.ts:66-226`
-  - `server/src/harness/opencode-event-adapter.test.ts:5-6`, `server/src/harness/opencode-event-adapter.test.ts:37-84`
-- **Problem:** None. These tests are validating the OpenCode adapter boundary itself, so direct OpenCode fixtures are appropriate there.
-- **Fix:** No action needed. Keep these tests close to the adapter implementation and continue using OpenCode-native types here.
-- **Priority:** `no action needed`
+### High
 
-#### Dependency wiring files intentionally assemble the OpenCode-backed harness
+#### Shared server code still imports OpenCode-owned types outside `harness/`
 
-- **Files:**
-  - `server/src/dependencies.ts:20`, `server/src/dependencies.ts:277-292`
-  - `server/src/lib/context-deps.ts:6`, `server/src/lib/context-deps.ts:41-51`
-- **Problem:** None. These files are the composition layer that turns OpenCode runtime pieces into the harness abstraction.
-- **Fix:** No action needed. The important boundary is that downstream feature code consumes `Deps.harness`, not that the wiring layer avoids OpenCode references.
-- **Priority:** `no action needed`
+Files: `server/src/lib/skills.ts`, `server/src/lib/agents-db.ts`
+
+Problem: Shared code outside the adapter layer still depends on OpenCode-specific types. `lib/skills.ts` accepts `OpenCodeSkill`, and `lib/agents-db.ts` uses `SessionStatus` from `opencode-client`. These are exactly the kinds of type leaks the abstraction was supposed to remove.
+
+Fix: Change shared code to accept and return Birdhouse-owned types instead. `lib/skills.ts` should consume `BirdhouseSkill`, and `lib/agents-db.ts` should use `BirdhouseSessionStatus` for agent status fields.
+
+#### Tests still bypass the abstraction boundary with OpenCode fixtures and types
+
+Files: `server/src/dependencies.ts`, `server/src/routes/agents.recent.test.ts`, `server/src/lib/model-validator.test.ts`, `server/src/lib/agent-messaging.test.ts`
+
+Problem: Non-adapter tests still use OpenCode-native types or wiring. `createTestDeps` wraps the real OpenCode event adapter instead of the in-memory test event stream, and several feature/lib tests still cast fixtures to `opencode-client` types. That weakens the boundary because tests can keep passing even if Birdhouse-owned contracts drift from OpenCode.
+
+Fix: Use `createTestHarnessEventStream()` in `createTestDeps`, and convert non-adapter tests to construct Birdhouse-owned messages, providers, and skills directly. Keep OpenCode-native fixtures only in adapter-specific tests.
+
+### Medium
+
+#### `harness_type` is persisted but not used to resolve the active harness implementation
+
+Files: `server/src/features/api/create.ts`, `server/src/features/aapi/create.ts`, `server/src/domain/agent-lifecycle.ts`
+
+Problem: Agents now record `harness_type`, but the runtime does not use that value to select the corresponding harness implementation. New agents store `deps.harness.kind`, clones preserve the source harness type, and then the rest of the system ignores the field because there is still only one live harness. This becomes real friction as soon as mixed-harness data exists.
+
+Fix: Once the runtime registry exists, thread `harness_type` into harness resolution for agent operations, cloning, and event streaming so persisted agent metadata and live runtime selection stay aligned.
+
+#### Lifecycle and tool-registration abstractions are defined but not wired into runtime composition
+
+Files: `server/src/harness/harness-lifecycle.ts`, `server/src/harness/tool-registrar.ts`, `server/src/harness/index.ts`
+
+Problem: The lifecycle and tool-registration interfaces exist as scaffolding, but production code does not use them yet. Adding Pi will still require another composition pass for startup, shutdown, health checks, and tool exposure.
+
+Fix: Either wire these abstractions into the runtime/composition layer now, or explicitly keep them out of the active contract until a second harness is implemented. If they stay, they should be the path by which a harness runtime starts, reports health, and registers Birdhouse tools.
+
+#### `sendMessage` behavior is not specified clearly enough for multi-harness implementations
+
+Files: `server/src/harness/agent-harness.ts`, `server/src/harness/opencode-adapter.ts`
+
+Problem: The contract does not say what `sendMessage(...)` must return when the underlying harness does not produce an immediate assistant message. The OpenCode adapter currently manufactures a placeholder assistant message when `response.data` is absent. That behavior is OpenCode-specific and is not encoded in the interface, so another harness could reasonably choose a different behavior and break callers.
+
+Fix: Specify the expected `sendMessage` semantics in the interface. Either require a real assistant message, allow `null`/`void` for async sends, or make placeholder responses an explicit Birdhouse-level concept.
+
+### Low
+
+#### File search routes are still a direct OpenCode passthrough
+
+Files: `server/src/routes/files.ts`
+
+Problem: File operations are still implemented by constructing an OpenCode client directly outside the harness boundary. This is fine if file APIs remain intentionally OpenCode-specific, but it means the abstraction is not yet the single boundary for all harness-mediated functionality.
+
+Fix: Make an explicit scope decision. Either leave file APIs as OpenCode-only infrastructure and document that clearly, or pull the needed file operations into a harness-owned interface before adding a second harness.
+
+#### Frontend terminology still exposes OpenCode-specific labels in a few places
+
+Files: `frontend/src/types/workspace.ts`, `frontend/src/components/LogViewer.tsx`, `frontend/src/components/LogViewer.test.tsx`
+
+Problem: The main server abstraction is moving toward harness-generic naming, but some frontend surfaces still expose `opencode` as the runtime/source label. This does not block Pi support by itself, but it keeps the product model tied to OpenCode even after the server contract becomes generic.
+
+Fix: Rename user-facing runtime labels to `harness` or another neutral term where appropriate, and keep OpenCode-specific wording only in places that are intentionally OpenCode-only.
+
+### Expected / No Action
+
+#### OpenCode-specific adapter and manager code should stay OpenCode-specific
+
+Files: `server/src/harness/opencode-adapter.ts`, `server/src/harness/opencode-type-mappers.ts`, `server/src/harness/opencode-event-adapter.ts`, `server/src/lib/opencode-manager.ts`
+
+Problem: None. These files are the OpenCode side of the boundary and are expected to use OpenCode-native SDK types and runtime logic.
+
+Fix: No action needed. Keep direct OpenCode dependencies contained here and add parallel Pi-specific files rather than diluting the adapter boundary.
