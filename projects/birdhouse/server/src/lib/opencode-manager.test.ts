@@ -383,6 +383,7 @@ describe("OpenCodeManager environment configuration", () => {
 
       expect(env.OPENCODE_PROJECT_ID).toBe(workspaceId);
       expect(env.OPENCODE_DISABLE_GLOBAL_CONFIG).toBe("true");
+      expect(env.OPENCODE_DISABLE_PROJECT_CONFIG).toBe("true");
       expect(env.OPENCODE_DISABLE_CHANNEL_DB).toBe("true");
       expect(env.PORT).toBe("4310");
     });

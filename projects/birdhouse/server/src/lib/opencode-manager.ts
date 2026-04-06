@@ -464,6 +464,7 @@ export class OpenCodeManager {
       BIRDHOUSE_SERVER: `http://localhost:${this.serverPort}`,
       BIRDHOUSE_WORKSPACE_ID: workspace.workspace_id,
       OPENCODE_DISABLE_GLOBAL_CONFIG: "true",
+      OPENCODE_DISABLE_PROJECT_CONFIG: "true",
       OPENCODE_DISABLE_CHANNEL_DB: "true",
       OPENCODE_DISABLE_AUTOCOMPACT: "true",
       OPENCODE_DISABLE_PRUNE: "true",
