@@ -56,6 +56,16 @@ Problem: The server still assumes every workspace request is backed by an OpenCo
 
 Fix: Introduce a harness runtime registry/factory at the composition layer. Middleware should resolve a harness runtime generically, inject harness-neutral context values, and the deps layer should build the correct `AgentHarness` and event stream from that selected runtime. Workspace APIs should stop exposing OpenCode transport details as the generic harness contract.
 
+### High
+
+#### Workspace runtime persistence and management are still OpenCode-shaped
+
+Files: `server/src/lib/data-db.ts`, `server/src/lib/migrations/migrations/2026-02-28_000_initial_schema.ts`, `server/src/lib/startup-warmup.ts`, `server/src/routes/workspaces.ts`
+
+Problem: Workspace state still persists OpenCode-specific runtime fields (`opencode_port`, `opencode_pid`), startup warmup still prewarms OpenCode specifically, and workspace management routes still model health/restart/shutdown/logs around an OpenCode process. Even after request-time harness resolution is fixed, the platform-level workspace model is still tied to one process-backed harness.
+
+Fix: Replace workspace runtime metadata with a harness-neutral runtime model, or clearly separate generic workspace data from OpenCode-only runtime state. Warmup, health, restart, shutdown, and logs should be routed through a harness runtime abstraction so non-OpenCode harnesses can either implement those features or opt out cleanly.
+
 #### Harness events are not typed strongly enough to protect the frontend contract
 
 Files: `server/src/harness/harness-events.ts`, `server/src/harness/opencode-event-adapter.ts`, `server/src/routes/events.ts`
@@ -63,8 +73,6 @@ Files: `server/src/harness/harness-events.ts`, `server/src/harness/opencode-even
 Problem: `HarnessEvent.properties` is still `Record<string, unknown>`. The frontend and SSE route depend on specific event payload shapes, but the abstraction does not encode those shapes. A Pi adapter could emit structurally different payloads and still type-check, causing silent runtime breakage instead of compile-time failures.
 
 Fix: Define a typed, Birdhouse-owned event payload contract for the harness events that are forwarded to the frontend. Make adapters map their native events into those typed payloads, and add tests that lock the SSE payload shapes Birdhouse depends on.
-
-### High
 
 #### Shared server code still imports OpenCode-owned types outside `harness/`
 
@@ -74,16 +82,6 @@ Problem: Shared code outside the adapter layer still depends on OpenCode-specifi
 
 Fix: Change shared code to accept and return Birdhouse-owned types instead. `lib/skills.ts` should consume `BirdhouseSkill`, and `lib/agents-db.ts` should use `BirdhouseSessionStatus` for agent status fields.
 
-#### Tests still bypass the abstraction boundary with OpenCode fixtures and types
-
-Files: `server/src/dependencies.ts`, `server/src/routes/agents.recent.test.ts`, `server/src/lib/model-validator.test.ts`, `server/src/lib/agent-messaging.test.ts`
-
-Problem: Non-adapter tests still use OpenCode-native types or wiring. `createTestDeps` wraps the real OpenCode event adapter instead of the in-memory test event stream, and several feature/lib tests still cast fixtures to `opencode-client` types. That weakens the boundary because tests can keep passing even if Birdhouse-owned contracts drift from OpenCode.
-
-Fix: Use `createTestHarnessEventStream()` in `createTestDeps`, and convert non-adapter tests to construct Birdhouse-owned messages, providers, and skills directly. Keep OpenCode-native fixtures only in adapter-specific tests.
-
-### Medium
-
 #### `harness_type` is persisted but not used to resolve the active harness implementation
 
 Files: `server/src/features/api/create.ts`, `server/src/features/aapi/create.ts`, `server/src/domain/agent-lifecycle.ts`
@@ -91,14 +89,6 @@ Files: `server/src/features/api/create.ts`, `server/src/features/aapi/create.ts`
 Problem: Agents now record `harness_type`, but the runtime does not use that value to select the corresponding harness implementation. New agents store `deps.harness.kind`, clones preserve the source harness type, and then the rest of the system ignores the field because there is still only one live harness. This becomes real friction as soon as mixed-harness data exists.
 
 Fix: Once the runtime registry exists, thread `harness_type` into harness resolution for agent operations, cloning, and event streaming so persisted agent metadata and live runtime selection stay aligned.
-
-#### Lifecycle and tool-registration abstractions are defined but not wired into runtime composition
-
-Files: `server/src/harness/harness-lifecycle.ts`, `server/src/harness/tool-registrar.ts`, `server/src/harness/index.ts`
-
-Problem: The lifecycle and tool-registration interfaces exist as scaffolding, but production code does not use them yet. Adding Pi will still require another composition pass for startup, shutdown, health checks, and tool exposure.
-
-Fix: Either wire these abstractions into the runtime/composition layer now, or explicitly keep them out of the active contract until a second harness is implemented. If they stay, they should be the path by which a harness runtime starts, reports health, and registers Birdhouse tools.
 
 #### `sendMessage` behavior is not specified clearly enough for multi-harness implementations
 
@@ -108,7 +98,25 @@ Problem: The contract does not say what `sendMessage(...)` must return when the 
 
 Fix: Specify the expected `sendMessage` semantics in the interface. Either require a real assistant message, allow `null`/`void` for async sends, or make placeholder responses an explicit Birdhouse-level concept.
 
+### Medium
+
+#### Test coverage still validates too much OpenCode behavior instead of the harness contract
+
+Files: `server/src/dependencies.ts`, `server/src/routes/agents.recent.test.ts`, `server/src/lib/model-validator.test.ts`, `server/src/lib/agent-messaging.test.ts`
+
+Problem: Non-adapter tests still use OpenCode-native fixtures or real OpenCode event adaptation. That does not block plugging in Pi, but it reduces confidence that the abstraction itself is what the tests are protecting.
+
+Fix: Use `createTestHarnessEventStream()` in `createTestDeps`, and convert non-adapter tests to construct Birdhouse-owned messages, providers, and skills directly. Keep OpenCode-native fixtures only in adapter-specific tests.
+
 ### Low
+
+#### Lifecycle and tool-registration abstractions are defined but not wired into runtime composition
+
+Files: `server/src/harness/harness-lifecycle.ts`, `server/src/harness/tool-registrar.ts`, `server/src/harness/index.ts`
+
+Problem: The lifecycle and tool-registration interfaces exist as scaffolding, but production code does not use them yet. This is awkward, but it is not a blocker for trying a second harness if the composition layer can instantiate that harness directly.
+
+Fix: Either wire these abstractions into the runtime/composition layer when the second harness lands, or remove them until there is a concrete use. If they stay, they should eventually become the path for harness startup, health, and tool exposure.
 
 #### File search routes are still a direct OpenCode passthrough
 
