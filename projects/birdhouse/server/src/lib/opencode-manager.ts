@@ -329,8 +329,6 @@ export class OpenCodeManager {
             "--port",
             port.toString(),
             "--print-logs",
-            "--hostname",
-            "0.0.0.0",
           ],
           {
             cwd: join(this.opencodeSourcePath, "packages/opencode"),
@@ -339,7 +337,7 @@ export class OpenCodeManager {
             detached: shouldDetach, // Detach from parent process group to survive Ctrl+C
           },
         )
-      : spawn(this.opencodeBinaryPath, ["serve", "--port", port.toString(), "--print-logs", "--hostname", "0.0.0.0"], {
+      : spawn(this.opencodeBinaryPath, ["serve", "--port", port.toString(), "--print-logs"], {
           env,
           stdio,
           detached: shouldDetach, // Detach from parent process group to survive Ctrl+C
