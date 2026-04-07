@@ -3,6 +3,7 @@
 
 import { dirname } from "node:path";
 import { Hono } from "hono";
+import { getDefaultHarness } from "../dependencies";
 import { getDepsFromContext } from "../lib/context-deps";
 import { getWorkspaceEventBus } from "../lib/birdhouse-event-bus";
 import type { DataDB } from "../lib/data-db";
@@ -42,7 +43,7 @@ export function createSkillRoutes(dataDb: DataDB) {
   const app = new Hono();
 
   app.post("/attachments/preview", async (c) => {
-    const { harness } = getDepsFromContext(c);
+    const harness = getDefaultHarness(getDepsFromContext(c));
     const skillsCapability = harness.capabilities.skills;
     const body = await c.req.json();
 
@@ -63,7 +64,7 @@ export function createSkillRoutes(dataDb: DataDB) {
   });
 
   app.get("/", async (c) => {
-    const { harness } = getDepsFromContext(c);
+    const harness = getDefaultHarness(getDepsFromContext(c));
     const skillsCapability = harness.capabilities.skills;
     const workspace = c.get("workspace");
     const skills = (await skillsCapability?.listSkills()) ?? [];
@@ -76,7 +77,7 @@ export function createSkillRoutes(dataDb: DataDB) {
   });
 
   app.get("/:skillName", async (c) => {
-    const { harness } = getDepsFromContext(c);
+    const harness = getDefaultHarness(getDepsFromContext(c));
     const skillsCapability = harness.capabilities.skills;
     const workspace = c.get("workspace");
     const skillName = c.req.param("skillName");
@@ -91,7 +92,7 @@ export function createSkillRoutes(dataDb: DataDB) {
   });
 
   app.post("/reload", async (c) => {
-    const { harness } = getDepsFromContext(c);
+    const harness = getDefaultHarness(getDepsFromContext(c));
     const skillsCapability = harness.capabilities.skills;
 
     await skillsCapability?.reloadSkills();
@@ -100,7 +101,7 @@ export function createSkillRoutes(dataDb: DataDB) {
   });
 
   app.patch("/:skillName/trigger-phrases", async (c) => {
-    const { harness } = getDepsFromContext(c);
+    const harness = getDefaultHarness(getDepsFromContext(c));
     const skillsCapability = harness.capabilities.skills;
     const workspace = c.get("workspace");
     const skillName = c.req.param("skillName");
@@ -133,7 +134,7 @@ export function createSkillRoutes(dataDb: DataDB) {
   });
 
   app.post("/:skillName/reveal", async (c) => {
-    const { harness } = getDepsFromContext(c);
+    const harness = getDefaultHarness(getDepsFromContext(c));
     const skillsCapability = harness.capabilities.skills;
     const skillName = c.req.param("skillName");
     const skills = (await skillsCapability?.listSkills()) ?? [];

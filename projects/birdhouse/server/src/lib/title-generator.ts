@@ -1,7 +1,7 @@
 // ABOUTME: Title generation service using the harness generation capability.
 // ABOUTME: Applies Birdhouse-owned title rules from a dedicated prompt file.
 
-import type { Deps } from "../dependencies";
+import { getDefaultHarness, type Deps } from "../dependencies";
 import { buildTitleMessage, TITLE_PROMPT } from "./prompts/title-prompt";
 
 export interface TitleGenerationOptions {
@@ -20,10 +20,11 @@ export interface TitleGenerationResult {
  * @returns Generated title
  */
 export async function generateTitle(
-  deps: Pick<Deps, "harness" | "log">,
+  deps: Pick<Deps, "harnesses" | "log">,
   options: TitleGenerationOptions,
 ): Promise<TitleGenerationResult> {
-  const { harness, log } = deps;
+  const { log } = deps;
+  const harness = getDefaultHarness(deps);
 
   const { message, sourceAgentTitle } = options;
   const generateCapability = harness.capabilities.generate;

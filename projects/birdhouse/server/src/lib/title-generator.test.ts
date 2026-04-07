@@ -2,7 +2,7 @@
 // ABOUTME: Verifies title-generator always uses the dedicated prompt file and clone context.
 
 import { describe, expect, it } from "bun:test";
-import { createTestDeps } from "../dependencies";
+import { createTestDeps, getDefaultHarness } from "../dependencies";
 import { createTestAgentHarness } from "../harness";
 import { buildTitleMessage, TITLE_PROMPT } from "./prompts/title-prompt";
 import { generateTitle } from "./title-generator";
@@ -73,7 +73,7 @@ describe("title-generator", () => {
 
   it("throws when generate capability is absent", async () => {
     const deps = await createTestDeps();
-    deps.harness = createTestAgentHarness({ enableGenerate: false });
+    getDefaultHarness(deps).capabilities.generate = createTestAgentHarness({ enableGenerate: false }).capabilities.generate;
 
     await expect(
       generateTitle(deps, {

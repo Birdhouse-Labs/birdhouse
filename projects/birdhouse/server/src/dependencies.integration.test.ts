@@ -3,7 +3,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
-import { createTestDeps, onWithDeps, setTimeoutWithDeps, useDeps, withDeps } from "./dependencies";
+import { createTestDeps, getDefaultHarness, onWithDeps, setTimeoutWithDeps, useDeps, withDeps } from "./dependencies";
 
 // Helper
 async function createMockDeps() {
@@ -21,9 +21,8 @@ describe("Helpers Integration", () => {
       // Subscribe to stream with deps preserved
       const cleanup = onWithDeps<{ sessionId: string }>(emitter, "session.created", async (event) => {
         // Can use useDeps() pattern here!
-        const {
-          harness: { getSession },
-        } = useDeps();
+        const harness = getDefaultHarness(useDeps());
+        const { getSession } = harness;
 
         const session = await getSession(event.sessionId);
         processedEvents.push(`${session.id}:${session.title}`);
@@ -52,9 +51,8 @@ describe("Helpers Integration", () => {
     await withDeps(deps, async () => {
       // Schedule background job with deps preserved
       setTimeoutWithDeps(async () => {
-        const {
-          harness: { getSession },
-        } = useDeps();
+        const harness = getDefaultHarness(useDeps());
+        const { getSession } = harness;
 
         const session = await getSession("ses_123");
         completedJobs.push(session.title || "No title");
@@ -78,17 +76,15 @@ describe("Helpers Integration", () => {
 
     await withDeps(deps, async () => {
       const cleanup1 = onWithDeps<string>(emitter, "event", async (data) => {
-        const {
-          harness: { getSession },
-        } = useDeps();
+        const harness = getDefaultHarness(useDeps());
+        const { getSession } = harness;
         const session = await getSession(data);
         results.handler1.push(session.title);
       });
 
       const cleanup2 = onWithDeps<string>(emitter, "event", async (data) => {
-        const {
-          harness: { getSession },
-        } = useDeps();
+        const harness = getDefaultHarness(useDeps());
+        const { getSession } = harness;
         const session = await getSession(data);
         results.handler2.push(session.title);
       });

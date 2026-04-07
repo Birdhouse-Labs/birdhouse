@@ -2,7 +2,7 @@
 // ABOUTME: Used by /aapi/agents POST endpoint - optimized for agent-to-agent workflows
 
 import type { Context } from "hono";
-import type { Deps, Session } from "../../dependencies";
+import { getDefaultHarness, getHarnessForAgent, getHarnessForKind, type Deps, type Session } from "../../dependencies";
 import { cloneAgent, createAgent } from "../../domain/agent-lifecycle";
 import { sendFirstMessage } from "../../lib/agent-messaging";
 import type { AgentRow } from "../../lib/agents-db";
@@ -25,13 +25,8 @@ async function getCurrentAgentBySession(c: Context, deps: Pick<Deps, "agentsDB">
 /**
  * POST /aapi/agents - Create agent with optional cloning
  */
-export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
-  const {
-    harness: { getMessages, createSession },
-    agentsDB,
-    log,
-    telemetry,
-  } = deps;
+export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
+  const { agentsDB, log, telemetry } = deps;
 
   try {
     // 1. Parse and validate request body
@@ -93,7 +88,8 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
           "Smart from_self: finding message before last user message",
         );
 
-        const messages = await getMessages(sourceAgent.session_id);
+        const sourceHarness = getHarnessForAgent(deps, sourceAgent);
+        const messages = await sourceHarness.getMessages(sourceAgent.session_id);
 
         // Find all user messages
         const userMessages = messages.filter((msg) => msg.info.role === "user");
@@ -136,7 +132,8 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
 
       // Validate from_message_id exists if provided
       if (actualMessageId) {
-        const messages = await getMessages(sourceAgent.session_id);
+        const sourceHarness = getHarnessForAgent(deps, sourceAgent);
+        const messages = await sourceHarness.getMessages(sourceAgent.session_id);
         const messageExists = messages.some((msg) => msg.info.id === actualMessageId);
 
         if (!messageExists) {
@@ -157,7 +154,7 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
 
       // Validate model if explicitly provided
       if (requestModel) {
-        const modelError = await validateModel(model, deps.harness);
+        const modelError = await validateModel(model, getHarnessForAgent(deps, sourceAgent));
         if (modelError) {
           return c.json({ error: modelError }, 400);
         }
@@ -180,7 +177,14 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
       // Clone the agent using the helper function
       newAgent = await cloneAgent(
         sourceAgent,
-        { ...deps, birdhouseEventBus },
+        {
+          harness: getHarnessForAgent(deps, sourceAgent),
+          agentsDB: deps.agentsDB,
+          dataDb: deps.dataDb,
+          log: deps.log,
+          telemetry: deps.telemetry,
+          birdhouseEventBus,
+        },
         {
           messageId: actualMessageId,
           title: title.trim(),
@@ -307,14 +311,15 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
           : currentAgent.model;
 
       // Validate model
-      const modelError = await validateModel(model, deps.harness);
+      const currentHarness = getHarnessForAgent(deps, currentAgent);
+      const modelError = await validateModel(model, currentHarness);
       if (modelError) {
         return c.json({ error: modelError }, 400);
       }
 
       // Create new harness session
       log.server.info({ title }, "Creating harness session");
-      session = await createSession(title.trim());
+      session = await currentHarness.createSession(title.trim());
       log.server.info(
         {
           sessionId: session.id,
@@ -335,7 +340,7 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
         project_id: session.projectID,
         directory: session.directory,
         model,
-        harness_type: deps.harness.kind,
+        harness_type: currentHarness.kind,
         created_at: now,
         updated_at: now,
         cloned_from: null, // Not a clone
@@ -380,14 +385,18 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
         }
       : undefined;
 
-    const result = await sendFirstMessage(deps, {
-      agentId: newAgent.id,
-      sessionId: newAgent.session_id,
-      model: newAgent.model,
-      prompt: prompt.trim(),
-      wait: shouldWait,
-      senderMetadata,
-    });
+    const result = await sendFirstMessage(
+      deps,
+      {
+        agentId: newAgent.id,
+        sessionId: newAgent.session_id,
+        model: newAgent.model,
+        prompt: prompt.trim(),
+        wait: shouldWait,
+        senderMetadata,
+      },
+      getHarnessForKind(deps, newAgent.harness_type),
+    );
 
     if (result.parts) {
       // Blocking mode - return agent with response

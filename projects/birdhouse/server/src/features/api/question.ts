@@ -10,7 +10,7 @@ import type { Deps } from "../../dependencies";
  * Returns empty array if the session is idle — a pending question on an idle session is a leaked
  * prompt from an aborted run and cannot be answered.
  */
-export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "harnesses" | "log">) {
+export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses" | "log">) {
   const { agentsDB, harnesses, log } = deps;
   const agentId = c.req.param("id");
 

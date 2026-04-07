@@ -1,7 +1,7 @@
 // ABOUTME: Model validation helper - validates model IDs and provides helpful error messages
-// ABOUTME: Uses deps.harness.getProviders for testability
+// ABOUTME: Uses a harness-like getProviders dependency for testability
 
-import type { Deps } from "../dependencies";
+import type { AgentHarness } from "../harness";
 
 /**
  * Parse a model ID string into providerID and modelID parts
@@ -32,7 +32,7 @@ export function parseModelId(model: string): { providerID: string; modelID: stri
  */
 export async function validateModel(
   modelId: string,
-  harness: Pick<Deps["harness"], "getProviders">,
+  harness: Pick<AgentHarness, "getProviders">,
 ): Promise<string | null> {
   try {
     const { providers } = await harness.getProviders();

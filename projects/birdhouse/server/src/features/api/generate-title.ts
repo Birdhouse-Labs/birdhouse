@@ -8,7 +8,7 @@ import { generateTitle as generateTitleService } from "../../lib/title-generator
 /**
  * POST /api/title/generate - Generate a title for a message
  */
-export async function generateTitle(c: Context, deps: Pick<Deps, "harness" | "log">) {
+export async function generateTitle(c: Context, deps: Pick<Deps, "harnesses" | "log">) {
   const { log } = deps;
 
   try {

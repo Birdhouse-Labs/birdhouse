@@ -2,14 +2,11 @@
 // ABOUTME: Used by /aapi/agents/:id/tool-calls/:callId to avoid rereading full transcripts.
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { getHarnessForAgent, type Deps } from "../../dependencies";
 import { filterMessage } from "./helpers/message-filter";
 
-export async function getToolCall(c: Context, deps: Pick<Deps, "agentsDB" | "harness">) {
-  const {
-    agentsDB,
-    harness: { getMessages: getMessagesFromHarness },
-  } = deps;
+export async function getToolCall(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses">) {
+  const { agentsDB } = deps;
 
   const agentId = c.req.param("id");
   const callId = c.req.param("callId");
@@ -20,7 +17,8 @@ export async function getToolCall(c: Context, deps: Pick<Deps, "agentsDB" | "har
       return c.json({ error: `Agent ${agentId} not found` }, 404);
     }
 
-    const messages = await getMessagesFromHarness(agent.session_id);
+    const harness = getHarnessForAgent(deps, agent);
+    const messages = await harness.getMessages(agent.session_id);
 
     for (const message of messages) {
       const matchingPart = message.parts.find(

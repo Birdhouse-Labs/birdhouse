@@ -2,7 +2,7 @@
 // ABOUTME: Formats messages, events, and tool calls following the Birdhouse export spec
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { getHarnessForAgent, type Deps } from "../../dependencies";
 import type {
   BirdhouseAssistantMessageInfo,
   BirdhousePart as Part,
@@ -275,8 +275,8 @@ export function formatTimelineItem(item: TimelineItem): string {
 /**
  * GET /agents/:id/export - Export agent timeline as markdown
  */
-export async function exportMarkdown(c: Context, deps: Pick<Deps, "agentsDB" | "harness">) {
-  const { agentsDB, harness } = deps;
+export async function exportMarkdown(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses">) {
+  const { agentsDB } = deps;
   const agentId = c.req.param("id");
 
   try {
@@ -287,6 +287,7 @@ export async function exportMarkdown(c: Context, deps: Pick<Deps, "agentsDB" | "
     }
 
     // Generate markdown content using shared helper
+    const harness = getHarnessForAgent(deps, agent);
     const markdown = await generateMarkdownContent(agent, agentsDB, harness, {
       formatTimelineItem,
     });

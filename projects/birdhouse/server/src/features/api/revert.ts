@@ -2,16 +2,15 @@
 // ABOUTME: Revert returns the text of the user message being reverted to
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { getHarnessForAgent, type Deps } from "../../dependencies";
 import { extractRestorableComposerFileAttachments } from "../../lib/message-parts";
 
 /**
  * POST /api/workspace/:workspaceId/agents/:id/revert
  * Revert agent session to a specific user message
  */
-export async function revert(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
-  const { agentsDB, harness, log } = deps;
-  const revertCapability = harness.capabilities.revert;
+export async function revert(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses" | "log">) {
+  const { agentsDB, log } = deps;
   const agentId = c.req.param("id");
 
   // Lookup agent
@@ -19,6 +18,9 @@ export async function revert(c: Context, deps: Pick<Deps, "agentsDB" | "harness"
   if (!agent) {
     return c.json({ error: `Agent ${agentId} not found` }, 404);
   }
+
+  const harness = getHarnessForAgent(deps, agent);
+  const revertCapability = harness.capabilities.revert;
 
   try {
     if (!revertCapability) {
@@ -101,9 +103,8 @@ export async function revert(c: Context, deps: Pick<Deps, "agentsDB" | "harness"
  * POST /api/workspace/:workspaceId/agents/:id/unrevert
  * Unrevert a previously reverted session
  */
-export async function unrevert(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
-  const { agentsDB, harness, log } = deps;
-  const revertCapability = harness.capabilities.revert;
+export async function unrevert(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses" | "log">) {
+  const { agentsDB, log } = deps;
   const agentId = c.req.param("id");
 
   // Lookup agent
@@ -111,6 +112,9 @@ export async function unrevert(c: Context, deps: Pick<Deps, "agentsDB" | "harnes
   if (!agent) {
     return c.json({ error: `Agent ${agentId} not found` }, 404);
   }
+
+  const harness = getHarnessForAgent(deps, agent);
+  const revertCapability = harness.capabilities.revert;
 
   try {
     if (!revertCapability) {

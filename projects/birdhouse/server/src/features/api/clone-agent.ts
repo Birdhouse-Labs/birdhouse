@@ -2,7 +2,7 @@
 // ABOUTME: Emits clone_created timeline events on both source and target agents
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { getHarnessForAgent, type Deps } from "../../dependencies";
 import { cloneAgent as cloneAgentDomain } from "../../domain/agent-lifecycle";
 import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
 
@@ -12,7 +12,7 @@ import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
  */
 export async function cloneAgent(
   c: Context,
-  deps: Pick<Deps, "agentsDB" | "dataDb" | "harness" | "log" | "telemetry">,
+  deps: Pick<Deps, "agentsDB" | "dataDb" | "harnesses" | "log" | "telemetry">,
 ) {
   const { agentsDB, log } = deps;
   const agentId = c.req.param("id");
@@ -51,7 +51,14 @@ export async function cloneAgent(
     const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
     const clonedAgent = await cloneAgentDomain(
       sourceAgent,
-      { ...deps, birdhouseEventBus },
+      {
+        harness: getHarnessForAgent(deps, sourceAgent),
+        agentsDB: deps.agentsDB,
+        dataDb: deps.dataDb,
+        log: deps.log,
+        telemetry: deps.telemetry,
+        birdhouseEventBus,
+      },
       {
         title: sourceAgent.title, // Keep same title
         messageId: messageId || undefined, // Clone from specific message or full clone

@@ -2,10 +2,10 @@
 // ABOUTME: Resolves the tree from the selected agent and aborts each session once.
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { getHarnessForAgent, type Deps } from "../../dependencies";
 
-export async function stopAgentTree(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
-  const { agentsDB, harness, log } = deps;
+export async function stopAgentTree(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses" | "log">) {
+  const { agentsDB, log } = deps;
 
   const agentId = c.req.param("id");
 
@@ -26,6 +26,7 @@ export async function stopAgentTree(c: Context, deps: Pick<Deps, "agentsDB" | "h
   );
 
   for (const treeAgent of treeAgents) {
+    const harness = getHarnessForAgent(deps, treeAgent);
     await harness.abortSession(treeAgent.session_id);
 
     agentsDB.updateAgentTimestamp(treeAgent.id);

@@ -56,7 +56,6 @@ export function getDepsFromContext(c: Context): Deps {
 
   return {
     harnesses,
-    harness,
     log,
     agentsDB,
     dataDb,

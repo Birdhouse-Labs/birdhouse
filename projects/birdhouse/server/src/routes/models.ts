@@ -2,6 +2,7 @@
 // ABOUTME: Reads provider/model data through the harness and reshapes it for the frontend.
 
 import { Hono } from "hono";
+import { getDefaultHarness } from "../dependencies";
 import { getDepsFromContext } from "../lib/context-deps";
 import "../types/context";
 
@@ -50,7 +51,7 @@ export function createModelRoutes() {
   // GET /api/models - Get list of available models
   app.get("/", async (c) => {
     try {
-      const { harness } = getDepsFromContext(c);
+      const harness = getDefaultHarness(getDepsFromContext(c));
       const data = (await harness.getProviders()) as { providers: Provider[] };
       const providers: Provider[] = data.providers || [];
 

@@ -28,7 +28,7 @@ import { TestDataDB } from "./test-utils/data-db-test";
 // Re-export types from implementations
 export type { AgentsDB, CapturedLog, DataDB, LoggerDeps, Message, ProvidersResponse, Session, TelemetryClient };
 
-type LegacyHarnessOverrides = Partial<Deps["harness"]> & {
+type LegacyHarnessOverrides = Partial<AgentHarness> & {
   listSkills?: () => Promise<BirdhouseSkill[]>;
   reloadSkillState?: () => Promise<void>;
   generate?: (options: {
@@ -47,13 +47,55 @@ type LegacyHarnessOverrides = Partial<Deps["harness"]> & {
 // Dependencies interface - harness client, logger, agents database, and stream factory
 export interface Deps {
   harnesses: WorkspaceHarnessResolver;
-  harness: AgentHarness;
   log: LoggerDeps;
   agentsDB: AgentsDB;
   dataDb: DataDB;
   posthog: PosthogProxy;
   telemetry: TelemetryClient;
   getBirdhouseEventBus: (workspaceDirectory: string) => BirdhouseEventBus;
+}
+
+export type TestDeps = Deps & {
+  harness: AgentHarness;
+};
+
+export function getDefaultHarness(deps: Pick<Deps, "harnesses">): AgentHarness {
+  return deps.harnesses.default();
+}
+
+export function getHarnessForKind(deps: Pick<Deps, "harnesses">, kind: string): AgentHarness {
+  return deps.harnesses.forKind(kind);
+}
+
+export function getHarnessForAgent(
+  deps: Pick<Deps, "harnesses">,
+  agent: { harness_type: string },
+): AgentHarness {
+  return deps.harnesses.forAgent(agent);
+}
+
+function attachTestHarnessAlias(
+  deps: Deps,
+  harnesses: WorkspaceHarnessResolver,
+  registeredHarnesses: Record<string, AgentHarness>,
+  defaultHarnessKind: string,
+): TestDeps {
+  const testDeps = deps as TestDeps;
+
+  Object.defineProperty(testDeps, "harness", {
+    get() {
+      return harnesses.default();
+    },
+    set(nextHarness: AgentHarness) {
+      registeredHarnesses[defaultHarnessKind] = nextHarness;
+      registeredHarnesses[nextHarness.kind] = nextHarness;
+      registeredHarnesses.opencode = nextHarness;
+    },
+    enumerable: true,
+    configurable: true,
+  });
+
+  return testDeps;
 }
 
 // ============================================================================
@@ -182,31 +224,11 @@ export function clearCapturedLogs(): void {
   testLoggerInstance.captured.length = 0;
 }
 
-function attachDefaultHarnessAlias(
-  deps: Deps,
-  harnesses: WorkspaceHarnessResolver,
-  registeredHarnesses: Record<string, AgentHarness>,
-  defaultHarnessKind: string,
-): void {
-  Object.defineProperty(deps, "harness", {
-    get() {
-      return harnesses.default();
-    },
-    set(nextHarness: AgentHarness) {
-      registeredHarnesses[defaultHarnessKind] = nextHarness;
-      registeredHarnesses[nextHarness.kind] = nextHarness;
-      registeredHarnesses.opencode = nextHarness;
-    },
-    enumerable: true,
-    configurable: true,
-  });
-}
-
 /**
  * Create test deps with optional harness overrides
  * Includes test logger and in-memory database automatically
  */
-export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides): Promise<Deps> {
+export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides): Promise<TestDeps> {
   const defaultHarness: AgentHarness = createTestAgentHarness({
     enableRevert: true,
     enableSkills: true,
@@ -312,14 +334,12 @@ export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides):
     posthog: createTestPosthogProxy(),
     telemetry: createTestTelemetryClient(),
     getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
-  } as Deps;
+  };
 
-  attachDefaultHarnessAlias(deps, harnesses, registeredHarnesses, defaultHarnessKind);
-
-  return deps;
+  return attachTestHarnessAlias(deps, harnesses, registeredHarnesses, defaultHarnessKind);
 }
 
-export async function createPosthogDeps(): Promise<Deps> {
+export async function createPosthogDeps(): Promise<TestDeps> {
   const defaultHarness: AgentHarness = createTestAgentHarness();
   const defaultEventStream = createTestHarnessEventStream();
   const defaultHarnessKind = defaultHarness.kind;
@@ -345,9 +365,7 @@ export async function createPosthogDeps(): Promise<Deps> {
     posthog: createLivePosthogProxy(),
     telemetry: createTestTelemetryClient(),
     getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
-  } as Deps;
+  };
 
-  attachDefaultHarnessAlias(deps, harnesses, registeredHarnesses, defaultHarnessKind);
-
-  return deps;
+  return attachTestHarnessAlias(deps, harnesses, registeredHarnesses, defaultHarnessKind);
 }

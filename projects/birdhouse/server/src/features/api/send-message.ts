@@ -2,7 +2,7 @@
 // ABOUTME: Used by /api/agents/:id/messages POST endpoint
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { getHarnessForAgent, type Deps } from "../../dependencies";
 import { cloneAgent } from "../../domain/agent-lifecycle";
 import { findSafeClonePoint } from "../../domain/clone-point";
 import type { AgentHarness, BirdhouseInputFilePart } from "../../harness";
@@ -21,9 +21,9 @@ import "../../types/context";
  */
 export async function sendMessage(
   c: Context,
-  deps: Pick<Deps, "agentsDB" | "dataDb" | "harness" | "log" | "telemetry">,
+  deps: Pick<Deps, "agentsDB" | "dataDb" | "harnesses" | "log" | "telemetry">,
 ) {
-  const { agentsDB, harness, log, telemetry } = deps;
+  const { agentsDB, log, telemetry } = deps;
 
   // Get workspace context for stream creation
   const opencodeBase = c.get("opencodeBase");
@@ -45,17 +45,6 @@ export async function sendMessage(
     return c.json({ error: message }, 400);
   }
   const workspaceRoot = workspaceDir;
-  const visibleSkills = (await harness.capabilities.skills?.listSkills()) ?? [];
-  const enrichedText = enrichMessageWithSkillAttachments(
-    rawText,
-    buildSkillAttachmentPreview(
-      rawText,
-      visibleSkills.map((skill) => ({
-        name: skill.name,
-        content: skill.content,
-      })),
-    ),
-  );
 
   // Check for wait query parameter (default: true for blocking)
   const waitParam = c.req.query("wait");
@@ -66,6 +55,19 @@ export async function sendMessage(
   if (!sourceAgent) {
     return c.json({ error: `Agent ${agentId} not found` }, 404);
   }
+
+  const sourceHarness = getHarnessForAgent(deps, sourceAgent);
+  const visibleSkills = (await sourceHarness.capabilities.skills?.listSkills()) ?? [];
+  const enrichedText = enrichMessageWithSkillAttachments(
+    rawText,
+    buildSkillAttachmentPreview(
+      rawText,
+      visibleSkills.map((skill) => ({
+        name: skill.name,
+        content: skill.content,
+      })),
+    ),
+  );
 
   // Determine target agent (clone if requested, otherwise use original)
   let targetAgent: AgentRow = sourceAgent;
@@ -83,7 +85,7 @@ export async function sendMessage(
 
     // Find safe clone point to avoid copying incomplete work
     // This is especially important when cloning a busy agent
-    const messages = await harness.getMessages(sourceAgent.session_id);
+    const messages = await sourceHarness.getMessages(sourceAgent.session_id);
 
     // DEBUG: Log message order returned by the harness
     log.server.info(
@@ -132,7 +134,14 @@ export async function sendMessage(
     const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
     clonedAgent = await cloneAgent(
       sourceAgent,
-      { ...deps, birdhouseEventBus },
+      {
+        harness: sourceHarness,
+        agentsDB: deps.agentsDB,
+        dataDb: deps.dataDb,
+        log: deps.log,
+        telemetry: deps.telemetry,
+        birdhouseEventBus,
+      },
       {
         title: "Cloning Agent...",
         messageId: clonePointMessageId,
@@ -244,11 +253,11 @@ export async function sendMessage(
       clonedAgentId,
       rawText,
       sourceAgent.title,
-      workspaceId,
-      opencodeBase,
-      workspaceDir,
-      harness,
-    ).catch((error) => {
+        workspaceId,
+        opencodeBase,
+        workspaceDir,
+        sourceHarness,
+      ).catch((error) => {
       log.server.error(
         {
           agentId: clonedAgentId,
@@ -260,6 +269,8 @@ export async function sendMessage(
 
     targetAgent = clonedAgent;
   }
+
+  const targetHarness = getHarnessForAgent(deps, targetAgent);
 
   log.server.info(
     {
@@ -290,7 +301,7 @@ export async function sendMessage(
   if (!shouldWait) {
     // Async mode: Fire-and-forget (detach from the process)
     // Build collaboration context if tagged agents are present
-    harness
+    targetHarness
       .sendMessage(targetAgent.session_id, enrichedText, {
         model: { providerID, modelID },
         agent: agentName,
@@ -333,7 +344,7 @@ export async function sendMessage(
     return c.json(response);
   }
 
-  const messageResponse = await harness.sendMessage(targetAgent.session_id, enrichedText, {
+  const messageResponse = await targetHarness.sendMessage(targetAgent.session_id, enrichedText, {
     model: { providerID, modelID },
     agent: agentName,
     system: BIRDHOUSE_SYSTEM_PROMPT,
@@ -370,7 +381,7 @@ export async function sendMessage(
  * Generate title for cloned agent and update (async helper)
  */
 async function generateAndUpdateTitleForClone(
-  deps: Pick<Deps, "agentsDB" | "log" | "harness">,
+  deps: Pick<Deps, "agentsDB" | "log" | "harnesses">,
   agentId: string,
   message: string,
   sourceTitle: string,

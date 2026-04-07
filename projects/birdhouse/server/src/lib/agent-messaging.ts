@@ -1,8 +1,8 @@
 // ABOUTME: Domain logic for sending first message to agents with Birdhouse system prompt
 // ABOUTME: Encapsulates blocking vs fire-and-forget modes and model parsing
 
-import type { Deps } from "../dependencies";
-import type { BirdhouseFilePart } from "../harness";
+import { getDefaultHarness, type Deps } from "../dependencies";
+import type { AgentHarness, BirdhouseFilePart } from "../harness";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "./birdhouse-system-prompt";
 import { buildPromptParts } from "./message-parts";
 import { parseModelId } from "./model-validator";
@@ -38,11 +38,13 @@ export interface SendFirstMessageResult {
  */
 
 export async function sendFirstMessage(
-  deps: Pick<Deps, "harness" | "agentsDB" | "log" | "telemetry">,
+  deps: Pick<Deps, "agentsDB" | "harnesses" | "log" | "telemetry">,
   options: SendFirstMessageOptions,
+  harnessArg?: Pick<AgentHarness, "capabilities" | "sendMessage">,
 ): Promise<SendFirstMessageResult> {
   const { agentId, sessionId, model, prompt, wait, agent, attachments = [], senderMetadata } = options;
-  const { harness, agentsDB, log, telemetry } = deps;
+  const { agentsDB, log, telemetry } = deps;
+  const harness = harnessArg ?? getDefaultHarness(deps);
 
   const visibleSkills = (await harness.capabilities.skills?.listSkills()) ?? [];
   const enrichedPrompt = enrichMessageWithSkillAttachments(

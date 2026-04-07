@@ -2,7 +2,7 @@
 // ABOUTME: Used by /api/agents POST endpoint with optional prompt for first message
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { getDefaultHarness, getHarnessForKind, type Deps } from "../../dependencies";
 import { createAgent } from "../../domain/agent-lifecycle";
 import { sendFirstMessage } from "../../lib/agent-messaging";
 import type { AgentRow } from "../../lib/agents-db";
@@ -16,8 +16,9 @@ import "../../types/context";
 /**
  * POST /agents - Create a new agent with optional first message
  */
-export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
-  const { harness, agentsDB, log, telemetry } = deps;
+export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
+  const { agentsDB, log, telemetry } = deps;
+  const harness = getDefaultHarness(deps);
   const { createSession } = harness;
 
   try {
@@ -131,15 +132,19 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
       const shouldWait = wait === true; // Default to false (async) for frontend
 
       try {
-        const result = await sendFirstMessage(deps, {
-          agentId: agent.id,
-          sessionId: agent.session_id,
-          model,
-          prompt: prompt.trim(),
-          wait: shouldWait,
-          attachments: requestAttachments,
-          ...(requestAgent && { agent: requestAgent }),
-        });
+        const result = await sendFirstMessage(
+          deps,
+          {
+            agentId: agent.id,
+            sessionId: agent.session_id,
+            model,
+            prompt: prompt.trim(),
+            wait: shouldWait,
+            attachments: requestAttachments,
+            ...(requestAgent && { agent: requestAgent }),
+          },
+          getHarnessForKind(deps, agent.harness_type),
+        );
 
         // 6. Generate title if user didn't provide one
         if (!hasExplicitTitle) {
@@ -155,7 +160,7 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
             workspaceId,
             opencodeBase,
             workspaceDir,
-            deps.harness,
+            getHarnessForKind(deps, agent.harness_type),
           ).catch((error) => {
             log.server.error(
               {
@@ -220,7 +225,7 @@ export async function create(c: Context, deps: Pick<Deps, "harness" | "agentsDB"
  * Generate title and update agent (async helper)
  */
 async function generateAndUpdateTitle(
-  deps: Pick<Deps, "agentsDB" | "log" | "harness">,
+  deps: Pick<Deps, "agentsDB" | "log" | "harnesses">,
   agentId: string,
   message: string,
   _workspaceId: string,

@@ -2,17 +2,13 @@
 // ABOUTME: Used by /api/agents/:id/wait and /aapi/agents/:id/wait GET endpoints
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { getHarnessForAgent, type Deps } from "../../dependencies";
 
 /**
  * GET /agents/:id/wait - Wait for agent completion (proxies to OpenCode)
  */
-export async function wait(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
-  const {
-    agentsDB,
-    harness: { waitForCompletion },
-    log,
-  } = deps;
+export async function wait(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses" | "log">) {
+  const { agentsDB, log } = deps;
 
   const agentId = c.req.param("id");
 
@@ -21,6 +17,9 @@ export async function wait(c: Context, deps: Pick<Deps, "agentsDB" | "harness" |
     if (!agent) {
       return c.json({ error: `Agent ${agentId} not found` }, 404);
     }
+
+    const harness = getHarnessForAgent(deps, agent);
+    const waitForCompletion = harness.waitForCompletion.bind(harness);
 
     log.server.info({ agentId, sessionId: agent.session_id }, "Waiting for agent completion");
 

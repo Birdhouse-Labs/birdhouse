@@ -7,6 +7,7 @@ import type { Deps } from "./dependencies";
 import {
   createPosthogDeps,
   createTestDeps,
+  getDefaultHarness,
   onWithDeps,
   setTimeoutWithDeps,
   useDeps,
@@ -43,22 +44,11 @@ describe("Dependencies", () => {
     });
   });
 
-  test("createTestDeps exposes harnesses resolver with harness alias", async () => {
+  test("createTestDeps exposes the default harness through the resolver", async () => {
     const deps = await createTestDeps();
 
-    expect(deps.harnesses.default()).toBe(deps.harness);
-    expect(deps.harnesses.forKind(deps.harness.kind)).toBe(deps.harness);
-  });
-
-  test("assigning deps.harness updates the resolver default harness", async () => {
-    const deps = await createTestDeps();
-    const replacementHarness = createTestAgentHarness({ enableQuestions: false });
-    replacementHarness.kind = "alternate";
-
-    deps.harness = replacementHarness;
-
-    expect(deps.harnesses.default()).toBe(replacementHarness);
-    expect(deps.harnesses.forKind("opencode")).toBe(replacementHarness);
+    expect(deps.harnesses.default()).toBe(getDefaultHarness(deps));
+    expect(deps.harnesses.forKind(getDefaultHarness(deps).kind)).toBe(getDefaultHarness(deps));
   });
 
   test("createPosthogDeps does not require OpenCode base", async () => {
@@ -113,7 +103,7 @@ describe("Dependencies", () => {
 
     await withDeps(deps, async () => {
       const cleanup = onWithDeps<string>(emitter, "test-event", (data) => {
-        const { harness } = useDeps(); // Should work!
+        const harness = getDefaultHarness(useDeps()); // Should work!
         expect(harness).toBeDefined();
         received.push(data);
       });
@@ -133,9 +123,7 @@ describe("Dependencies", () => {
   test("automatically uses test deps in test environment", async () => {
     const deps = await createTestDeps();
     await withDeps(deps, async () => {
-      const {
-        harness: { getSession },
-      } = useDeps();
+      const { getSession } = getDefaultHarness(useDeps());
       const session = await getSession("ses_123");
 
       // Should be mock data (not real API call)
@@ -157,9 +145,7 @@ describe("Dependencies", () => {
     });
 
     await withDeps(customDeps, async () => {
-      const {
-        harness: { getSession },
-      } = useDeps();
+      const { getSession } = getDefaultHarness(useDeps());
       const session = await getSession("any");
       expect(session.title).toBe("Custom Mock");
       expect(session.id).toBe("custom");
@@ -172,7 +158,7 @@ describe("Dependencies", () => {
 
     await withDeps(deps, async () => {
       setTimeoutWithDeps(() => {
-        const { harness } = useDeps(); // Should work!
+        const harness = getDefaultHarness(useDeps()); // Should work!
         expect(harness).toBeDefined();
         calls.push("timeout-fired");
       }, 10);
@@ -187,21 +173,19 @@ describe("Dependencies", () => {
     const deps = await createMockDeps();
 
     async function level1() {
-      const { harness } = useDeps();
+      const harness = getDefaultHarness(useDeps());
       expect(harness).toBeDefined();
       return level2();
     }
 
     async function level2() {
-      const { harness } = useDeps();
+      const harness = getDefaultHarness(useDeps());
       expect(harness).toBeDefined();
       await level3();
     }
 
     async function level3() {
-      const {
-        harness: { getSession },
-      } = useDeps();
+      const { getSession } = getDefaultHarness(useDeps());
       const session = await getSession("ses_nested");
       expect(session.id).toBe("ses_nested");
     }
@@ -217,21 +201,15 @@ describe("Dependencies", () => {
     await withDeps(deps, async () => {
       const results = await Promise.all([
         (async () => {
-          const {
-            harness: { getSession },
-          } = useDeps();
+          const { getSession } = getDefaultHarness(useDeps());
           return getSession("ses_1");
         })(),
         (async () => {
-          const {
-            harness: { getSession },
-          } = useDeps();
+          const { getSession } = getDefaultHarness(useDeps());
           return getSession("ses_2");
         })(),
         (async () => {
-          const {
-            harness: { getSession },
-          } = useDeps();
+          const { getSession } = getDefaultHarness(useDeps());
           return getSession("ses_3");
         })(),
       ]);

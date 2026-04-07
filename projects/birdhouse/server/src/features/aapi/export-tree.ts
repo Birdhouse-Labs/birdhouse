@@ -4,7 +4,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { getHarnessForAgent, type Deps } from "../../dependencies";
 import type { AgentNode, AgentRow } from "../../lib/agents-db";
 import { formatTimelineItem } from "../api/export-markdown";
 import { formatAgentTree } from "../api/tree";
@@ -109,8 +109,8 @@ function buildTreeStructure(treeAgents: AgentRow[]): AgentNode {
 /**
  * POST /aapi/agents/:id/export-tree - Export entire agent tree
  */
-export async function exportTree(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
-  const { agentsDB, harness, log } = deps;
+export async function exportTree(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses" | "log">) {
+  const { agentsDB, log } = deps;
   const agentId = c.req.param("id");
 
   try {
@@ -180,7 +180,9 @@ export async function exportTree(c: Context, deps: Pick<Deps, "agentsDB" | "harn
         log.server.info({ agent_id: agentToExport.id }, "Exporting agent");
 
         // Generate markdown content
-        const markdown = await generateMarkdownContent(agentToExport, agentsDB, harness, { formatTimelineItem });
+        const markdown = await generateMarkdownContent(agentToExport, agentsDB, getHarnessForAgent(deps, agentToExport), {
+          formatTimelineItem,
+        });
 
         // Generate filename with agent_id
         const filename = `${agentToExport.id}.md`;
