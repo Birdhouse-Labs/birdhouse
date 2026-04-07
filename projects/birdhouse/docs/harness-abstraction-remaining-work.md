@@ -48,23 +48,15 @@ We introduced an "Agent Harness" abstraction layer so Birdhouse can support mult
 
 ### Critical
 
-#### Runtime selection is still hard-wired to OpenCode
+#### Agent harness resolution is still hard-wired to OpenCode
 
 Files: `server/src/middleware/workspace.ts`, `server/src/middleware/aapi.ts`, `server/src/lib/context-deps.ts`, `server/src/dependencies.ts`, `server/src/types/context.ts`, `server/src/routes/events.ts`, `server/src/routes/workspaces.ts`
 
-Problem: The server still assumes every workspace request is backed by an OpenCode process and an OpenCode base URL. Middleware always calls `getOrSpawnOpenCode(...)`, request context exposes `opencodePort` and `opencodeBase`, the deps layer builds `OpenCodeAgentHarness` directly, and the event stream factory still takes an OpenCode URL. This means Birdhouse cannot actually select or run a second harness yet, even though the `AgentHarness` interface exists.
+Problem: Birdhouse now has an `AgentHarness` interface, but the implementation is not resolved through a small, obvious set of extension points yet. Request-time composition still builds `OpenCodeAgentHarness` directly, and event streaming still assumes the OpenCode-backed harness path. That means adding a second harness would still require tracing through middleware, deps wiring, and stream setup instead of implementing a clearly named harness integration path.
 
-Fix: Introduce a harness runtime registry/factory at the composition layer. Middleware should resolve a harness runtime generically, inject harness-neutral context values, and the deps layer should build the correct `AgentHarness` and event stream from that selected runtime. Workspace APIs should stop exposing OpenCode transport details as the generic harness contract.
+Fix: Introduce one clear harness resolution/composition point at the server boundary. New harness work should be concentrated in a small number of obvious files: harness registration, harness construction, and harness event stream construction. The goal is not to hide every OpenCode-specific infrastructure detail, but to make the places that change for a new harness easy to find and limited in number.
 
 ### High
-
-#### Workspace runtime persistence and management are still OpenCode-shaped
-
-Files: `server/src/lib/data-db.ts`, `server/src/lib/migrations/migrations/2026-02-28_000_initial_schema.ts`, `server/src/lib/startup-warmup.ts`, `server/src/routes/workspaces.ts`
-
-Problem: Workspace state still persists OpenCode-specific runtime fields (`opencode_port`, `opencode_pid`), startup warmup still prewarms OpenCode specifically, and workspace management routes still model health/restart/shutdown/logs around an OpenCode process. Even after request-time harness resolution is fixed, the platform-level workspace model is still tied to one process-backed harness.
-
-Fix: Replace workspace runtime metadata with a harness-neutral runtime model, or clearly separate generic workspace data from OpenCode-only runtime state. Warmup, health, restart, shutdown, and logs should be routed through a harness runtime abstraction so non-OpenCode harnesses can either implement those features or opt out cleanly.
 
 #### Harness events are not typed strongly enough to protect the frontend contract
 
@@ -143,3 +135,11 @@ Files: `server/src/harness/opencode-adapter.ts`, `server/src/harness/opencode-ty
 Problem: None. These files are the OpenCode side of the boundary and are expected to use OpenCode-native SDK types and runtime logic.
 
 Fix: No action needed. Keep direct OpenCode dependencies contained here and add parallel Pi-specific files rather than diluting the adapter boundary.
+
+#### Workspace-level OpenCode runtime management is intentionally still OpenCode-specific
+
+Files: `server/src/lib/data-db.ts`, `server/src/lib/startup-warmup.ts`, `server/src/routes/workspaces.ts`, `server/src/middleware/workspace.ts`, `server/src/middleware/aapi.ts`
+
+Problem: None for this phase. Birdhouse still launches and manages an OpenCode runtime per workspace. Health, restart, logs, persisted port/pid fields, and warmup behavior are workspace infrastructure concerns, not evidence that the `AgentHarness` boundary failed.
+
+Fix: No action needed in this phase. Leave OpenCode-specific workspace runtime infrastructure in place unless the product direction changes and workspaces themselves become multi-runtime.
