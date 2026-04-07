@@ -216,7 +216,7 @@ const AgentSearchDialog: Component = () => {
           {/* Search input header */}
           <div class="flex items-center gap-2 px-4 py-3 border-b border-border flex-shrink-0">
             {/* Input box styled like the chat composer */}
-            <div class="flex-1 flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+            <div class="flex-1 flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 focus-within:ring-2 focus-within:ring-accent focus-within:border-accent">
               <Search size={16} class="text-text-muted flex-shrink-0" />
               <input
                 ref={(el) => {
@@ -227,7 +227,7 @@ const AgentSearchDialog: Component = () => {
                 type="text"
                 onInput={(e) => setQuery(e.currentTarget.value)}
                 placeholder="Search messages..."
-                class="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted outline-none"
+                class="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted outline-none focus:outline-none"
                 aria-label="Search agent messages"
                 data-ph-capture-attribute-element-type="agent-search-dialog-input"
               />
