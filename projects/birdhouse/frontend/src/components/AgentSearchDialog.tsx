@@ -227,7 +227,8 @@ const AgentSearchDialog: Component = () => {
                 type="text"
                 onInput={(e) => setQuery(e.currentTarget.value)}
                 placeholder="Search messages..."
-                class="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted outline-none focus:outline-none focus:ring-0"
+                class="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted"
+                style={{ outline: "none" }}
                 aria-label="Search agent messages"
                 data-ph-capture-attribute-element-type="agent-search-dialog-input"
               />
