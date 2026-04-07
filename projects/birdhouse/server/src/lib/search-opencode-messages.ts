@@ -87,7 +87,7 @@ export function searchOpenCodeMessages(dbPath: string, query: string, limit: num
            WHERE m.session_id = ?2
              AND m.time_created < ?1
              AND json_extract(m.data, '$.role') = 'user'
-           ORDER BY m.time_created DESC
+         ORDER BY m.time_created DESC
            LIMIT 1`,
         )
         .get(match.time_created, match.session_id);

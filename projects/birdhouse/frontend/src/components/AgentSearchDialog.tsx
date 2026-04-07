@@ -303,14 +303,14 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
         </span>
       </div>
 
-      {/* Messages */}
-      <div class="flex flex-col gap-2">
-        {/* Context message — the user turn that preceded the match */}
+      {/* Messages — newest on top, oldest on bottom (matches Birdhouse chat direction) */}
+      <div class="flex flex-col-reverse gap-2">
+        {/* Context message — the older user turn that preceded the match, renders below */}
         <Show when={props.result.contextMessage}>
           {(ctx) => <MessageParts parts={ctx().parts} role={ctx().role} />}
         </Show>
 
-        {/* Matched message */}
+        {/* Matched message — newer, renders on top */}
         <MessageParts
           parts={props.result.matchedMessage.parts}
           role={props.result.matchedMessage.role}
