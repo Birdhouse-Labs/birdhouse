@@ -214,39 +214,33 @@ const AgentSearchDialog: Component = () => {
                    flex flex-col overflow-hidden z-[40]`}
         >
           {/* Search input header */}
-          <div class="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0">
-            <Search size={16} class="text-text-muted flex-shrink-0" />
-            <input
-              ref={(el) => {
-                inputRef = el;
-              }}
-              // eslint-disable-next-line jsx-a11y/no-autofocus
-              autofocus
-              type="text"
-              onInput={(e) => setQuery(e.currentTarget.value)}
-              placeholder="Search messages..."
-              class="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted outline-none"
-              aria-label="Search agent messages"
-              data-ph-capture-attribute-element-type="agent-search-dialog-input"
-            />
-            <Show when={isSearching()}>
-              <div class="animate-spin rounded-full h-4 w-4 border-2 border-accent border-t-transparent flex-shrink-0" />
-            </Show>
+          <div class="flex items-center gap-2 px-4 py-3 border-b border-border flex-shrink-0">
+            {/* Input box styled like the chat composer */}
+            <div class="flex-1 flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+              <Search size={16} class="text-text-muted flex-shrink-0" />
+              <input
+                ref={(el) => {
+                  inputRef = el;
+                }}
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autofocus
+                type="text"
+                onInput={(e) => setQuery(e.currentTarget.value)}
+                placeholder="Search messages..."
+                class="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted outline-none"
+                aria-label="Search agent messages"
+                data-ph-capture-attribute-element-type="agent-search-dialog-input"
+              />
+              <Show when={isSearching()}>
+                <div class="animate-spin rounded-full h-4 w-4 border-2 border-accent border-t-transparent flex-shrink-0" />
+              </Show>
+            </div>
+            {/* Close button — outside the input box */}
             <button
               type="button"
-              onClick={() => {
-                if (query().length > 0) {
-                  setQuery("");
-                  if (inputRef) {
-                    inputRef.value = "";
-                    inputRef.focus();
-                  }
-                } else {
-                  closeSearch();
-                }
-              }}
+              onClick={closeSearch}
               class="flex-shrink-0 text-text-muted hover:text-text-primary transition-colors"
-              aria-label={query().length > 0 ? "Clear search" : "Close search"}
+              aria-label="Close search"
             >
               <X size={16} />
             </button>
