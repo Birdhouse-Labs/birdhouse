@@ -120,9 +120,11 @@ const DEBOUNCE_MS = 300;
 
 const AgentSearchDialog: Component = () => {
   const { workspaceId } = useWorkspace();
-  const { modalStack, closeModal, openModal } = useModalRoute();
+  const { modalStack, removeModalByType, openModal } = useModalRoute();
 
   const isOpen = createMemo(() => modalStack().some((m) => m.type === MODAL_TYPE_AGENT_SEARCH));
+
+  const closeSearch = () => removeModalByType(MODAL_TYPE_AGENT_SEARCH);
 
   const [query, setQuery] = createSignal("");
   const [results, setResults] = createSignal<AgentMessageSearchResult[]>([]);
@@ -188,7 +190,18 @@ const AgentSearchDialog: Component = () => {
   };
 
   return (
-    <Dialog open={isOpen()} onOpenChange={(open) => { if (!open) closeModal(); }} closeOnOutsidePointer={false} preventScroll={false}>
+    <Dialog
+      open={isOpen()}
+      closeOnOutsidePointer={false}
+      closeOnOutsideFocus={false}
+      closeOnEscapeKeyDown={false}
+      preventScroll={false}
+      onEscapeKeyDown={() => {
+        // Only close search if it is the top modal — don't steal Escape from agent modals stacked above
+        const stack = modalStack();
+        if (stack.at(-1)?.type === MODAL_TYPE_AGENT_SEARCH) closeSearch();
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[40]" />
         <Dialog.Content
@@ -232,9 +245,14 @@ const AgentSearchDialog: Component = () => {
                 <X size={16} />
               </button>
             </Show>
-            <Dialog.Close class="flex-shrink-0 text-text-muted hover:text-text-primary transition-colors ml-1">
+            <button
+              type="button"
+              onClick={closeSearch}
+              class="flex-shrink-0 text-text-muted hover:text-text-primary transition-colors ml-1"
+              aria-label="Close search"
+            >
               <X size={16} />
-            </Dialog.Close>
+            </button>
           </div>
 
           {/* Results area */}

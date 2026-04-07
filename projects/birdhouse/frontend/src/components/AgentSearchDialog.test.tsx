@@ -25,6 +25,7 @@ vi.mock("../lib/routing", () => ({
   useModalRoute: () => ({
     modalStack: () => (mockIsOpen ? [{ type: "agent-search", id: "main" }] : []),
     closeModal: mockCloseModal,
+    removeModalByType: vi.fn(),
     openModal: mockOpenModal,
   }),
 }));
