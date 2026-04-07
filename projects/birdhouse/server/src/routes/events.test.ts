@@ -172,6 +172,66 @@ describe("GET /api/events (SSE)", () => {
     });
   });
 
+  test("forwards message.updated events with Birdhouse-owned message info shape", async () => {
+    const deps = await createTestDeps();
+    await withDeps(deps, async () => {
+      const { agentsDB } = useDeps();
+
+      createRootAgent(agentsDB, {
+        id: "agent_message_updated_1",
+        session_id: "ses_message_updated_1",
+        model: "test-model",
+      });
+
+      const app = await withWorkspaceContext(createEventRoutes, { agentsDb: agentsDB });
+      const stream = getResolverStream(deps);
+
+      const request = new Request("http://localhost:3000/");
+      const responsePromise = app.request(request);
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      stream.emit({
+        type: "message.updated",
+        sessionID: "ses_message_updated_1",
+        properties: {
+          info: {
+            id: "msg_message_updated_1",
+            sessionID: "ses_message_updated_1",
+            role: "assistant",
+            time: { created: 123, completed: 124 },
+            parentID: "msg_parent_1",
+            modelID: "claude-sonnet-4",
+            providerID: "anthropic",
+          },
+        },
+      });
+
+      const response = await responsePromise;
+      const events = await Promise.race([
+        readSSEEvents(response, 1),
+        new Promise<string[]>((r) => setTimeout(() => r([]), 100)),
+      ]);
+
+      expect(events).toHaveLength(1);
+      expect(JSON.parse(events[0])).toEqual({
+        type: "message.updated",
+        properties: {
+          info: {
+            id: "msg_message_updated_1",
+            sessionID: "ses_message_updated_1",
+            role: "assistant",
+            time: { created: 123, completed: 124 },
+            parentID: "msg_parent_1",
+            modelID: "claude-sonnet-4",
+            providerID: "anthropic",
+          },
+          agentId: "agent_message_updated_1",
+        },
+      });
+    });
+  });
+
   test("forwards question.asked events with Birdhouse-owned payload shape", async () => {
     const deps = await createTestDeps();
     await withDeps(deps, async () => {

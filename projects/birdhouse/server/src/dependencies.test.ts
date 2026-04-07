@@ -13,6 +13,7 @@ import {
   withCurrentDeps,
   withDeps,
 } from "./dependencies";
+import { createTestAgentHarness } from "./harness";
 
 // Helper to create mock deps with custom getSession behavior
 async function createMockDeps(): Promise<Deps> {
@@ -47,6 +48,17 @@ describe("Dependencies", () => {
 
     expect(deps.harnesses.default()).toBe(deps.harness);
     expect(deps.harnesses.forKind(deps.harness.kind)).toBe(deps.harness);
+  });
+
+  test("assigning deps.harness updates the resolver default harness", async () => {
+    const deps = await createTestDeps();
+    const replacementHarness = createTestAgentHarness({ enableQuestions: false });
+    replacementHarness.kind = "alternate";
+
+    deps.harness = replacementHarness;
+
+    expect(deps.harnesses.default()).toBe(replacementHarness);
+    expect(deps.harnesses.forKind("opencode")).toBe(replacementHarness);
   });
 
   test("createPosthogDeps does not require OpenCode base", async () => {

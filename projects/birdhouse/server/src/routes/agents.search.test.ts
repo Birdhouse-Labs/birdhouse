@@ -3,6 +3,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
+import { createTestAgentHarness, createTestHarnessEventStream, createWorkspaceHarnessResolver } from "../harness";
 import type { AgentNode, AgentTree } from "../lib/agents-db";
 import { initAgentsDB } from "../lib/agents-db";
 import { withWorkspaceContext } from "../test-utils";
@@ -240,6 +241,49 @@ describe("GET /api/agents/search - Basic behavior", () => {
 });
 
 describe("GET /api/agents/search - Flat mode with real data", () => {
+  test("uses resolver aggregate statuses in flat search results", async () => {
+    const agentsDB = await initAgentsDB(":memory:");
+    const now = Date.now();
+
+    const agent = createRootAgent(agentsDB, {
+      id: "agent_search_alt",
+      session_id: "ses_search_alt",
+      title: "Database Search Agent",
+      harness_type: "alternate",
+      created_at: now,
+      updated_at: now,
+    });
+
+    const defaultHarness = createTestAgentHarness();
+    const alternateHarness = createTestAgentHarness();
+    alternateHarness.kind = "alternate";
+    alternateHarness.seedSessionStatus(agent.session_id, { type: "retry" });
+
+    const deps = await createTestDeps();
+    deps.agentsDB = agentsDB;
+    deps.harness = defaultHarness;
+    deps.harnesses = createWorkspaceHarnessResolver({
+      defaultKind: defaultHarness.kind,
+      harnesses: {
+        [defaultHarness.kind]: defaultHarness,
+        [alternateHarness.kind]: alternateHarness,
+      },
+      eventStreams: {
+        [defaultHarness.kind]: () => createTestHarnessEventStream(),
+        [alternateHarness.kind]: () => createTestHarnessEventStream(),
+      },
+    });
+
+    await withDeps(deps, async () => {
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const res = await app.request("/search?q=database");
+
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as FlatSearchResponse;
+      expect(data.agents).toEqual([expect.objectContaining({ id: agent.id, status: { type: "retry" } })]);
+    });
+  });
+
   test("returns matching agents in flat format", async () => {
     const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();

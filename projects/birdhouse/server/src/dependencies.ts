@@ -182,12 +182,32 @@ export function clearCapturedLogs(): void {
   testLoggerInstance.captured.length = 0;
 }
 
+function attachDefaultHarnessAlias(
+  deps: Deps,
+  harnesses: WorkspaceHarnessResolver,
+  registeredHarnesses: Record<string, AgentHarness>,
+  defaultHarnessKind: string,
+): void {
+  Object.defineProperty(deps, "harness", {
+    get() {
+      return harnesses.default();
+    },
+    set(nextHarness: AgentHarness) {
+      registeredHarnesses[defaultHarnessKind] = nextHarness;
+      registeredHarnesses[nextHarness.kind] = nextHarness;
+      registeredHarnesses.opencode = nextHarness;
+    },
+    enumerable: true,
+    configurable: true,
+  });
+}
+
 /**
  * Create test deps with optional harness overrides
  * Includes test logger and in-memory database automatically
  */
 export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides): Promise<Deps> {
-  let currentHarness: AgentHarness = createTestAgentHarness({
+  const defaultHarness: AgentHarness = createTestAgentHarness({
     enableRevert: true,
     enableSkills: true,
     enableGenerate: true,
@@ -222,63 +242,64 @@ export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides):
   });
 
   if (harnessOverrides) {
-    Object.assign(currentHarness, harnessOverrides);
+    Object.assign(defaultHarness, harnessOverrides);
 
     if (harnessOverrides.capabilities) {
-      currentHarness.capabilities = {
-        ...currentHarness.capabilities,
+      defaultHarness.capabilities = {
+        ...defaultHarness.capabilities,
         ...harnessOverrides.capabilities,
       };
     }
 
     if (harnessOverrides.listSkills || harnessOverrides.reloadSkillState) {
-      currentHarness.capabilities.skills = {
-        listSkills: harnessOverrides.listSkills ?? currentHarness.capabilities.skills?.listSkills ?? (async () => []),
+      defaultHarness.capabilities.skills = {
+        listSkills: harnessOverrides.listSkills ?? defaultHarness.capabilities.skills?.listSkills ?? (async () => []),
         reloadSkills:
-          harnessOverrides.reloadSkillState ?? currentHarness.capabilities.skills?.reloadSkills ?? (async () => {}),
+          harnessOverrides.reloadSkillState ?? defaultHarness.capabilities.skills?.reloadSkills ?? (async () => {}),
       };
     }
 
     if (harnessOverrides.generate) {
-      currentHarness.capabilities.generate = {
+      defaultHarness.capabilities.generate = {
         generate: harnessOverrides.generate,
       };
     }
 
     if (harnessOverrides.listPendingQuestions || harnessOverrides.replyToQuestion) {
-      currentHarness.capabilities.questions = {
+      defaultHarness.capabilities.questions = {
         listPendingQuestions:
           harnessOverrides.listPendingQuestions ??
-          currentHarness.capabilities.questions?.listPendingQuestions ??
+          defaultHarness.capabilities.questions?.listPendingQuestions ??
           (async () => []),
         replyToQuestion:
           harnessOverrides.replyToQuestion ??
-          currentHarness.capabilities.questions?.replyToQuestion ??
+          defaultHarness.capabilities.questions?.replyToQuestion ??
           (async () => {}),
       };
     }
 
     if (harnessOverrides.revertSession || harnessOverrides.unrevertSession) {
-      currentHarness.capabilities.revert = {
+      defaultHarness.capabilities.revert = {
         revertSession:
-          harnessOverrides.revertSession ?? currentHarness.capabilities.revert?.revertSession ?? (async () => {}),
+          harnessOverrides.revertSession ?? defaultHarness.capabilities.revert?.revertSession ?? (async () => {}),
         unrevertSession:
-          harnessOverrides.unrevertSession ?? currentHarness.capabilities.revert?.unrevertSession ?? (async () => {}),
+          harnessOverrides.unrevertSession ?? defaultHarness.capabilities.revert?.unrevertSession ?? (async () => {}),
       };
     }
   }
 
   const defaultEventStream = createTestHarnessEventStream();
+  const defaultHarnessKind = defaultHarness.kind;
   const registeredHarnesses: Record<string, AgentHarness> = {
-    [currentHarness.kind]: currentHarness,
-    opencode: currentHarness,
+    [defaultHarnessKind]: defaultHarness,
+    opencode: defaultHarness,
   };
 
   const harnesses = createWorkspaceHarnessResolver({
-    defaultKind: currentHarness.kind,
+    defaultKind: defaultHarnessKind,
     harnesses: registeredHarnesses,
     eventStreams: {
-      [currentHarness.kind]: () => defaultEventStream,
+      [defaultHarnessKind]: () => defaultEventStream,
       opencode: () => defaultEventStream,
     },
   });
@@ -293,35 +314,25 @@ export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides):
     getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
   } as Deps;
 
-  Object.defineProperty(deps, "harness", {
-    get() {
-      return currentHarness;
-    },
-    set(nextHarness: AgentHarness) {
-      currentHarness = nextHarness;
-      registeredHarnesses[nextHarness.kind] = nextHarness;
-      registeredHarnesses.opencode = nextHarness;
-    },
-    enumerable: true,
-    configurable: true,
-  });
+  attachDefaultHarnessAlias(deps, harnesses, registeredHarnesses, defaultHarnessKind);
 
   return deps;
 }
 
 export async function createPosthogDeps(): Promise<Deps> {
-  let currentHarness: AgentHarness = createTestAgentHarness();
+  const defaultHarness: AgentHarness = createTestAgentHarness();
   const defaultEventStream = createTestHarnessEventStream();
+  const defaultHarnessKind = defaultHarness.kind;
   const registeredHarnesses: Record<string, AgentHarness> = {
-    [currentHarness.kind]: currentHarness,
-    opencode: currentHarness,
+    [defaultHarnessKind]: defaultHarness,
+    opencode: defaultHarness,
   };
 
   const harnesses = createWorkspaceHarnessResolver({
-    defaultKind: currentHarness.kind,
+    defaultKind: defaultHarnessKind,
     harnesses: registeredHarnesses,
     eventStreams: {
-      [currentHarness.kind]: () => defaultEventStream,
+      [defaultHarnessKind]: () => defaultEventStream,
       opencode: () => defaultEventStream,
     },
   });
@@ -336,18 +347,7 @@ export async function createPosthogDeps(): Promise<Deps> {
     getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
   } as Deps;
 
-  Object.defineProperty(deps, "harness", {
-    get() {
-      return currentHarness;
-    },
-    set(nextHarness: AgentHarness) {
-      currentHarness = nextHarness;
-      registeredHarnesses[nextHarness.kind] = nextHarness;
-      registeredHarnesses.opencode = nextHarness;
-    },
-    enumerable: true,
-    configurable: true,
-  });
+  attachDefaultHarnessAlias(deps, harnesses, registeredHarnesses, defaultHarnessKind);
 
   return deps;
 }
