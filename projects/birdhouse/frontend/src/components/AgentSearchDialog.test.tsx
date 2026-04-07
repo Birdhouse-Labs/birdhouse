@@ -54,6 +54,8 @@ const makeResult = (overrides?: Partial<AgentMessageSearchResponse["results"][nu
     parts: [{ type: "text" as const, text: "Context message from user" }],
   },
   matchedAt: Date.now() - 60000,
+  sessionCreatedAt: Date.now() - 3600000,
+  sessionUpdatedAt: Date.now() - 60000,
   ...overrides,
 });
 

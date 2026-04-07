@@ -30,6 +30,8 @@ export interface AgentMessageSearchResult {
   matchedMessage: SearchResultMessage;
   contextMessage: SearchResultMessage | null;
   matchedAt: number;
+  sessionCreatedAt: number;
+  sessionUpdatedAt: number;
 }
 
 /**

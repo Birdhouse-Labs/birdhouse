@@ -30,6 +30,8 @@ function makeTextResult(overrides?: Partial<MessageSearchResult>): MessageSearch
       parts: [{ type: "text", text: "say hello" }],
     },
     matchedAt: 1234567890,
+    sessionCreatedAt: 1000000000,
+    sessionUpdatedAt: 1234567890,
     ...overrides,
   };
 }
@@ -44,6 +46,8 @@ function makeToolResult(): MessageSearchResult {
     },
     contextMessage: null,
     matchedAt: 1234567890,
+    sessionCreatedAt: 1000000000,
+    sessionUpdatedAt: 1234567890,
   };
 }
 
@@ -294,5 +298,7 @@ function makeExpectedResult() {
       parts: [{ type: "text", text: "say hello" }] as { type: string; text?: string }[],
     } as null | { id: string; role: string; parts: { type: string; text?: string }[] },
     matchedAt: 1234567890,
+    sessionCreatedAt: 1000000000,
+    sessionUpdatedAt: 1234567890,
   };
 }

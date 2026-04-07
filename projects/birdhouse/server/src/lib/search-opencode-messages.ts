@@ -29,6 +29,8 @@ export interface MessageSearchResult {
     parts: MessagePart[];
   } | null;
   matchedAt: number;
+  sessionCreatedAt: number;
+  sessionUpdatedAt: number;
 }
 
 /**
@@ -44,10 +46,15 @@ export function searchOpenCodeMessages(dbPath: string, query: string, limit: num
 
   try {
     const matchingParts = db
-      .query<{ message_id: string; session_id: string; time_created: number }, [string, number]>(
-        `SELECT DISTINCT p.message_id, p.session_id, m.time_created
+      .query<
+        { message_id: string; session_id: string; time_created: number; session_created: number; session_updated: number },
+        [string, number]
+      >(
+        `SELECT DISTINCT p.message_id, p.session_id, m.time_created,
+                s.time_created as session_created, s.time_updated as session_updated
          FROM part p
          JOIN message m ON m.id = p.message_id
+         JOIN session s ON s.id = p.session_id
          WHERE (
            (json_extract(p.data, '$.type') = 'text' AND json_extract(p.data, '$.text') LIKE ?1)
            OR
@@ -127,6 +134,8 @@ export function searchOpenCodeMessages(dbPath: string, query: string, limit: num
         },
         contextMessage,
         matchedAt: match.time_created,
+        sessionCreatedAt: match.session_created,
+        sessionUpdatedAt: match.session_updated,
       });
     }
 

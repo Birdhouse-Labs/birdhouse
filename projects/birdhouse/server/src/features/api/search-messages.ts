@@ -29,6 +29,8 @@ export async function searchMessages(c: Context, deps: Pick<Deps, "agentsDB" | "
       matchedMessage: match.matchedMessage,
       contextMessage: match.contextMessage,
       matchedAt: match.matchedAt,
+      sessionCreatedAt: match.sessionCreatedAt,
+      sessionUpdatedAt: match.sessionUpdatedAt,
     };
   });
 

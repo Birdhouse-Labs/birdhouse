@@ -1,5 +1,5 @@
 // ABOUTME: Modal dialog for searching agent messages by content
-// ABOUTME: Shows matched messages with context bubbles, grouped by agent
+// ABOUTME: Shows full matched messages with tool calls, context, and session date range
 
 import Dialog from "corvu/dialog";
 import { Search, X } from "lucide-solid";
@@ -9,83 +9,108 @@ import type { AgentMessageSearchResult, MessagePart } from "../services/agents-a
 import { searchAgentMessages } from "../services/agents-api";
 import { cardSurfaceFlat } from "../styles/containerStyles";
 
-// Compact message bubble for search results — copied from AgentTypeahead's private MessageBubble.
-// Uses overflow fade rather than truncation to preserve readability.
-interface SearchMessageBubbleProps {
-  text: string;
-  justify: "start" | "end";
-  background: string;
-  boxShadow: string;
-  gradientBackground: string;
+// Format an absolute timestamp as a human-readable date+time
+function formatDateTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
-const SearchMessageBubble: Component<SearchMessageBubbleProps> = (props) => {
-  const [isOverflowing, setIsOverflowing] = createSignal(false);
-  let ref: HTMLDivElement | undefined;
+// Format a date range: "Mar 10, 2026 – Apr 7, 2026" or just one date if same day
+function formatSessionRange(createdAt: number, updatedAt: number): string {
+  const start = new Date(createdAt);
+  const end = new Date(updatedAt);
 
-  createEffect(() => {
-    if (ref) {
-      setIsOverflowing(ref.scrollHeight > ref.clientHeight);
-    }
+  const startStr = start.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
 
-  const justifyClass = () => (props.justify === "end" ? "justify-end" : "justify-start");
+  // If same calendar day, just show one datetime
+  if (
+    start.getFullYear() === end.getFullYear() &&
+    start.getMonth() === end.getMonth() &&
+    start.getDate() === end.getDate()
+  ) {
+    return startStr;
+  }
+
+  const endStr = end.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  return `${startStr} – ${endStr}`;
+}
+
+// Render all meaningful parts of a message — full text, tool names, commands, outputs
+// No truncation or overflow fade; this is a search result, not a preview
+interface MessagePartsProps {
+  parts: MessagePart[];
+  role: string;
+}
+
+const MessageParts: Component<MessagePartsProps> = (props) => {
+  const isUser = () => props.role === "user";
 
   return (
-    <div class={`flex ${justifyClass()}`}>
+    <div class={`flex ${isUser() ? "justify-end" : "justify-start"}`}>
       <div
-        ref={(el) => {
-          ref = el;
-        }}
-        class="text-xs text-text-primary rounded-xl px-2.5 py-1.5 max-w-[85%] relative"
+        class="max-w-[90%] rounded-xl px-3 py-2 text-sm text-text-primary"
         style={{
-          background: props.background,
-          "box-shadow": props.boxShadow,
-          "line-height": "1.35",
-          "max-height": "4em",
-          overflow: "hidden",
+          background: isUser()
+            ? "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))"
+            : "var(--theme-surface-raised)",
+          "box-shadow": isUser()
+            ? "0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent)"
+            : "0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)",
         }}
-        title={props.text}
       >
-        {props.text}
-        <Show when={isOverflowing()}>
-          <div
-            class="absolute bottom-0 left-0 right-0 h-5 pointer-events-none"
-            style={{ background: props.gradientBackground }}
-          />
-        </Show>
+        <For each={props.parts}>
+          {(part) => (
+            <Show
+              when={part.type === "tool"}
+              fallback={
+                // Text part — render as-is, preserve newlines
+                <p class="whitespace-pre-wrap break-words leading-relaxed">
+                  {part.type === "text" ? part.text : ""}
+                </p>
+              }
+            >
+              {/* Tool part */}
+              <div class="space-y-1">
+                <div class="text-xs font-mono text-text-secondary">
+                  [{part.type === "tool" ? (part as Extract<MessagePart, { type: "tool" }>).toolName : ""}]
+                </div>
+                <Show when={part.type === "tool" && (part as Extract<MessagePart, { type: "tool" }>).command}>
+                  <pre class="text-xs font-mono bg-surface-overlay rounded px-2 py-1 overflow-x-auto whitespace-pre-wrap break-words text-text-primary">
+                    {part.type === "tool" ? (part as Extract<MessagePart, { type: "tool" }>).command : ""}
+                  </pre>
+                </Show>
+                <Show when={part.type === "tool" && (part as Extract<MessagePart, { type: "tool" }>).output}>
+                  <pre class="text-xs font-mono bg-surface-overlay rounded px-2 py-1 overflow-x-auto whitespace-pre-wrap break-words text-text-secondary max-h-48 overflow-y-auto">
+                    {part.type === "tool" ? (part as Extract<MessagePart, { type: "tool" }>).output : ""}
+                  </pre>
+                </Show>
+              </div>
+            </Show>
+          )}
+        </For>
       </div>
     </div>
   );
 };
-
-// Extract the best plain-text preview from a message's parts array
-function extractPreviewText(parts: MessagePart[]): string {
-  for (const part of parts) {
-    if (part.type === "text" && part.text.trim()) {
-      return part.text.trim();
-    }
-    if (part.type === "tool") {
-      if (part.output?.trim()) return `[${part.toolName}] ${part.output.trim()}`;
-      if (part.command?.trim()) return `[${part.toolName}] ${part.command.trim()}`;
-      return `[${part.toolName}]`;
-    }
-  }
-  return "";
-}
-
-function formatTimestamp(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
-}
 
 export interface AgentSearchDialogProps {
   open: boolean;
@@ -148,30 +173,23 @@ const AgentSearchDialog: Component<AgentSearchDialogProps> = (props) => {
     onCleanup(() => clearTimeout(timerId));
   });
 
-  const handleOpenChange = (open: boolean) => {
-    props.onOpenChange(open);
-  };
-
-  const handleAgentClick = (agentId: string | null) => {
-    if (!agentId) return;
-    // Close the dialog — navigation happens via the <a> href
+  const handleAgentClick = () => {
     props.onOpenChange(false);
   };
 
-  // Build agent href for navigation
   const agentHref = (agentId: string | null) => {
     if (!agentId) return undefined;
     return `/workspace/${workspaceId}/agent/${agentId}`;
   };
 
   return (
-    <Dialog open={props.open} onOpenChange={handleOpenChange} closeOnOutsidePointer={true} preventScroll={false}>
+    <Dialog open={props.open} onOpenChange={props.onOpenChange} closeOnOutsidePointer={true} preventScroll={false}>
       <Dialog.Portal>
         <Dialog.Overlay class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]" />
         <Dialog.Content
           class={`fixed rounded-2xl ${cardSurfaceFlat} shadow-2xl
                    w-[95vw] max-w-2xl max-h-[85dvh]
-                   left-1/2 top-[10%] -translate-x-1/2
+                   left-1/2 top-[8%] -translate-x-1/2
                    flex flex-col overflow-hidden z-[100]`}
         >
           {/* Search input header */}
@@ -231,18 +249,24 @@ const AgentSearchDialog: Component<AgentSearchDialogProps> = (props) => {
               </div>
             </Show>
 
-            {/* Idle state — no query typed yet */}
+            {/* Idle state — nothing typed yet */}
             <Show when={!query().trim() && !hasSearched()}>
               <div class="px-4 py-10 text-center">
                 <p class="text-sm text-text-muted">Type to search agent messages</p>
               </div>
             </Show>
 
-            {/* Results list */}
+            {/* Results */}
             <Show when={results().length > 0}>
               <div class="divide-y divide-border">
                 <For each={results()}>
-                  {(result) => <SearchResult result={result} onAgentClick={handleAgentClick} agentHref={agentHref} />}
+                  {(result) => (
+                    <SearchResultCard
+                      result={result}
+                      onAgentClick={handleAgentClick}
+                      agentHref={agentHref(result.agentId)}
+                    />
+                  )}
                 </For>
               </div>
             </Show>
@@ -253,73 +277,44 @@ const AgentSearchDialog: Component<AgentSearchDialogProps> = (props) => {
   );
 };
 
-// Single search result row
-interface SearchResultProps {
+interface SearchResultCardProps {
   result: AgentMessageSearchResult;
-  onAgentClick: (agentId: string | null) => void;
-  agentHref: (agentId: string | null) => string | undefined;
+  onAgentClick: () => void;
+  agentHref: string | undefined;
 }
 
-const SearchResult: Component<SearchResultProps> = (props) => {
-  const contextText = () =>
-    props.result.contextMessage ? extractPreviewText(props.result.contextMessage.parts) : null;
-  const matchedText = () => extractPreviewText(props.result.matchedMessage.parts);
-  const isAssistantMatch = () => props.result.matchedMessage.role === "assistant";
-
+const SearchResultCard: Component<SearchResultCardProps> = (props) => {
   return (
-    <div class="px-4 py-3 hover:bg-surface-overlay transition-colors">
-      {/* Agent title + timestamp */}
-      <div class="flex items-baseline justify-between gap-2 mb-2">
+    <div class="px-4 py-4 space-y-3">
+      {/* Agent title + session date range */}
+      <div class="flex flex-col gap-0.5">
         <a
-          href={props.agentHref(props.result.agentId)}
-          onClick={() => props.onAgentClick(props.result.agentId)}
-          class="text-xs font-medium text-accent hover:underline truncate flex-1"
+          href={props.agentHref}
+          onClick={props.onAgentClick}
+          class="text-sm font-medium text-accent hover:underline leading-snug"
           data-agent-id={props.result.agentId}
         >
-          {props.result.title}
+          {props.result.title ?? props.result.sessionId}
         </a>
-        <span class="text-[10px] text-text-secondary shrink-0">{formatTimestamp(props.result.matchedAt)}</span>
+        <span class="text-[11px] text-text-secondary">
+          {formatSessionRange(props.result.sessionCreatedAt, props.result.sessionUpdatedAt)}
+          {" · matched "}
+          {formatDateTime(props.result.matchedAt)}
+        </span>
       </div>
 
-      {/* Message bubbles */}
-      <div class="flex flex-col gap-1.5">
-        {/* Context message (user message before the match) */}
-        <Show when={contextText()}>
-          {(text) => (
-            <SearchMessageBubble
-              text={text()}
-              justify="end"
-              background="color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))"
-              boxShadow="0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent), 0 2px 8px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent)"
-              gradientBackground="linear-gradient(to bottom, transparent, color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised)))"
-            />
-          )}
+      {/* Messages */}
+      <div class="flex flex-col gap-2">
+        {/* Context message — the user turn that preceded the match */}
+        <Show when={props.result.contextMessage}>
+          {(ctx) => <MessageParts parts={ctx().parts} role={ctx().role} />}
         </Show>
 
         {/* Matched message */}
-        <Show when={matchedText()}>
-          {(text) => (
-            <SearchMessageBubble
-              text={text()}
-              justify={isAssistantMatch() ? "start" : "end"}
-              background={
-                isAssistantMatch()
-                  ? "var(--theme-surface-raised)"
-                  : "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))"
-              }
-              boxShadow={
-                isAssistantMatch()
-                  ? "0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)"
-                  : "0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent), 0 2px 8px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent)"
-              }
-              gradientBackground={
-                isAssistantMatch()
-                  ? `linear-gradient(to bottom, transparent, var(--theme-surface-raised))`
-                  : "linear-gradient(to bottom, transparent, color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised)))"
-              }
-            />
-          )}
-        </Show>
+        <MessageParts
+          parts={props.result.matchedMessage.parts}
+          role={props.result.matchedMessage.role}
+        />
       </div>
     </div>
   );
