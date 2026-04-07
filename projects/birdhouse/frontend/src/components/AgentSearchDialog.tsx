@@ -188,14 +188,14 @@ const AgentSearchDialog: Component = () => {
   };
 
   return (
-    <Dialog open={isOpen()} onOpenChange={(open) => { if (!open) closeModal(); }} closeOnOutsidePointer={true} preventScroll={false}>
+    <Dialog open={isOpen()} onOpenChange={(open) => { if (!open) closeModal(); }} closeOnOutsidePointer={false} preventScroll={false}>
       <Dialog.Portal>
-        <Dialog.Overlay class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]" />
+        <Dialog.Overlay class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[40]" />
         <Dialog.Content
           class={`fixed rounded-2xl ${cardSurfaceFlat} shadow-2xl
                    w-[95vw] max-w-2xl max-h-[85dvh]
                    left-1/2 top-[8%] -translate-x-1/2
-                   flex flex-col overflow-hidden z-[100]`}
+                   flex flex-col overflow-hidden z-[40]`}
         >
           {/* Search input header */}
           <div class="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0">
