@@ -3,11 +3,14 @@
 
 import Dialog from "corvu/dialog";
 import { Search, X } from "lucide-solid";
-import { type Component, createEffect, createSignal, For, onCleanup, Show } from "solid-js";
+import { type Component, createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import { useWorkspace } from "../contexts/WorkspaceContext";
+import { useModalRoute } from "../lib/routing";
 import type { AgentMessageSearchResult, MessagePart } from "../services/agents-api";
 import { searchAgentMessages } from "../services/agents-api";
 import { cardSurfaceFlat } from "../styles/containerStyles";
+
+export const MODAL_TYPE_AGENT_SEARCH = "agent-search";
 
 // Format an absolute timestamp as a human-readable date+time
 function formatDateTime(timestamp: number): string {
@@ -112,16 +115,14 @@ const MessageParts: Component<MessagePartsProps> = (props) => {
   );
 };
 
-export interface AgentSearchDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
 const SEARCH_LIMIT = 50;
 const DEBOUNCE_MS = 300;
 
-const AgentSearchDialog: Component<AgentSearchDialogProps> = (props) => {
+const AgentSearchDialog: Component = () => {
   const { workspaceId } = useWorkspace();
+  const { modalStack, closeModal, openModal } = useModalRoute();
+
+  const isOpen = createMemo(() => modalStack().some((m) => m.type === MODAL_TYPE_AGENT_SEARCH));
 
   const [query, setQuery] = createSignal("");
   const [results, setResults] = createSignal<AgentMessageSearchResult[]>([]);
@@ -133,7 +134,7 @@ const AgentSearchDialog: Component<AgentSearchDialogProps> = (props) => {
 
   // Clear state when dialog closes
   createEffect(() => {
-    if (!props.open) {
+    if (!isOpen()) {
       setQuery("");
       if (inputRef) inputRef.value = "";
       setResults([]);
@@ -173,8 +174,12 @@ const AgentSearchDialog: Component<AgentSearchDialogProps> = (props) => {
     onCleanup(() => clearTimeout(timerId));
   });
 
-  const handleAgentClick = () => {
-    props.onOpenChange(false);
+  const handleAgentClick = (agentId: string | null, e: MouseEvent) => {
+    if (!agentId) return;
+    // Let Cmd/Ctrl+click fall through to the browser for new-tab behavior
+    if (e.metaKey || e.ctrlKey) return;
+    e.preventDefault();
+    openModal("agent", agentId);
   };
 
   const agentHref = (agentId: string | null) => {
@@ -183,7 +188,7 @@ const AgentSearchDialog: Component<AgentSearchDialogProps> = (props) => {
   };
 
   return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange} closeOnOutsidePointer={true} preventScroll={false}>
+    <Dialog open={isOpen()} onOpenChange={(open) => { if (!open) closeModal(); }} closeOnOutsidePointer={true} preventScroll={false}>
       <Dialog.Portal>
         <Dialog.Overlay class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]" />
         <Dialog.Content
@@ -261,11 +266,11 @@ const AgentSearchDialog: Component<AgentSearchDialogProps> = (props) => {
               <div class="divide-y divide-border">
                 <For each={results()}>
                   {(result) => (
-                    <SearchResultCard
-                      result={result}
-                      onAgentClick={handleAgentClick}
-                      agentHref={agentHref(result.agentId)}
-                    />
+            <SearchResultCard
+                  result={result}
+                  onAgentClick={(e) => handleAgentClick(result.agentId, e)}
+                  agentHref={agentHref(result.agentId)}
+                />
                   )}
                 </For>
               </div>
@@ -279,7 +284,7 @@ const AgentSearchDialog: Component<AgentSearchDialogProps> = (props) => {
 
 interface SearchResultCardProps {
   result: AgentMessageSearchResult;
-  onAgentClick: () => void;
+  onAgentClick: (e: MouseEvent) => void;
   agentHref: string | undefined;
 }
 
@@ -290,7 +295,7 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
       <div class="flex flex-col gap-0.5">
         <a
           href={props.agentHref}
-          onClick={props.onAgentClick}
+          onClick={(e) => props.onAgentClick(e)}
           class="text-sm font-medium text-accent hover:underline leading-snug"
           data-agent-id={props.result.agentId}
         >

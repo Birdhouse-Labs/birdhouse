@@ -1,15 +1,15 @@
 // ABOUTME: Slim header bar for the agent list panel
-// ABOUTME: Shows "Agents" title with a search icon button that opens AgentSearchDialog
+// ABOUTME: Shows "Agents" title with a search icon button that opens AgentSearchDialog via modal route
 
 import { Search } from "lucide-solid";
 import type { Component } from "solid-js";
+import { useModalRoute } from "../lib/routing";
+import { MODAL_TYPE_AGENT_SEARCH } from "./AgentSearchDialog";
 import { borderColor } from "../styles/containerStyles";
 
-export interface AgentListHeaderProps {
-  onSearchOpen: () => void;
-}
+const AgentListHeader: Component = () => {
+  const { openModal } = useModalRoute();
 
-const AgentListHeader: Component<AgentListHeaderProps> = (props) => {
   return (
     <div
       class={`px-4 py-1 flex items-center justify-between border-b ${borderColor} flex-shrink-0`}
@@ -18,7 +18,7 @@ const AgentListHeader: Component<AgentListHeaderProps> = (props) => {
       <span class="text-sm font-medium text-text-primary">Agents</span>
       <button
         type="button"
-        onClick={props.onSearchOpen}
+        onClick={() => openModal(MODAL_TYPE_AGENT_SEARCH, "main")}
         class="flex items-center justify-center w-7 h-7 rounded-lg transition-colors text-text-secondary hover:bg-surface-overlay hover:text-text-primary"
         aria-label="Search agents"
         data-ph-capture-attribute-button-type="open-agent-search"

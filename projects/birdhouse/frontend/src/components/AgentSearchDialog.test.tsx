@@ -16,6 +16,19 @@ vi.mock("../services/agents-api", () => ({
   searchAgentMessages: vi.fn(),
 }));
 
+// Control open state via the modal route mock
+let mockIsOpen = true;
+const mockCloseModal = vi.fn();
+const mockOpenModal = vi.fn();
+
+vi.mock("../lib/routing", () => ({
+  useModalRoute: () => ({
+    modalStack: () => (mockIsOpen ? [{ type: "agent-search", id: "main" }] : []),
+    closeModal: mockCloseModal,
+    openModal: mockOpenModal,
+  }),
+}));
+
 vi.mock("corvu/dialog", () => {
   const Dialog = (props: { children: JSX.Element; open?: boolean; onOpenChange?: (open: boolean) => void }) => (
     <>{props.open ? props.children : null}</>
@@ -60,9 +73,8 @@ const makeResult = (overrides?: Partial<AgentMessageSearchResponse["results"][nu
 });
 
 const renderDialog = (open = true) => {
-  const onOpenChange = vi.fn();
-  render(() => <AgentSearchDialog open={open} onOpenChange={onOpenChange} />);
-  return { onOpenChange };
+  mockIsOpen = open;
+  render(() => <AgentSearchDialog />);
 };
 
 describe("AgentSearchDialog", () => {
@@ -96,7 +108,6 @@ describe("AgentSearchDialog", () => {
     const input = screen.getByLabelText("Search agent messages") as HTMLInputElement;
     fireEvent.input(input, { target: { value: "hello" } });
 
-    // Not called yet — debounce pending
     expect(mockSearchAgentMessages).not.toHaveBeenCalled();
 
     await waitFor(

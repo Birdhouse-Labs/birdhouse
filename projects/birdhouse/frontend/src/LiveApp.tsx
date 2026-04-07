@@ -85,9 +85,6 @@ const LiveApp: Component<LiveAppProps> = (props) => {
   const [error, setError] = createSignal<Error | null>(null);
   const { modalStack, openModal, closeModal } = useModalRoute();
 
-  // Search dialog state
-  const [isSearchOpen, setIsSearchOpen] = createSignal(false);
-
   const agentModalStack = createMemo(() => modalStack().filter((modal) => modal.type === "agent"));
 
   // Modal navigation handlers
@@ -454,7 +451,7 @@ const LiveApp: Component<LiveAppProps> = (props) => {
   const TreeViewContent = () => (
     <div class="flex flex-col h-full">
       {/* Slim header with search button */}
-      <AgentListHeader onSearchOpen={() => setIsSearchOpen(true)} />
+      <AgentListHeader />
 
       {/* Tree content */}
       <div class="flex-1 overflow-hidden">
@@ -606,7 +603,7 @@ const LiveApp: Component<LiveAppProps> = (props) => {
       <SkillLibraryDialog workspaceId={workspaceId} />
 
       {/* Agent Search Dialog */}
-      <AgentSearchDialog open={isSearchOpen()} onOpenChange={setIsSearchOpen} />
+      <AgentSearchDialog />
     </div>
   );
 };
