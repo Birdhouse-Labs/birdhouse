@@ -232,27 +232,21 @@ const AgentSearchDialog: Component = () => {
             <Show when={isSearching()}>
               <div class="animate-spin rounded-full h-4 w-4 border-2 border-accent border-t-transparent flex-shrink-0" />
             </Show>
-            <Show when={query().length > 0 && !isSearching()}>
-              <button
-                type="button"
-                onClick={() => {
+            <button
+              type="button"
+              onClick={() => {
+                if (query().length > 0) {
                   setQuery("");
                   if (inputRef) {
                     inputRef.value = "";
                     inputRef.focus();
                   }
-                }}
-                class="flex-shrink-0 text-text-muted hover:text-text-primary transition-colors"
-                aria-label="Clear search"
-              >
-                <X size={16} />
-              </button>
-            </Show>
-            <button
-              type="button"
-              onClick={closeSearch}
-              class="flex-shrink-0 text-text-muted hover:text-text-primary transition-colors ml-1"
-              aria-label="Close search"
+                } else {
+                  closeSearch();
+                }
+              }}
+              class="flex-shrink-0 text-text-muted hover:text-text-primary transition-colors"
+              aria-label={query().length > 0 ? "Clear search" : "Close search"}
             >
               <X size={16} />
             </button>
