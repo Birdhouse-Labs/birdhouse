@@ -192,7 +192,13 @@ const AgentSearchDialog: Component = () => {
   return (
     <Dialog
       open={isOpen()}
-      onOpenChange={(open) => { if (!open) closeSearch(); }}
+      onOpenChange={(open) => {
+        // Only act when Corvu itself is requesting close (Escape key).
+        // Ignore external stack changes — when an agent modal above us closes,
+        // Corvu re-evaluates and fires onOpenChange(false) on us too, but the
+        // search entry is still in the modal stack so isOpen() stays true.
+        if (!open && isOpen()) closeSearch();
+      }}
       closeOnOutsidePointer={false}
       closeOnOutsideFocus={false}
       preventScroll={false}
