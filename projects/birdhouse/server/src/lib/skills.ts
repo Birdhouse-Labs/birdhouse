@@ -1,4 +1,4 @@
-// ABOUTME: Normalizes OpenCode skills into Birdhouse API-ready skill records.
+// ABOUTME: Normalizes Birdhouse-owned skill records into API-ready skill responses.
 // ABOUTME: Handles v1 scope inference and skill lookup by name for workspace requests.
 
 import { type ChildProcess, spawn } from "node:child_process";
@@ -6,7 +6,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { load } from "js-yaml";
-import type { Skill as OpenCodeSkill } from "./opencode-client";
+import type { BirdhouseSkill } from "../harness";
 
 export type SkillScope = "workspace" | "global";
 
@@ -145,7 +145,7 @@ export function revealDirectoryInFileManager(
 }
 
 export function toBirdhouseSkillSummary(
-  skill: OpenCodeSkill,
+  skill: BirdhouseSkill,
   workspaceDirectory: string,
   triggerPhrases: string[],
 ): BirdhouseSkillSummary {
@@ -165,7 +165,7 @@ export function toBirdhouseSkillSummary(
 }
 
 export async function toBirdhouseSkillDetail(
-  skill: OpenCodeSkill,
+  skill: BirdhouseSkill,
   workspaceDirectory: string,
   triggerPhrases: string[],
 ): Promise<BirdhouseSkillDetail> {
@@ -182,6 +182,6 @@ export async function toBirdhouseSkillDetail(
   };
 }
 
-export function findSkillByName(skills: OpenCodeSkill[], name: string): OpenCodeSkill | undefined {
+export function findSkillByName(skills: BirdhouseSkill[], name: string): BirdhouseSkill | undefined {
   return skills.find((skill) => skill.name === name);
 }

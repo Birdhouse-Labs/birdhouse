@@ -10,7 +10,18 @@ export type {
   HarnessSkillsCapability,
   SendMessageOptions,
 } from "./agent-harness";
-export type { BirdhouseEvent, HarnessEvent, HarnessEventStream, HarnessEventType } from "./harness-events";
+export type {
+  BirdhouseEvent,
+  FrontendConsumedHarnessEventProperties,
+  FrontendConsumedHarnessEventType,
+  HarnessEvent,
+  HarnessEventStream,
+  HarnessEventType,
+} from "./harness-events";
+export {
+  hasValidFrontendConsumedHarnessEventProperties,
+  isFrontendConsumedHarnessEventType,
+} from "./harness-events";
 export type { HarnessHealth, HarnessLifecycle, HarnessRuntimeStatus, HarnessStartOptions } from "./harness-lifecycle";
 export { OpenCodeAgentHarness } from "./opencode-adapter";
 export { OpenCodeHarnessEventStream } from "./opencode-event-adapter";
@@ -55,3 +66,5 @@ export type {
   BirdhouseUnknownPart,
   BirdhouseUserMessageInfo,
 } from "./types";
+export type { WorkspaceHarnessResolver } from "./workspace-harness-resolver";
+export { createWorkspaceHarnessResolver } from "./workspace-harness-resolver";

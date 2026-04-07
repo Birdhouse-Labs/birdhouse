@@ -6,18 +6,17 @@ import type { EventEmitter } from "node:events";
 import type {
   AgentHarness,
   BirdhouseQuestionRequest,
-  BirdhouseMessage as Message,
   BirdhouseSkill,
-  HarnessEventStream,
+  BirdhouseMessage as Message,
   BirdhouseProvidersResponse as ProvidersResponse,
   BirdhouseSession as Session,
+  WorkspaceHarnessResolver,
 } from "./harness";
-import { createTestAgentHarness, OpenCodeHarnessEventStream } from "./harness";
+import { createTestAgentHarness, createTestHarnessEventStream, createWorkspaceHarnessResolver } from "./harness";
 import { type AgentsDB, getDefaultDatabasePath, initAgentsDB } from "./lib/agents-db";
 import { type BirdhouseEventBus, getWorkspaceEventBus } from "./lib/birdhouse-event-bus";
 import type { DataDB } from "./lib/data-db";
 import { type CapturedLog, createLiveLogger, createTestLogger, type LoggerDeps } from "./lib/logger";
-import { getOpenCodeStream } from "./lib/opencode-stream";
 import { createLivePosthogProxy, createTestPosthogProxy, type PosthogProxy } from "./lib/posthog-proxy";
 import { createTestTelemetryClient, type TelemetryClient } from "./lib/telemetry";
 import { TestDataDB } from "./test-utils/data-db-test";
@@ -47,13 +46,13 @@ type LegacyHarnessOverrides = Partial<Deps["harness"]> & {
 
 // Dependencies interface - harness client, logger, agents database, and stream factory
 export interface Deps {
+  harnesses: WorkspaceHarnessResolver;
   harness: AgentHarness;
   log: LoggerDeps;
   agentsDB: AgentsDB;
   dataDb: DataDB;
   posthog: PosthogProxy;
   telemetry: TelemetryClient;
-  getHarnessEventStream: (opencodeBase: string, workspaceDirectory: string) => HarnessEventStream;
   getBirdhouseEventBus: (workspaceDirectory: string) => BirdhouseEventBus;
 }
 
@@ -188,7 +187,7 @@ export function clearCapturedLogs(): void {
  * Includes test logger and in-memory database automatically
  */
 export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides): Promise<Deps> {
-  const harness = createTestAgentHarness({
+  let currentHarness: AgentHarness = createTestAgentHarness({
     enableRevert: true,
     enableSkills: true,
     enableGenerate: true,
@@ -223,74 +222,132 @@ export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides):
   });
 
   if (harnessOverrides) {
-    Object.assign(harness, harnessOverrides);
+    Object.assign(currentHarness, harnessOverrides);
 
     if (harnessOverrides.capabilities) {
-      harness.capabilities = {
-        ...harness.capabilities,
+      currentHarness.capabilities = {
+        ...currentHarness.capabilities,
         ...harnessOverrides.capabilities,
       };
     }
 
     if (harnessOverrides.listSkills || harnessOverrides.reloadSkillState) {
-      harness.capabilities.skills = {
-        listSkills: harnessOverrides.listSkills ?? harness.capabilities.skills?.listSkills ?? (async () => []),
+      currentHarness.capabilities.skills = {
+        listSkills: harnessOverrides.listSkills ?? currentHarness.capabilities.skills?.listSkills ?? (async () => []),
         reloadSkills:
-          harnessOverrides.reloadSkillState ?? harness.capabilities.skills?.reloadSkills ?? (async () => {}),
+          harnessOverrides.reloadSkillState ?? currentHarness.capabilities.skills?.reloadSkills ?? (async () => {}),
       };
     }
 
     if (harnessOverrides.generate) {
-      harness.capabilities.generate = {
+      currentHarness.capabilities.generate = {
         generate: harnessOverrides.generate,
       };
     }
 
     if (harnessOverrides.listPendingQuestions || harnessOverrides.replyToQuestion) {
-      harness.capabilities.questions = {
+      currentHarness.capabilities.questions = {
         listPendingQuestions:
           harnessOverrides.listPendingQuestions ??
-          harness.capabilities.questions?.listPendingQuestions ??
+          currentHarness.capabilities.questions?.listPendingQuestions ??
           (async () => []),
         replyToQuestion:
-          harnessOverrides.replyToQuestion ?? harness.capabilities.questions?.replyToQuestion ?? (async () => {}),
+          harnessOverrides.replyToQuestion ??
+          currentHarness.capabilities.questions?.replyToQuestion ??
+          (async () => {}),
       };
     }
 
     if (harnessOverrides.revertSession || harnessOverrides.unrevertSession) {
-      harness.capabilities.revert = {
-        revertSession: harnessOverrides.revertSession ?? harness.capabilities.revert?.revertSession ?? (async () => {}),
+      currentHarness.capabilities.revert = {
+        revertSession:
+          harnessOverrides.revertSession ?? currentHarness.capabilities.revert?.revertSession ?? (async () => {}),
         unrevertSession:
-          harnessOverrides.unrevertSession ?? harness.capabilities.revert?.unrevertSession ?? (async () => {}),
+          harnessOverrides.unrevertSession ?? currentHarness.capabilities.revert?.unrevertSession ?? (async () => {}),
       };
     }
   }
 
-  return {
-    harness,
+  const defaultEventStream = createTestHarnessEventStream();
+  const registeredHarnesses: Record<string, AgentHarness> = {
+    [currentHarness.kind]: currentHarness,
+    opencode: currentHarness,
+  };
+
+  const harnesses = createWorkspaceHarnessResolver({
+    defaultKind: currentHarness.kind,
+    harnesses: registeredHarnesses,
+    eventStreams: {
+      [currentHarness.kind]: () => defaultEventStream,
+      opencode: () => defaultEventStream,
+    },
+  });
+
+  const deps = {
+    harnesses,
     log: testLoggerInstance.log,
     agentsDB: await initAgentsDB(":memory:"),
     dataDb: new TestDataDB(),
     posthog: createTestPosthogProxy(),
     telemetry: createTestTelemetryClient(),
-    getHarnessEventStream: (_opencodeBase: string, workspaceDirectory: string) => {
-      return new OpenCodeHarnessEventStream(getOpenCodeStream("http://test", workspaceDirectory));
-    },
     getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
-  };
+  } as Deps;
+
+  Object.defineProperty(deps, "harness", {
+    get() {
+      return currentHarness;
+    },
+    set(nextHarness: AgentHarness) {
+      currentHarness = nextHarness;
+      registeredHarnesses[nextHarness.kind] = nextHarness;
+      registeredHarnesses.opencode = nextHarness;
+    },
+    enumerable: true,
+    configurable: true,
+  });
+
+  return deps;
 }
 
 export async function createPosthogDeps(): Promise<Deps> {
-  return {
-    harness: createTestAgentHarness(),
+  let currentHarness: AgentHarness = createTestAgentHarness();
+  const defaultEventStream = createTestHarnessEventStream();
+  const registeredHarnesses: Record<string, AgentHarness> = {
+    [currentHarness.kind]: currentHarness,
+    opencode: currentHarness,
+  };
+
+  const harnesses = createWorkspaceHarnessResolver({
+    defaultKind: currentHarness.kind,
+    harnesses: registeredHarnesses,
+    eventStreams: {
+      [currentHarness.kind]: () => defaultEventStream,
+      opencode: () => defaultEventStream,
+    },
+  });
+
+  const deps = {
+    harnesses,
     log: createLiveLogger(),
     agentsDB: await initAgentsDB(getDefaultDatabasePath(undefined)),
     dataDb: new TestDataDB(),
     posthog: createLivePosthogProxy(),
     telemetry: createTestTelemetryClient(),
-    getHarnessEventStream: (opencodeBase: string, workspaceDirectory: string) => {
-      return new OpenCodeHarnessEventStream(getOpenCodeStream(opencodeBase, workspaceDirectory));
-    },
     getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
-  };
+  } as Deps;
+
+  Object.defineProperty(deps, "harness", {
+    get() {
+      return currentHarness;
+    },
+    set(nextHarness: AgentHarness) {
+      currentHarness = nextHarness;
+      registeredHarnesses[nextHarness.kind] = nextHarness;
+      registeredHarnesses.opencode = nextHarness;
+    },
+    enumerable: true,
+    configurable: true,
+  });
+
+  return deps;
 }

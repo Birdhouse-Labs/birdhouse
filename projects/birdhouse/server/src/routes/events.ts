@@ -3,7 +3,12 @@
 
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
-import type { BirdhouseEvent, HarnessEvent } from "../harness";
+import {
+  type BirdhouseEvent,
+  type HarnessEvent,
+  hasValidFrontendConsumedHarnessEventProperties,
+  isFrontendConsumedHarnessEventType,
+} from "../harness";
 import { getDepsFromContext } from "../lib/context-deps";
 import { log } from "../lib/logger";
 import "../types/context";
@@ -44,12 +49,11 @@ export function createEventRoutes() {
   const app = new Hono();
 
   app.get("/", (c) => {
-    const { agentsDB, getHarnessEventStream, getBirdhouseEventBus } = getDepsFromContext(c);
-    const opencodeBase = c.get("opencodeBase");
+    const { agentsDB, harnesses, getBirdhouseEventBus } = getDepsFromContext(c);
     const workspace = c.get("workspace");
 
     return streamSSE(c, async (stream) => {
-      const harnessEventStream = getHarnessEventStream(opencodeBase, workspace.directory);
+      const harnessEventStream = harnesses.createDefaultHarnessEventStream();
       const birdhouseEventBus = getBirdhouseEventBus(workspace.directory);
       let streamClosed = false;
       const eventQueue: QueuedEvent[] = [];
@@ -119,6 +123,15 @@ export function createEventRoutes() {
 
       const unsubscribeHarness = harnessEventStream.subscribe((event) => {
         if (streamClosed) return;
+
+        if (isFrontendConsumedHarnessEventType(event.type) && !hasValidFrontendConsumedHarnessEventProperties(event)) {
+          log.stream.warn(
+            { eventType: event.type, properties: event.properties },
+            "Dropped malformed frontend-consumed harness event",
+          );
+          return;
+        }
+
         eventQueue.push({
           event: mapHarnessEventToBirdhouseEvent(event),
           sessionID: event.sessionID,

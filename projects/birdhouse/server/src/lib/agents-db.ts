@@ -6,8 +6,8 @@ import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { nanoid } from "nanoid";
+import type { BirdhouseSessionStatus } from "../harness";
 import { runAgentsDbMigrations, runAgentsDbMigrationsOnDb } from "./agents-db-migrations/run-agents-db-migrations";
-import type { SessionStatus } from "./opencode-client";
 
 // ============================================================================
 // Draft Types
@@ -116,7 +116,7 @@ export interface AgentNode {
   cloned_from: string | null;
   cloned_at: number | null;
   children: AgentNode[]; // The key difference from AgentRow!
-  status?: SessionStatus; // Session status from OpenCode (idle/busy/retry)
+  status?: BirdhouseSessionStatus;
 }
 
 /**

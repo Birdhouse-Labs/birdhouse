@@ -3,6 +3,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
+import type { BirdhouseMessage as Message } from "../harness";
 import { initAgentsDB } from "../lib/agents-db";
 import { withWorkspaceContext } from "../test-utils";
 import { createChildAgent, createRootAgent } from "../test-utils/agent-factories";
@@ -24,6 +25,85 @@ interface RecentAgentResponse {
     lastAgentMessage: string | null;
   }>;
   total: number;
+}
+
+function makeUserMessage(id: string, sessionID: string, created: number, text: string, metadata?: Record<string, unknown>): Message {
+  return {
+    info: {
+      id,
+      sessionID,
+      role: "user",
+      time: { created },
+    },
+    parts: [
+      {
+        id: `${id}_part_text`,
+        sessionID,
+        messageID: id,
+        type: "text",
+        text,
+        ...(metadata ? { metadata } : {}),
+      },
+    ],
+  };
+}
+
+function makeAssistantMessage(id: string, sessionID: string, created: number, text: string): Message {
+  return {
+    info: {
+      id,
+      sessionID,
+      role: "assistant",
+      time: { created },
+      parentID: `${id}_parent`,
+      modelID: "claude-sonnet-4",
+      providerID: "anthropic",
+    },
+    parts: [
+      {
+        id: `${id}_part_text`,
+        sessionID,
+        messageID: id,
+        type: "text",
+        text,
+      },
+    ],
+  };
+}
+
+function makeToolPartMessage(id: string, sessionID: string, created: number): Message {
+  return {
+    info: {
+      id,
+      sessionID,
+      role: "user",
+      time: { created },
+    },
+    parts: [
+      {
+        id: `${id}_part_text_1`,
+        sessionID,
+        messageID: id,
+        type: "text",
+        text: "First part ",
+      },
+      {
+        id: `${id}_part_tool`,
+        sessionID,
+        messageID: id,
+        type: "tool",
+        tool: "read",
+        state: { file: "test.txt" },
+      },
+      {
+        id: `${id}_part_text_2`,
+        sessionID,
+        messageID: id,
+        type: "text",
+        text: "second part",
+      },
+    ],
+  };
 }
 
 describe("GET /api/agents/recent - Basic behavior", () => {
@@ -312,19 +392,10 @@ describe("GET /api/agents/recent - Message context", () => {
     const deps = await createTestDeps({
       getMessages: async () =>
         [
-          {
-            info: { role: "user", time: { created: now - 2000 } },
-            parts: [{ type: "text", text: "First user message here" }],
-          },
-          {
-            info: { role: "assistant", time: { created: now - 1000 } },
-            parts: [{ type: "text", text: "Agent response here" }],
-          },
-          {
-            info: { role: "user", time: { created: now } },
-            parts: [{ type: "text", text: "Latest user message content" }],
-          },
-        ] as unknown as import("../lib/opencode-client").Message[],
+          makeUserMessage("msg_user_1", "ses_messages", now - 2000, "First user message here"),
+          makeAssistantMessage("msg_assistant_1", "ses_messages", now - 1000, "Agent response here"),
+          makeUserMessage("msg_user_2", "ses_messages", now, "Latest user message content"),
+        ],
     });
     deps.agentsDB = agentsDB;
 
@@ -358,13 +429,7 @@ describe("GET /api/agents/recent - Message context", () => {
     const longMessage = "a".repeat(250);
 
     const deps = await createTestDeps({
-      getMessages: async () =>
-        [
-          {
-            info: { role: "user", time: { created: now } },
-            parts: [{ type: "text", text: longMessage }],
-          },
-        ] as unknown as import("../lib/opencode-client").Message[],
+      getMessages: async () => [makeUserMessage("msg_long", "ses_long", now, longMessage)],
     });
     deps.agentsDB = agentsDB;
 
@@ -454,17 +519,7 @@ describe("GET /api/agents/recent - Message context", () => {
     });
 
     const deps = await createTestDeps({
-      getMessages: async () =>
-        [
-          {
-            info: { role: "user", time: { created: now } },
-            parts: [
-              { type: "text", text: "First part " },
-              { type: "tool", tool: "read", input: { file: "test.txt" } },
-              { type: "text", text: "second part" },
-            ],
-          },
-        ] as unknown as import("../lib/opencode-client").Message[],
+      getMessages: async () => [makeToolPartMessage("msg_multi", "ses_multi", now)],
     });
     deps.agentsDB = agentsDB;
 
@@ -494,23 +549,11 @@ describe("GET /api/agents/recent - Message context", () => {
     const deps = await createTestDeps({
       getMessages: async () =>
         [
-          {
-            info: { role: "user", time: { created: now - 3000 } },
-            parts: [{ type: "text", text: "Oldest user" }],
-          },
-          {
-            info: { role: "assistant", time: { created: now - 2000 } },
-            parts: [{ type: "text", text: "First agent reply" }],
-          },
-          {
-            info: { role: "user", time: { created: now - 1000 } },
-            parts: [{ type: "text", text: "Middle user" }],
-          },
-          {
-            info: { role: "assistant", time: { created: now } },
-            parts: [{ type: "text", text: "Latest agent reply" }],
-          },
-        ] as unknown as import("../lib/opencode-client").Message[],
+          makeUserMessage("msg_user_old", "ses_mixed", now - 3000, "Oldest user"),
+          makeAssistantMessage("msg_assistant_old", "ses_mixed", now - 2000, "First agent reply"),
+          makeUserMessage("msg_user_mid", "ses_mixed", now - 1000, "Middle user"),
+          makeAssistantMessage("msg_assistant_new", "ses_mixed", now, "Latest agent reply"),
+        ],
     });
     deps.agentsDB = agentsDB;
 

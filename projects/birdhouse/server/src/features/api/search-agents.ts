@@ -7,7 +7,7 @@ import type { AgentNode, AgentRow, SortOrder } from "../../lib/agents-db";
 import { loadAllAgentTrees } from "../../lib/agents-db";
 import { parseSearchAgentsPolicy } from "./agent-list-policy";
 
-export async function searchAgents(c: Context, deps: Pick<Deps, "agentsDB" | "harness">) {
+export async function searchAgents(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses">) {
   const policy = parseSearchAgentsPolicy({
     q: c.req.query("q"),
     includeTrees: c.req.query("includeTrees"),
@@ -23,7 +23,7 @@ export async function searchAgents(c: Context, deps: Pick<Deps, "agentsDB" | "ha
     const treeSortBy: SortOrder = policy.sortBy === "relevance" ? "updated_at" : policy.sortBy;
     const { rows, matchedAgentIds } = deps.agentsDB.searchAgentsWithTrees(policy.query, treeSortBy, policy.order);
     const trees = loadAllAgentTrees(deps.agentsDB, treeSortBy, policy.order, rows);
-    const sessionStatuses = await deps.harness.getSessionStatus();
+    const sessionStatuses = await deps.harnesses.getSessionStatus();
 
     const injectStatus = (node: AgentNode): void => {
       node.status = sessionStatuses[node.session_id] || { type: "idle" };
@@ -45,7 +45,7 @@ export async function searchAgents(c: Context, deps: Pick<Deps, "agentsDB" | "ha
     sortedAgents = [...agents].sort((a, b) => compareAgentsByTimestamp(a, b, timestampSortBy, policy.order));
   }
 
-  const sessionStatuses = await deps.harness.getSessionStatus();
+  const sessionStatuses = await deps.harnesses.getSessionStatus();
   const agentsWithStatus = sortedAgents.map((agent) => ({
     ...agent,
     children: [],

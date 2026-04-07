@@ -7,7 +7,7 @@ import type { AgentNode } from "../../lib/agents-db";
 import { loadAllAgentTrees } from "../../lib/agents-db";
 import { parseGetAgentsPolicy } from "./agent-list-policy";
 
-export async function getAgents(c: Context, deps: Pick<Deps, "agentsDB" | "harness">) {
+export async function getAgents(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses">) {
   const policy = parseGetAgentsPolicy({
     sortBy: c.req.query("sortBy"),
   });
@@ -17,7 +17,7 @@ export async function getAgents(c: Context, deps: Pick<Deps, "agentsDB" | "harne
   }
 
   const trees = loadAllAgentTrees(deps.agentsDB, policy.sortBy, "desc");
-  const sessionStatuses = await deps.harness.getSessionStatus();
+  const sessionStatuses = await deps.harnesses.getSessionStatus();
 
   const injectStatus = (node: AgentNode): void => {
     node.status = sessionStatuses[node.session_id] || { type: "idle" };

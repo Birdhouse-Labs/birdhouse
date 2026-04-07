@@ -2,6 +2,7 @@
 // ABOUTME: Mocks OpenCode client via deps to test validation logic
 
 import { describe, expect, test } from "bun:test";
+import type { BirdhouseProvidersResponse } from "../harness";
 import { parseModelId, validateModel } from "./model-validator";
 
 describe("Model Validator", () => {
@@ -71,28 +72,30 @@ describe("Model Validator", () => {
   });
 
   test("formats model list with proper indentation", async () => {
+    const providers: BirdhouseProvidersResponse = {
+      providers: [
+        {
+          id: "anthropic",
+          name: "Anthropic",
+          models: {
+            "claude-sonnet-4": {
+              id: "claude-sonnet-4",
+              name: "Claude Sonnet 4",
+            },
+          },
+        },
+        {
+          id: "openai",
+          name: "OpenAI",
+          models: {
+            "gpt-4": { id: "gpt-4", name: "GPT-4" },
+          },
+        },
+      ],
+    };
+
     const mockOpenCode = {
-      getProviders: async () => ({
-        providers: [
-          {
-            id: "anthropic",
-            name: "Anthropic",
-            models: {
-              "claude-sonnet-4": {
-                id: "claude-sonnet-4",
-                name: "Claude Sonnet 4",
-              },
-            },
-          },
-          {
-            id: "openai",
-            name: "OpenAI",
-            models: {
-              "gpt-4": { id: "gpt-4", name: "GPT-4" },
-            },
-          },
-        ] as import("../../src/lib/opencode-client").Provider[],
-      }),
+      getProviders: async () => providers,
     };
 
     const error = await validateModel("invalid/model", mockOpenCode);

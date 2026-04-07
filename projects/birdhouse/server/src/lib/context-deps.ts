@@ -3,7 +3,7 @@
 
 import type { Context } from "hono";
 import { type Deps, depsContext } from "../dependencies";
-import { OpenCodeAgentHarness, OpenCodeHarnessEventStream } from "../harness";
+import { createWorkspaceHarnessResolver, OpenCodeAgentHarness, OpenCodeHarnessEventStream } from "../harness";
 import { getWorkspaceEventBus } from "./birdhouse-event-bus";
 import { getDataDB } from "./data-db";
 import { log } from "./logger";
@@ -40,16 +40,28 @@ export function getDepsFromContext(c: Context): Deps {
 
   // Production path: create live OpenCode harness and stream factory
   const dataDb = getDataDB();
+  const harness = new OpenCodeAgentHarness(
+    createLiveOpenCodeClient(opencodeBase, workspace.directory),
+    workspace.directory,
+  );
+  const harnesses = createWorkspaceHarnessResolver({
+    defaultKind: harness.kind,
+    harnesses: {
+      [harness.kind]: harness,
+    },
+    eventStreams: {
+      [harness.kind]: () => new OpenCodeHarnessEventStream(getWorkspaceStream(opencodeBase, workspace.directory)),
+    },
+  });
+
   return {
-    harness: new OpenCodeAgentHarness(createLiveOpenCodeClient(opencodeBase, workspace.directory), workspace.directory),
+    harnesses,
+    harness,
     log,
     agentsDB,
     dataDb,
     posthog: createLivePosthogProxy(),
     telemetry: createLiveTelemetryClient(dataDb),
-    getHarnessEventStream: (streamOpencodeBase: string, workspaceDirectory: string) => {
-      return new OpenCodeHarnessEventStream(getWorkspaceStream(streamOpencodeBase, workspaceDirectory));
-    },
     getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
   };
 }

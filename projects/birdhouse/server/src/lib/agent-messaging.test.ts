@@ -3,8 +3,8 @@
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
+import type { BirdhouseMessage as Message, BirdhouseSkill as Skill } from "../harness";
 import { sendFirstMessage } from "./agent-messaging";
-import type { Message, Skill } from "./opencode-client";
 import type { TelemetryClient } from "./telemetry";
 
 function makeAssistantMessage(tokens: {

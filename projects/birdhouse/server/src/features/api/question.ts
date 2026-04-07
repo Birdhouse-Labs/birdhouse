@@ -10,15 +10,17 @@ import type { Deps } from "../../dependencies";
  * Returns empty array if the session is idle — a pending question on an idle session is a leaked
  * prompt from an aborted run and cannot be answered.
  */
-export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
-  const { agentsDB, harness, log } = deps;
-  const questionsCapability = harness.capabilities.questions;
+export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "harnesses" | "log">) {
+  const { agentsDB, harnesses, log } = deps;
   const agentId = c.req.param("id");
 
   const agent = agentsDB.getAgentById(agentId);
   if (!agent) {
     return c.json({ error: `Agent ${agentId} not found` }, 404);
   }
+
+  const harness = harnesses.forAgent(agent);
+  const questionsCapability = harness.capabilities.questions;
 
   try {
     if (!questionsCapability) {
@@ -27,7 +29,7 @@ export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" 
 
     const [allQuestions, allStatuses] = await Promise.all([
       questionsCapability.listPendingQuestions(),
-      harness.getSessionStatus(),
+      harnesses.getSessionStatus(),
     ]);
 
     // If the session is idle, any pending questions are leaked from an aborted run — not answerable
@@ -52,9 +54,8 @@ export async function getAgentQuestions(c: Context, deps: Pick<Deps, "agentsDB" 
  * POST /agents/:id/questions/:requestId/reply - Reply to a pending question
  * Validates the reply body and forwards it to the harness question capability
  */
-export async function replyToAgentQuestion(c: Context, deps: Pick<Deps, "agentsDB" | "harness" | "log">) {
-  const { agentsDB, harness, log } = deps;
-  const questionsCapability = harness.capabilities.questions;
+export async function replyToAgentQuestion(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses" | "log">) {
+  const { agentsDB, harnesses, log } = deps;
   const agentId = c.req.param("id");
   const requestId = c.req.param("requestId");
 
@@ -65,6 +66,9 @@ export async function replyToAgentQuestion(c: Context, deps: Pick<Deps, "agentsD
     log.server.warn({ agentId, requestId }, "Question reply: agent not found");
     return c.json({ error: `Agent ${agentId} not found` }, 404);
   }
+
+  const harness = harnesses.forAgent(agent);
+  const questionsCapability = harness.capabilities.questions;
 
   let body: unknown;
   try {

@@ -42,6 +42,13 @@ describe("Dependencies", () => {
     });
   });
 
+  test("createTestDeps exposes harnesses resolver with harness alias", async () => {
+    const deps = await createTestDeps();
+
+    expect(deps.harnesses.default()).toBe(deps.harness);
+    expect(deps.harnesses.forKind(deps.harness.kind)).toBe(deps.harness);
+  });
+
   test("createPosthogDeps does not require OpenCode base", async () => {
     const originalBase = process.env.BIRDHOUSE_OPENCODE_BASE;
     delete process.env.BIRDHOUSE_OPENCODE_BASE;

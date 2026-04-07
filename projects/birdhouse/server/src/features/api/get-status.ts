@@ -8,11 +8,8 @@ import type { Deps } from "../../dependencies";
  * GET /agents/:id/status - Get session status for agent
  * Returns OpenCode session status: idle, busy, or retry
  */
-export async function getStatus(c: Context, deps: Pick<Deps, "agentsDB" | "harness">) {
-  const {
-    agentsDB,
-    harness: { getSessionStatus },
-  } = deps;
+export async function getStatus(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses">) {
+  const { agentsDB, harnesses } = deps;
 
   const agentId = c.req.param("id");
 
@@ -24,7 +21,7 @@ export async function getStatus(c: Context, deps: Pick<Deps, "agentsDB" | "harne
     }
 
     // Fetch all session statuses from the harness
-    const allStatuses = await getSessionStatus();
+    const allStatuses = await harnesses.getSessionStatus();
 
     // Get status for this specific session (default to idle if not in map)
     const status = allStatuses[agent.session_id] || { type: "idle" };
