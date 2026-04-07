@@ -6,9 +6,10 @@ import Resizable from "corvu/resizable";
 import { type Component, createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import type { BackendAgentNode } from "./adapters/agent-tree-adapter";
-import { mapAgentNode, mapAgentTrees } from "./adapters/agent-tree-adapter";
+import { mapAgentNode } from "./adapters/agent-tree-adapter";
+import AgentListHeader from "./components/AgentListHeader";
 import AgentModal from "./components/AgentModal";
-import AgentSearch from "./components/AgentSearch";
+import AgentSearchDialog from "./components/AgentSearchDialog";
 import AgentTreeItem from "./components/AgentTreeItem";
 import ConnectionStatusBanner from "./components/ConnectionStatusBanner";
 import LiveMessages from "./components/LiveMessages";
@@ -24,7 +25,6 @@ import { log } from "./lib/logger";
 import { usePageTitle } from "./lib/page-title";
 import { keepAgentInView } from "./lib/preferences";
 import { useModalRoute, useNavigateToWorkspaceAgent, useWorkspaceAgentId } from "./lib/routing";
-import { searchAgents } from "./services/agents-api";
 import { fetchAgentTrees } from "./services/messages-api";
 import SkillLibraryDialog from "./skills/components/SkillLibraryDialog";
 import { createMediaQuery } from "./theme/createMediaQuery";
@@ -85,16 +85,8 @@ const LiveApp: Component<LiveAppProps> = (props) => {
   const [error, setError] = createSignal<Error | null>(null);
   const { modalStack, openModal, closeModal } = useModalRoute();
 
-  // Search state
-  const [searchQuery, setSearchQuery] = createSignal("");
-  const [includeTrees, setIncludeTrees] = createSignal(false);
-  const [searchResults, setSearchResults] = createSignal<TreeNode[] | null>(null);
-  const [matchedAgentIds, setMatchedAgentIds] = createSignal<Set<string>>(new Set());
-  const [isSearching, setIsSearching] = createSignal(false);
-  const [searchError, setSearchError] = createSignal<Error | null>(null);
-
-  // Flat mode when searching without "include trees"
-  const flatMode = createMemo(() => searchResults() !== null && !includeTrees());
+  // Search dialog state
+  const [isSearchOpen, setIsSearchOpen] = createSignal(false);
 
   const agentModalStack = createMemo(() => modalStack().filter((modal) => modal.type === "agent"));
 
@@ -158,54 +150,6 @@ const LiveApp: Component<LiveAppProps> = (props) => {
 
   onMount(() => {
     refetch();
-  });
-
-  // Debounced search effect
-  createEffect(() => {
-    const query = searchQuery();
-    const includeTreesValue = includeTrees();
-
-    // Clear results immediately if query is empty
-    if (query.trim() === "") {
-      setSearchResults(null);
-      setMatchedAgentIds(new Set<string>());
-      setSearchError(null);
-      return;
-    }
-
-    // Debounce search API call
-    const timerId = setTimeout(async () => {
-      setIsSearching(true);
-      setSearchError(null);
-
-      try {
-        const response = await searchAgents(workspaceId, query, includeTreesValue);
-
-        // Map response to TreeNode format
-        if (includeTreesValue && response.trees) {
-          // Include trees mode - map full tree structures
-          const trees = mapAgentTrees(response.trees);
-          const matchedIds = new Set<string>(response.matchedAgentIds || []);
-          setSearchResults(trees);
-          setMatchedAgentIds(matchedIds);
-        } else if (response.agents) {
-          // Flat mode - map agents as root nodes
-          const agents = response.agents.map((agent) => mapAgentNode(agent));
-          setSearchResults(agents);
-          setMatchedAgentIds(new Set<string>()); // All results are matches in flat mode
-        } else {
-          setSearchResults([]);
-          setMatchedAgentIds(new Set<string>());
-        }
-      } catch (err) {
-        setSearchError(err instanceof Error ? err : new Error("Search failed"));
-        setSearchResults(null);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 400);
-
-    onCleanup(() => clearTimeout(timerId));
   });
 
   // Get agent ID from route params (workspace-aware)
@@ -505,70 +449,29 @@ const LiveApp: Component<LiveAppProps> = (props) => {
     return agentTrees.map(applyState);
   });
 
-  // Determine which items to display: search results or normal tree
-  const displayItems = createMemo(() => {
-    const results = searchResults();
-    if (results !== null) {
-      return results;
-    }
-    return treeWithCollapsedState();
-  });
-
-  // Result count for search UI
-  const resultCount = createMemo(() => {
-    const results = searchResults();
-    if (results === null) return undefined;
-    return results.length;
-  });
-
   // Tree view component with loading/error/empty states
   // Wrapped with AgentTreeProvider to avoid prop drilling through TreeView
   const TreeViewContent = () => (
     <div class="flex flex-col h-full">
-      {/* Search UI - always visible */}
-      <AgentSearch
-        query={searchQuery()}
-        onQueryChange={setSearchQuery}
-        includeTrees={includeTrees()}
-        onIncludeTreesChange={setIncludeTrees}
-        isSearching={isSearching()}
-        isLoading={isLoading()}
-        resultCount={resultCount()}
-      />
+      {/* Slim header with search button */}
+      <AgentListHeader onSearchOpen={() => setIsSearchOpen(true)} />
 
-      {/* Tree content with search results or normal tree */}
+      {/* Tree content */}
       <div class="flex-1 overflow-hidden">
         <Show when={!isLoading()} fallback={<LoadingSpinner />}>
-          <Show
-            when={!error() && !searchError()}
-            fallback={
-              <ErrorMessage
-                error={(searchError() || error()) as Error}
-                onRetry={() => (searchError() ? setSearchQuery(searchQuery()) : refetch())}
-              />
-            }
-          >
+          <Show when={!error()} fallback={<ErrorMessage error={error() as Error} onRetry={() => refetch()} />}>
             <Show
-              when={displayItems().length > 0}
+              when={treeWithCollapsedState().length > 0}
               fallback={
                 <div class="flex flex-col items-center justify-center h-full gap-4 p-4 text-center">
-                  <p class="text-text-muted text-lg">{searchQuery() ? "No agents found" : "No agents yet"}</p>
-                  {searchQuery() ? (
-                    <p class="text-sm text-text-muted">Try a different search term</p>
-                  ) : (
-                    <p class="text-sm text-text-muted">Create your first agent to get started</p>
-                  )}
+                  <p class="text-text-muted text-lg">No agents yet</p>
+                  <p class="text-sm text-text-muted">Create your first agent to get started</p>
                 </div>
               }
             >
-              <AgentTreeProvider
-                selectAgent={handleSelectAgent}
-                toggleCollapse={handleToggleCollapse}
-                matchedAgentIds={matchedAgentIds}
-                flatMode={flatMode}
-              >
+              <AgentTreeProvider selectAgent={handleSelectAgent} toggleCollapse={handleToggleCollapse}>
                 <TreeView
-                  items={displayItems()}
+                  items={treeWithCollapsedState()}
                   selectedItemId={selectedAgentId() ?? ""}
                   height="100%"
                   showBorder={false}
@@ -701,6 +604,9 @@ const LiveApp: Component<LiveAppProps> = (props) => {
 
       {/* Skills Library Dialog */}
       <SkillLibraryDialog workspaceId={workspaceId} />
+
+      {/* Agent Search Dialog */}
+      <AgentSearchDialog open={isSearchOpen()} onOpenChange={setIsSearchOpen} />
     </div>
   );
 };

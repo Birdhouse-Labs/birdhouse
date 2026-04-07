@@ -5,6 +5,41 @@ import type { BackendAgentNode, BackendAgentTree } from "../adapters/agent-tree-
 import { buildWorkspaceUrl } from "../config/api";
 
 /**
+ * A single part of a matched or context message
+ */
+export type MessagePart =
+  | { type: "text"; text: string }
+  | { type: "tool"; toolName: string; command?: string; output?: string };
+
+/**
+ * A message returned as part of a search result
+ */
+export interface SearchResultMessage {
+  id: string;
+  role: string;
+  parts: MessagePart[];
+}
+
+/**
+ * A single agent message search result
+ */
+export interface AgentMessageSearchResult {
+  agentId: string | null;
+  sessionId: string;
+  title: string;
+  matchedMessage: SearchResultMessage;
+  contextMessage: SearchResultMessage | null;
+  matchedAt: number;
+}
+
+/**
+ * Response from the agent message search endpoint
+ */
+export interface AgentMessageSearchResponse {
+  results: AgentMessageSearchResult[];
+}
+
+/**
  * Flattened agent for typeahead display
  */
 export interface AgentForTypeahead {
@@ -36,16 +71,6 @@ export interface RecentAgentForTypeahead {
  */
 export interface RecentAgentsResponse {
   agents: RecentAgentForTypeahead[];
-  total: number;
-}
-
-/**
- * Search response from backend
- */
-export interface SearchResponse {
-  agents?: BackendAgentNode[]; // When includeTrees=false
-  trees?: BackendAgentTree[]; // When includeTrees=true
-  matchedAgentIds?: string[]; // When includeTrees=true
   total: number;
 }
 
@@ -132,17 +157,21 @@ export async function unarchiveAgent(workspaceId: string, agentId: string): Prom
 }
 
 /**
- * Search agents by title
+ * Search agent messages by content
  * @param workspaceId The workspace ID
- * @param query Search query (empty returns all agents)
- * @param includeTrees Return complete trees vs flat list
- * @returns Search results with agents or trees
+ * @param query Search query text
+ * @param limit Maximum number of results to return
+ * @returns Search results with matched and context messages
  */
-export async function searchAgents(workspaceId: string, query: string, includeTrees: boolean): Promise<SearchResponse> {
-  const params = new URLSearchParams({
-    q: query,
-    includeTrees: String(includeTrees),
-  });
+export async function searchAgentMessages(
+  workspaceId: string,
+  query: string,
+  limit?: number,
+): Promise<AgentMessageSearchResponse> {
+  const params = new URLSearchParams({ q: query });
+  if (limit !== undefined) {
+    params.set("limit", String(limit));
+  }
 
   const url = `${buildWorkspaceUrl(workspaceId, "/agents/search")}?${params}`;
 
@@ -152,7 +181,6 @@ export async function searchAgents(workspaceId: string, query: string, includeTr
     const responseBody = await response.text();
     let errorMessage = `Search failed: ${response.statusText}`;
 
-    // Try to extract error from JSON response
     try {
       const errorData = JSON.parse(responseBody);
       if (errorData.error) {
