@@ -143,3 +143,58 @@ Files: `server/src/lib/data-db.ts`, `server/src/lib/startup-warmup.ts`, `server/
 Problem: None for this phase. Birdhouse still launches and manages an OpenCode runtime per workspace. Health, restart, logs, persisted port/pid fields, and warmup behavior are workspace infrastructure concerns, not evidence that the `AgentHarness` boundary failed.
 
 Fix: No action needed in this phase. Leave OpenCode-specific workspace runtime infrastructure in place unless the product direction changes and workspaces themselves become multi-runtime.
+
+---
+
+## Recommended Composition Shape
+
+The goal of this phase is not to remove every OpenCode-specific detail from workspace infrastructure. The goal is to make adding another **agent harness** require changes in a small, obvious set of files.
+
+### Deps shape
+
+Do **not** put multiple top-level harness dependencies directly on `Deps`.
+
+Prefer a single workspace-scoped resolver/facade such as:
+
+```ts
+interface WorkspaceHarnessResolver {
+  default(): AgentHarness;
+  forKind(kind: string): AgentHarness;
+  forAgent(agent: { harness_type: string }): AgentHarness;
+  getSessionStatus(): Promise<BirdhouseSessionStatusMap>;
+}
+
+interface Deps {
+  harnesses: WorkspaceHarnessResolver;
+  // ...other deps
+}
+```
+
+Why this shape:
+
+- A workspace may support more than one harness kind, so `Deps.harness` as a single concrete harness stops fitting once agents can differ by `harness_type`.
+- A resolver keeps harness selection logic in one place instead of spreading `if (kind === ...)` checks through feature handlers.
+- Aggregate operations such as status lookups can live on the resolver instead of forcing route code to know which harnesses exist.
+
+### How feature code should use it
+
+- Agent-specific operations:
+  - load the agent row
+  - call `deps.harnesses.forAgent(agent)`
+  - use the returned `AgentHarness`
+- New-agent creation:
+  - determine the desired harness kind for the new agent
+  - call `deps.harnesses.forKind(kind)`
+  - persist that kind as `harness_type`
+- Workspace-wide aggregate operations:
+  - use resolver-level methods such as `getSessionStatus()` instead of talking to one harness directly
+
+### Main implementation points for a new harness
+
+If this shape is followed, adding a new harness should mainly mean touching:
+
+1. `server/src/harness/` for the adapter, event adapter, and mappers
+2. the harness registry / resolver implementation
+3. `server/src/lib/context-deps.ts` only if request-time composition needs to know about the new harness
+
+That is the standard for this abstraction: a new harness should be easy to locate, easy to wire in, and should not require chasing logic across feature handlers.
