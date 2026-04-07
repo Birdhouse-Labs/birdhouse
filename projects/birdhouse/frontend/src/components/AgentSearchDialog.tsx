@@ -192,15 +192,10 @@ const AgentSearchDialog: Component = () => {
   return (
     <Dialog
       open={isOpen()}
+      onOpenChange={(open) => { if (!open) closeSearch(); }}
       closeOnOutsidePointer={false}
       closeOnOutsideFocus={false}
-      closeOnEscapeKeyDown={false}
       preventScroll={false}
-      onEscapeKeyDown={() => {
-        // Only close search if it is the top modal — don't steal Escape from agent modals stacked above
-        const stack = modalStack();
-        if (stack.at(-1)?.type === MODAL_TYPE_AGENT_SEARCH) closeSearch();
-      }}
     >
       <Dialog.Portal>
         <Dialog.Overlay class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[40]" />
