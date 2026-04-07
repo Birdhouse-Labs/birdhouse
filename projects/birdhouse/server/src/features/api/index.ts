@@ -11,7 +11,7 @@ export { getMessages } from "./get-messages";
 export { getRecentAgents } from "./get-recent-agents";
 export { getStatus } from "./get-status";
 export { revert, unrevert } from "./revert";
-export { searchAgents } from "./search-agents";
+export { searchMessages } from "./search-messages";
 export { sendMessage } from "./send-message";
 export { stopAgent } from "./stop-agent";
 export { stopAgentTree } from "./stop-agent-tree";

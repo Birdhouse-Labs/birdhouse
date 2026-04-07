@@ -8,6 +8,7 @@ import { log } from "./logger";
 import { createLiveOpenCodeClient } from "./opencode-client";
 import { getWorkspaceStream } from "./opencode-stream";
 import { createLivePosthogProxy } from "./posthog-proxy";
+import { getOpenCodeDbPath, searchOpenCodeMessages } from "./search-opencode-messages";
 import { createLiveTelemetryClient } from "./telemetry";
 
 /**
@@ -50,5 +51,7 @@ export function getDepsFromContext(c: Context): Deps {
       // This ensures the same stream instance is used for both emitting and listening
       return getWorkspaceStream(streamOpencodeBase, workspaceDirectory);
     },
+    searchMessages: (workspaceId: string, query: string, limit: number) =>
+      searchOpenCodeMessages(getOpenCodeDbPath(workspaceId), query, limit),
   };
 }
