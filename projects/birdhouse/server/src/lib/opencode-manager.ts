@@ -321,15 +321,7 @@ export class OpenCodeManager {
     const proc = this.opencodeSourcePath
       ? spawn(
           "bun",
-          [
-            "run",
-            "--conditions=browser",
-            "src/index.ts",
-            "serve",
-            "--port",
-            port.toString(),
-            "--print-logs",
-          ],
+          ["run", "--conditions=browser", "src/index.ts", "serve", "--port", port.toString(), "--print-logs"],
           {
             cwd: join(this.opencodeSourcePath, "packages/opencode"),
             env,
@@ -753,8 +745,10 @@ export class OpenCodeManager {
       log.server.info({ workspaceId, port: instance.port, pid: instance.pid }, "Shutting down OpenCode from memory");
 
       if (instance.process) {
+        const proc = instance.process;
+
         // Send SIGTERM for graceful shutdown
-        instance.process.kill("SIGTERM");
+        proc.kill("SIGTERM");
 
         // Wait for graceful shutdown
         await new Promise<void>((resolve) => {
@@ -762,12 +756,12 @@ export class OpenCodeManager {
             // Force kill if still alive
             if (this.isProcessAlive(instance.pid)) {
               log.server.warn({ workspaceId, pid: instance.pid }, "OpenCode did not exit gracefully, force killing");
-              instance.process!.kill("SIGKILL");
+              proc.kill("SIGKILL");
             }
             resolve();
           }, 5000);
 
-          instance.process!.once("exit", () => {
+          proc.once("exit", () => {
             clearTimeout(timeout);
             resolve();
           });

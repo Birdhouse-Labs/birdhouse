@@ -123,6 +123,8 @@ jobs:
         run: cd frontend && bun run generate:themes && bun run validate:themes
 
       - name: Run Build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: cd frontend && bun run build
 
   server-typecheck:

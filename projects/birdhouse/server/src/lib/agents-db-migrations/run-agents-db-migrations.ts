@@ -87,7 +87,7 @@ export async function runAgentsDbMigrations(dbPath: string): Promise<void> {
  * Does NOT close the database — the caller retains ownership.
  */
 export async function runAgentsDbMigrationsOnDb(database: Database): Promise<void> {
-  const { migrator, db } = createAgentsMigratorFromDb(database);
+  const { migrator } = createAgentsMigratorFromDb(database);
   const resultSet = await migrator.migrateToLatest();
   logResults(resultSet.results);
   // Release Kysely's internal resources without closing the underlying connection.
