@@ -86,9 +86,7 @@ const MessageParts: Component<MessagePartsProps> = (props) => {
               when={part.type === "tool"}
               fallback={
                 // Text part — render as-is, preserve newlines
-                <p class="whitespace-pre-wrap break-words leading-relaxed">
-                  {part.type === "text" ? part.text : ""}
-                </p>
+                <p class="whitespace-pre-wrap break-words leading-relaxed">{part.type === "text" ? part.text : ""}</p>
               }
             >
               {/* Tool part */}
@@ -276,11 +274,11 @@ const AgentSearchDialog: Component = () => {
               <div class="divide-y divide-border">
                 <For each={results()}>
                   {(result) => (
-            <SearchResultCard
-                  result={result}
-                  onAgentClick={(e) => handleAgentClick(result.agentId, e)}
-                  agentHref={agentHref(result.agentId)}
-                />
+                    <SearchResultCard
+                      result={result}
+                      onAgentClick={(e) => handleAgentClick(result.agentId, e)}
+                      agentHref={agentHref(result.agentId)}
+                    />
                   )}
                 </For>
               </div>
@@ -326,10 +324,7 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
         </Show>
 
         {/* Matched message — newer, renders on top */}
-        <MessageParts
-          parts={props.result.matchedMessage.parts}
-          role={props.result.matchedMessage.role}
-        />
+        <MessageParts parts={props.result.matchedMessage.parts} role={props.result.matchedMessage.role} />
       </div>
     </div>
   );

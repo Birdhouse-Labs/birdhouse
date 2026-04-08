@@ -47,7 +47,13 @@ export function searchOpenCodeMessages(dbPath: string, query: string, limit: num
   try {
     const matchingParts = db
       .query<
-        { message_id: string; session_id: string; time_created: number; session_created: number; session_updated: number },
+        {
+          message_id: string;
+          session_id: string;
+          time_created: number;
+          session_created: number;
+          session_updated: number;
+        },
         [string, number]
       >(
         `SELECT DISTINCT p.message_id, p.session_id, m.time_created,

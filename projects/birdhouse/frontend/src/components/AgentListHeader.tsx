@@ -4,8 +4,8 @@
 import { Search } from "lucide-solid";
 import type { Component } from "solid-js";
 import { useModalRoute } from "../lib/routing";
-import { MODAL_TYPE_AGENT_SEARCH } from "./AgentSearchDialog";
 import { borderColor } from "../styles/containerStyles";
+import { MODAL_TYPE_AGENT_SEARCH } from "./AgentSearchDialog";
 
 const AgentListHeader: Component = () => {
   const { openModal } = useModalRoute();

@@ -6,7 +6,6 @@ import type { Deps } from "../../dependencies";
 import type { Message } from "../../lib/opencode-client";
 
 // TODO(agent-search): Move search to db once we are setup for searching agents better
-const DAYS_LOOKBACK = 30;
 const MAX_SNIPPET_LENGTH = 200;
 
 interface RecentAgentResponse {
