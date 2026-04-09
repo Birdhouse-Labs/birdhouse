@@ -435,6 +435,7 @@ export class OpenCodeManager {
 
   private async buildSpawnEnv(workspace: Workspace, port: number): Promise<Record<string, string>> {
     const opencodeDataDir = getOpenCodeDataDir(workspace.workspace_id);
+    const { NODE_ENV: _nodeEnv, ...parentEnv } = process.env as Record<string, string>;
 
     if (!existsSync(opencodeDataDir)) {
       mkdirSync(opencodeDataDir, { recursive: true });
@@ -444,7 +445,7 @@ export class OpenCodeManager {
     const opencodeConfig = this.buildOpenCodeConfig(workspace);
 
     return {
-      ...(process.env as Record<string, string>),
+      ...parentEnv,
       ...workspaceEnv,
       OPENCODE_XDG_DATA_HOME: join(opencodeDataDir, "data"),
       OPENCODE_XDG_CONFIG_HOME: join(opencodeDataDir, "config"),
