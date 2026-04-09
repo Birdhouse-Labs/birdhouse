@@ -19,13 +19,20 @@ import { providersToEnv } from "./secrets";
 describe("OpenCodeManager environment configuration", () => {
   let dataDb: TestDataDB;
   let manager: OpenCodeManager;
+  let originalNodeEnv: string | undefined;
 
   beforeEach(() => {
     dataDb = new TestDataDB();
     manager = new OpenCodeManager(dataDb, "/test/opencode", 3000);
+    originalNodeEnv = process.env.NODE_ENV;
   });
 
   afterEach(() => {
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
     dataDb.close();
   });
 
@@ -386,6 +393,30 @@ describe("OpenCodeManager environment configuration", () => {
       expect(env.OPENCODE_DISABLE_PROJECT_CONFIG).toBe("true");
       expect(env.OPENCODE_DISABLE_CHANNEL_DB).toBe("true");
       expect(env.PORT).toBe("4310");
+    });
+
+    test("buildSpawnEnv does not forward launcher NODE_ENV to child processes", async () => {
+      process.env.NODE_ENV = "production";
+
+      const workspaceId = "ws_spawn_env_without_node_env";
+      dataDb.insertWorkspace({
+        workspace_id: workspaceId,
+        directory: "/test/path",
+        opencode_port: null,
+        opencode_pid: null,
+        created_at: new Date().toISOString(),
+        last_used: new Date().toISOString(),
+      });
+
+      const workspace = dataDb.getWorkspaceById(workspaceId);
+      const managerWithBuildEnv = manager as unknown as {
+        buildSpawnEnv: (workspace: object, port: number) => Promise<Record<string, string>>;
+      };
+
+      const env = await managerWithBuildEnv.buildSpawnEnv(workspace ?? {}, 4311);
+
+      expect(env.NODE_ENV).toBeUndefined();
+      expect(process.env.NODE_ENV).toBe("production");
     });
   });
 });

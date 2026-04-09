@@ -8,7 +8,7 @@ on:
 jobs:
   frontend-typecheck:
     name: Frontend TypeCheck
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: projects/birdhouse
@@ -32,7 +32,7 @@ jobs:
 
   frontend-lint:
     name: Frontend Lint
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: projects/birdhouse
@@ -55,7 +55,7 @@ jobs:
 
   frontend-css-lint:
     name: Frontend CSS Lint
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: projects/birdhouse
@@ -78,7 +78,7 @@ jobs:
 
   frontend-test:
     name: Frontend Test
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: projects/birdhouse
@@ -101,7 +101,7 @@ jobs:
 
   frontend-build:
     name: Frontend Build
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: projects/birdhouse
@@ -123,11 +123,13 @@ jobs:
         run: cd frontend && bun run generate:themes && bun run validate:themes
 
       - name: Run Build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: cd frontend && bun run build
 
   server-typecheck:
     name: Server TypeCheck
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: projects/birdhouse
@@ -150,7 +152,7 @@ jobs:
 
   server-lint:
     name: Server Lint
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: projects/birdhouse
@@ -173,7 +175,7 @@ jobs:
 
   server-test:
     name: Server Test
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: projects/birdhouse
@@ -196,7 +198,7 @@ jobs:
 
   server-build:
     name: Server Build
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: projects/birdhouse
@@ -219,7 +221,7 @@ jobs:
 
   plugin-typecheck:
     name: Plugin TypeCheck
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: projects/birdhouse-oc-plugin
@@ -240,7 +242,7 @@ jobs:
 
   plugin-test:
     name: Plugin Test
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: projects/birdhouse-oc-plugin
@@ -261,7 +263,7 @@ jobs:
 
   plugin-build:
     name: Plugin Build
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: projects/birdhouse-oc-plugin
