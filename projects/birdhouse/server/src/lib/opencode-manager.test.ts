@@ -198,6 +198,27 @@ describe("OpenCodeManager environment configuration", () => {
       expect(config.enabled_providers).toEqual(["opencode"]);
       expect(config.provider).toBeUndefined();
     });
+
+    test("disables the task tool in injected OpenCode config", () => {
+      const workspaceId = "ws_task_tool_disabled";
+      dataDb.insertWorkspace({
+        workspace_id: workspaceId,
+        directory: "/test/path",
+        opencode_port: null,
+        opencode_pid: null,
+        created_at: new Date().toISOString(),
+        last_used: new Date().toISOString(),
+      });
+
+      const workspace = dataDb.getWorkspaceById(workspaceId);
+      const managerWithBuildConfig = manager as unknown as {
+        buildOpenCodeConfig: (workspace: object) => Record<string, unknown>;
+      };
+      const config = managerWithBuildConfig.buildOpenCodeConfig(workspace ?? {});
+
+      expect(config.lsp).toBe(false);
+      expect(config.tools).toEqual({ task: false });
+    });
   });
 
   describe("environment override behavior", () => {

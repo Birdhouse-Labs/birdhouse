@@ -508,6 +508,10 @@ export class OpenCodeManager {
     // Birdhouse plugin is now built-in to OpenCode - just use the name
     const config: Record<string, unknown> = {
       plugin: ["birdhouse"],
+      lsp: false,
+      tools: {
+        task: false,
+      },
       permission: {
         external_directory: "allow",
       },
