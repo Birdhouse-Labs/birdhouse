@@ -1,10 +1,12 @@
 // ABOUTME: Modal dialog for searching agent messages by content
-// ABOUTME: Shows full matched messages with tool calls, context, and session date range
+// ABOUTME: Shows results grouped by agent with a match-count popover for each
 
 import Dialog from "corvu/dialog";
+import Popover from "corvu/popover";
 import { Search, X } from "lucide-solid";
 import { type Component, createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import { useWorkspace } from "../contexts/WorkspaceContext";
+import { useZIndex } from "../contexts/ZIndexContext";
 import { useModalRoute } from "../lib/routing";
 import type { AgentMessageSearchResult, MessagePart } from "../services/agents-api";
 import { searchAgentMessages } from "../services/agents-api";
@@ -113,6 +115,39 @@ const MessageParts: Component<MessagePartsProps> = (props) => {
   );
 };
 
+// A single matched message paired with its preceding context message
+interface MatchPairProps {
+  match: AgentMessageSearchResult;
+}
+
+const MatchPair: Component<MatchPairProps> = (props) => {
+  return (
+    <div class="space-y-1.5">
+      {/* Timestamp for this specific match */}
+      <div class="text-[11px] text-text-secondary px-0.5">{formatDateTime(props.match.matchedAt)}</div>
+
+      {/* Bubbles — newest on top (Birdhouse convention) */}
+      <div class="flex flex-col-reverse gap-2">
+        {/* Context message — older user turn, renders below */}
+        <Show when={props.match.contextMessage}>{(ctx) => <MessageParts parts={ctx().parts} role={ctx().role} />}</Show>
+
+        {/* Matched message — newer, renders on top */}
+        <MessageParts parts={props.match.matchedMessage.parts} role={props.match.matchedMessage.role} />
+      </div>
+    </div>
+  );
+};
+
+// One result per agent: all matches from the same agent session
+interface GroupedResult {
+  agentId: string | null;
+  sessionId: string;
+  title: string;
+  sessionCreatedAt: number;
+  sessionUpdatedAt: number;
+  matches: AgentMessageSearchResult[];
+}
+
 const SEARCH_LIMIT = 50;
 const DEBOUNCE_MS = 300;
 
@@ -172,6 +207,32 @@ const AgentSearchDialog: Component = () => {
     }, DEBOUNCE_MS);
 
     onCleanup(() => clearTimeout(timerId));
+  });
+
+  // Group flat results by agent — preserves order of first appearance
+  const groupedResults = createMemo((): GroupedResult[] => {
+    const raw = results();
+    const map = new Map<string, GroupedResult>();
+    const order: string[] = [];
+
+    for (const result of raw) {
+      const key = result.agentId ?? result.sessionId;
+      if (!map.has(key)) {
+        order.push(key);
+        map.set(key, {
+          agentId: result.agentId,
+          sessionId: result.sessionId,
+          title: result.title,
+          sessionCreatedAt: result.sessionCreatedAt,
+          sessionUpdatedAt: result.sessionUpdatedAt,
+          matches: [],
+        });
+      }
+      // biome-ignore lint/style/noNonNullAssertion: key was just inserted above
+      map.get(key)!.matches.push(result);
+    }
+
+    return order.map((key) => map.get(key) as GroupedResult);
   });
 
   const handleAgentClick = (agentId: string | null, e: MouseEvent) => {
@@ -255,7 +316,7 @@ const AgentSearchDialog: Component = () => {
             </Show>
 
             {/* Empty state after search */}
-            <Show when={!searchError() && hasSearched() && results().length === 0 && !isSearching()}>
+            <Show when={!searchError() && hasSearched() && groupedResults().length === 0 && !isSearching()}>
               <div class="px-4 py-10 text-center">
                 <p class="text-sm text-text-muted">No results found</p>
                 <p class="text-xs text-text-muted mt-1">Try a different search term</p>
@@ -270,14 +331,14 @@ const AgentSearchDialog: Component = () => {
             </Show>
 
             {/* Results */}
-            <Show when={results().length > 0}>
+            <Show when={groupedResults().length > 0}>
               <div class="divide-y divide-border">
-                <For each={results()}>
-                  {(result) => (
+                <For each={groupedResults()}>
+                  {(group) => (
                     <SearchResultCard
-                      result={result}
-                      onAgentClick={(e) => handleAgentClick(result.agentId, e)}
-                      agentHref={agentHref(result.agentId)}
+                      group={group}
+                      onAgentClick={(e) => handleAgentClick(group.agentId, e)}
+                      agentHref={agentHref(group.agentId)}
                     />
                   )}
                 </For>
@@ -291,41 +352,76 @@ const AgentSearchDialog: Component = () => {
 };
 
 interface SearchResultCardProps {
-  result: AgentMessageSearchResult;
+  group: GroupedResult;
   onAgentClick: (e: MouseEvent) => void;
   agentHref: string | undefined;
 }
 
 const SearchResultCard: Component<SearchResultCardProps> = (props) => {
+  const baseZIndex = useZIndex();
+  const [isPopoverOpen, setIsPopoverOpen] = createSignal(false);
+  const matchCount = () => props.group.matches.length;
+
   return (
-    <div class="px-4 py-4 space-y-3">
+    <div class="px-4 py-4 space-y-2">
       {/* Agent title + session date range */}
       <div class="flex flex-col gap-0.5">
         <a
           href={props.agentHref}
           onClick={(e) => props.onAgentClick(e)}
           class="text-sm font-medium text-accent hover:underline leading-snug"
-          data-agent-id={props.result.agentId}
+          data-agent-id={props.group.agentId}
         >
-          {props.result.title ?? props.result.sessionId}
+          {props.group.title ?? props.group.sessionId}
         </a>
         <span class="text-[11px] text-text-secondary">
-          {formatSessionRange(props.result.sessionCreatedAt, props.result.sessionUpdatedAt)}
-          {" · matched "}
-          {formatDateTime(props.result.matchedAt)}
+          {formatSessionRange(props.group.sessionCreatedAt, props.group.sessionUpdatedAt)}
         </span>
       </div>
 
-      {/* Messages — newest on top, oldest on bottom (matches Birdhouse chat direction) */}
-      <div class="flex flex-col-reverse gap-2">
-        {/* Context message — the older user turn that preceded the match, renders below */}
-        <Show when={props.result.contextMessage}>
-          {(ctx) => <MessageParts parts={ctx().parts} role={ctx().role} />}
-        </Show>
+      {/* Match count badge — opens popover with all matches */}
+      <Popover open={isPopoverOpen()} onOpenChange={setIsPopoverOpen}>
+        <Popover.Trigger
+          as="button"
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium
+                 bg-accent/10 text-accent border border-accent/20
+                 hover:bg-accent/20 hover:border-accent/40 transition-colors cursor-pointer"
+          aria-label={`Show ${matchCount()} ${matchCount() === 1 ? "match" : "matches"}`}
+        >
+          {matchCount()} {matchCount() === 1 ? "match" : "matches"}
+        </Popover.Trigger>
 
-        {/* Matched message — newer, renders on top */}
-        <MessageParts parts={props.result.matchedMessage.parts} role={props.result.matchedMessage.role} />
-      </div>
+        <Popover.Portal>
+          <Popover.Content
+            class="rounded-xl border border-border bg-surface-raised shadow-2xl
+                   w-[min(calc(100vw-2rem),42rem)]
+                   max-h-[60vh] overflow-y-auto"
+            style={{ "z-index": baseZIndex }}
+          >
+            {/* Sticky header showing match count */}
+            <div class="sticky top-0 bg-surface-raised border-b border-border px-4 py-2.5">
+              <span class="text-xs font-medium text-text-secondary">
+                {matchCount()} {matchCount() === 1 ? "match" : "matches"}
+              </span>
+            </div>
+
+            {/* Match pairs — each with timestamp and bubble pair */}
+            <div class="px-4 py-3 space-y-4">
+              <For each={props.group.matches}>
+                {(match, index) => (
+                  <>
+                    <Show when={index() > 0}>
+                      <div class="border-t border-border" />
+                    </Show>
+                    <MatchPair match={match} />
+                  </>
+                )}
+              </For>
+            </div>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover>
     </div>
   );
 };
