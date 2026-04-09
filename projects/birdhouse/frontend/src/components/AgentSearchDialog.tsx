@@ -26,7 +26,9 @@ function formatDateTime(timestamp: number): string {
   });
 }
 
-// Format a date range: "Mar 10, 2026 – Apr 7, 2026" or just one date if same day
+// Format a date range, always showing both endpoints:
+// Same day:  "Mar 9, 2026, 8:53 AM – 9:46 AM"
+// Different: "Mar 8, 2026, 11:31 PM – Mar 9, 2026, 12:11 AM"
 function formatSessionRange(createdAt: number, updatedAt: number): string {
   const start = new Date(createdAt);
   const end = new Date(updatedAt);
@@ -39,13 +41,18 @@ function formatSessionRange(createdAt: number, updatedAt: number): string {
     minute: "2-digit",
   });
 
-  // If same calendar day, just show one datetime
-  if (
+  const isSameDay =
     start.getFullYear() === end.getFullYear() &&
     start.getMonth() === end.getMonth() &&
-    start.getDate() === end.getDate()
-  ) {
-    return startStr;
+    start.getDate() === end.getDate();
+
+  if (isSameDay) {
+    // Show date once, append only the end time
+    const endTimeStr = end.toLocaleString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    return `${startStr} – ${endTimeStr}`;
   }
 
   const endStr = end.toLocaleString(undefined, {
