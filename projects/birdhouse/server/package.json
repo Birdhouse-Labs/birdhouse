@@ -17,6 +17,7 @@
     "db:migrate-down-data": "bun scripts/db-migrate-down-data.ts",
     "db:migrate-agents-db": "bun scripts/db-migrate-agents.ts",
     "db:migrate-down-agents-db": "bun scripts/db-migrate-down-agents.ts",
+    "db:migrate-down-agents-all": "bun scripts/db-migrate-down-agents-all.ts",
     "agent-migration:new": "bun scripts/agent-migration-new.ts",
     "data-migration:new": "bun scripts/data-migration-new.ts"
   },
