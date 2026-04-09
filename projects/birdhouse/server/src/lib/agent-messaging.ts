@@ -1,7 +1,7 @@
 // ABOUTME: Domain logic for sending first message to agents with Birdhouse system prompt
 // ABOUTME: Encapsulates blocking vs fire-and-forget modes and model parsing
 
-import { getDefaultHarness, type Deps } from "../dependencies";
+import { type Deps, getDefaultHarness } from "../dependencies";
 import type { AgentHarness, BirdhouseFilePart } from "../harness";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "./birdhouse-system-prompt";
 import { buildPromptParts } from "./message-parts";

@@ -2,7 +2,7 @@
 // ABOUTME: Used by /api/agents/:id/messages GET endpoint - returns TimelineItem[]
 
 import type { Context } from "hono";
-import { getHarnessForAgent, type Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import type { TimelineItem } from "../../types/agent-events";
 
 /**

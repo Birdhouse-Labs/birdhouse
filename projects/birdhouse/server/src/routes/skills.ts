@@ -4,8 +4,8 @@
 import { dirname } from "node:path";
 import { Hono } from "hono";
 import { getDefaultHarness } from "../dependencies";
-import { getDepsFromContext } from "../lib/context-deps";
 import { getWorkspaceEventBus } from "../lib/birdhouse-event-bus";
+import { getDepsFromContext } from "../lib/context-deps";
 import type { DataDB } from "../lib/data-db";
 import { buildSkillAttachmentPreview } from "../lib/skill-attachments";
 import {

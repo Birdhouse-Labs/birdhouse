@@ -2,7 +2,7 @@
 // ABOUTME: Revert returns the text of the user message being reverted to
 
 import type { Context } from "hono";
-import { getHarnessForAgent, type Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import { extractRestorableComposerFileAttachments } from "../../lib/message-parts";
 
 /**

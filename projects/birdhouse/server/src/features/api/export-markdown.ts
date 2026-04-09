@@ -2,7 +2,7 @@
 // ABOUTME: Formats messages, events, and tool calls following the Birdhouse export spec
 
 import type { Context } from "hono";
-import { getHarnessForAgent, type Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import type {
   BirdhouseAssistantMessageInfo,
   BirdhousePart as Part,

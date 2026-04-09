@@ -2,7 +2,7 @@
 // ABOUTME: Used by /aapi/agents/:id/messages GET endpoint (unique to /aapi)
 
 import type { Context } from "hono";
-import { getHarnessForAgent, type Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import type { BirdhouseMessage as Message } from "../../harness";
 import { filterMessagesForView } from "./helpers/message-filter";
 

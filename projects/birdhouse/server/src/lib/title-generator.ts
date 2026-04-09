@@ -1,7 +1,7 @@
 // ABOUTME: Title generation service using the harness generation capability.
 // ABOUTME: Applies Birdhouse-owned title rules from a dedicated prompt file.
 
-import { getDefaultHarness, type Deps } from "../dependencies";
+import { type Deps, getDefaultHarness } from "../dependencies";
 import { buildTitleMessage, TITLE_PROMPT } from "./prompts/title-prompt";
 
 export interface TitleGenerationOptions {

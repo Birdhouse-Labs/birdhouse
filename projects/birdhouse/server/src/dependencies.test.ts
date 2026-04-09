@@ -14,7 +14,6 @@ import {
   withCurrentDeps,
   withDeps,
 } from "./dependencies";
-import { createTestAgentHarness } from "./harness";
 
 // Helper to create mock deps with custom getSession behavior
 async function createMockDeps(): Promise<Deps> {

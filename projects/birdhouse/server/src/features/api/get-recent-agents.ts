@@ -2,7 +2,7 @@
 // ABOUTME: Returns agents from last 30 days with last message snippets
 
 import type { Context } from "hono";
-import { getHarnessForAgent, type Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import type { BirdhouseMessage as Message } from "../../harness";
 
 // TODO(agent-search): Move search to db once we are setup for searching agents better

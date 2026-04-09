@@ -2,7 +2,7 @@
 // ABOUTME: Used by /aapi/agents/:id/tool-calls/:callId to avoid rereading full transcripts.
 
 import type { Context } from "hono";
-import { getHarnessForAgent, type Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import { filterMessage } from "./helpers/message-filter";
 
 export async function getToolCall(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses">) {

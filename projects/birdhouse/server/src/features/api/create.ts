@@ -2,7 +2,7 @@
 // ABOUTME: Used by /api/agents POST endpoint with optional prompt for first message
 
 import type { Context } from "hono";
-import { getDefaultHarness, getHarnessForKind, type Deps } from "../../dependencies";
+import { type Deps, getDefaultHarness, getHarnessForKind } from "../../dependencies";
 import { createAgent } from "../../domain/agent-lifecycle";
 import { sendFirstMessage } from "../../lib/agent-messaging";
 import type { AgentRow } from "../../lib/agents-db";

@@ -2,7 +2,7 @@
 // ABOUTME: Used by /api/agents/:id/stop to abort the active session and refresh timestamps.
 
 import type { Context } from "hono";
-import { getHarnessForAgent, type Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 
 /**
  * POST /agents/:id/stop - Send message to agent

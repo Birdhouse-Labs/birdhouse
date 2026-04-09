@@ -27,7 +27,13 @@ interface RecentAgentResponse {
   total: number;
 }
 
-function makeUserMessage(id: string, sessionID: string, created: number, text: string, metadata?: Record<string, unknown>): Message {
+function makeUserMessage(
+  id: string,
+  sessionID: string,
+  created: number,
+  text: string,
+  metadata?: Record<string, unknown>,
+): Message {
   return {
     info: {
       id,
@@ -390,12 +396,11 @@ describe("GET /api/agents/recent - Message context", () => {
     });
 
     const deps = await createTestDeps({
-      getMessages: async () =>
-        [
-          makeUserMessage("msg_user_1", "ses_messages", now - 2000, "First user message here"),
-          makeAssistantMessage("msg_assistant_1", "ses_messages", now - 1000, "Agent response here"),
-          makeUserMessage("msg_user_2", "ses_messages", now, "Latest user message content"),
-        ],
+      getMessages: async () => [
+        makeUserMessage("msg_user_1", "ses_messages", now - 2000, "First user message here"),
+        makeAssistantMessage("msg_assistant_1", "ses_messages", now - 1000, "Agent response here"),
+        makeUserMessage("msg_user_2", "ses_messages", now, "Latest user message content"),
+      ],
     });
     deps.agentsDB = agentsDB;
 
@@ -547,13 +552,12 @@ describe("GET /api/agents/recent - Message context", () => {
     });
 
     const deps = await createTestDeps({
-      getMessages: async () =>
-        [
-          makeUserMessage("msg_user_old", "ses_mixed", now - 3000, "Oldest user"),
-          makeAssistantMessage("msg_assistant_old", "ses_mixed", now - 2000, "First agent reply"),
-          makeUserMessage("msg_user_mid", "ses_mixed", now - 1000, "Middle user"),
-          makeAssistantMessage("msg_assistant_new", "ses_mixed", now, "Latest agent reply"),
-        ],
+      getMessages: async () => [
+        makeUserMessage("msg_user_old", "ses_mixed", now - 3000, "Oldest user"),
+        makeAssistantMessage("msg_assistant_old", "ses_mixed", now - 2000, "First agent reply"),
+        makeUserMessage("msg_user_mid", "ses_mixed", now - 1000, "Middle user"),
+        makeAssistantMessage("msg_assistant_new", "ses_mixed", now, "Latest agent reply"),
+      ],
     });
     deps.agentsDB = agentsDB;
 

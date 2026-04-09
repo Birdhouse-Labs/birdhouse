@@ -2,11 +2,7 @@
 // ABOUTME: Covers the shared test bus path and the workspace-scoped path used outside tests.
 
 import { beforeEach, describe, expect, test } from "bun:test";
-import {
-  getWorkspaceEventBus,
-  resetBirdhouseEventBus,
-  type BirdhouseWorkspaceEvent,
-} from "./birdhouse-event-bus";
+import { type BirdhouseWorkspaceEvent, getWorkspaceEventBus, resetBirdhouseEventBus } from "./birdhouse-event-bus";
 
 function createEvent(type: string, properties: Record<string, unknown> = {}): BirdhouseWorkspaceEvent {
   return { type, properties };

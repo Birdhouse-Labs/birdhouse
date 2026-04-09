@@ -67,10 +67,7 @@ export function getHarnessForKind(deps: Pick<Deps, "harnesses">, kind: string): 
   return deps.harnesses.forKind(kind);
 }
 
-export function getHarnessForAgent(
-  deps: Pick<Deps, "harnesses">,
-  agent: { harness_type: string },
-): AgentHarness {
+export function getHarnessForAgent(deps: Pick<Deps, "harnesses">, agent: { harness_type: string }): AgentHarness {
   return deps.harnesses.forAgent(agent);
 }
 

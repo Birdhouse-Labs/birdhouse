@@ -4,7 +4,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Context } from "hono";
-import { getHarnessForAgent, type Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import { formatTimelineItem } from "../api/export-markdown";
 import { generateFilenameWithAgentId, generateMarkdownContent } from "./export-helpers";
 

@@ -2,7 +2,7 @@
 // ABOUTME: Used by /api/agents/:id/wait and /aapi/agents/:id/wait GET endpoints
 
 import type { Context } from "hono";
-import { getHarnessForAgent, type Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 
 /**
  * GET /agents/:id/wait - Wait for agent completion (proxies to OpenCode)

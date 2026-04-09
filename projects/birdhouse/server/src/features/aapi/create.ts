@@ -2,7 +2,7 @@
 // ABOUTME: Used by /aapi/agents POST endpoint - optimized for agent-to-agent workflows
 
 import type { Context } from "hono";
-import { getDefaultHarness, getHarnessForAgent, getHarnessForKind, type Deps, type Session } from "../../dependencies";
+import { type Deps, getHarnessForAgent, getHarnessForKind, type Session } from "../../dependencies";
 import { cloneAgent, createAgent } from "../../domain/agent-lifecycle";
 import { sendFirstMessage } from "../../lib/agent-messaging";
 import type { AgentRow } from "../../lib/agents-db";

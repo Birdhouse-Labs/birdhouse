@@ -73,7 +73,9 @@ describe("title-generator", () => {
 
   it("throws when generate capability is absent", async () => {
     const deps = await createTestDeps();
-    getDefaultHarness(deps).capabilities.generate = createTestAgentHarness({ enableGenerate: false }).capabilities.generate;
+    getDefaultHarness(deps).capabilities.generate = createTestAgentHarness({
+      enableGenerate: false,
+    }).capabilities.generate;
 
     await expect(
       generateTitle(deps, {

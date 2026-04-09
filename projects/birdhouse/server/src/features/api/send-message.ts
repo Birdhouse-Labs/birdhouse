@@ -2,7 +2,7 @@
 // ABOUTME: Used by /api/agents/:id/messages POST endpoint
 
 import type { Context } from "hono";
-import { getHarnessForAgent, type Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import { cloneAgent } from "../../domain/agent-lifecycle";
 import { findSafeClonePoint } from "../../domain/clone-point";
 import type { AgentHarness, BirdhouseInputFilePart } from "../../harness";
@@ -253,11 +253,11 @@ export async function sendMessage(
       clonedAgentId,
       rawText,
       sourceAgent.title,
-        workspaceId,
-        opencodeBase,
-        workspaceDir,
-        sourceHarness,
-      ).catch((error) => {
+      workspaceId,
+      opencodeBase,
+      workspaceDir,
+      sourceHarness,
+    ).catch((error) => {
       log.server.error(
         {
           agentId: clonedAgentId,

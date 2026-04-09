@@ -2,7 +2,7 @@
 // ABOUTME: Emits clone_created timeline events on both source and target agents
 
 import type { Context } from "hono";
-import { getHarnessForAgent, type Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import { cloneAgent as cloneAgentDomain } from "../../domain/agent-lifecycle";
 import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
 
