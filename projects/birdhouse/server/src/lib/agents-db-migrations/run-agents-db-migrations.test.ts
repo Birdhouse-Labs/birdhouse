@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runAgentsDbMigrations } from "./run-agents-db-migrations";
+import { createAgentsMigrator, runAgentsDbMigrations } from "./run-agents-db-migrations";
 
 // ============================================================================
 // Helpers
@@ -47,6 +47,13 @@ function getMigrationNames(dbPath: string): string[] {
     db.close();
     return [];
   }
+}
+
+function getAgentCount(dbPath: string): number {
+  const db = new Database(dbPath);
+  const row = db.query<{ c: number }, []>("SELECT COUNT(*) as c FROM agents").get();
+  db.close();
+  return row?.c ?? 0;
 }
 
 function tempDbPath(): string {
@@ -224,6 +231,46 @@ describe("runAgentsDbMigrations — demo-snapshot.db", () => {
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
     expect(migrations).toHaveLength(3);
+  });
+
+  test("can roll back harness_type migration on a real fixture snapshot without losing rows or indexes", async () => {
+    await runAgentsDbMigrations(dbPath);
+
+    const beforeCount = getAgentCount(dbPath);
+    const beforeIndexes = getIndexes(dbPath);
+
+    const { migrator, db } = createAgentsMigrator(dbPath);
+    const result = await migrator.migrateDown();
+    await db.destroy();
+
+    expect(result.error).toBeUndefined();
+    expect(result.results?.find((it) => it.status === "Success")?.migrationName).toBe("20260403173314_harness_type");
+    expect(getMigrationNames(dbPath)).toEqual(["20260320000000_initial_schema", "20260321144612_composer_drafts"]);
+    expect(getColumns(dbPath, "agents")).not.toContain("harness_type");
+    expect(getAgentCount(dbPath)).toBe(beforeCount);
+    expect(getIndexes(dbPath)).toEqual(beforeIndexes);
+  });
+
+  test("can roll back and re-apply harness_type migration on a real fixture snapshot", async () => {
+    await runAgentsDbMigrations(dbPath);
+
+    const beforeCount = getAgentCount(dbPath);
+
+    const { migrator, db } = createAgentsMigrator(dbPath);
+    const downResult = await migrator.migrateDown();
+    expect(downResult.error).toBeUndefined();
+
+    const upResult = await migrator.migrateToLatest();
+    await db.destroy();
+
+    expect(upResult.error).toBeUndefined();
+    expect(getMigrationNames(dbPath)).toEqual([
+      "20260320000000_initial_schema",
+      "20260321144612_composer_drafts",
+      "20260403173314_harness_type",
+    ]);
+    expect(getColumns(dbPath, "agents")).toContain("harness_type");
+    expect(getAgentCount(dbPath)).toBe(beforeCount);
   });
 });
 
