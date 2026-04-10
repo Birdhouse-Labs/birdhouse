@@ -4,20 +4,19 @@
 import {
   bulkRollbackAgentsDbMigration,
   getDefaultBirdhouseRoot,
-  getDefaultDataDbPath,
 } from "./db-migrate-down-agents-all-lib";
 
 interface ParsedArgs {
   targetMigration: string;
   execute: boolean;
-  dataDbPath?: string;
   birdhouseRoot?: string;
 }
 
 function usage(): void {
-  console.error("Usage: bun run db:migrate-down-agents-all <migration-name> [--execute] [--data-db-path <path>] [--birdhouse-root <path>]");
+  console.error("Usage: bun run db:migrate-down-agents-all <migration-name> [--execute] [--birdhouse-root <path>]");
   console.error("");
   console.error("Dry-run is the default.");
+  console.error("Discovers agents.db files from <birdhouse-root>/workspaces/*/agents.db.");
   console.error("Only workspaces where the target migration is the latest applied migration are eligible.");
 }
 
@@ -29,18 +28,12 @@ function parseArgs(argv: string[]): ParsedArgs {
   }
 
   let execute = false;
-  let dataDbPath: string | undefined;
   let birdhouseRoot: string | undefined;
 
   for (let index = 0; index < rest.length; index += 1) {
     const arg = rest[index];
     if (arg === "--execute") {
       execute = true;
-      continue;
-    }
-    if (arg === "--data-db-path") {
-      dataDbPath = rest[index + 1];
-      index += 1;
       continue;
     }
     if (arg === "--birdhouse-root") {
@@ -54,7 +47,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     process.exit(1);
   }
 
-  return { targetMigration, execute, dataDbPath, birdhouseRoot };
+  return { targetMigration, execute, birdhouseRoot };
 }
 
 function printSummary(results: Awaited<ReturnType<typeof bulkRollbackAgentsDbMigration>>): void {
@@ -78,17 +71,14 @@ function printSummary(results: Awaited<ReturnType<typeof bulkRollbackAgentsDbMig
 
 const args = parseArgs(process.argv.slice(2));
 const birdhouseRoot = args.birdhouseRoot ?? getDefaultBirdhouseRoot();
-const dataDbPath = args.dataDbPath ?? getDefaultDataDbPath(birdhouseRoot);
 
 console.log(args.execute ? "Executing bulk rollback..." : "Dry run only. No databases will be modified.");
 console.log(`  target migration: ${args.targetMigration}`);
-console.log(`  data.db: ${dataDbPath}`);
 console.log(`  Birdhouse root: ${birdhouseRoot}\n`);
 
 const results = await bulkRollbackAgentsDbMigration({
   targetMigration: args.targetMigration,
   execute: args.execute,
-  dataDbPath,
   birdhouseRoot,
 });
 

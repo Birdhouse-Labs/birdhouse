@@ -7,8 +7,6 @@ import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgentsMigrator } from "../src/lib/agents-db-migrations/run-agents-db-migrations";
-import { runMigrations } from "../src/lib/migrations/run-migrations";
-import { DataDB, type Workspace } from "../src/lib/data-db";
 import {
   bulkRollbackAgentsDbMigration,
   getAppliedAgentsDbMigrations,
@@ -58,7 +56,6 @@ describe("bulkRollbackAgentsDbMigration", () => {
 
   async function createIsolatedBirdhouseRoot(): Promise<{
     root: string;
-    dataDbPath: string;
     addWorkspace: (workspaceId: string, withAgentsDb: boolean, latestMigration?: string) => Promise<string>;
   }> {
     const root = mkdtempSync(join(tmpdir(), "birdhouse-bulk-rollback-"));
@@ -66,32 +63,14 @@ describe("bulkRollbackAgentsDbMigration", () => {
     const workspacesRoot = join(root, "workspaces");
     mkdirSync(workspacesRoot, { recursive: true });
 
-    const dataDbPath = join(root, "data.db");
-    await runMigrations(dataDbPath);
-    const dataDb = new DataDB(dataDbPath);
-
     const addWorkspace = async (
       workspaceId: string,
       withAgentsDb: boolean,
       latestMigration = TARGET_MIGRATION,
     ): Promise<string> => {
-      const workspaceDir = join(root, "workspace-directories", workspaceId);
-      mkdirSync(workspaceDir, { recursive: true });
-
-      const workspace: Workspace = {
-        workspace_id: workspaceId,
-        directory: workspaceDir,
-        title: workspaceId,
-        opencode_port: null,
-        opencode_pid: null,
-        created_at: new Date().toISOString(),
-        last_used: new Date().toISOString(),
-      };
-      dataDb.insertWorkspace(workspace);
-
       const agentsDbPath = join(workspacesRoot, workspaceId, "agents.db");
+      mkdirSync(join(workspacesRoot, workspaceId), { recursive: true });
       if (withAgentsDb) {
-        mkdirSync(join(workspacesRoot, workspaceId), { recursive: true });
         await migrateAgentsDbTo(
           agentsDbPath,
           latestMigration === TARGET_MIGRATION ? undefined : PREVIOUS_MIGRATION,
@@ -101,7 +80,7 @@ describe("bulkRollbackAgentsDbMigration", () => {
       return agentsDbPath;
     };
 
-    return { root, dataDbPath, addWorkspace };
+    return { root, addWorkspace };
   }
 
   test("discovers workspace agents.db paths from data.db", async () => {
@@ -109,23 +88,11 @@ describe("bulkRollbackAgentsDbMigration", () => {
     const firstPath = await isolated.addWorkspace("ws_first", true);
     await isolated.addWorkspace("ws_missing", false);
 
-    const discovered = listWorkspaceAgentsDatabases(isolated.dataDbPath, isolated.root).sort((a, b) =>
-      a.workspaceId.localeCompare(b.workspaceId),
-    );
+    const discovered = listWorkspaceAgentsDatabases(isolated.root);
 
     expect(discovered).toEqual([
-      {
-        workspaceId: "ws_first",
-        title: "ws_first",
-        agentsDbPath: firstPath,
-        exists: true,
-      },
-      {
-        workspaceId: "ws_missing",
-        title: "ws_missing",
-        agentsDbPath: join(isolated.root, "workspaces", "ws_missing", "agents.db"),
-        exists: false,
-      },
+      { workspaceId: "ws_first", title: null, agentsDbPath: firstPath, exists: true },
+      { workspaceId: "ws_missing", title: null, agentsDbPath: join(isolated.root, "workspaces", "ws_missing", "agents.db"), exists: false },
     ]);
   });
 
@@ -138,7 +105,6 @@ describe("bulkRollbackAgentsDbMigration", () => {
     const results = (await bulkRollbackAgentsDbMigration({
       targetMigration: TARGET_MIGRATION,
       execute: false,
-      dataDbPath: isolated.dataDbPath,
       birdhouseRoot: isolated.root,
     })).sort((a, b) => a.workspaceId.localeCompare(b.workspaceId));
 
@@ -162,7 +128,6 @@ describe("bulkRollbackAgentsDbMigration", () => {
     const results = await bulkRollbackAgentsDbMigration({
       targetMigration: TARGET_MIGRATION,
       execute: true,
-      dataDbPath: isolated.dataDbPath,
       birdhouseRoot: isolated.root,
     });
 

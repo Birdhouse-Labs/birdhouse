@@ -1,8 +1,8 @@
-// ABOUTME: Discovers workspace agents.db files and rolls back one specific migration when it is the latest applied.
+// ABOUTME: Discovers workspace agents.db files from the Birdhouse app-support folder and rolls back one specific migration when it is the latest applied.
 // ABOUTME: Powers a dry-run-first bulk rollback tool so developers can safely undo a migration across local workspaces.
 
 import Database from "bun:sqlite";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createAgentsMigrator } from "../src/lib/agents-db-migrations/run-agents-db-migrations";
@@ -34,7 +34,6 @@ export interface BulkRollbackResult {
 
 export interface BulkRollbackOptions {
   targetMigration: string;
-  dataDbPath?: string;
   birdhouseRoot?: string;
   execute: boolean;
 }
@@ -43,46 +42,30 @@ export function getDefaultBirdhouseRoot(homeDirectory = homedir()): string {
   return join(homeDirectory, "Library/Application Support/Birdhouse");
 }
 
-export function getDefaultDataDbPath(birdhouseRoot = getDefaultBirdhouseRoot()): string {
-  return join(birdhouseRoot, "data.db");
-}
-
 export function expandHomePath(path: string, homeDirectory = homedir()): string {
   return path.replace(/^~/, homeDirectory);
 }
 
-export function listWorkspaceAgentsDatabases(
-  dataDbPath = getDefaultDataDbPath(),
-  birdhouseRoot = getDefaultBirdhouseRoot(),
-): WorkspaceAgentsDbRecord[] {
-  const resolvedDataDbPath = expandHomePath(dataDbPath);
+export function listWorkspaceAgentsDatabases(birdhouseRoot = getDefaultBirdhouseRoot()): WorkspaceAgentsDbRecord[] {
   const resolvedBirdhouseRoot = expandHomePath(birdhouseRoot);
+  const workspacesRoot = join(resolvedBirdhouseRoot, "workspaces");
 
-  if (!existsSync(resolvedDataDbPath)) {
-    throw new Error(`data.db not found: ${resolvedDataDbPath}`);
+  if (!existsSync(workspacesRoot)) {
+    throw new Error(`Birdhouse workspaces directory not found: ${workspacesRoot}`);
   }
 
-  const db = new Database(resolvedDataDbPath, { readonly: true });
-
-  try {
-    const rows = db
-      .query<{ workspace_id: string; title: string | null }, []>(
-        "SELECT workspace_id, title FROM workspaces ORDER BY last_used DESC",
-      )
-      .all();
-
-    return rows.map((row) => {
-      const agentsDbPath = join(resolvedBirdhouseRoot, "workspaces", row.workspace_id, "agents.db");
+  return readdirSync(workspacesRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => {
+      const agentsDbPath = join(workspacesRoot, entry.name, "agents.db");
       return {
-        workspaceId: row.workspace_id,
-        title: row.title,
+        workspaceId: entry.name,
+        title: null,
         agentsDbPath,
         exists: existsSync(agentsDbPath),
       };
-    });
-  } finally {
-    db.close();
-  }
+    })
+    .sort((a, b) => a.workspaceId.localeCompare(b.workspaceId));
 }
 
 export function getAppliedAgentsDbMigrations(dbPath: string): string[] {
@@ -149,7 +132,7 @@ export async function rollbackSpecificAgentsDbMigration(
 }
 
 export async function bulkRollbackAgentsDbMigration(options: BulkRollbackOptions): Promise<BulkRollbackResult[]> {
-  const workspaces = listWorkspaceAgentsDatabases(options.dataDbPath, options.birdhouseRoot);
+  const workspaces = listWorkspaceAgentsDatabases(options.birdhouseRoot);
   const results: BulkRollbackResult[] = [];
 
   for (const workspace of workspaces) {
