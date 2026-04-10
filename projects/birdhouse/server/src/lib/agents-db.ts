@@ -1339,33 +1339,30 @@ export function insertTestData(agentsDB: AgentsDB): void {
 const APP_NAME = "Birdhouse";
 
 /**
- * Get default database path
- * In production: ~/Library/Application Support/Birdhouse/agents.db (macOS)
+ * Get workspace-specific agents.db path.
+ * Requires an explicit workspaceId and never falls back to a global shared agents database.
  * In tests: :memory: (in-memory database)
  *
  * Follows macOS best practices: stores app data in Application Support directory
  * with app-specific subdirectory matching our bundle identifier pattern.
  */
-export function getDefaultDatabasePath(workspaceId?: string): string {
+export function getDefaultDatabasePath(workspaceId: string): string {
   const isTest = process.env.NODE_ENV === "test" || (typeof Bun !== "undefined" && Bun?.main?.includes(".test."));
 
   if (isTest) {
     return ":memory:";
   }
 
+  if (!workspaceId) {
+    throw new Error("workspaceId is required for agents.db path resolution");
+  }
+
   // macOS standard location: ~/Library/Application Support/AppName
   const home = homedir();
   if (home && process.platform === "darwin") {
-    if (workspaceId) {
-      // Workspace-specific database path
-      return join(home, "Library", "Application Support", APP_NAME, "workspaces", workspaceId, "agents.db");
-    }
-    return join(home, "Library", "Application Support", APP_NAME, "agents.db");
+    return join(home, "Library", "Application Support", APP_NAME, "workspaces", workspaceId, "agents.db");
   }
 
   // Fallback for other platforms or if home not available
-  if (workspaceId) {
-    return join(process.cwd(), "data", "workspaces", workspaceId, "agents.db");
-  }
-  return join(process.cwd(), "data", "agents.db");
+  return join(process.cwd(), "data", "workspaces", workspaceId, "agents.db");
 }

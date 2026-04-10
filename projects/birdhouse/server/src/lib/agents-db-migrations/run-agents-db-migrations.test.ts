@@ -37,6 +37,16 @@ function getIndexes(dbPath: string): string[] {
   return rows.map((r) => r.name);
 }
 
+function getAgentsForeignKeyTables(dbPath: string): string[] {
+  const db = new Database(dbPath);
+  try {
+    const rows = db.query<{ table: string }, []>("PRAGMA foreign_key_list(agents)").all();
+    return rows.map((row) => row.table);
+  } finally {
+    db.close();
+  }
+}
+
 function getMigrationNames(dbPath: string): string[] {
   const db = new Database(dbPath);
   try {
@@ -271,6 +281,63 @@ describe("runAgentsDbMigrations — demo-snapshot.db", () => {
     ]);
     expect(getColumns(dbPath, "agents")).toContain("harness_type");
     expect(getAgentCount(dbPath)).toBe(beforeCount);
+  });
+
+  test("rollback keeps self-referential foreign keys pointing at agents", async () => {
+    await runAgentsDbMigrations(dbPath);
+
+    const beforeCount = getAgentCount(dbPath);
+    const beforeIndexes = getIndexes(dbPath);
+
+    const { migrator, db } = createAgentsMigrator(dbPath);
+    const downResult = await migrator.migrateDown();
+    await db.destroy();
+
+    expect(downResult.error).toBeUndefined();
+    expect(getMigrationNames(dbPath)).toEqual(["20260320000000_initial_schema", "20260321144612_composer_drafts"]);
+    expect(getColumns(dbPath, "agents")).not.toContain("harness_type");
+    expect(getAgentsForeignKeyTables(dbPath)).toEqual(["agents", "agents"]);
+    expect(getAgentCount(dbPath)).toBe(beforeCount);
+    expect(getIndexes(dbPath)).toEqual(beforeIndexes);
+    expect(getColumns(dbPath, "agents")).not.toContain("harness_type");
+
+    const dbAfterRepair = new Database(dbPath);
+    try {
+      dbAfterRepair
+        .query(
+          `
+            INSERT INTO agents (
+              id, session_id, parent_id, tree_id, level,
+              title, project_id, directory, model,
+              created_at, updated_at, cloned_from, cloned_at, archived_at
+            ) VALUES (
+              $id, $session_id, $parent_id, $tree_id, $level,
+              $title, $project_id, $directory, $model,
+              $created_at, $updated_at, $cloned_from, $cloned_at, $archived_at
+            )
+          `,
+        )
+        .run({
+          $id: "agent_repair_test",
+          $session_id: "ses_repair_test",
+          $parent_id: null,
+          $tree_id: "agent_repair_test",
+          $level: 0,
+          $title: "Repair Test",
+          $project_id: "project_repair",
+          $directory: "/tmp/repair-test",
+          $model: "test-model",
+          $created_at: 1,
+          $updated_at: 1,
+          $cloned_from: null,
+          $cloned_at: null,
+          $archived_at: null,
+        });
+    } finally {
+      dbAfterRepair.close();
+    }
+
+    expect(getAgentCount(dbPath)).toBe(beforeCount + 1);
   });
 });
 

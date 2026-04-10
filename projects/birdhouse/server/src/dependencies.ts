@@ -13,7 +13,7 @@ import type {
   WorkspaceHarnessResolver,
 } from "./harness";
 import { createTestAgentHarness, createTestHarnessEventStream, createWorkspaceHarnessResolver } from "./harness";
-import { type AgentsDB, getDefaultDatabasePath, initAgentsDB } from "./lib/agents-db";
+import { type AgentsDB, initAgentsDB } from "./lib/agents-db";
 import { type BirdhouseEventBus, getWorkspaceEventBus } from "./lib/birdhouse-event-bus";
 import type { DataDB } from "./lib/data-db";
 import { type CapturedLog, createLiveLogger, createTestLogger, type LoggerDeps } from "./lib/logger";
@@ -69,6 +69,39 @@ export function getHarnessForKind(deps: Pick<Deps, "harnesses">, kind: string): 
 
 export function getHarnessForAgent(deps: Pick<Deps, "harnesses">, agent: { harness_type: string }): AgentHarness {
   return deps.harnesses.forAgent(agent);
+}
+
+function attachUnavailableWorkspaceDeps(
+  deps: Omit<Deps, "harnesses" | "agentsDB" | "getBirdhouseEventBus">,
+  contextName: string,
+): Deps {
+  const unavailable = (dependencyName: string): never => {
+    throw new Error(`${dependencyName} is unavailable in ${contextName}`);
+  };
+
+  Object.defineProperty(deps, "harnesses", {
+    get() {
+      return unavailable("harnesses");
+    },
+    enumerable: true,
+    configurable: true,
+  });
+
+  Object.defineProperty(deps, "agentsDB", {
+    get() {
+      return unavailable("agentsDB");
+    },
+    enumerable: true,
+    configurable: true,
+  });
+
+  Object.defineProperty(deps, "getBirdhouseEventBus", {
+    value: () => unavailable("getBirdhouseEventBus"),
+    enumerable: true,
+    configurable: true,
+  });
+
+  return deps as Deps;
 }
 
 function attachTestHarnessAlias(
@@ -336,33 +369,11 @@ export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides):
   return attachTestHarnessAlias(deps, harnesses, registeredHarnesses, defaultHarnessKind);
 }
 
-export async function createPosthogDeps(): Promise<TestDeps> {
-  const defaultHarness: AgentHarness = createTestAgentHarness();
-  const defaultEventStream = createTestHarnessEventStream();
-  const defaultHarnessKind = defaultHarness.kind;
-  const registeredHarnesses: Record<string, AgentHarness> = {
-    [defaultHarnessKind]: defaultHarness,
-    opencode: defaultHarness,
-  };
-
-  const harnesses = createWorkspaceHarnessResolver({
-    defaultKind: defaultHarnessKind,
-    harnesses: registeredHarnesses,
-    eventStreams: {
-      [defaultHarnessKind]: () => defaultEventStream,
-      opencode: () => defaultEventStream,
-    },
-  });
-
-  const deps = {
-    harnesses,
+export async function createPosthogDeps(): Promise<Deps> {
+  return attachUnavailableWorkspaceDeps({
     log: createLiveLogger(),
-    agentsDB: await initAgentsDB(getDefaultDatabasePath(undefined)),
     dataDb: new TestDataDB(),
     posthog: createLivePosthogProxy(),
     telemetry: createTestTelemetryClient(),
-    getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
-  };
-
-  return attachTestHarnessAlias(deps, harnesses, registeredHarnesses, defaultHarnessKind);
+  }, "PostHog ingest context");
 }

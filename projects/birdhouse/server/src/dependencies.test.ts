@@ -65,6 +65,16 @@ describe("Dependencies", () => {
     }
   });
 
+  test("createPosthogDeps does not expose workspace-scoped deps", async () => {
+    const deps = await createPosthogDeps();
+
+    expect(() => deps.agentsDB).toThrow("agentsDB is unavailable in PostHog ingest context");
+    expect(() => deps.harnesses).toThrow("harnesses is unavailable in PostHog ingest context");
+    expect(() => deps.getBirdhouseEventBus("/tmp")).toThrow(
+      "getBirdhouseEventBus is unavailable in PostHog ingest context",
+    );
+  });
+
   test("context preserved across async operations", async () => {
     const deps = await createMockDeps();
 
