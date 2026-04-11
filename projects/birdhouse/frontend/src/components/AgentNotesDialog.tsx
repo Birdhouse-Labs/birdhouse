@@ -39,6 +39,15 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
   let activeLoad = 0;
   let isClosing = false;
 
+  const autoResize = () => {
+    if (!textareaRef) return;
+    textareaRef.style.height = "auto";
+    const maxHeight = window.innerHeight * 0.5;
+    const newHeight = Math.min(textareaRef.scrollHeight, maxHeight);
+    textareaRef.style.height = `${newHeight}px`;
+    textareaRef.style.overflow = textareaRef.scrollHeight > maxHeight ? "auto" : "hidden";
+  };
+
   const persistNote = async (currentText: string) => {
     if (!hasLoaded()) {
       return false;
@@ -110,6 +119,7 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
   createEffect(() => {
     if (!props.open || !hasLoaded() || !textareaRef) return;
     textareaRef.focus();
+    queueMicrotask(() => autoResize());
   });
 
   const uiState = () => getAgentNotesDialogUiState(hasLoaded(), loadFailed(), saveState());
@@ -147,7 +157,10 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
                 textareaRef = el;
               }}
               value={text()}
-              onInput={(e) => setText(e.currentTarget.value)}
+              onInput={(e) => {
+                setText(e.currentTarget.value);
+                autoResize();
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && e.metaKey && !uiState().isSaveDisabled) {
                   e.preventDefault();
@@ -155,7 +168,9 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
                 }
               }}
               disabled={uiState().isTextareaDisabled}
-              class="min-h-64 w-full resize-y rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-accent"
+              rows={6}
+              class="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-accent"
+              style={{ overflow: "hidden" }}
               placeholder="Scratchpad notes for this agent"
             />
 
