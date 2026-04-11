@@ -2,7 +2,7 @@
 // ABOUTME: Loads notes on open and saves them when the user closes the scratchpad.
 
 import Dialog from "corvu/dialog";
-import { type Component, createEffect, createSignal, Show } from "solid-js";
+import { batch, type Component, createEffect, createMemo, createSignal, Show } from "solid-js";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { clearAgentNote, getAgentNote, saveAgentNote } from "../services/agent-notes-api";
 import { borderColor, cardSurfaceFlat } from "../styles/containerStyles";
@@ -37,19 +37,10 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
   const [hasLoaded, setHasLoaded] = createSignal(false);
   const [loadFailed, setLoadFailed] = createSignal(false);
   const [viewMode, setViewMode] = createSignal<"edit" | "preview">("edit");
-  let textareaRef: HTMLTextAreaElement | undefined;
+  const [textareaRef, setTextareaRef] = createSignal<HTMLTextAreaElement | null>(null);
   let lastPersistedText = "";
   let activeLoad = 0;
   let isClosing = false;
-
-  const autoResize = () => {
-    if (!textareaRef) return;
-    textareaRef.style.height = "auto";
-    const maxHeight = window.innerHeight * 0.5;
-    const newHeight = Math.min(textareaRef.scrollHeight, maxHeight);
-    textareaRef.style.height = `${newHeight}px`;
-    textareaRef.style.overflow = textareaRef.scrollHeight > maxHeight ? "auto" : "hidden";
-  };
 
   const persistNote = async (currentText: string) => {
     if (!hasLoaded()) {
@@ -99,11 +90,13 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
     }
 
     const loadId = ++activeLoad;
-    setHasLoaded(false);
-    setLoadFailed(false);
-    setSaveState("idle");
-    setText("");
-    setViewMode("edit");
+    batch(() => {
+      setHasLoaded(false);
+      setLoadFailed(false);
+      setSaveState("idle");
+      setText("");
+      setViewMode("edit");
+    });
     lastPersistedText = "";
 
     getAgentNote(props.workspaceId, props.agentId)
@@ -120,13 +113,26 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
       });
   });
 
+  const autoResize = () => {
+    const el = textareaRef();
+    if (!el) return;
+    el.style.height = "auto";
+    const maxHeight = window.innerHeight * 0.5;
+    const newHeight = Math.min(el.scrollHeight, maxHeight);
+    el.style.height = `${newHeight}px`;
+    el.style.overflow = el.scrollHeight > maxHeight ? "auto" : "hidden";
+  };
+
+  // Re-runs whenever the textarea mounts or unmounts (e.g. switching edit/preview),
+  // and whenever hasLoaded changes — ensuring height and focus are always current.
   createEffect(() => {
-    if (!props.open || !hasLoaded() || !textareaRef) return;
-    textareaRef.focus();
+    const el = textareaRef();
+    if (!props.open || !hasLoaded() || !el) return;
+    el.focus();
     queueMicrotask(() => autoResize());
   });
 
-  const uiState = () => getAgentNotesDialogUiState(hasLoaded(), loadFailed(), saveState());
+  const uiState = createMemo(() => getAgentNotesDialogUiState(hasLoaded(), loadFailed(), saveState()));
 
   return (
     <Dialog
@@ -180,9 +186,7 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
               }
             >
               <textarea
-                ref={(el) => {
-                  textareaRef = el;
-                }}
+                ref={setTextareaRef}
                 value={text()}
                 onInput={(e) => {
                   setText(e.currentTarget.value);
