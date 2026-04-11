@@ -6,6 +6,8 @@ import { type Component, createEffect, createSignal, Show } from "solid-js";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { clearAgentNote, getAgentNote, saveAgentNote } from "../services/agent-notes-api";
 import { borderColor, cardSurfaceFlat } from "../styles/containerStyles";
+import MarkdownRenderer from "./MarkdownRenderer";
+import { ButtonGroup } from "./ui";
 
 export interface AgentNotesDialogProps {
   agentId: string;
@@ -34,6 +36,7 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
   const [saveState, setSaveState] = createSignal<SaveState>("idle");
   const [hasLoaded, setHasLoaded] = createSignal(false);
   const [loadFailed, setLoadFailed] = createSignal(false);
+  const [viewMode, setViewMode] = createSignal<"edit" | "preview">("edit");
   let textareaRef: HTMLTextAreaElement | undefined;
   let lastPersistedText = "";
   let activeLoad = 0;
@@ -100,6 +103,7 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
     setLoadFailed(false);
     setSaveState("idle");
     setText("");
+    setViewMode("edit");
     lastPersistedText = "";
 
     getAgentNote(props.workspaceId, props.agentId)
@@ -145,34 +149,58 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
           style={{ "z-index": baseZIndex }}
         >
           <div class={`border-b px-5 py-4 ${borderColor}`}>
-            <div>
-              <Dialog.Label class="text-lg font-semibold text-heading">Agent Notes</Dialog.Label>
-              <p class="mt-1 text-sm text-text-secondary">Jot down anything you want to remember for this agent.</p>
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <Dialog.Label class="text-lg font-semibold text-heading">Agent Notes</Dialog.Label>
+                <p class="mt-1 text-sm text-text-secondary">Jot down anything you want to remember for this agent.</p>
+              </div>
+              <ButtonGroup
+                items={[
+                  { value: "edit", label: "Edit" },
+                  { value: "preview", label: "Preview" },
+                ]}
+                value={viewMode()}
+                onChange={(v) => setViewMode(v as "edit" | "preview")}
+              />
             </div>
           </div>
 
           <div class="p-5">
-            <textarea
-              ref={(el) => {
-                textareaRef = el;
-              }}
-              value={text()}
-              onInput={(e) => {
-                setText(e.currentTarget.value);
-                autoResize();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && e.metaKey && !uiState().isSaveDisabled) {
-                  e.preventDefault();
-                  void handleSaveAndClose();
-                }
-              }}
-              disabled={uiState().isTextareaDisabled}
-              rows={6}
-              class="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-accent"
-              style={{ overflow: "hidden" }}
-              placeholder="Scratchpad notes for this agent"
-            />
+            <Show
+              when={viewMode() === "edit"}
+              fallback={
+                <div class="max-h-[50vh] overflow-y-auto rounded-xl border border-border bg-surface px-4 py-3">
+                  <Show
+                    when={text().trim().length > 0}
+                    fallback={<p class="text-sm text-text-muted">Nothing to preview.</p>}
+                  >
+                    <MarkdownRenderer content={text()} class="text-sm" />
+                  </Show>
+                </div>
+              }
+            >
+              <textarea
+                ref={(el) => {
+                  textareaRef = el;
+                }}
+                value={text()}
+                onInput={(e) => {
+                  setText(e.currentTarget.value);
+                  autoResize();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && e.metaKey && !uiState().isSaveDisabled) {
+                    e.preventDefault();
+                    void handleSaveAndClose();
+                  }
+                }}
+                disabled={uiState().isTextareaDisabled}
+                rows={6}
+                class="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-accent"
+                style={{ overflow: "hidden" }}
+                placeholder="Scratchpad notes for this agent"
+              />
+            </Show>
 
             <Show when={uiState().errorMessage}>
               {(message) => <p class="mt-3 text-sm text-danger">{message()}</p>}
