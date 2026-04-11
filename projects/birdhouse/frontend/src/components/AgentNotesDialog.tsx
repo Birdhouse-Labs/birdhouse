@@ -148,6 +148,12 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
               }}
               value={text()}
               onInput={(e) => setText(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.metaKey && !uiState().isSaveDisabled) {
+                  e.preventDefault();
+                  void handleSaveAndClose();
+                }
+              }}
               disabled={uiState().isTextareaDisabled}
               class="min-h-64 w-full resize-y rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-accent"
               placeholder="Scratchpad notes for this agent"

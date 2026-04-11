@@ -104,4 +104,62 @@ describe("AgentNotesDialog", () => {
       isTextareaDisabled: false,
     });
   });
+
+  it("saves and closes when Cmd+Enter is pressed in the textarea after editing", async () => {
+    vi.mocked(agentNotesApi.getAgentNote).mockResolvedValue("");
+    const onOpenChange = vi.fn();
+    renderDialog(onOpenChange);
+
+    // Wait for load to complete (save button becomes enabled)
+    const saveButton = await screen.findByRole("button", { name: "Save & Close" });
+    await waitFor(() => expect(saveButton).not.toBeDisabled());
+
+    // Simulate typing new content into the textarea
+    const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+    textarea.value = "my new note";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+
+    // Trigger save via Cmd+Enter
+    textarea.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", metaKey: true, bubbles: true, cancelable: true }),
+    );
+
+    await waitFor(() => {
+      expect(agentNotesApi.saveAgentNote).toHaveBeenCalledWith("test-workspace", "agent-123", "my new note");
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("closes without saving when Cmd+Enter is pressed and notes are unchanged", async () => {
+    vi.mocked(agentNotesApi.getAgentNote).mockResolvedValue("existing note");
+    const onOpenChange = vi.fn();
+    renderDialog(onOpenChange);
+
+    // Wait for load to complete
+    const saveButton = await screen.findByRole("button", { name: "Save & Close" });
+    await waitFor(() => expect(saveButton).not.toBeDisabled());
+
+    const textarea = screen.getByRole("textbox");
+    textarea.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", metaKey: true, bubbles: true, cancelable: true }),
+    );
+
+    await waitFor(() => {
+      // No save needed — content unchanged
+      expect(agentNotesApi.saveAgentNote).not.toHaveBeenCalled();
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("does not save when Cmd+Enter is pressed before load completes", async () => {
+    vi.mocked(agentNotesApi.getAgentNote).mockReturnValueOnce(new Promise(() => {}));
+    renderDialog();
+
+    const textarea = screen.getByRole("textbox");
+    textarea.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", metaKey: true, bubbles: true, cancelable: true }),
+    );
+
+    expect(agentNotesApi.saveAgentNote).not.toHaveBeenCalled();
+  });
 });

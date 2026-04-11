@@ -2,6 +2,7 @@
 // ABOUTME: Shows agent title, model, context donut, and working state with gradient pulse
 
 import Popover from "corvu/popover";
+import Tooltip from "corvu/tooltip";
 import { Archive, Download, Edit, Hammer, Lightbulb, MoreVertical, Notebook, NotebookText, X } from "lucide-solid";
 import { type Component, createEffect, createMemo, createResource, createSignal, onCleanup, Show } from "solid-js";
 import { API_ENDPOINT_BASE, buildWorkspaceUrl } from "../config/api";
@@ -16,6 +17,7 @@ import AgentNotesDialog from "./AgentNotesDialog";
 import ArchiveAgentDialog from "./ArchiveAgentDialog";
 import ContextUsageIndicator from "./ContextUsageIndicator";
 import EditAgentDialog from "./EditAgentDialog";
+import MarkdownRenderer from "./MarkdownRenderer";
 import UnarchiveAgentDialog from "./UnarchiveAgentDialog";
 import { IconButton, MenuItemButton } from "./ui";
 
@@ -42,7 +44,7 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
   const [isUnarchiveDialogOpen, setIsUnarchiveDialogOpen] = createSignal(false);
   const [isPopoverOpen, setIsPopoverOpen] = createSignal(false);
   const [isNotesDialogOpen, setIsNotesDialogOpen] = createSignal(false);
-  const [hasNotes, setHasNotes] = createSignal(false);
+  const [noteContent, setNoteContent] = createSignal("");
   const [currentTitle, setCurrentTitle] = createSignal(props.title);
   const [showClickFeedback, setShowClickFeedback] = createSignal(false);
   const [isExporting, setIsExporting] = createSignal(false);
@@ -125,12 +127,12 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
     getAgentNote(workspaceId, agentId)
       .then((note) => {
         if (!cancelled) {
-          setHasNotes(note.trim().length > 0);
+          setNoteContent(note);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setHasNotes(false);
+          setNoteContent("");
         }
       });
 
@@ -240,8 +242,8 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
     }
 
     getAgentNote(props.workspaceId, props.agentId)
-      .then((note) => setHasNotes(note.trim().length > 0))
-      .catch(() => setHasNotes(false));
+      .then((note) => setNoteContent(note))
+      .catch(() => setNoteContent(""));
   };
 
   const handleHeaderClick = (e: MouseEvent) => {
@@ -321,27 +323,42 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
             {props.modelName}
           </span>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsNotesDialogOpen(true);
-            }}
-            class="relative z-10 flex items-center justify-center w-7 h-7 rounded-lg transition-all text-text-secondary hover:bg-surface-overlay hover:text-text-primary"
-            classList={{
-              "!text-text-on-accent hover:bg-white/20": isWorking(),
-              "bg-accent/15 text-accent hover:bg-accent/25": hasNotes() && !isWorking(),
-            }}
-            aria-label="Open agent notes"
-            title="Open agent notes"
-            data-ph-capture-attribute-button-type="open-agent-notes"
-            data-ph-capture-attribute-agent-id={props.agentId}
-            data-ph-capture-attribute-has-notes={hasNotes() ? "true" : "false"}
-          >
-            <Show when={hasNotes()} fallback={<Notebook size={14} />}>
-              <NotebookText size={14} />
+          <Tooltip openDelay={150} closeDelay={0} openOnFocus={false} placement="bottom">
+            <Tooltip.Trigger
+              as="button"
+              type="button"
+              onClick={(e: MouseEvent) => {
+                e.stopPropagation();
+                setIsNotesDialogOpen(true);
+              }}
+              class="relative z-10 flex items-center justify-center w-7 h-7 rounded-lg transition-all text-text-secondary hover:bg-surface-overlay hover:text-text-primary"
+              classList={{
+                "!text-text-on-accent hover:bg-white/20": isWorking(),
+                "bg-accent/15 text-accent hover:bg-accent/25": noteContent().trim().length > 0 && !isWorking(),
+              }}
+              aria-label="Open agent notes"
+              data-ph-capture-attribute-button-type="open-agent-notes"
+              data-ph-capture-attribute-agent-id={props.agentId}
+              data-ph-capture-attribute-has-notes={noteContent().trim().length > 0 ? "true" : "false"}
+            >
+              <Show when={noteContent().trim().length > 0} fallback={<Notebook size={14} />}>
+                <NotebookText size={14} />
+              </Show>
+            </Tooltip.Trigger>
+
+            <Show when={noteContent().trim().length > 0}>
+              <Tooltip.Portal>
+                <Tooltip.Content
+                  class="w-[min(92vw,36rem)] max-h-[80vh] overflow-y-auto rounded-xl border shadow-2xl bg-surface-raised border-border"
+                  style={{ "z-index": baseZIndex }}
+                >
+                  <div class="px-4 py-3">
+                    <MarkdownRenderer content={noteContent()} class="text-sm" />
+                  </div>
+                </Tooltip.Content>
+              </Tooltip.Portal>
             </Show>
-          </button>
+          </Tooltip>
 
           <button
             type="button"
