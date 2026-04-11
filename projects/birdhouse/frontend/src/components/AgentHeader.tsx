@@ -9,10 +9,11 @@ import { API_ENDPOINT_BASE, buildWorkspaceUrl } from "../config/api";
 import { useStreaming } from "../contexts/StreamingContext";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { aggregateTokenStats } from "../domain/token-aggregation";
+import { useModalRoute } from "../lib/routing";
 import { getAgentNote } from "../services/agent-notes-api";
-
 import { borderColor } from "../styles/containerStyles";
 import type { Message } from "../types/messages";
+import { recordAgentView } from "../utils/agent-navigation";
 import AgentNotesDialog from "./AgentNotesDialog";
 import ArchiveAgentDialog from "./ArchiveAgentDialog";
 import ContextUsageIndicator from "./ContextUsageIndicator";
@@ -38,6 +39,7 @@ export interface AgentHeaderProps {
 export const AgentHeader: Component<AgentHeaderProps> = (props) => {
   const streaming = useStreaming();
   const baseZIndex = useZIndex();
+  const { openModal } = useModalRoute();
   const [isWorking, setIsWorking] = createSignal(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = createSignal(false);
   const [isArchiveDialogOpen, setIsArchiveDialogOpen] = createSignal(false);
@@ -353,7 +355,17 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
                   style={{ "z-index": baseZIndex }}
                 >
                   <div class="px-4 py-3">
-                    <MarkdownRenderer content={noteContent()} class="text-sm" />
+                    <MarkdownRenderer
+                      content={noteContent()}
+                      workspaceId={props.workspaceId}
+                      onReferenceLinkClick={(reference) => {
+                        if (reference.type === "agent") {
+                          recordAgentView(reference.identifier);
+                          openModal("agent", reference.identifier);
+                        }
+                      }}
+                      class="text-sm"
+                    />
                   </div>
                 </Tooltip.Content>
               </Tooltip.Portal>
