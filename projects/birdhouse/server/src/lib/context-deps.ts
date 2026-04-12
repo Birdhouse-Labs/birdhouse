@@ -10,6 +10,7 @@ import { log } from "./logger";
 import { createLiveOpenCodeClient } from "./opencode-client";
 import { getWorkspaceStream } from "./opencode-stream";
 import { createLivePosthogProxy } from "./posthog-proxy";
+import { getOpenCodeDbPath, searchOpenCodeMessages } from "./search-opencode-messages";
 import { createLiveTelemetryClient } from "./telemetry";
 
 /**
@@ -62,5 +63,7 @@ export function getDepsFromContext(c: Context): Deps {
     posthog: createLivePosthogProxy(),
     telemetry: createLiveTelemetryClient(dataDb),
     getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
+    searchMessages: (workspaceId: string, query: string, limit: number) =>
+      searchOpenCodeMessages(getOpenCodeDbPath(workspaceId), query, limit),
   };
 }

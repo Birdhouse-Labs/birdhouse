@@ -18,6 +18,7 @@ import { type BirdhouseEventBus, getWorkspaceEventBus } from "./lib/birdhouse-ev
 import type { DataDB } from "./lib/data-db";
 import { type CapturedLog, createLiveLogger, createTestLogger, type LoggerDeps } from "./lib/logger";
 import { createLivePosthogProxy, createTestPosthogProxy, type PosthogProxy } from "./lib/posthog-proxy";
+import { getOpenCodeDbPath, type MessageSearchResult, searchOpenCodeMessages } from "./lib/search-opencode-messages";
 import { createTestTelemetryClient, type TelemetryClient } from "./lib/telemetry";
 import { TestDataDB } from "./test-utils/data-db-test";
 
@@ -26,7 +27,17 @@ import { TestDataDB } from "./test-utils/data-db-test";
 // ============================================================================
 
 // Re-export types from implementations
-export type { AgentsDB, CapturedLog, DataDB, LoggerDeps, Message, ProvidersResponse, Session, TelemetryClient };
+export type {
+  AgentsDB,
+  CapturedLog,
+  DataDB,
+  LoggerDeps,
+  Message,
+  MessageSearchResult,
+  ProvidersResponse,
+  Session,
+  TelemetryClient,
+};
 
 type LegacyHarnessOverrides = Partial<AgentHarness> & {
   listSkills?: () => Promise<BirdhouseSkill[]>;
@@ -53,6 +64,7 @@ export interface Deps {
   posthog: PosthogProxy;
   telemetry: TelemetryClient;
   getBirdhouseEventBus: (workspaceDirectory: string) => BirdhouseEventBus;
+  searchMessages: (workspaceId: string, query: string, limit: number) => MessageSearchResult[] | null;
 }
 
 export type TestDeps = Deps & {
@@ -364,16 +376,22 @@ export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides):
     posthog: createTestPosthogProxy(),
     telemetry: createTestTelemetryClient(),
     getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
+    searchMessages: (_workspaceId: string, _query: string, _limit: number) => [],
   };
 
   return attachTestHarnessAlias(deps, harnesses, registeredHarnesses, defaultHarnessKind);
 }
 
 export async function createPosthogDeps(): Promise<Deps> {
-  return attachUnavailableWorkspaceDeps({
-    log: createLiveLogger(),
-    dataDb: new TestDataDB(),
-    posthog: createLivePosthogProxy(),
-    telemetry: createTestTelemetryClient(),
-  }, "PostHog ingest context");
+  return attachUnavailableWorkspaceDeps(
+    {
+      log: createLiveLogger(),
+      dataDb: new TestDataDB(),
+      posthog: createLivePosthogProxy(),
+      telemetry: createTestTelemetryClient(),
+      searchMessages: (workspaceId: string, query: string, limit: number) =>
+        searchOpenCodeMessages(getOpenCodeDbPath(workspaceId), query, limit),
+    },
+    "PostHog ingest context",
+  );
 }

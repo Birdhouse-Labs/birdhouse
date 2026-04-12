@@ -14,8 +14,8 @@ import "../types/context";
 export function createAgentRoutes() {
   const app = new Hono();
 
-  // GET /api/agents/search - Search agents by query with fuzzy matching and sorting
-  app.get("/search", (c) => handlers.searchAgents(c, getDepsFromContext(c)));
+  // GET /api/agents/search - Search agent message content in OpenCode database
+  app.get("/search", (c) => handlers.searchMessages(c, getDepsFromContext(c)));
 
   // GET /api/agents/recent - Get recent agents with message context for typeahead
   app.get("/recent", (c) => handlers.getRecentAgents(c, getDepsFromContext(c)));
