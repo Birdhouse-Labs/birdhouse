@@ -3,7 +3,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
-import type { BirdhouseMessage as Message, BirdhouseSession as Session } from "../harness";
+import type { AgentHarness, BirdhouseMessage as Message, BirdhouseSession as Session } from "../harness";
 import type { AgentNode, AgentRow, AgentTree } from "../lib/agents-db";
 import { initAgentsDB } from "../lib/agents-db";
 import { createAgentTree, createChildAgent, createRootAgent, withWorkspaceContext } from "../test-utils";
@@ -186,6 +186,47 @@ describe("POST /api/agents - Create root agent", () => {
       expect(res.status).toBe(201);
       const data = (await res.json()) as AgentRow;
       expect(data.model).toBe("anthropic/claude-sonnet-4-5"); // Default model
+    });
+  });
+
+  test("creates root agent when createSession relies on harness this binding", async () => {
+    const mockSession: Session = {
+      id: "ses_bound_create",
+      title: "Bound Agent",
+      projectID: "birdhouse-playground",
+      directory: "/Users/test/projects/birdhouse",
+      version: "1.0.0",
+      time: { created: Date.now(), updated: Date.now() },
+    };
+
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
+
+    deps.harness = {
+      ...deps.harness,
+      marker: "bound-harness",
+      async createSession(title?: string) {
+        expect(title).toBe("Bound Agent");
+        expect((this as AgentHarness & { marker: string }).marker).toBe("bound-harness");
+        return mockSession;
+      },
+    } as AgentHarness & { marker: string };
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const res = await app.request("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Bound Agent",
+          model: "anthropic/claude-sonnet-4",
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      const agent = (await res.json()) as AgentRow;
+      expect(agent.session_id).toBe("ses_bound_create");
     });
   });
 

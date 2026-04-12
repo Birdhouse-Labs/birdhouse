@@ -19,7 +19,6 @@ import "../../types/context";
 export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
   const { agentsDB, log, telemetry } = deps;
   const harness = getDefaultHarness(deps);
-  const { createSession } = harness;
 
   try {
     // 1. Parse and validate request body
@@ -75,7 +74,7 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
 
     // 3. Create harness session via API
     log.server.info({ title }, "Creating harness session");
-    const session = await createSession(title);
+    const session = await harness.createSession(title);
     log.server.info(
       {
         sessionId: session.id,
