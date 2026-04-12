@@ -92,11 +92,6 @@ export function createEventRoutes() {
 
               if (agentId) {
                 properties.agentId = agentId;
-              } else if (queued.expectsAgentId) {
-                log.stream.debug(
-                  { sessionID: queued.sessionID, eventType: queued.event.type },
-                  "Event from non-Birdhouse session - ignoring",
-                );
               }
             } else if (queued.expectsAgentId) {
               log.stream.warn(
