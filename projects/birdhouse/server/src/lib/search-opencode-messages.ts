@@ -125,7 +125,7 @@ export function searchOpenCodeMessages(dbPath: string, query: string, limit: num
                 JSON.parse(p.data) as {
                   type: string;
                   text?: string;
-                  toolName?: string;
+                  tool?: string;
                   state?: { input?: { command?: string }; output?: string };
                 },
             )
@@ -133,7 +133,7 @@ export function searchOpenCodeMessages(dbPath: string, query: string, limit: num
             .map((p) => ({
               type: p.type as "text" | "tool",
               ...(p.text ? { text: p.text } : {}),
-              ...(p.toolName ? { toolName: p.toolName } : {}),
+              ...(p.tool ? { toolName: p.tool } : {}),
               ...(p.state?.input?.command ? { command: p.state.input.command } : {}),
               ...(p.state?.output ? { output: p.state.output } : {}),
             })),

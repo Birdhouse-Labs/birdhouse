@@ -144,7 +144,7 @@ function searchWorkspace(workspaceId: string, query: string, limit: number): Sea
           .map((p) => ({
             type: p.type,
             ...(p.text ? { text: p.text } : {}),
-            ...(p.toolName ? { toolName: p.toolName } : {}),
+            ...(p.tool ? { toolName: p.tool } : {}),
             ...(p.state?.input?.command ? { command: p.state.input.command } : {}),
             ...(p.state?.output ? { output: p.state.output } : {}),
           })),
@@ -220,7 +220,10 @@ if (args.length < 2) {
 const [workspaceArg, ...rest] = args;
 const limitIdx = rest.indexOf("--limit");
 const limit = limitIdx !== -1 ? parseInt(rest[limitIdx + 1] ?? "20") : 20;
-const queryParts = rest.filter((_, i) => i !== limitIdx && i !== limitIdx + 1);
+const queryParts =
+  limitIdx !== -1
+    ? rest.filter((_, i) => i !== limitIdx && i !== limitIdx + 1)
+    : rest;
 const query = queryParts.join(" ");
 
 if (!query.trim()) {
