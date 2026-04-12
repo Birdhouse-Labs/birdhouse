@@ -57,6 +57,16 @@ describe("Dependencies", () => {
     }
   });
 
+  test("createPosthogDeps does not expose workspace-scoped deps", async () => {
+    const deps = await createPosthogDeps();
+
+    expect(() => deps.agentsDB).toThrow("agentsDB is unavailable in PostHog ingest context");
+    expect(() => deps.opencode).toThrow("opencode is unavailable in PostHog ingest context");
+    expect(() => deps.getStream("http://127.0.0.1:3000", "/tmp")).toThrow(
+      "getStream is unavailable in PostHog ingest context",
+    );
+  });
+
   test("context preserved across async operations", async () => {
     const deps = await createMockDeps();
 

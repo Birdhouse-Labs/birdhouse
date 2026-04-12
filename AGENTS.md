@@ -164,7 +164,7 @@ When working in this workspace:
 - **Read project READMEs** to understand dependencies and build processes
 - **Follow commit style guide** at [`docs/git-commit-style.md`](docs/git-commit-style.md) - required reading for all git commits
 - **Commit Often** We like small commits. Easy to squash later!
-- **Logging & reading logs** — load the [logging skill](.agents/skills/birdhouse-development/logging/SKILL.md)
+- **Logging & reading logs** — load the [logging skill](.agents/skills/internal/birdhouse-development/logging/SKILL.md)
 
 ## Working with Agents
 

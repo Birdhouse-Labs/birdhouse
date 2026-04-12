@@ -321,15 +321,7 @@ export class OpenCodeManager {
     const proc = this.opencodeSourcePath
       ? spawn(
           "bun",
-          [
-            "run",
-            "--conditions=browser",
-            "src/index.ts",
-            "serve",
-            "--port",
-            port.toString(),
-            "--print-logs",
-          ],
+          ["run", "--conditions=browser", "src/index.ts", "serve", "--port", port.toString(), "--print-logs"],
           {
             cwd: join(this.opencodeSourcePath, "packages/opencode"),
             env,
@@ -443,6 +435,7 @@ export class OpenCodeManager {
 
   private async buildSpawnEnv(workspace: Workspace, port: number): Promise<Record<string, string>> {
     const opencodeDataDir = getOpenCodeDataDir(workspace.workspace_id);
+    const { NODE_ENV: _nodeEnv, ...parentEnv } = process.env as Record<string, string>;
 
     if (!existsSync(opencodeDataDir)) {
       mkdirSync(opencodeDataDir, { recursive: true });
@@ -452,7 +445,7 @@ export class OpenCodeManager {
     const opencodeConfig = this.buildOpenCodeConfig(workspace);
 
     return {
-      ...(process.env as Record<string, string>),
+      ...parentEnv,
       ...workspaceEnv,
       OPENCODE_XDG_DATA_HOME: join(opencodeDataDir, "data"),
       OPENCODE_XDG_CONFIG_HOME: join(opencodeDataDir, "config"),
@@ -464,6 +457,7 @@ export class OpenCodeManager {
       BIRDHOUSE_SERVER: `http://localhost:${this.serverPort}`,
       BIRDHOUSE_WORKSPACE_ID: workspace.workspace_id,
       OPENCODE_DISABLE_GLOBAL_CONFIG: "true",
+      OPENCODE_DISABLE_PROJECT_CONFIG: "true",
       OPENCODE_DISABLE_CHANNEL_DB: "true",
       OPENCODE_DISABLE_AUTOCOMPACT: "true",
       OPENCODE_DISABLE_PRUNE: "true",
@@ -514,6 +508,10 @@ export class OpenCodeManager {
     // Birdhouse plugin is now built-in to OpenCode - just use the name
     const config: Record<string, unknown> = {
       plugin: ["birdhouse"],
+      lsp: false,
+      tools: {
+        task: false,
+      },
       permission: {
         external_directory: "allow",
       },
@@ -752,8 +750,10 @@ export class OpenCodeManager {
       log.server.info({ workspaceId, port: instance.port, pid: instance.pid }, "Shutting down OpenCode from memory");
 
       if (instance.process) {
+        const proc = instance.process;
+
         // Send SIGTERM for graceful shutdown
-        instance.process.kill("SIGTERM");
+        proc.kill("SIGTERM");
 
         // Wait for graceful shutdown
         await new Promise<void>((resolve) => {
@@ -761,12 +761,12 @@ export class OpenCodeManager {
             // Force kill if still alive
             if (this.isProcessAlive(instance.pid)) {
               log.server.warn({ workspaceId, pid: instance.pid }, "OpenCode did not exit gracefully, force killing");
-              instance.process!.kill("SIGKILL");
+              proc.kill("SIGKILL");
             }
             resolve();
           }, 5000);
 
-          instance.process!.once("exit", () => {
+          proc.once("exit", () => {
             clearTimeout(timeout);
             resolve();
           });
