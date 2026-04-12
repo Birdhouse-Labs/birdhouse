@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createAgentsMigrator, runAgentsDbMigrations } from "./run-agents-db-migrations";
+import { runAgentsDbMigrations } from "./run-agents-db-migrations";
 
 // ============================================================================
 // Helpers
@@ -37,16 +37,6 @@ function getIndexes(dbPath: string): string[] {
   return rows.map((r) => r.name);
 }
 
-function getAgentsForeignKeyTables(dbPath: string): string[] {
-  const db = new Database(dbPath);
-  try {
-    const rows = db.query<{ table: string }, []>("PRAGMA foreign_key_list(agents)").all();
-    return rows.map((row) => row.table);
-  } finally {
-    db.close();
-  }
-}
-
 function getMigrationNames(dbPath: string): string[] {
   const db = new Database(dbPath);
   try {
@@ -57,13 +47,6 @@ function getMigrationNames(dbPath: string): string[] {
     db.close();
     return [];
   }
-}
-
-function getAgentCount(dbPath: string): number {
-  const db = new Database(dbPath);
-  const row = db.query<{ c: number }, []>("SELECT COUNT(*) as c FROM agents").get();
-  db.close();
-  return row?.c ?? 0;
 }
 
 function tempDbPath(): string {
@@ -102,7 +85,6 @@ describe("runAgentsDbMigrations — fresh database", () => {
     expect(cols).toContain("project_id");
     expect(cols).toContain("directory");
     expect(cols).toContain("model");
-    expect(cols).toContain("harness_type");
     expect(cols).toContain("created_at");
     expect(cols).toContain("updated_at");
     expect(cols).toContain("cloned_from");
@@ -145,7 +127,6 @@ describe("runAgentsDbMigrations — fresh database", () => {
     const migrations = getMigrationNames(dbPath);
     expect(migrations).toContain("20260320000000_initial_schema");
     expect(migrations).toContain("20260321144612_composer_drafts");
-    expect(migrations).toContain("20260403173314_harness_type");
   });
 
   test("creates composer_drafts and composer_draft_attachments tables", async () => {
@@ -232,7 +213,6 @@ describe("runAgentsDbMigrations — demo-snapshot.db", () => {
     expect(migrations).toEqual([
       "20260320000000_initial_schema",
       "20260321144612_composer_drafts",
-      "20260403173314_harness_type",
     ]);
   });
 
@@ -240,104 +220,7 @@ describe("runAgentsDbMigrations — demo-snapshot.db", () => {
     await runAgentsDbMigrations(dbPath);
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toHaveLength(3);
-  });
-
-  test("can roll back harness_type migration on a real fixture snapshot without losing rows or indexes", async () => {
-    await runAgentsDbMigrations(dbPath);
-
-    const beforeCount = getAgentCount(dbPath);
-    const beforeIndexes = getIndexes(dbPath);
-
-    const { migrator, db } = createAgentsMigrator(dbPath);
-    const result = await migrator.migrateDown();
-    await db.destroy();
-
-    expect(result.error).toBeUndefined();
-    expect(result.results?.find((it) => it.status === "Success")?.migrationName).toBe("20260403173314_harness_type");
-    expect(getMigrationNames(dbPath)).toEqual(["20260320000000_initial_schema", "20260321144612_composer_drafts"]);
-    expect(getColumns(dbPath, "agents")).not.toContain("harness_type");
-    expect(getAgentCount(dbPath)).toBe(beforeCount);
-    expect(getIndexes(dbPath)).toEqual(beforeIndexes);
-  });
-
-  test("can roll back and re-apply harness_type migration on a real fixture snapshot", async () => {
-    await runAgentsDbMigrations(dbPath);
-
-    const beforeCount = getAgentCount(dbPath);
-
-    const { migrator, db } = createAgentsMigrator(dbPath);
-    const downResult = await migrator.migrateDown();
-    expect(downResult.error).toBeUndefined();
-
-    const upResult = await migrator.migrateToLatest();
-    await db.destroy();
-
-    expect(upResult.error).toBeUndefined();
-    expect(getMigrationNames(dbPath)).toEqual([
-      "20260320000000_initial_schema",
-      "20260321144612_composer_drafts",
-      "20260403173314_harness_type",
-    ]);
-    expect(getColumns(dbPath, "agents")).toContain("harness_type");
-    expect(getAgentCount(dbPath)).toBe(beforeCount);
-  });
-
-  test("rollback keeps self-referential foreign keys pointing at agents", async () => {
-    await runAgentsDbMigrations(dbPath);
-
-    const beforeCount = getAgentCount(dbPath);
-    const beforeIndexes = getIndexes(dbPath);
-
-    const { migrator, db } = createAgentsMigrator(dbPath);
-    const downResult = await migrator.migrateDown();
-    await db.destroy();
-
-    expect(downResult.error).toBeUndefined();
-    expect(getMigrationNames(dbPath)).toEqual(["20260320000000_initial_schema", "20260321144612_composer_drafts"]);
-    expect(getColumns(dbPath, "agents")).not.toContain("harness_type");
-    expect(getAgentsForeignKeyTables(dbPath)).toEqual(["agents", "agents"]);
-    expect(getAgentCount(dbPath)).toBe(beforeCount);
-    expect(getIndexes(dbPath)).toEqual(beforeIndexes);
-    expect(getColumns(dbPath, "agents")).not.toContain("harness_type");
-
-    const dbAfterRepair = new Database(dbPath);
-    try {
-      dbAfterRepair
-        .query(
-          `
-            INSERT INTO agents (
-              id, session_id, parent_id, tree_id, level,
-              title, project_id, directory, model,
-              created_at, updated_at, cloned_from, cloned_at, archived_at
-            ) VALUES (
-              $id, $session_id, $parent_id, $tree_id, $level,
-              $title, $project_id, $directory, $model,
-              $created_at, $updated_at, $cloned_from, $cloned_at, $archived_at
-            )
-          `,
-        )
-        .run({
-          $id: "agent_repair_test",
-          $session_id: "ses_repair_test",
-          $parent_id: null,
-          $tree_id: "agent_repair_test",
-          $level: 0,
-          $title: "Repair Test",
-          $project_id: "project_repair",
-          $directory: "/tmp/repair-test",
-          $model: "test-model",
-          $created_at: 1,
-          $updated_at: 1,
-          $cloned_from: null,
-          $cloned_at: null,
-          $archived_at: null,
-        });
-    } finally {
-      dbAfterRepair.close();
-    }
-
-    expect(getAgentCount(dbPath)).toBe(beforeCount + 1);
+    expect(migrations).toHaveLength(2);
   });
 });
 
@@ -371,7 +254,6 @@ describe("runAgentsDbMigrations — small-snapshot.db", () => {
     expect(migrations).toEqual([
       "20260320000000_initial_schema",
       "20260321144612_composer_drafts",
-      "20260403173314_harness_type",
     ]);
   });
 
@@ -379,6 +261,6 @@ describe("runAgentsDbMigrations — small-snapshot.db", () => {
     await runAgentsDbMigrations(dbPath);
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toHaveLength(3);
+    expect(migrations).toHaveLength(2);
   });
 });

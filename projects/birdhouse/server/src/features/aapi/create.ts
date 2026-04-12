@@ -2,8 +2,9 @@
 // ABOUTME: Used by /aapi/agents POST endpoint - optimized for agent-to-agent workflows
 
 import type { Context } from "hono";
-import { type Deps, getHarnessForAgent, getHarnessForKind, type Session } from "../../dependencies";
+import { type Deps, getHarnessForAgent, type Session } from "../../dependencies";
 import { cloneAgent, createAgent } from "../../domain/agent-lifecycle";
+import type { AgentHarness } from "../../harness";
 import { sendFirstMessage } from "../../lib/agent-messaging";
 import type { AgentRow } from "../../lib/agents-db";
 import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
@@ -56,6 +57,7 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
     const isCloning = from_self || from_agent_id;
 
     let newAgent: AgentRow;
+    let newAgentHarness: AgentHarness;
     let session: Session;
 
     if (isCloning) {
@@ -80,6 +82,7 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
 
       // Determine message ID to fork from
       let actualMessageId = from_message_id;
+      const sourceHarness = getHarnessForAgent(deps, sourceAgent);
 
       if (from_self && !from_message_id) {
         // Smart detection: Find message before last user message
@@ -88,7 +91,6 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
           "Smart from_self: finding message before last user message",
         );
 
-        const sourceHarness = getHarnessForAgent(deps, sourceAgent);
         const messages = await sourceHarness.getMessages(sourceAgent.session_id);
 
         // Find all user messages
@@ -132,7 +134,6 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
 
       // Validate from_message_id exists if provided
       if (actualMessageId) {
-        const sourceHarness = getHarnessForAgent(deps, sourceAgent);
         const messages = await sourceHarness.getMessages(sourceAgent.session_id);
         const messageExists = messages.some((msg) => msg.info.id === actualMessageId);
 
@@ -154,7 +155,7 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
 
       // Validate model if explicitly provided
       if (requestModel) {
-        const modelError = await validateModel(model, getHarnessForAgent(deps, sourceAgent));
+        const modelError = await validateModel(model, sourceHarness);
         if (modelError) {
           return c.json({ error: modelError }, 400);
         }
@@ -178,7 +179,7 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
       newAgent = await cloneAgent(
         sourceAgent,
         {
-          harness: getHarnessForAgent(deps, sourceAgent),
+          harness: sourceHarness,
           agentsDB: deps.agentsDB,
           dataDb: deps.dataDb,
           log: deps.log,
@@ -192,6 +193,7 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
           callingAgentId: currentAgent?.id, // If available, clone becomes child of calling agent
         },
       );
+      newAgentHarness = sourceHarness;
 
       // Insert timeline events for AAPI clone (action-centric model with deduplication)
       try {
@@ -340,7 +342,6 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
         project_id: session.projectID,
         directory: session.directory,
         model,
-        harness_type: currentHarness.kind,
         created_at: now,
         updated_at: now,
         cloned_from: null, // Not a clone
@@ -358,6 +359,7 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
       const workspaceDir = workspace.directory;
       const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
       newAgent = createAgent(agentsDB, agentData, birdhouseEventBus, telemetry, deps.dataDb);
+      newAgentHarness = currentHarness;
 
       log.server.info(
         {
@@ -395,7 +397,7 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
         wait: shouldWait,
         senderMetadata,
       },
-      getHarnessForKind(deps, newAgent.harness_type),
+      newAgentHarness,
     );
 
     if (result.parts) {

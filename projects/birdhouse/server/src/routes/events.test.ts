@@ -297,6 +297,7 @@ describe("GET /api/events (SSE)", () => {
   test("subscribes through the resolver event stream", async () => {
     const deps = await createTestDeps();
     const resolverStream = createTestHarnessEventStream();
+    deps.harnesses.createHarnessEventStreams = () => [resolverStream];
     deps.harnesses.createDefaultHarnessEventStream = () => resolverStream;
 
     await withDeps(deps, async () => {
@@ -328,6 +329,79 @@ describe("GET /api/events (SSE)", () => {
           sessionID: "ses_from_resolver",
         },
       });
+    });
+  });
+
+  test("forwards events from non-default resolver streams", async () => {
+    const deps = await createTestDeps();
+    const defaultStream = createTestHarnessEventStream();
+    const alternateStream = createTestHarnessEventStream();
+    deps.harnesses.createHarnessEventStreams = () => [defaultStream, alternateStream];
+    deps.harnesses.createDefaultHarnessEventStream = () => defaultStream;
+
+    await withDeps(deps, async () => {
+      const app = await withWorkspaceContext(createEventRoutes);
+
+      const request = new Request("http://localhost:3000/");
+      const responsePromise = app.request(request);
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      alternateStream.emit({
+        type: "session.idle",
+        sessionID: "ses_from_alternate_stream",
+        properties: {
+          sessionID: "ses_from_alternate_stream",
+        },
+      });
+
+      const response = await responsePromise;
+      const events = await Promise.race([
+        readSSEEvents(response, 1),
+        new Promise<string[]>((r) => setTimeout(() => r([]), 100)),
+      ]);
+
+      expect(events).toHaveLength(1);
+      expect(JSON.parse(events[0])).toEqual({
+        type: "session.idle",
+        properties: {
+          sessionID: "ses_from_alternate_stream",
+        },
+      });
+    });
+  });
+
+  test("unsubscribes all resolver streams on abort", async () => {
+    const deps = await createTestDeps();
+    const streams = [createTestHarnessEventStream(), createTestHarnessEventStream()];
+    let activeSubscriptions = 0;
+
+    deps.harnesses.createHarnessEventStreams = () =>
+      streams.map((stream) => ({
+        subscribe(listener) {
+          activeSubscriptions += 1;
+          const unsubscribe = stream.subscribe(listener);
+          return () => {
+            activeSubscriptions -= 1;
+            unsubscribe();
+          };
+        },
+      }));
+    deps.harnesses.createDefaultHarnessEventStream = () => streams[0];
+
+    await withDeps(deps, async () => {
+      const app = await withWorkspaceContext(createEventRoutes);
+
+      const request = new Request("http://localhost:3000/");
+      const response = await app.request(request);
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(activeSubscriptions).toBe(2);
+
+      await response.body?.cancel();
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(activeSubscriptions).toBe(0);
     });
   });
 

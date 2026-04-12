@@ -28,7 +28,9 @@ describe("createWorkspaceHarnessResolver", () => {
 
     expect(resolver.default()).toBe(defaultHarness);
     expect(resolver.forKind("alternate")).toBe(alternateHarness);
+    expect(resolver.forAgent({})).toBe(defaultHarness);
     expect(resolver.forAgent({ harness_type: "alternate" })).toBe(alternateHarness);
+    expect(resolver.createHarnessEventStreams()).toEqual([defaultStream, alternateStream]);
     expect(resolver.createDefaultHarnessEventStream()).toBe(defaultStream);
   });
 

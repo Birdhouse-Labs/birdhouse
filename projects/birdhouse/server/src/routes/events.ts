@@ -53,7 +53,7 @@ export function createEventRoutes() {
     const workspace = c.get("workspace");
 
     return streamSSE(c, async (stream) => {
-      const harnessEventStream = harnesses.createDefaultHarnessEventStream();
+      const harnessEventStreams = harnesses.createHarnessEventStreams();
       const birdhouseEventBus = getBirdhouseEventBus(workspace.directory);
       let streamClosed = false;
       const eventQueue: QueuedEvent[] = [];
@@ -121,24 +121,26 @@ export function createEventRoutes() {
         processing = false;
       };
 
-      const unsubscribeHarness = harnessEventStream.subscribe((event) => {
-        if (streamClosed) return;
+      const unsubscribeHarnesses = harnessEventStreams.map((harnessEventStream) =>
+        harnessEventStream.subscribe((event) => {
+          if (streamClosed) return;
 
-        if (isFrontendConsumedHarnessEventType(event.type) && !hasValidFrontendConsumedHarnessEventProperties(event)) {
-          log.stream.warn(
-            { eventType: event.type, properties: event.properties },
-            "Dropped malformed frontend-consumed harness event",
-          );
-          return;
-        }
+          if (isFrontendConsumedHarnessEventType(event.type) && !hasValidFrontendConsumedHarnessEventProperties(event)) {
+            log.stream.warn(
+              { eventType: event.type, properties: event.properties },
+              "Dropped malformed frontend-consumed harness event",
+            );
+            return;
+          }
 
-        eventQueue.push({
-          event: mapHarnessEventToBirdhouseEvent(event),
-          sessionID: event.sessionID,
-          expectsAgentId: EVENTS_EXPECTING_AGENT_ID.has(event.type),
-        });
-        void processQueue();
-      });
+          eventQueue.push({
+            event: mapHarnessEventToBirdhouseEvent(event),
+            sessionID: event.sessionID,
+            expectsAgentId: EVENTS_EXPECTING_AGENT_ID.has(event.type),
+          });
+          void processQueue();
+        }),
+      );
 
       const unsubscribeBirdhouse = birdhouseEventBus.subscribe((event) => {
         if (streamClosed) return;
@@ -168,7 +170,9 @@ export function createEventRoutes() {
           log.stream.info("Client disconnected from SSE stream");
           streamClosed = true;
           clearInterval(keepaliveInterval);
-          unsubscribeHarness();
+          for (const unsubscribeHarness of unsubscribeHarnesses) {
+            unsubscribeHarness();
+          }
           unsubscribeBirdhouse();
           resolve();
         });

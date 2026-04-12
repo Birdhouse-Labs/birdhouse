@@ -2,7 +2,7 @@
 // ABOUTME: Used by /api/agents POST endpoint with optional prompt for first message
 
 import type { Context } from "hono";
-import { type Deps, getDefaultHarness, getHarnessForKind } from "../../dependencies";
+import { type Deps, getDefaultHarness } from "../../dependencies";
 import { createAgent } from "../../domain/agent-lifecycle";
 import { sendFirstMessage } from "../../lib/agent-messaging";
 import type { AgentRow } from "../../lib/agents-db";
@@ -98,7 +98,6 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
       project_id: session.projectID,
       directory: session.directory,
       model,
-      harness_type: harness.kind,
       created_at: now,
       updated_at: now,
       cloned_from: null, // Not a clone
@@ -143,7 +142,7 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
             attachments: requestAttachments,
             ...(requestAgent && { agent: requestAgent }),
           },
-          getHarnessForKind(deps, agent.harness_type),
+          harness,
         );
 
         // 6. Generate title if user didn't provide one
@@ -160,7 +159,7 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
             workspaceId,
             opencodeBase,
             workspaceDir,
-            getHarnessForKind(deps, agent.harness_type),
+            harness,
           ).catch((error) => {
             log.server.error(
               {

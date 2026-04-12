@@ -55,7 +55,6 @@ describe("AgentsDB", () => {
       expect(agent.parent_id).toBeNull();
       expect(agent.level).toBe(0);
       expect(agent.title).toBe("Test Root Agent");
-      expect(agent.harness_type).toBe("opencode");
     });
 
     test("inserts a child agent successfully", () => {

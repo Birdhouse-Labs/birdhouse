@@ -5,15 +5,14 @@ import type { AgentHarness } from "./agent-harness";
 import type { HarnessEventStream } from "./harness-events";
 import type { BirdhouseSessionStatusMap } from "./types";
 
-interface HarnessAgentLike {
-  harness_type: string;
-}
+type HarnessAgentLike = object & { harness_type?: string };
 
 export interface WorkspaceHarnessResolver {
   default(): AgentHarness;
   forKind(kind: string): AgentHarness;
   forAgent(agent: HarnessAgentLike): AgentHarness;
   getSessionStatus(): Promise<BirdhouseSessionStatusMap>;
+  createHarnessEventStreams(): HarnessEventStream[];
   createDefaultHarnessEventStream(): HarnessEventStream;
 }
 
@@ -50,7 +49,7 @@ export function createWorkspaceHarnessResolver(options: WorkspaceHarnessResolver
       return getHarness(kind);
     },
     forAgent(agent: HarnessAgentLike) {
-      return getHarness(agent.harness_type);
+      return agent.harness_type ? getHarness(agent.harness_type) : getHarness(options.defaultKind);
     },
     async getSessionStatus() {
       const mergedStatuses: BirdhouseSessionStatusMap = {};
@@ -60,6 +59,9 @@ export function createWorkspaceHarnessResolver(options: WorkspaceHarnessResolver
       }
 
       return mergedStatuses;
+    },
+    createHarnessEventStreams() {
+      return [...new Set(orderedKinds.map((kind) => getEventStreamFactory(kind)()))];
     },
     createDefaultHarnessEventStream() {
       return getEventStreamFactory(options.defaultKind)();

@@ -231,54 +231,6 @@ describe("getAgentQuestions", () => {
     });
   });
 
-  test("uses harnesses.forAgent(agent) when the agent harness_type is not the default", async () => {
-    const agent = createRootAgent(agentsDB, {
-      id: "agent_alt_read",
-      session_id: "ses_alt_read",
-      title: "Alternate Harness Agent",
-      harness_type: "alternate",
-    });
-
-    const defaultHarness = createTestAgentHarness({ enableQuestions: false });
-    const alternateHarness = createTestAgentHarness({
-      questionRequests: [
-        {
-          id: "req_alt_read",
-          sessionID: "ses_alt_read",
-          questions: [{ question: "Alt?", header: "Alt", options: [] }],
-        },
-      ],
-      enableQuestions: true,
-    });
-    alternateHarness.kind = "alternate";
-    alternateHarness.seedSessionStatus("ses_alt_read", { type: "busy" });
-
-    const deps = await createTestDeps();
-    deps.agentsDB = agentsDB;
-    deps.harness = defaultHarness;
-    deps.harnesses = createWorkspaceHarnessResolver({
-      defaultKind: defaultHarness.kind,
-      harnesses: {
-        [defaultHarness.kind]: defaultHarness,
-        [alternateHarness.kind]: alternateHarness,
-      },
-      eventStreams: {
-        [defaultHarness.kind]: () => createTestHarnessEventStream(),
-        [alternateHarness.kind]: () => createTestHarnessEventStream(),
-      },
-    });
-
-    await withDeps(deps, async () => {
-      const app = await createTestApp({ agentsDb: agentsDB });
-      app.get("/:id/questions", (c) => getAgentQuestions(c, deps));
-
-      const response = await app.request(`/${agent.id}/questions`);
-      expect(response.status).toBe(200);
-      const data = (await response.json()) as QuestionRequest[];
-      expect(data).toHaveLength(1);
-      expect(data[0].id).toBe("req_alt_read");
-    });
-  });
 });
 
 describe("replyToAgentQuestion", () => {
@@ -445,54 +397,4 @@ describe("replyToAgentQuestion", () => {
     });
   });
 
-  test("uses harnesses.forAgent(agent) when replying for a non-default harness", async () => {
-    const agent = createRootAgent(agentsDB, {
-      id: "agent_alt_reply",
-      session_id: "ses_alt_reply",
-      title: "Alternate Reply Agent",
-      harness_type: "alternate",
-    });
-
-    const defaultHarness = createTestAgentHarness({ enableQuestions: false });
-    let capturedRequestID: string | undefined;
-    let capturedAnswers: string[][] | undefined;
-    const alternateHarness = createTestAgentHarness({ enableQuestions: true });
-    alternateHarness.kind = "alternate";
-    alternateHarness.capabilities.questions = {
-      listPendingQuestions: async () => [],
-      replyToQuestion: async (requestID: string, answers: string[][]) => {
-        capturedRequestID = requestID;
-        capturedAnswers = answers;
-      },
-    };
-
-    const deps = await createTestDeps();
-    deps.agentsDB = agentsDB;
-    deps.harness = defaultHarness;
-    deps.harnesses = createWorkspaceHarnessResolver({
-      defaultKind: defaultHarness.kind,
-      harnesses: {
-        [defaultHarness.kind]: defaultHarness,
-        [alternateHarness.kind]: alternateHarness,
-      },
-      eventStreams: {
-        [defaultHarness.kind]: () => createTestHarnessEventStream(),
-        [alternateHarness.kind]: () => createTestHarnessEventStream(),
-      },
-    });
-
-    await withDeps(deps, async () => {
-      const app = await createTestApp({ agentsDb: agentsDB });
-      app.post("/:id/questions/:requestId/reply", (c) => replyToAgentQuestion(c, deps));
-
-      const response = await app.request(`/${agent.id}/questions/req_alt_reply/reply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: [["Option A"]] }),
-      });
-      expect(response.status).toBe(200);
-      expect(capturedRequestID).toBe("req_alt_reply");
-      expect(capturedAnswers).toEqual([["Option A"]]);
-    });
-  });
 });

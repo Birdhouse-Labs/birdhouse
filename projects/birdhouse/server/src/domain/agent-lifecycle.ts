@@ -179,7 +179,6 @@ export async function cloneAgent(
     project_id: session.projectID,
     directory: session.directory,
     model: options?.model ?? sourceAgent.model,
-    harness_type: sourceAgent.harness_type,
     created_at: now,
     updated_at: now,
     cloned_from: sourceAgent.id, // Always set to source agent
