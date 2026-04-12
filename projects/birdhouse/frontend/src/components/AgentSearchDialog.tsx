@@ -171,12 +171,14 @@ const AgentSearchDialog: Component = () => {
   const [isSearching, setIsSearching] = createSignal(false);
   const [searchError, setSearchError] = createSignal<string | null>(null);
   const [hasSearched, setHasSearched] = createSignal(false);
+  let requestId = 0;
 
   let inputRef: HTMLInputElement | undefined;
 
   // Clear state when dialog closes
   createEffect(() => {
     if (!isOpen()) {
+      requestId += 1;
       setQuery("");
       if (inputRef) inputRef.value = "";
       setResults([]);
@@ -198,18 +200,23 @@ const AgentSearchDialog: Component = () => {
     }
 
     const timerId = setTimeout(async () => {
+      const thisRequest = ++requestId;
       setIsSearching(true);
       setSearchError(null);
 
       try {
         const response = await searchAgentMessages(workspaceId, q, SEARCH_LIMIT);
+        if (thisRequest !== requestId) return;
         setResults(response.results);
         setHasSearched(true);
       } catch (err) {
+        if (thisRequest !== requestId) return;
         setSearchError(err instanceof Error ? err.message : "Search failed");
         setResults([]);
       } finally {
-        setIsSearching(false);
+        if (thisRequest === requestId) {
+          setIsSearching(false);
+        }
       }
     }, DEBOUNCE_MS);
 
