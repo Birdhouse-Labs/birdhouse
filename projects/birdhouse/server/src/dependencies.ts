@@ -232,12 +232,15 @@ export async function createTestDeps(opencode?: Partial<Deps["opencode"]>): Prom
 }
 
 export async function createPosthogDeps(): Promise<Deps> {
-  return attachUnavailableWorkspaceDeps({
-    log: createLiveLogger(),
-    dataDb: new TestDataDB(),
-    posthog: createLivePosthogProxy(),
-    telemetry: createTestTelemetryClient(),
-    searchMessages: (workspaceId: string, query: string, limit: number) =>
-      searchOpenCodeMessages(getOpenCodeDbPath(workspaceId), query, limit),
-  }, "PostHog ingest context");
+  return attachUnavailableWorkspaceDeps(
+    {
+      log: createLiveLogger(),
+      dataDb: new TestDataDB(),
+      posthog: createLivePosthogProxy(),
+      telemetry: createTestTelemetryClient(),
+      searchMessages: (workspaceId: string, query: string, limit: number) =>
+        searchOpenCodeMessages(getOpenCodeDbPath(workspaceId), query, limit),
+    },
+    "PostHog ingest context",
+  );
 }
