@@ -22,12 +22,13 @@ export interface EditAgentDialogProps {
 
 /**
  * Extract the last "turn" from messages
- * A turn is all messages from and including the last user message
+ * A turn is all messages from and including the last user message.
+ * Messages are stored newest-first, so index 0 is the most recent.
  */
 function extractLastTurn(messages: Message[]): string {
-  // Find the last user message
+  // Find the most recent user message (first user message in newest-first array)
   let lastUserIndex = -1;
-  for (let i = messages.length - 1; i >= 0; i--) {
+  for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
     if (msg && msg.role === "user") {
       lastUserIndex = i;
@@ -40,27 +41,16 @@ function extractLastTurn(messages: Message[]): string {
     return "";
   }
 
-  // Collect all messages from lastUserIndex onwards
-  const turnMessages = messages.slice(lastUserIndex);
+  // Collect all messages from the most recent user message back to index 0
+  // (index 0 is newest, so slice [0..lastUserIndex] gives the last turn)
+  const turnMessages = messages.slice(0, lastUserIndex + 1);
 
-  // Extract text content from each message
+  // Extract text content from each message.
+  // msg.content is the pre-concatenated plain text from all text parts.
   const textParts: string[] = [];
   for (const msg of turnMessages) {
-    // Add the simple content field
     if (msg.content?.trim()) {
       textParts.push(`[${msg.role}]: ${msg.content.trim()}`);
-    }
-
-    // Also check blocks for text content
-    if (msg.blocks) {
-      for (const block of msg.blocks) {
-        if (block.type === "text" && "content" in block && typeof block.content === "string") {
-          const content = block.content.trim();
-          if (content) {
-            textParts.push(`[${msg.role}]: ${content}`);
-          }
-        }
-      }
     }
   }
 
