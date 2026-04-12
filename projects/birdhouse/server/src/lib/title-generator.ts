@@ -57,6 +57,21 @@ export async function generateTitle(
       maxTokens: 300,
     });
 
+    if (!title || title.trim() === "") {
+      const err = new Error(
+        "Title generation returned empty response — the active model may not support this prompt. " +
+          "Check OpenCode logs for the model being used (search: service=llm path=/llm/generate).",
+      );
+      log.server.error(
+        {
+          sourceAgentTitle,
+          hint: "Check which model is selected as 'small' for this workspace in OpenCode logs",
+        },
+        "TITLE_GENERATION_EMPTY: LLM returned empty title",
+      );
+      throw err;
+    }
+
     log.server.debug({ title }, "Title generated successfully");
 
     return {
