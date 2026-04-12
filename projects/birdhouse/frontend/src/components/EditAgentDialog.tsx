@@ -182,7 +182,9 @@ const EditAgentDialog: Component<EditAgentDialogProps> = (props) => {
 
           {/* Error Message */}
           <Show when={error()}>
-            <div class="mb-4 text-danger text-sm p-3 bg-surface-raised rounded-lg border border-danger">{error()}</div>
+            <div class="mb-4 text-danger text-sm p-3 bg-surface-raised rounded-lg border border-danger break-words">
+              {error()}
+            </div>
           </Show>
 
           {/* Actions */}
