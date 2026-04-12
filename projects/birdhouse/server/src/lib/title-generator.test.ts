@@ -7,6 +7,26 @@ import { buildTitleMessage, TITLE_PROMPT } from "./prompts/title-prompt";
 import { generateTitle } from "./title-generator";
 
 describe("title-generator", () => {
+  it("throws an error when LLM returns an empty string", async () => {
+    const deps = await createTestDeps({
+      generate: async () => "",
+    });
+
+    await expect(generateTitle(deps, { message: "Do something" })).rejects.toThrow(
+      "Title generation returned empty response",
+    );
+  });
+
+  it("throws an error when LLM returns a whitespace-only string", async () => {
+    const deps = await createTestDeps({
+      generate: async () => "   ",
+    });
+
+    await expect(generateTitle(deps, { message: "Do something" })).rejects.toThrow(
+      "Title generation returned empty response",
+    );
+  });
+
   it("uses the dedicated title prompt file directly", async () => {
     let capturedOptions:
       | {

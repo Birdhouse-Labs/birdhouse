@@ -2,11 +2,13 @@
 // ABOUTME: Applies Birdhouse-owned title rules from a dedicated prompt file.
 
 import type { Deps } from "../dependencies";
+import { getOpenCodeDataDir } from "./database-paths";
 import { buildTitleMessage, TITLE_PROMPT } from "./prompts/title-prompt";
 
 export interface TitleGenerationOptions {
   message: string;
   sourceAgentTitle?: string;
+  workspaceId?: string;
 }
 
 export interface TitleGenerationResult {
@@ -28,7 +30,7 @@ export async function generateTitle(
     log,
   } = deps;
 
-  const { message, sourceAgentTitle } = options;
+  const { message, sourceAgentTitle, workspaceId } = options;
 
   // Build system instructions for clone context
   const systemInstructions: string[] = [];
@@ -56,6 +58,26 @@ export async function generateTitle(
       small: true,
       maxTokens: 300,
     });
+
+    if (!title || title.trim() === "") {
+      const modelJsonPath = workspaceId
+        ? `${getOpenCodeDataDir(workspaceId)}/state/opencode/model.json`
+        : "<workspace>/engine/state/opencode/model.json";
+      const err = new Error(
+        "Title generation returned empty response. The active model may not support this prompt.\n" +
+          `This may be caused by a bad default model in: ${modelJsonPath}\n` +
+          "Check logs for the model being used (search: service=llm path=/llm/generate).",
+      );
+      log.server.error(
+        {
+          sourceAgentTitle,
+          modelJsonPath,
+          hint: "Delete or clear the 'recent' array in model.json to reset the default model",
+        },
+        "TITLE_GENERATION_EMPTY: LLM returned empty title",
+      );
+      throw err;
+    }
 
     log.server.debug({ title }, "Title generated successfully");
 
