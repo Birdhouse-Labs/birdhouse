@@ -68,8 +68,13 @@ export async function down(db: Kysely<Record<string, never>>): Promise<void> {
   // SQLite requires table recreation to remove a column.
   // List every column to keep explicitly — do not use SELECT *.
   // Recreate all indexes that existed on the original table.
+  // Rename the old table away first, then create the replacement using the
+  // final table name. Do not create self-referential foreign keys against the
+  // temporary table name — SQLite can preserve that wrong target after rename.
+  await sql`DROP TABLE IF EXISTS agents_old`.execute(db);
+  await sql`ALTER TABLE agents RENAME TO agents_old`.execute(db);
   await sql`
-    CREATE TABLE agents_new (
+    CREATE TABLE agents (
       id TEXT PRIMARY KEY,
       session_id TEXT NOT NULL UNIQUE,
       parent_id TEXT,
@@ -81,20 +86,19 @@ export async function down(db: Kysely<Record<string, never>>): Promise<void> {
       model TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      cloned_from TEXT REFERENCES agents_new(id) ON DELETE SET NULL,
+      cloned_from TEXT REFERENCES agents(id) ON DELETE SET NULL,
       cloned_at INTEGER,
       archived_at INTEGER,
-      FOREIGN KEY (parent_id) REFERENCES agents_new(id) ON DELETE CASCADE
+      FOREIGN KEY (parent_id) REFERENCES agents(id) ON DELETE CASCADE
     )
   `.execute(db);
   await sql`
-    INSERT INTO agents_new
+    INSERT INTO agents
     SELECT id, session_id, parent_id, tree_id, level, title, project_id,
            directory, model, created_at, updated_at, cloned_from, cloned_at, archived_at
-    FROM agents
+    FROM agents_old
   `.execute(db);
-  await sql`DROP TABLE agents`.execute(db);
-  await sql`ALTER TABLE agents_new RENAME TO agents`.execute(db);
+  await sql`DROP TABLE agents_old`.execute(db);
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_agents_session_id ON agents(session_id)`.execute(db);
   await sql`CREATE INDEX IF NOT EXISTS idx_agents_directory ON agents(directory)`.execute(db);
   await sql`CREATE INDEX IF NOT EXISTS idx_agents_tree_updated ON agents(tree_id DESC, level ASC, updated_at DESC)`.execute(db);
@@ -102,6 +106,14 @@ export async function down(db: Kysely<Record<string, never>>): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_agents_cloned_from ON agents(cloned_from)`.execute(db);
 }
 ```
+
+Golden example:
+- `src/lib/agents-db-migrations/migrations/20260403173314_harness_type.ts`
+- `src/lib/agents-db-migrations/run-agents-db-migrations.test.ts`
+
+Common gotcha:
+- If you create the replacement table as `agents_new` and define self-referential foreign keys as `REFERENCES agents_new(id)`, SQLite can preserve the temporary table name in `PRAGMA foreign_key_list(agents)` after rename.
+- The safe pattern is to rename the old table out of the way, create the replacement with the final table name (`agents`), and copy rows into that final table.
 
 ### Step 3: Run the tests — this is your verification
 

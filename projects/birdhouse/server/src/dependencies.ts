@@ -3,7 +3,7 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { EventEmitter } from "node:events";
-import { type AgentsDB, getDefaultDatabasePath, initAgentsDB } from "./lib/agents-db";
+import { type AgentsDB, initAgentsDB } from "./lib/agents-db";
 import type { DataDB } from "./lib/data-db";
 import { type CapturedLog, createLiveLogger, createTestLogger, type LoggerDeps } from "./lib/logger";
 import {
@@ -34,6 +34,39 @@ export interface Deps {
   posthog: PosthogProxy;
   telemetry: TelemetryClient;
   getStream: (opencodeBase: string, workspaceDirectory: string) => OpenCodeStream;
+}
+
+function attachUnavailableWorkspaceDeps(
+  deps: Omit<Deps, "opencode" | "agentsDB" | "getStream">,
+  contextName: string,
+): Deps {
+  const unavailable = (dependencyName: string): never => {
+    throw new Error(`${dependencyName} is unavailable in ${contextName}`);
+  };
+
+  Object.defineProperty(deps, "opencode", {
+    get() {
+      return unavailable("opencode");
+    },
+    enumerable: true,
+    configurable: true,
+  });
+
+  Object.defineProperty(deps, "agentsDB", {
+    get() {
+      return unavailable("agentsDB");
+    },
+    enumerable: true,
+    configurable: true,
+  });
+
+  Object.defineProperty(deps, "getStream", {
+    value: () => unavailable("getStream"),
+    enumerable: true,
+    configurable: true,
+  });
+
+  return deps as Deps;
 }
 
 // ============================================================================
@@ -185,13 +218,10 @@ export async function createTestDeps(opencode?: Partial<Deps["opencode"]>): Prom
 }
 
 export async function createPosthogDeps(): Promise<Deps> {
-  return {
-    opencode: createTestOpenCodeClient(),
+  return attachUnavailableWorkspaceDeps({
     log: createLiveLogger(),
-    agentsDB: await initAgentsDB(getDefaultDatabasePath(undefined)),
     dataDb: new TestDataDB(),
     posthog: createLivePosthogProxy(),
     telemetry: createTestTelemetryClient(),
-    getStream: (_opencodeBase: string, _workspaceDirectory: string) => getOpenCodeStream(),
-  };
+  }, "PostHog ingest context");
 }
