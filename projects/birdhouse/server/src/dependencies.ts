@@ -15,6 +15,7 @@ import {
 } from "./lib/opencode-client";
 import { getOpenCodeStream, type OpenCodeStream } from "./lib/opencode-stream";
 import { createLivePosthogProxy, createTestPosthogProxy, type PosthogProxy } from "./lib/posthog-proxy";
+import { getOpenCodeDbPath, type MessageSearchResult, searchOpenCodeMessages } from "./lib/search-opencode-messages";
 import { createTestTelemetryClient, type TelemetryClient } from "./lib/telemetry";
 import { TestDataDB } from "./test-utils/data-db-test";
 
@@ -23,7 +24,17 @@ import { TestDataDB } from "./test-utils/data-db-test";
 // ============================================================================
 
 // Re-export types from implementations
-export type { AgentsDB, CapturedLog, DataDB, LoggerDeps, Message, ProvidersResponse, Session, TelemetryClient };
+export type {
+  AgentsDB,
+  CapturedLog,
+  DataDB,
+  LoggerDeps,
+  Message,
+  MessageSearchResult,
+  ProvidersResponse,
+  Session,
+  TelemetryClient,
+};
 
 // Dependencies interface - OpenCode client, logger, agents database, and stream factory
 export interface Deps {
@@ -34,6 +45,7 @@ export interface Deps {
   posthog: PosthogProxy;
   telemetry: TelemetryClient;
   getStream: (opencodeBase: string, workspaceDirectory: string) => OpenCodeStream;
+  searchMessages: (workspaceId: string, query: string, limit: number) => MessageSearchResult[] | null;
 }
 
 function attachUnavailableWorkspaceDeps(
@@ -214,14 +226,21 @@ export async function createTestDeps(opencode?: Partial<Deps["opencode"]>): Prom
       // Tests: Return singleton so test events flow through to route
       return getOpenCodeStream();
     },
+    // Tests: returns no results by default; override per-test to inject fixture data
+    searchMessages: (_workspaceId: string, _query: string, _limit: number) => [],
   };
 }
 
 export async function createPosthogDeps(): Promise<Deps> {
-  return attachUnavailableWorkspaceDeps({
-    log: createLiveLogger(),
-    dataDb: new TestDataDB(),
-    posthog: createLivePosthogProxy(),
-    telemetry: createTestTelemetryClient(),
-  }, "PostHog ingest context");
+  return attachUnavailableWorkspaceDeps(
+    {
+      log: createLiveLogger(),
+      dataDb: new TestDataDB(),
+      posthog: createLivePosthogProxy(),
+      telemetry: createTestTelemetryClient(),
+      searchMessages: (workspaceId: string, query: string, limit: number) =>
+        searchOpenCodeMessages(getOpenCodeDbPath(workspaceId), query, limit),
+    },
+    "PostHog ingest context",
+  );
 }

@@ -223,12 +223,24 @@ export function useModalRoute() {
     return modalStack().some((modal) => modal.type === type && modal.id === id);
   };
 
+  // Remove all modals of a given type from the stack, regardless of position.
+  // Use this instead of closeModal() when you need to close a specific modal
+  // that may not be at the top of the stack (e.g. a search dialog with agent
+  // modals stacked on top of it).
+  const removeModalByType = (type: string) => {
+    const stack = modalStack();
+    const nextStack = stack.filter((m) => m.type !== type);
+    if (nextStack.length === stack.length) return;
+    setSearchParams({ modals: serializeModalStack(nextStack) });
+  };
+
   return {
     modalStack,
     currentModal,
     openModal,
     replaceModal,
     closeModal,
+    removeModalByType,
     isModalOpen,
   };
 }
