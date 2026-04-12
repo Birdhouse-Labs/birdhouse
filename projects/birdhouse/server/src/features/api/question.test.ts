@@ -3,12 +3,7 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../../dependencies";
-import {
-  createTestAgentHarness,
-  createTestHarnessEventStream,
-  createWorkspaceHarnessResolver,
-  type BirdhouseQuestionRequest as QuestionRequest,
-} from "../../harness";
+import { createTestAgentHarness, type BirdhouseQuestionRequest as QuestionRequest } from "../../harness";
 import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
 import { createRootAgent, createTestApp } from "../../test-utils";
 import { getAgentQuestions, replyToAgentQuestion } from "./question";
@@ -230,7 +225,6 @@ describe("getAgentQuestions", () => {
       expect(data).toHaveLength(2);
     });
   });
-
 });
 
 describe("replyToAgentQuestion", () => {
@@ -396,5 +390,4 @@ describe("replyToAgentQuestion", () => {
       expect(data.error).toBe("Not Found");
     });
   });
-
 });

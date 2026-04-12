@@ -3,13 +3,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
-import {
-  createTestAgentHarness,
-  createTestHarnessEventStream,
-  createWorkspaceHarnessResolver,
-  type BirdhouseMessage as Message,
-  type BirdhouseSession as Session,
-} from "../harness";
+import type { BirdhouseMessage as Message, BirdhouseSession as Session } from "../harness";
 import type { AgentNode, AgentRow, AgentTree } from "../lib/agents-db";
 import { initAgentsDB } from "../lib/agents-db";
 import { createAgentTree, createChildAgent, createRootAgent, withWorkspaceContext } from "../test-utils";

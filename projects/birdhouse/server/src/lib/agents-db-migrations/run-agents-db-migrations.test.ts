@@ -210,10 +210,7 @@ describe("runAgentsDbMigrations — demo-snapshot.db", () => {
   test("applies composer_drafts migration to existing DB", async () => {
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toEqual([
-      "20260320000000_initial_schema",
-      "20260321144612_composer_drafts",
-    ]);
+    expect(migrations).toEqual(["20260320000000_initial_schema", "20260321144612_composer_drafts"]);
   });
 
   test("is idempotent — running twice does not error or change state", async () => {
@@ -251,10 +248,7 @@ describe("runAgentsDbMigrations — small-snapshot.db", () => {
   test("applies composer_drafts migration to existing DB", async () => {
     await runAgentsDbMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toEqual([
-      "20260320000000_initial_schema",
-      "20260321144612_composer_drafts",
-    ]);
+    expect(migrations).toEqual(["20260320000000_initial_schema", "20260321144612_composer_drafts"]);
   });
 
   test("is idempotent — running twice does not error or change state", async () => {

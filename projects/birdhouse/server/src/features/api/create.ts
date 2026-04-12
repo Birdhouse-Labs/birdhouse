@@ -152,23 +152,17 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
           const workspaceId = workspace.workspace_id;
 
           // Fire-and-forget title generation (don't block response)
-          generateAndUpdateTitle(
-            deps,
-            agent.id,
-            prompt.trim(),
-            workspaceId,
-            opencodeBase,
-            workspaceDir,
-            harness,
-          ).catch((error) => {
-            log.server.error(
-              {
-                agentId: agent.id,
-                error: error instanceof Error ? error.message : "Unknown error",
-              },
-              "Failed to generate title",
-            );
-          });
+          generateAndUpdateTitle(deps, agent.id, prompt.trim(), workspaceId, opencodeBase, workspaceDir, harness).catch(
+            (error) => {
+              log.server.error(
+                {
+                  agentId: agent.id,
+                  error: error instanceof Error ? error.message : "Unknown error",
+                },
+                "Failed to generate title",
+              );
+            },
+          );
         }
 
         if (result.parts) {

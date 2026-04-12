@@ -125,7 +125,10 @@ export function createEventRoutes() {
         harnessEventStream.subscribe((event) => {
           if (streamClosed) return;
 
-          if (isFrontendConsumedHarnessEventType(event.type) && !hasValidFrontendConsumedHarnessEventProperties(event)) {
+          if (
+            isFrontendConsumedHarnessEventType(event.type) &&
+            !hasValidFrontendConsumedHarnessEventProperties(event)
+          ) {
             log.stream.warn(
               { eventType: event.type, properties: event.properties },
               "Dropped malformed frontend-consumed harness event",
