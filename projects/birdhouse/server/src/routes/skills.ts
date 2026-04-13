@@ -45,13 +45,18 @@ export function createSkillRoutes(dataDb: DataDB) {
   app.post("/attachments/preview", async (c) => {
     const harness = getDefaultHarness(getDepsFromContext(c));
     const skillsCapability = harness.capabilities.skills;
+
+    if (!skillsCapability) {
+      return c.json({ error: "Skills not supported by harness" }, 501);
+    }
+
     const body = await c.req.json();
 
     if (typeof body.text !== "string") {
       return c.json({ error: "text is required and must be a string" }, 400);
     }
 
-    const skills = (await skillsCapability?.listSkills()) ?? [];
+    const skills = await skillsCapability.listSkills();
     const attachments = buildSkillAttachmentPreview(
       body.text,
       skills.map((skill) => ({
@@ -66,8 +71,13 @@ export function createSkillRoutes(dataDb: DataDB) {
   app.get("/", async (c) => {
     const harness = getDefaultHarness(getDepsFromContext(c));
     const skillsCapability = harness.capabilities.skills;
+
+    if (!skillsCapability) {
+      return c.json({ error: "Skills not supported by harness" }, 501);
+    }
+
     const workspace = c.get("workspace");
-    const skills = (await skillsCapability?.listSkills()) ?? [];
+    const skills = await skillsCapability.listSkills();
 
     return c.json({
       skills: skills
@@ -79,9 +89,14 @@ export function createSkillRoutes(dataDb: DataDB) {
   app.get("/:skillName", async (c) => {
     const harness = getDefaultHarness(getDepsFromContext(c));
     const skillsCapability = harness.capabilities.skills;
+
+    if (!skillsCapability) {
+      return c.json({ error: "Skills not supported by harness" }, 501);
+    }
+
     const workspace = c.get("workspace");
     const skillName = c.req.param("skillName");
-    const skills = (await skillsCapability?.listSkills()) ?? [];
+    const skills = await skillsCapability.listSkills();
     const skill = findSkillByName(skills, skillName);
 
     if (!skill) {
@@ -95,7 +110,11 @@ export function createSkillRoutes(dataDb: DataDB) {
     const harness = getDefaultHarness(getDepsFromContext(c));
     const skillsCapability = harness.capabilities.skills;
 
-    await skillsCapability?.reloadSkills();
+    if (!skillsCapability) {
+      return c.json({ error: "Skills not supported by harness" }, 501);
+    }
+
+    await skillsCapability.reloadSkills();
 
     return c.json({ success: true });
   });
@@ -103,6 +122,11 @@ export function createSkillRoutes(dataDb: DataDB) {
   app.patch("/:skillName/trigger-phrases", async (c) => {
     const harness = getDefaultHarness(getDepsFromContext(c));
     const skillsCapability = harness.capabilities.skills;
+
+    if (!skillsCapability) {
+      return c.json({ error: "Skills not supported by harness" }, 501);
+    }
+
     const workspace = c.get("workspace");
     const skillName = c.req.param("skillName");
     const body = await c.req.json();
@@ -112,7 +136,7 @@ export function createSkillRoutes(dataDb: DataDB) {
       return c.json({ error: validated.error }, 400);
     }
 
-    const skills = (await skillsCapability?.listSkills()) ?? [];
+    const skills = await skillsCapability.listSkills();
     const skill = findSkillByName(skills, skillName);
     if (!skill) {
       return c.json({ error: `Skill ${skillName} not found` }, 404);
@@ -136,8 +160,13 @@ export function createSkillRoutes(dataDb: DataDB) {
   app.post("/:skillName/reveal", async (c) => {
     const harness = getDefaultHarness(getDepsFromContext(c));
     const skillsCapability = harness.capabilities.skills;
+
+    if (!skillsCapability) {
+      return c.json({ error: "Skills not supported by harness" }, 501);
+    }
+
     const skillName = c.req.param("skillName");
-    const skills = (await skillsCapability?.listSkills()) ?? [];
+    const skills = await skillsCapability.listSkills();
     const skill = findSkillByName(skills, skillName);
 
     if (!skill) {
