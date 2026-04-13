@@ -162,19 +162,17 @@ export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsD
               );
               // Clear the "Creating Agent..." placeholder so the agent isn't stuck
               const fallbackTitle = prompt.trim().slice(0, 60) || "New Agent";
-              syncAgentTitle(
-                { agentsDB: deps.agentsDB, harness, workspaceDir, log },
-                agent.id,
-                fallbackTitle,
-              ).catch((syncError) => {
-                log.server.error(
-                  {
-                    agentId: agent.id,
-                    error: syncError instanceof Error ? syncError.message : "Unknown error",
-                  },
-                  "Failed to set fallback title",
-                );
-              });
+              syncAgentTitle({ agentsDB: deps.agentsDB, harness, workspaceDir, log }, agent.id, fallbackTitle).catch(
+                (syncError) => {
+                  log.server.error(
+                    {
+                      agentId: agent.id,
+                      error: syncError instanceof Error ? syncError.message : "Unknown error",
+                    },
+                    "Failed to set fallback title",
+                  );
+                },
+              );
             },
           );
         }
