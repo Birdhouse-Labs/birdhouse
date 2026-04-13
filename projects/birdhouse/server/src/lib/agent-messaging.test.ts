@@ -245,5 +245,36 @@ describe("agent-messaging token recording", () => {
       expect(recordMessageTokensSpy).toHaveBeenCalledTimes(1);
       expect(recordMessageTokensSpy).toHaveBeenCalledWith("agent_async", message);
     });
+
+    it("does not forward noReply to the harness async send", async () => {
+      let capturedNoReply: boolean | undefined;
+
+      const deps = await createTestDeps({
+        sendMessage: async (_sessionId, _text, options) => {
+          capturedNoReply = options?.noReply;
+          return makeAssistantMessage({
+            input: 200,
+            output: 100,
+            reasoning: 0,
+            cache: { read: 15_000, write: 300 },
+          });
+        },
+      });
+      deps.telemetry = mockTelemetry;
+
+      await withDeps(deps, () =>
+        sendFirstMessage(deps, {
+          agentId: "agent_async_no_reply",
+          sessionId: "ses_test",
+          model: "anthropic/claude-sonnet-4",
+          prompt: "Hello",
+          wait: false,
+        }),
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(capturedNoReply).toBeUndefined();
+    });
   });
 });

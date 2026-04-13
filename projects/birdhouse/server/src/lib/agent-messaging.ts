@@ -94,7 +94,6 @@ export async function sendFirstMessage(
         system: BIRDHOUSE_SYSTEM_PROMPT,
         parts: promptParts,
         ...(agent && { agent }),
-        noReply: true,
       })
       .then((messageResponse) => {
         agentsDB.updateAgentTimestamp(agentId);

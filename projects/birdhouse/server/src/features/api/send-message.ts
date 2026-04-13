@@ -307,7 +307,6 @@ export async function sendMessage(
         agent: agentName,
         system: BIRDHOUSE_SYSTEM_PROMPT,
         parts: messageParts,
-        noReply: true,
       })
       .then((messageResponse) => {
         agentsDB.updateAgentTimestamp(targetAgent.id);

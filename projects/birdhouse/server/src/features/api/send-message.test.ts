@@ -485,5 +485,68 @@ describe("API send-message with clone_and_send", () => {
         expect(sourceEvents).toHaveLength(0);
       });
     });
+
+    test("does not forward noReply in async endpoint mode", async () => {
+      const sourceAgent = createRootAgent(agentsDB, {
+        id: "agent_async_no_reply",
+        session_id: "ses_async_no_reply",
+        title: "Async No Reply Agent",
+      });
+
+      let capturedNoReply: boolean | undefined;
+      const mockMessage = {
+        info: {
+          id: "msg_async_no_reply",
+          sessionID: "ses_async_no_reply",
+          role: "assistant",
+          time: { created: Date.now(), completed: Date.now() },
+          parentID: "msg_user",
+          modelID: "claude-sonnet-4",
+          providerID: "anthropic",
+          mode: "build",
+          cost: 0,
+          tokens: {
+            input: 100,
+            output: 50,
+            reasoning: 0,
+            cache: { read: 0, write: 0 },
+          },
+          path: { cwd: "/test", root: "/" },
+        },
+        parts: [],
+      } as Message;
+
+      const deps = await createTestDeps();
+      deps.agentsDB = agentsDB;
+      deps.harness.sendMessage = async (_sessionId, _text, options) => {
+        capturedNoReply = options?.noReply;
+        return mockMessage;
+      };
+
+      await withDeps(deps, async () => {
+        const app = await withWorkspaceContext(
+          () => {
+            const hono = new Hono();
+            hono.post("/:id/messages", (c) => sendMessage(c, deps));
+            return hono;
+          },
+          { agentsDb: agentsDB },
+        );
+
+        const response = await app.request(`/${sourceAgent.id}/messages?wait=false`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: "hello async",
+          }),
+        });
+
+        expect(response.status).toBe(200);
+      });
+
+      expect(capturedNoReply).toBeUndefined();
+    });
   });
 });
