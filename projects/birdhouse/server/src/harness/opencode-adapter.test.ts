@@ -1,7 +1,7 @@
 // ABOUTME: Tests the OpenCode AgentHarness adapter against the existing OpenCode client boundary.
 // ABOUTME: Verifies required methods, optional capabilities, and consistent send/abort behavior.
 
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type {
   Message,
   OpenCodeClient,
@@ -10,7 +10,7 @@ import type {
   Session,
   Skill,
 } from "../lib/opencode-client";
-import { createTestOpenCodeClient } from "../lib/opencode-client";
+import { createTestOpenCodeClient, setMockSessionPrompt } from "../lib/opencode-client";
 import { OpenCodeAgentHarness } from "./opencode-adapter";
 
 function makeSession(id = "ses_1"): Session {
@@ -58,6 +58,10 @@ function makeMessage(sessionId = "ses_1"): Message {
 }
 
 describe("OpenCodeAgentHarness", () => {
+  beforeEach(() => {
+    setMockSessionPrompt(undefined);
+  });
+
   it("delegates required methods to the wrapped OpenCode client", async () => {
     const opencode = createTestOpenCodeClient();
     opencode.createSession = async (title?: string) => makeSession(title ? `ses_${title}` : "ses_new");
@@ -135,22 +139,33 @@ describe("OpenCodeAgentHarness", () => {
     expect(await harness.getProviders()).toEqual(providers);
   });
 
-  it("uses the wrapped OpenCode client sendMessage path and maps the response", async () => {
+  it("uses the SDK client prompt path for sendMessage and maps the response", async () => {
     const opencode = createTestOpenCodeClient();
     const harness = new OpenCodeAgentHarness(opencode, "/workspace");
 
-    let sendCall:
-      | {
-          sessionId: string;
-          text: string;
-          options?: Record<string, unknown>;
-        }
-      | undefined;
+    setMockSessionPrompt(async (options) => {
+      expect(options.path?.id).toBe("ses_sdk");
+      expect((options as typeof options & { query?: { directory?: string } }).query?.directory).toBe("/workspace");
+      expect(options.body?.model).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-4" });
+      expect(options.body?.system).toBe("Birdhouse system prompt");
+      expect(options.body?.agent).toBe("planner");
+      const promptParts = options.body?.parts as Array<Record<string, unknown>> | undefined;
 
-    opencode.sendMessage = async (sessionId, text, options) => {
-      sendCall = { sessionId, text, options };
-      return makeMessage("ses_sdk");
-    };
+      expect(promptParts).toHaveLength(2);
+      expect(promptParts?.[0]).toEqual({
+        type: "text",
+        text: "Prompt",
+        metadata: { source: "birdhouse" },
+      });
+      expect(promptParts?.[1]).toEqual({
+        type: "file",
+        mime: "application/pdf",
+        url: "https://example.com/file.pdf",
+        filename: "file.pdf",
+      });
+
+      return { data: makeMessage("ses_sdk") };
+    });
 
     const message = await harness.sendMessage("ses_sdk", "Prompt", {
       model: { providerID: "anthropic", modelID: "claude-sonnet-4" },
@@ -172,26 +187,6 @@ describe("OpenCodeAgentHarness", () => {
       ],
     });
 
-    expect(sendCall).toBeDefined();
-    expect(sendCall?.sessionId).toBe("ses_sdk");
-    expect(sendCall?.text).toBe("Prompt");
-    expect(sendCall?.options?.model).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-4" });
-    expect(sendCall?.options?.system).toBe("Birdhouse system prompt");
-    expect(sendCall?.options?.agent).toBe("planner");
-    const promptParts = sendCall?.options?.parts as Array<Record<string, unknown>> | undefined;
-    expect(promptParts).toHaveLength(2);
-    expect(promptParts?.[0]).toEqual({
-      type: "text",
-      text: "Prompt",
-      metadata: { source: "birdhouse" },
-    });
-    expect(promptParts?.[1]).toEqual({
-      type: "file",
-      mime: "application/pdf",
-      url: "https://example.com/file.pdf",
-      filename: "file.pdf",
-    });
-
     expect(message.info.id).toBe("msg_ses_sdk");
     expect(message.parts[0]).toMatchObject({
       id: expect.any(String),
@@ -202,14 +197,14 @@ describe("OpenCodeAgentHarness", () => {
     });
   });
 
-  it("returns a placeholder assistant message when noReply sendMessage returns no data", async () => {
+  it("returns a placeholder assistant message when OpenCode noReply does not return data", async () => {
     const opencode = createTestOpenCodeClient();
     const harness = new OpenCodeAgentHarness(opencode, "/workspace");
 
-    opencode.sendMessage = async (_sessionId, _text, options) => {
-      expect(options?.noReply).toBe(true);
-      return {} as Message;
-    };
+    setMockSessionPrompt(async (options) => {
+      expect(options.body?.noReply).toBe(true);
+      return { data: undefined as unknown as Message };
+    });
 
     const message = await harness.sendMessage("ses_async", "Prompt", {
       noReply: true,

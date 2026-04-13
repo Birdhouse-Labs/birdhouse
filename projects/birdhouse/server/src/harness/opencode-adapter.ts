@@ -126,16 +126,23 @@ export class OpenCodeAgentHarness implements AgentHarness {
       "HARNESS_TRACE_ADAPTER_SEND_REQUEST",
     );
 
-    const response = await this.opencodeClient.sendMessage(sessionId, text, {
-      ...(options?.model !== undefined ? { model: options.model } : {}),
-      ...(options?.noReply !== undefined ? { noReply: options.noReply } : {}),
-      ...(options?.system !== undefined ? { system: options.system } : {}),
-      ...(options?.agent !== undefined ? { agent: options.agent } : {}),
-      ...(options?.metadata !== undefined ? { metadata: options.metadata } : {}),
-      parts: buildPromptParts(text, options),
+    const response = await this.opencodeClient.client.session.prompt({
+      path: {
+        id: sessionId,
+      },
+      query: {
+        directory: this.workspaceDirectory,
+      },
+      body: {
+        parts: buildPromptParts(text, options),
+        ...(options?.model !== undefined ? { model: options.model } : {}),
+        ...(options?.noReply !== undefined ? { noReply: options.noReply } : {}),
+        ...(options?.system !== undefined ? { system: options.system } : {}),
+        ...(options?.agent !== undefined ? { agent: options.agent } : {}),
+      },
     });
 
-    if (!response?.info) {
+    if (!response.data) {
       log.opencode.info(
         {
           trace: "HARNESS_TRACE_ADAPTER_PLACEHOLDER_RESPONSE",
@@ -153,14 +160,14 @@ export class OpenCodeAgentHarness implements AgentHarness {
         trace: "HARNESS_TRACE_ADAPTER_MAPPED_RESPONSE",
         sessionId,
         workspaceDirectory: this.workspaceDirectory,
-        role: response.info.role,
-        responseMessageId: response.info.id,
-        responsePartCount: response.parts.length,
+        role: response.data.info.role,
+        responseMessageId: response.data.info.id,
+        responsePartCount: response.data.parts.length,
       },
       "HARNESS_TRACE_ADAPTER_MAPPED_RESPONSE",
     );
 
-    return mapOpenCodeMessageToBirdhouseMessage(response);
+    return mapOpenCodeMessageToBirdhouseMessage(response.data);
   }
 
   async getMessages(sessionId: string, limit?: number): Promise<BirdhouseMessage[]> {
