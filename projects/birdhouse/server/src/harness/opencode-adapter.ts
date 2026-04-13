@@ -110,27 +110,20 @@ export class OpenCodeAgentHarness implements AgentHarness {
   }
 
   async sendMessage(sessionId: string, text: string, options?: SendMessageOptions): Promise<BirdhouseMessage> {
-    const response = await this.opencodeClient.client.session.prompt({
-      path: {
-        id: sessionId,
-      },
-      query: {
-        directory: this.workspaceDirectory,
-      },
-      body: {
-        parts: buildPromptParts(text, options),
-        ...(options?.model !== undefined ? { model: options.model } : {}),
-        ...(options?.noReply !== undefined ? { noReply: options.noReply } : {}),
-        ...(options?.system !== undefined ? { system: options.system } : {}),
-        ...(options?.agent !== undefined ? { agent: options.agent } : {}),
-      },
+    const response = await this.opencodeClient.sendMessage(sessionId, text, {
+      ...(options?.model !== undefined ? { model: options.model } : {}),
+      ...(options?.noReply !== undefined ? { noReply: options.noReply } : {}),
+      ...(options?.system !== undefined ? { system: options.system } : {}),
+      ...(options?.agent !== undefined ? { agent: options.agent } : {}),
+      ...(options?.metadata !== undefined ? { metadata: options.metadata } : {}),
+      parts: buildPromptParts(text, options),
     });
 
-    if (!response.data) {
+    if (!response?.info) {
       return createPlaceholderAssistantMessage(sessionId, options);
     }
 
-    return mapOpenCodeMessageToBirdhouseMessage(response.data);
+    return mapOpenCodeMessageToBirdhouseMessage(response);
   }
 
   async getMessages(sessionId: string, limit?: number): Promise<BirdhouseMessage[]> {
