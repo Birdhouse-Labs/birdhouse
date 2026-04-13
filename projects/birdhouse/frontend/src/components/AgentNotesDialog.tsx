@@ -154,14 +154,11 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
           class={`fixed left-1/2 top-1/2 w-[min(92vw,42rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl ${cardSurfaceFlat} shadow-2xl`}
           style={{ "z-index": baseZIndex }}
         >
-          <div class={`border-b px-5 py-4 ${borderColor}`}>
-            <div class="flex items-start gap-4">
-              <div class="flex-1 min-w-0">
-                <Dialog.Label class="text-lg font-semibold text-heading">Agent Notes</Dialog.Label>
-                <p class="mt-1 text-sm text-text-secondary truncate">
-                  Jot down anything you want to remember for this agent.
-                </p>
-              </div>
+          <div class={`border-b px-5 py-3 ${borderColor}`}>
+            <div class="flex items-center gap-4">
+              <Dialog.Label class="text-lg font-semibold text-heading flex-1 min-w-0 truncate">
+                Agent Notes
+              </Dialog.Label>
               <ButtonGroup
                 items={[
                   { value: "edit", label: "Edit" },
