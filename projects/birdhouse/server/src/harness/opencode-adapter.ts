@@ -1,6 +1,7 @@
 // ABOUTME: Wraps the existing OpenCode client behind the Birdhouse AgentHarness contract.
 // ABOUTME: Centralizes type mapping and hides raw OpenCode SDK usage from the rest of the server.
 
+import { log } from "../lib/logger";
 import type { OpenCodeClient } from "../lib/opencode-client";
 import type { AgentHarness, AgentHarnessCapabilities, SendMessageOptions } from "./agent-harness";
 import {
@@ -110,6 +111,21 @@ export class OpenCodeAgentHarness implements AgentHarness {
   }
 
   async sendMessage(sessionId: string, text: string, options?: SendMessageOptions): Promise<BirdhouseMessage> {
+    log.opencode.debug(
+      {
+        trace: "HARNESS_TRACE_ADAPTER_SEND_REQUEST",
+        sessionId,
+        workspaceDirectory: this.workspaceDirectory,
+        textLength: text.length,
+        noReply: options?.noReply ?? false,
+        agent: options?.agent,
+        model: options?.model,
+        systemLength: options?.system?.length ?? 0,
+        providedPartCount: options?.parts?.length ?? 0,
+      },
+      "HARNESS_TRACE_ADAPTER_SEND_REQUEST",
+    );
+
     const response = await this.opencodeClient.sendMessage(sessionId, text, {
       ...(options?.model !== undefined ? { model: options.model } : {}),
       ...(options?.noReply !== undefined ? { noReply: options.noReply } : {}),
@@ -120,8 +136,29 @@ export class OpenCodeAgentHarness implements AgentHarness {
     });
 
     if (!response?.info) {
+      log.opencode.info(
+        {
+          trace: "HARNESS_TRACE_ADAPTER_PLACEHOLDER_RESPONSE",
+          sessionId,
+          workspaceDirectory: this.workspaceDirectory,
+          noReply: options?.noReply ?? false,
+        },
+        "HARNESS_TRACE_ADAPTER_PLACEHOLDER_RESPONSE",
+      );
       return createPlaceholderAssistantMessage(sessionId, options);
     }
+
+    log.opencode.debug(
+      {
+        trace: "HARNESS_TRACE_ADAPTER_MAPPED_RESPONSE",
+        sessionId,
+        workspaceDirectory: this.workspaceDirectory,
+        role: response.info.role,
+        responseMessageId: response.info.id,
+        responsePartCount: response.parts.length,
+      },
+      "HARNESS_TRACE_ADAPTER_MAPPED_RESPONSE",
+    );
 
     return mapOpenCodeMessageToBirdhouseMessage(response);
   }
