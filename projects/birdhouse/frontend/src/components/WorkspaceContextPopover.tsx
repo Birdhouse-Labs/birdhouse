@@ -128,10 +128,13 @@ const WorkspaceContextPopover: Component = () => {
 
   return (
     <Popover open={isOpen()} onOpenChange={setIsOpen}>
-      <Popover.Trigger class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all hover:bg-surface-overlay text-text-secondary text-sm">
+      <Popover.Trigger
+        class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all hover:bg-surface-overlay text-text-secondary text-sm"
+        aria-label="Workspace"
+      >
         <WorkspaceIcon size={16} />
-        <span class="max-w-32 truncate">{contextDisplayText()}</span>
-        <ChevronDown size={14} class="text-text-muted" />
+        <span class="hidden sm:inline max-w-32 truncate">{contextDisplayText()}</span>
+        <ChevronDown size={14} class="hidden sm:inline text-text-muted" />
       </Popover.Trigger>
 
       <Popover.Portal>
