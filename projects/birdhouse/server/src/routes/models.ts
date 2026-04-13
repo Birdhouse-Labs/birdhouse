@@ -59,11 +59,15 @@ export function createModelRoutes() {
       const models: Model[] = [];
       for (const provider of providers) {
         for (const [modelId, modelInfo] of Object.entries(provider.models)) {
+          // Use opencode's limit when present and non-zero.
+          // A context of 0 means opencode has no limit data for this model.
+          const contextLimit =
+            modelInfo.limit?.context != null && modelInfo.limit.context > 0 ? modelInfo.limit.context : 0;
           models.push({
             id: `${provider.id}/${modelId}`,
             name: modelInfo.name || modelId,
             provider: provider.name || provider.id,
-            contextLimit: modelInfo.limit?.context ?? 200_000,
+            contextLimit,
             outputLimit: modelInfo.limit?.output ?? 0,
           });
         }

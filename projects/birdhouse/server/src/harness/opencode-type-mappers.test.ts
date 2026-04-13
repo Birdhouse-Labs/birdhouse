@@ -330,4 +330,42 @@ describe("opencode type mappers", () => {
     };
     expect(mapOpenCodeQuestionRequestToBirdhouseQuestionRequest(question)).toEqual(question);
   });
+
+  it("preserves model limit through OpenCode-to-Birdhouse provider mapping", () => {
+    const withLimit = {
+      providers: [
+        {
+          id: "anthropic",
+          name: "Anthropic",
+          models: {
+            "claude-sonnet-4-6": {
+              id: "claude-sonnet-4-6",
+              name: "Claude Sonnet 4.6",
+              limit: { context: 200_000, output: 64_000 },
+            },
+          },
+        },
+      ],
+    };
+
+    const mapped = mapOpenCodeProvidersResponseToBirdhouseProvidersResponse(withLimit);
+    expect(mapped.providers[0].models["claude-sonnet-4-6"].limit).toEqual({ context: 200_000, output: 64_000 });
+  });
+
+  it("omits limit when not present in OpenCode provider model", () => {
+    const withoutLimit = {
+      providers: [
+        {
+          id: "custom",
+          name: "Custom",
+          models: {
+            "some-model": { id: "some-model", name: "Some Model" },
+          },
+        },
+      ],
+    };
+
+    const mapped = mapOpenCodeProvidersResponseToBirdhouseProvidersResponse(withoutLimit);
+    expect(mapped.providers[0].models["some-model"].limit).toBeUndefined();
+  });
 });

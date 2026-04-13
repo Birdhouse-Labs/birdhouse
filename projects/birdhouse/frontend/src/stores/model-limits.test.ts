@@ -2,12 +2,13 @@
 // ABOUTME: Validates fetching and caching behavior for model context limits
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { fetchModelLimits, getModelLimit } from "./model-limits";
+import { clearModelLimitsCache, fetchModelLimits, getModelLimit } from "./model-limits";
 
 describe("model-limits store", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(globalThis, "fetch");
+    clearModelLimitsCache();
   });
 
   describe("fetchModelLimits", () => {
@@ -78,7 +79,10 @@ describe("model-limits store", () => {
       expect(getModelLimit("anthropic/claude-sonnet-4-5")).toBe(200_000);
     });
 
-    test("should lookup by model name when given provider/model format", async () => {
+    test("should find model by bare name when cache contains provider/model IDs", async () => {
+      // opencode message.modelID is the bare name (e.g. "claude-sonnet-4-6"),
+      // but the models API returns full "provider/model" IDs.
+      // Both lookup formats must work.
       const mockModels = [
         {
           id: "anthropic/claude-sonnet-4-5",
@@ -96,8 +100,10 @@ describe("model-limits store", () => {
 
       await fetchModelLimits(TEST_WORKSPACE_ID);
 
-      // Should find by full ID
+      // Full ID lookup
       expect(getModelLimit("anthropic/claude-sonnet-4-5")).toBe(200_000);
+      // Bare name lookup (how message.modelID arrives from opencode)
+      expect(getModelLimit("claude-sonnet-4-5")).toBe(200_000);
     });
 
     test("should return undefined for unknown models", async () => {

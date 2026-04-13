@@ -63,7 +63,7 @@ export interface QuestionRequest {
 export interface Provider {
   id: string;
   name: string;
-  models: Record<string, { id: string; name: string }>;
+  models: Record<string, { id: string; name: string; limit?: { context: number; output: number } }>;
 }
 
 export interface ProvidersResponse {

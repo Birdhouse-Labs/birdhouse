@@ -224,7 +224,14 @@ export function mapOpenCodeProvidersResponseToBirdhouseProvidersResponse(
       id: provider.id,
       name: provider.name,
       models: Object.fromEntries(
-        Object.entries(provider.models).map(([key, model]) => [key, { id: model.id, name: model.name }]),
+        Object.entries(provider.models).map(([key, model]) => [
+          key,
+          {
+            id: model.id,
+            name: model.name,
+            ...(model.limit !== undefined ? { limit: { context: model.limit.context, output: model.limit.output } } : {}),
+          },
+        ]),
       ),
     })),
   };

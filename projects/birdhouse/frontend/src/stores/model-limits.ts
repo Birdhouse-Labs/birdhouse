@@ -31,7 +31,16 @@ export async function fetchModelLimits(workspaceId: string): Promise<void> {
 
   modelLimitsCache.clear();
   for (const model of models) {
+    // Store by full "provider/model" ID
     modelLimitsCache.set(model.id, model.contextLimit);
+    // Also store by bare model name so lookups with just the model ID work
+    // (message.modelID from opencode is the bare name, not the full provider/model ID)
+    if (model.id.includes("/")) {
+      const bareName = model.id.split("/")[1];
+      if (bareName) {
+        modelLimitsCache.set(bareName, model.contextLimit);
+      }
+    }
   }
 }
 
@@ -43,20 +52,12 @@ export async function fetchModelLimits(workspaceId: string): Promise<void> {
  * @returns Context limit in tokens, or undefined if not found
  */
 export function getModelLimit(modelId: string): number | undefined {
-  // Try cache with full ID
-  const fullIdResult = modelLimitsCache.get(modelId);
-  if (fullIdResult !== undefined) {
-    return fullIdResult;
-  }
+  return modelLimitsCache.get(modelId);
+}
 
-  // Extract model name from "provider/model" format if present
-  const modelName = modelId.includes("/") ? modelId.split("/")[1] : modelId;
-
-  // Try cache with just model name
-  if (modelName) {
-    return modelLimitsCache.get(modelName);
-  }
-
-  // Not found
-  return undefined;
+/**
+ * Clear the model limits cache (for testing)
+ */
+export function clearModelLimitsCache(): void {
+  modelLimitsCache.clear();
 }
