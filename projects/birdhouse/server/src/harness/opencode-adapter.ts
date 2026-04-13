@@ -111,21 +111,6 @@ export class OpenCodeAgentHarness implements AgentHarness {
   }
 
   async sendMessage(sessionId: string, text: string, options?: SendMessageOptions): Promise<BirdhouseMessage> {
-    log.opencode.debug(
-      {
-        trace: "HARNESS_TRACE_ADAPTER_SEND_REQUEST",
-        sessionId,
-        workspaceDirectory: this.workspaceDirectory,
-        textLength: text.length,
-        noReply: options?.noReply ?? false,
-        agent: options?.agent,
-        model: options?.model,
-        systemLength: options?.system?.length ?? 0,
-        providedPartCount: options?.parts?.length ?? 0,
-      },
-      "HARNESS_TRACE_ADAPTER_SEND_REQUEST",
-    );
-
     const response = await this.opencodeClient.client.session.prompt({
       path: {
         id: sessionId,
@@ -143,29 +128,15 @@ export class OpenCodeAgentHarness implements AgentHarness {
     });
 
     if (!response.data) {
-      log.opencode.info(
+      log.opencode.debug(
         {
-          trace: "HARNESS_TRACE_ADAPTER_PLACEHOLDER_RESPONSE",
           sessionId,
-          workspaceDirectory: this.workspaceDirectory,
           noReply: options?.noReply ?? false,
         },
-        "HARNESS_TRACE_ADAPTER_PLACEHOLDER_RESPONSE",
+        "SDK returned no response data, using placeholder",
       );
       return createPlaceholderAssistantMessage(sessionId, options);
     }
-
-    log.opencode.debug(
-      {
-        trace: "HARNESS_TRACE_ADAPTER_MAPPED_RESPONSE",
-        sessionId,
-        workspaceDirectory: this.workspaceDirectory,
-        role: response.data.info.role,
-        responseMessageId: response.data.info.id,
-        responsePartCount: response.data.parts.length,
-      },
-      "HARNESS_TRACE_ADAPTER_MAPPED_RESPONSE",
-    );
 
     return mapOpenCodeMessageToBirdhouseMessage(response.data);
   }

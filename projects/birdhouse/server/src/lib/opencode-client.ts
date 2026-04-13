@@ -5,8 +5,6 @@ export type { UserMessage, AssistantMessage };
 // ABOUTME: OpenCode HTTP API client for session and message operations
 // ABOUTME: Provides both live (real API calls) and test (mocked) implementations
 
-import { log } from "./logger";
-
 // Type definitions based on OpenCode's actual API contracts
 export interface Session {
   id: string;
@@ -119,28 +117,6 @@ export interface OpenCodeClient {
   replyToQuestion(requestID: string, answers: string[][]): Promise<void>;
 }
 
-function summarizePromptParts(parts: Array<TextPartInput | FilePartInput>): Array<Record<string, unknown>> {
-  return parts.map((part) => {
-    if (part.type === "text") {
-      return {
-        type: part.type,
-        textLength: part.text.length,
-        metadataKeys:
-          typeof part.metadata === "object" && part.metadata !== null
-            ? Object.keys(part.metadata as Record<string, unknown>)
-            : [],
-      };
-    }
-
-    return {
-      type: part.type,
-      mime: part.mime,
-      hasFilename: Boolean(part.filename),
-      urlPreview: part.url.slice(0, 120),
-    };
-  });
-}
-
 /**
  * Create live OpenCode client that calls real API
  */
@@ -203,23 +179,6 @@ export function createLiveOpenCodeClient(baseUrl: string, workspaceRoot: string)
         { type: "text", text, ...(options?.metadata && { metadata: options.metadata }) },
       ];
 
-      log.opencode.debug(
-        {
-          trace: "HARNESS_TRACE_SEND_REQUEST",
-          baseUrl,
-          workspaceRoot,
-          sessionId,
-          textLength: text.length,
-          noReply: options?.noReply ?? false,
-          agent: options?.agent,
-          model: options?.model,
-          systemLength: options?.system?.length ?? 0,
-          partCount: parts.length,
-          parts: summarizePromptParts(parts),
-        },
-        "HARNESS_TRACE_SEND_REQUEST",
-      );
-
       const response = await fetch(
         `${baseUrl}/session/${sessionId}/message?directory=${encodeURIComponent(workspaceRoot)}`,
         {
@@ -237,72 +196,19 @@ export function createLiveOpenCodeClient(baseUrl: string, workspaceRoot: string)
 
       const responseText = await response.text();
 
-      log.opencode.debug(
-        {
-          trace: "HARNESS_TRACE_SEND_RESPONSE",
-          baseUrl,
-          workspaceRoot,
-          sessionId,
-          status: response.status,
-          ok: response.ok,
-          contentType: response.headers.get("content-type"),
-          bodyLength: responseText.length,
-          bodyPreview: responseText.slice(0, 400),
-        },
-        "HARNESS_TRACE_SEND_RESPONSE",
-      );
-
       if (!response.ok) {
-        log.opencode.error(
-          {
-            trace: "HARNESS_TRACE_SEND_ERROR",
-            baseUrl,
-            workspaceRoot,
-            sessionId,
-            status: response.status,
-            statusText: response.statusText,
-            bodyPreview: responseText.slice(0, 400),
-          },
-          "HARNESS_TRACE_SEND_ERROR",
-        );
         throw new Error(`Failed to send message: ${response.statusText} - ${responseText}`);
       }
 
       if (!responseText) {
         // Empty response is expected when noReply: true (async message sending)
         if (options?.noReply) {
-          log.opencode.info(
-            {
-              trace: "HARNESS_TRACE_SEND_EMPTY_RESPONSE",
-              baseUrl,
-              workspaceRoot,
-              sessionId,
-              noReply: true,
-            },
-            "HARNESS_TRACE_SEND_EMPTY_RESPONSE",
-          );
           return {} as Message;
         }
         throw new Error(`Received unexpected empty response from agent engine (status ${response.status})`);
       }
 
-      const parsed = JSON.parse(responseText) as Message;
-
-      log.opencode.debug(
-        {
-          trace: "HARNESS_TRACE_SEND_PARSED_RESPONSE",
-          baseUrl,
-          workspaceRoot,
-          sessionId,
-          hasInfo: Boolean(parsed.info),
-          role: parsed.info?.role,
-          responseMessageId: parsed.info?.id,
-          responsePartCount: parsed.parts?.length ?? 0,
-        },
-        "HARNESS_TRACE_SEND_PARSED_RESPONSE",
-      );
-
-      return parsed;
+      return JSON.parse(responseText) as Message;
     },
 
     async getMessages(sessionId: string, limit?: number): Promise<Message[]> {
