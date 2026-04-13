@@ -6,7 +6,13 @@ import { Menu, Settings } from "lucide-solid";
 import { type Component, createSignal, type JSX, Show } from "solid-js";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { AgentIcon, SkillIcon } from "../design-system";
-import { keepAgentInView, setKeepAgentInViewPreference } from "../lib/preferences";
+import {
+  commandPaletteShortcut,
+  DEFAULT_COMMAND_PALETTE_SHORTCUT,
+  keepAgentInView,
+  setCommandPaletteShortcutPreference,
+  setKeepAgentInViewPreference,
+} from "../lib/preferences";
 import { useModalRoute, useWorkspaceId } from "../lib/routing";
 import {
   activeBaseTheme,
@@ -130,6 +136,95 @@ const BirdhouseIcon: Component<{ size?: number; gradientId: string }> = (props) 
         stroke-linejoin="round"
       />
     </svg>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// KeyBindingInput — captures a keyboard shortcut and stores it as a tinykeys
+// binding string (e.g. "$mod+k"). Pressing a key combo while the input is
+// focused records it; clicking "Reset" restores the default.
+// ---------------------------------------------------------------------------
+
+interface KeyBindingInputProps {
+  value: string;
+  onChange: (binding: string) => void;
+  defaultValue: string;
+}
+
+/** Converts a tinykeys binding string to a human-readable display label. */
+function shortcutToDisplay(binding: string): string {
+  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+  return binding
+    .replace("$mod", isMac ? "⌘" : "Ctrl")
+    .split("+")
+    .map((part) => {
+      if (part === "Shift") return "⇧";
+      if (part === "Alt") return isMac ? "⌥" : "Alt";
+      if (part === "Control") return "Ctrl";
+      return part.length === 1 ? part.toUpperCase() : part;
+    })
+    .join("+");
+}
+
+/** Converts a KeyboardEvent to a tinykeys binding string. */
+function eventToBinding(e: KeyboardEvent): string | null {
+  const key = e.key;
+  // Ignore standalone modifier key presses
+  if (["Meta", "Control", "Shift", "Alt"].includes(key)) return null;
+
+  const parts: string[] = [];
+  if (e.metaKey || e.ctrlKey) parts.push("$mod");
+  if (e.shiftKey) parts.push("Shift");
+  if (e.altKey) parts.push("Alt");
+  parts.push(key.length === 1 ? key.toLowerCase() : key);
+  return parts.join("+");
+}
+
+const KeyBindingInput: Component<KeyBindingInputProps> = (props) => {
+  const [isCapturing, setIsCapturing] = createSignal(false);
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const binding = eventToBinding(e);
+    if (binding) {
+      props.onChange(binding);
+      setIsCapturing(false);
+      (e.currentTarget as HTMLElement).blur();
+    }
+  };
+
+  return (
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="flex-1 px-3 py-2 rounded-lg text-sm border transition-colors bg-surface-overlay border-border-muted text-text-primary text-left font-mono"
+        classList={{
+          "border-accent ring-1 ring-accent": isCapturing(),
+          "hover:border-border": !isCapturing(),
+        }}
+        onFocus={() => setIsCapturing(true)}
+        onBlur={() => setIsCapturing(false)}
+        onKeyDown={handleKeyDown}
+        aria-label="Command palette keyboard shortcut. Click then press your desired shortcut."
+        title={isCapturing() ? "Press your desired shortcut..." : "Click to change shortcut"}
+      >
+        {isCapturing() ? (
+          <span class="text-text-muted italic text-xs">Press shortcut…</span>
+        ) : (
+          shortcutToDisplay(props.value)
+        )}
+      </button>
+      <Show when={props.value !== props.defaultValue}>
+        <button
+          type="button"
+          class="text-xs text-text-muted hover:text-text-primary transition-colors whitespace-nowrap"
+          onClick={() => props.onChange(props.defaultValue)}
+        >
+          Reset
+        </button>
+      </Show>
+    </div>
   );
 };
 
@@ -307,6 +402,16 @@ const Header: Component<HeaderProps> = (props) => {
                     checked={keepAgentInView()}
                     onChange={setKeepAgentInViewPreference}
                     label="Keep selected agent in view"
+                  />
+                </div>
+
+                {/* Command Palette Shortcut Section */}
+                <div class="space-y-2">
+                  <span class="text-sm font-medium block text-text-secondary">Command Palette Shortcut</span>
+                  <KeyBindingInput
+                    value={commandPaletteShortcut()}
+                    onChange={setCommandPaletteShortcutPreference}
+                    defaultValue={DEFAULT_COMMAND_PALETTE_SHORTCUT}
                   />
                 </div>
               </div>

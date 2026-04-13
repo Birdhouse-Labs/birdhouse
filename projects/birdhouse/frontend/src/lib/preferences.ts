@@ -92,6 +92,26 @@ export const setKeepAgentInViewPreference = (value: boolean) => {
 };
 
 // ============================================================================
+// Command Palette Shortcut Preference
+// ============================================================================
+
+/** Default shortcut string. "$mod" resolves to Meta on Mac and Ctrl elsewhere. */
+export const DEFAULT_COMMAND_PALETTE_SHORTCUT = "$mod+k";
+
+const [commandPaletteShortcut, setCommandPaletteShortcut] = createSignal(DEFAULT_COMMAND_PALETTE_SHORTCUT);
+
+/**
+ * Sets the keyboard shortcut used to open the command palette.
+ * Stored as a tinykeys-compatible key binding string (e.g. "$mod+k").
+ *
+ * @param shortcut - The binding string, e.g. "$mod+k" or "$mod+Shift+p"
+ */
+export const setCommandPaletteShortcutPreference = (shortcut: string) => {
+  setCommandPaletteShortcut(shortcut);
+  localStorage.setItem("commandPaletteShortcut", shortcut);
+};
+
+// ============================================================================
 // System Detection Helper
 // ============================================================================
 
@@ -150,6 +170,12 @@ if (typeof window !== "undefined") {
   if (savedKeepAgentInView !== null) {
     setKeepAgentInView(savedKeepAgentInView === "true");
   }
+
+  // Command Palette Shortcut
+  const savedCommandPaletteShortcut = localStorage.getItem("commandPaletteShortcut");
+  if (savedCommandPaletteShortcut) {
+    setCommandPaletteShortcut(savedCommandPaletteShortcut);
+  }
 }
 
 // ============================================================================
@@ -171,4 +197,6 @@ export {
   setActiveTheme,
   // Keep Agent in View
   keepAgentInView,
+  // Command Palette Shortcut
+  commandPaletteShortcut,
 };

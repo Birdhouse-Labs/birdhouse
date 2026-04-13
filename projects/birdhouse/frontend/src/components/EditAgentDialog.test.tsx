@@ -118,14 +118,7 @@ describe("EditAgentDialog", () => {
     mockFetchMessages.mockResolvedValue([makeMsg("user", "hello")]);
     const [agentId, setAgentId] = createSignal("agent-1");
 
-    render(() => (
-      <EditAgentDialog
-        agentId={agentId()}
-        currentTitle="Title"
-        open={true}
-        onOpenChange={() => {}}
-      />
-    ));
+    render(() => <EditAgentDialog agentId={agentId()} currentTitle="Title" open={true} onOpenChange={() => {}} />);
 
     await waitFor(() => expect(mockFetchMessages).toHaveBeenCalledWith("ws-1", "agent-1"));
 

@@ -13,10 +13,14 @@ import {
   Show,
   Switch,
 } from "solid-js";
+// @ts-expect-error — tinykeys types exist but package.json exports map lacks a "types" key
+import { tinykeys } from "tinykeys";
 import { SkillCacheProvider } from "../contexts/SkillCacheContext";
 import { StreamingProvider, useStreaming } from "../contexts/StreamingContext";
 import { WorkspaceProvider } from "../contexts/WorkspaceContext";
 import LiveApp from "../LiveApp";
+import { setIsCommandPaletteOpen } from "../lib/command-palette-state";
+import { commandPaletteShortcut } from "../lib/preferences";
 import { useModalRoute, useWorkspaceId } from "../lib/routing";
 import Playground from "../Playground";
 import { fetchWorkspace, fetchWorkspaceHealth, startWorkspace } from "../services/workspaces-api";
@@ -116,6 +120,19 @@ const WorkspaceLayout: Component = () => {
 
     stopHealthPolling = startHealthPolling(id);
     onCleanup(() => stopHealthPolling?.());
+  });
+
+  // Register global keyboard shortcut to open the command palette.
+  // Re-registers whenever the user changes the configured shortcut.
+  createEffect(() => {
+    const shortcut = commandPaletteShortcut();
+    const unsubscribe = tinykeys(window, {
+      [shortcut]: (e: KeyboardEvent) => {
+        e.preventDefault();
+        setIsCommandPaletteOpen(true);
+      },
+    });
+    onCleanup(unsubscribe);
   });
 
   // Called by WorkspaceRestartWatcher when a restart event arrives

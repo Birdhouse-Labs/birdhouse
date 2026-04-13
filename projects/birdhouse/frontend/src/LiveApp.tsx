@@ -11,6 +11,7 @@ import AgentListHeader from "./components/AgentListHeader";
 import AgentModal from "./components/AgentModal";
 import AgentSearchDialog from "./components/AgentSearchDialog";
 import AgentTreeItem from "./components/AgentTreeItem";
+import CommandPalette from "./components/CommandPalette";
 import ConnectionStatusBanner from "./components/ConnectionStatusBanner";
 import LiveMessages from "./components/LiveMessages";
 import MobileNavDrawer from "./components/MobileNavDrawer";
@@ -604,6 +605,9 @@ const LiveApp: Component<LiveAppProps> = (props) => {
 
       {/* Agent Search Dialog */}
       <AgentSearchDialog />
+
+      {/* Command Palette */}
+      <CommandPalette />
     </div>
   );
 };
