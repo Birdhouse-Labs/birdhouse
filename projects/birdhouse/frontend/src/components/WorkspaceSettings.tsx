@@ -115,14 +115,14 @@ const WorkspaceSettings: Component = () => {
 
                 <div class="space-y-3">
                   <div class="flex items-center gap-3">
-                    <div class={`w-3 h-3 rounded-full ${ws().opencode_running ? "bg-success" : "bg-text-muted"}`} />
-                    <span class="text-text-primary">{ws().opencode_running ? "Running" : "Not Running"}</span>
+                    <div class={`w-3 h-3 rounded-full ${ws().harness_running ? "bg-success" : "bg-text-muted"}`} />
+                    <span class="text-text-primary">{ws().harness_running ? "Running" : "Not Running"}</span>
                   </div>
 
-                  <Show when={ws().opencode_base}>
+                  <Show when={ws().harness_base}>
                     <div>
                       <div class="block text-sm font-medium text-text-muted mb-1">Environment Base URL</div>
-                      <p class="text-text-primary font-mono text-sm">{ws().opencode_base}</p>
+                      <p class="text-text-primary font-mono text-sm">{ws().harness_base}</p>
                     </div>
                   </Show>
                 </div>

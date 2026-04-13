@@ -1,10 +1,13 @@
 // ABOUTME: Export agent timeline as markdown for human readability and sharing
 // ABOUTME: Formats messages, events, and tool calls following the Birdhouse export spec
 
-import type { Part } from "@opencode-ai/sdk";
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
-import type { AssistantMessage, UserMessage } from "../../lib/opencode-client";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
+import type {
+  BirdhouseAssistantMessageInfo,
+  BirdhousePart as Part,
+  BirdhouseUserMessageInfo as UserMessage,
+} from "../../harness";
 import type { SystemEvent, TimelineItem } from "../../types/agent-events";
 import { generateFilenameWithTimestamp, generateMarkdownContent } from "../aapi/export-helpers";
 
@@ -160,7 +163,7 @@ function formatUserMessage(_message: UserMessage, parts: Part[]): string {
 /**
  * Format assistant message with parts
  */
-function formatAssistantMessage(message: AssistantMessage, parts: Part[]): string {
+function formatAssistantMessage(message: BirdhouseAssistantMessageInfo, parts: Part[]): string {
   const modelID = message.modelID;
   const providerID = message.providerID;
   const duration = formatDuration(message.time.created, message.time.completed);
@@ -272,8 +275,8 @@ export function formatTimelineItem(item: TimelineItem): string {
 /**
  * GET /agents/:id/export - Export agent timeline as markdown
  */
-export async function exportMarkdown(c: Context, deps: Pick<Deps, "agentsDB" | "opencode">) {
-  const { agentsDB, opencode } = deps;
+export async function exportMarkdown(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses">) {
+  const { agentsDB } = deps;
   const agentId = c.req.param("id");
 
   try {
@@ -284,7 +287,8 @@ export async function exportMarkdown(c: Context, deps: Pick<Deps, "agentsDB" | "
     }
 
     // Generate markdown content using shared helper
-    const markdown = await generateMarkdownContent(agent, agentsDB, opencode, {
+    const harness = getHarnessForAgent(deps, agent);
+    const markdown = await generateMarkdownContent(agent, agentsDB, harness, {
       formatTimelineItem,
     });
 

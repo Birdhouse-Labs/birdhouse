@@ -2,12 +2,13 @@
 // ABOUTME: Used by /aapi/agents POST endpoint - optimized for agent-to-agent workflows
 
 import type { Context } from "hono";
-import type { Deps, Session } from "../../dependencies";
+import { type Deps, getHarnessForAgent, type Session } from "../../dependencies";
 import { cloneAgent, createAgent } from "../../domain/agent-lifecycle";
+import type { AgentHarness } from "../../harness";
 import { sendFirstMessage } from "../../lib/agent-messaging";
 import type { AgentRow } from "../../lib/agents-db";
+import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
 import { validateModel } from "../../lib/model-validator";
-import { getWorkspaceStream } from "../../lib/opencode-stream";
 
 /**
  * Helper: Get current agent by session ID (for from_self)
@@ -25,13 +26,8 @@ async function getCurrentAgentBySession(c: Context, deps: Pick<Deps, "agentsDB">
 /**
  * POST /aapi/agents - Create agent with optional cloning
  */
-export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
-  const {
-    opencode: { getMessages, createSession },
-    agentsDB,
-    log,
-    telemetry,
-  } = deps;
+export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
+  const { agentsDB, log, telemetry } = deps;
 
   try {
     // 1. Parse and validate request body
@@ -61,6 +57,7 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
     const isCloning = from_self || from_agent_id;
 
     let newAgent: AgentRow;
+    let newAgentHarness: AgentHarness;
     let session: Session;
 
     if (isCloning) {
@@ -85,6 +82,7 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
 
       // Determine message ID to fork from
       let actualMessageId = from_message_id;
+      const sourceHarness = getHarnessForAgent(deps, sourceAgent);
 
       if (from_self && !from_message_id) {
         // Smart detection: Find message before last user message
@@ -93,7 +91,7 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
           "Smart from_self: finding message before last user message",
         );
 
-        const messages = await getMessages(sourceAgent.session_id);
+        const messages = await sourceHarness.getMessages(sourceAgent.session_id);
 
         // Find all user messages
         const userMessages = messages.filter((msg) => msg.info.role === "user");
@@ -136,7 +134,7 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
 
       // Validate from_message_id exists if provided
       if (actualMessageId) {
-        const messages = await getMessages(sourceAgent.session_id);
+        const messages = await sourceHarness.getMessages(sourceAgent.session_id);
         const messageExists = messages.some((msg) => msg.info.id === actualMessageId);
 
         if (!messageExists) {
@@ -157,7 +155,7 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
 
       // Validate model if explicitly provided
       if (requestModel) {
-        const modelError = await validateModel(model, deps.opencode);
+        const modelError = await validateModel(model, sourceHarness);
         if (modelError) {
           return c.json({ error: modelError }, 400);
         }
@@ -175,12 +173,19 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
       }
 
       const workspaceDir = workspace.directory;
-      const stream = getWorkspaceStream(opencodeBase, workspaceDir);
+      const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
 
       // Clone the agent using the helper function
       newAgent = await cloneAgent(
         sourceAgent,
-        { ...deps, stream },
+        {
+          harness: sourceHarness,
+          agentsDB: deps.agentsDB,
+          dataDb: deps.dataDb,
+          log: deps.log,
+          telemetry: deps.telemetry,
+          birdhouseEventBus,
+        },
         {
           messageId: actualMessageId,
           title: title.trim(),
@@ -188,6 +193,7 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
           callingAgentId: currentAgent?.id, // If available, clone becomes child of calling agent
         },
       );
+      newAgentHarness = sourceHarness;
 
       // Insert timeline events for AAPI clone (action-centric model with deduplication)
       try {
@@ -229,19 +235,22 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
             ...eventData,
           });
 
-          stream.emitCustomEvent("birdhouse.event.created", {
-            agentId: agentId,
-            event: {
-              id: event.id,
-              event_type: event.event_type,
-              timestamp: event.timestamp,
-              actor_agent_id: event.actor_agent_id,
-              actor_agent_title: event.actor_agent_title,
-              source_agent_id: event.source_agent_id,
-              source_agent_title: event.source_agent_title,
-              target_agent_id: event.target_agent_id,
-              target_agent_title: event.target_agent_title,
-              metadata: event.metadata ? JSON.parse(event.metadata) : undefined,
+          birdhouseEventBus.emit({
+            type: "birdhouse.event.created",
+            properties: {
+              agentId,
+              event: {
+                id: event.id,
+                event_type: event.event_type,
+                timestamp: event.timestamp,
+                actor_agent_id: event.actor_agent_id,
+                actor_agent_title: event.actor_agent_title,
+                source_agent_id: event.source_agent_id,
+                source_agent_title: event.source_agent_title,
+                target_agent_id: event.target_agent_id,
+                target_agent_title: event.target_agent_title,
+                metadata: event.metadata ? JSON.parse(event.metadata) : undefined,
+              },
             },
           });
 
@@ -304,21 +313,22 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
           : currentAgent.model;
 
       // Validate model
-      const modelError = await validateModel(model, deps.opencode);
+      const currentHarness = getHarnessForAgent(deps, currentAgent);
+      const modelError = await validateModel(model, currentHarness);
       if (modelError) {
         return c.json({ error: modelError }, 400);
       }
 
-      // Create new OpenCode session
-      log.server.info({ title }, "Creating OpenCode session");
-      session = await createSession(title.trim());
+      // Create new harness session
+      log.server.info({ title }, "Creating harness session");
+      session = await currentHarness.createSession(title.trim());
       log.server.info(
         {
           sessionId: session.id,
           projectID: session.projectID,
           directory: session.directory,
         },
-        "OpenCode session created",
+        "Harness session created",
       );
 
       // Insert as child of current agent
@@ -347,8 +357,9 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
       }
 
       const workspaceDir = workspace.directory;
-      const stream = getWorkspaceStream(opencodeBase, workspaceDir);
-      newAgent = createAgent(agentsDB, agentData, stream, telemetry, deps.dataDb);
+      const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
+      newAgent = createAgent(agentsDB, agentData, birdhouseEventBus, telemetry, deps.dataDb);
+      newAgentHarness = currentHarness;
 
       log.server.info(
         {
@@ -376,14 +387,18 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
         }
       : undefined;
 
-    const result = await sendFirstMessage(deps, {
-      agentId: newAgent.id,
-      sessionId: newAgent.session_id,
-      model: newAgent.model,
-      prompt: prompt.trim(),
-      wait: shouldWait,
-      senderMetadata,
-    });
+    const result = await sendFirstMessage(
+      deps,
+      {
+        agentId: newAgent.id,
+        sessionId: newAgent.session_id,
+        model: newAgent.model,
+        prompt: prompt.trim(),
+        wait: shouldWait,
+        senderMetadata,
+      },
+      newAgentHarness,
+    );
 
     if (result.parts) {
       // Blocking mode - return agent with response

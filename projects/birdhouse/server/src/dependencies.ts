@@ -3,17 +3,20 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { EventEmitter } from "node:events";
+import type {
+  AgentHarness,
+  BirdhouseQuestionRequest,
+  BirdhouseSkill,
+  BirdhouseMessage as Message,
+  BirdhouseProvidersResponse as ProvidersResponse,
+  BirdhouseSession as Session,
+  WorkspaceHarnessResolver,
+} from "./harness";
+import { createTestAgentHarness, createTestHarnessEventStream, createWorkspaceHarnessResolver } from "./harness";
 import { type AgentsDB, initAgentsDB } from "./lib/agents-db";
+import { type BirdhouseEventBus, getWorkspaceEventBus } from "./lib/birdhouse-event-bus";
 import type { DataDB } from "./lib/data-db";
 import { type CapturedLog, createLiveLogger, createTestLogger, type LoggerDeps } from "./lib/logger";
-import {
-  createTestOpenCodeClient,
-  type Message,
-  type OpenCodeClient,
-  type ProvidersResponse,
-  type Session,
-} from "./lib/opencode-client";
-import { getOpenCodeStream, type OpenCodeStream } from "./lib/opencode-stream";
 import { createLivePosthogProxy, createTestPosthogProxy, type PosthogProxy } from "./lib/posthog-proxy";
 import { getOpenCodeDbPath, type MessageSearchResult, searchOpenCodeMessages } from "./lib/search-opencode-messages";
 import { createTestTelemetryClient, type TelemetryClient } from "./lib/telemetry";
@@ -36,29 +39,64 @@ export type {
   TelemetryClient,
 };
 
-// Dependencies interface - OpenCode client, logger, agents database, and stream factory
+type LegacyHarnessOverrides = Partial<AgentHarness> & {
+  listSkills?: () => Promise<BirdhouseSkill[]>;
+  reloadSkillState?: () => Promise<void>;
+  generate?: (options: {
+    prompt?: string;
+    system?: string[];
+    message: string;
+    small?: boolean;
+    maxTokens?: number;
+  }) => Promise<string>;
+  listPendingQuestions?: () => Promise<BirdhouseQuestionRequest[]>;
+  replyToQuestion?: (requestId: string, answers: string[][]) => Promise<void>;
+  revertSession?: (sessionId: string, messageId: string) => Promise<void>;
+  unrevertSession?: (sessionId: string) => Promise<void>;
+};
+
+// Dependencies interface - harness client, logger, agents database, and stream factory
 export interface Deps {
-  opencode: OpenCodeClient;
+  harnesses: WorkspaceHarnessResolver;
   log: LoggerDeps;
   agentsDB: AgentsDB;
   dataDb: DataDB;
   posthog: PosthogProxy;
   telemetry: TelemetryClient;
-  getStream: (opencodeBase: string, workspaceDirectory: string) => OpenCodeStream;
+  getBirdhouseEventBus: (workspaceDirectory: string) => BirdhouseEventBus;
   searchMessages: (workspaceId: string, query: string, limit: number) => MessageSearchResult[] | null;
 }
 
+export type TestDeps = Deps & {
+  harness: AgentHarness;
+};
+
+export function getDefaultHarness(deps: Pick<Deps, "harnesses">): AgentHarness {
+  return deps.harnesses.default();
+}
+
+export function getHarnessForKind(deps: Pick<Deps, "harnesses">, kind: string): AgentHarness {
+  return deps.harnesses.forKind(kind);
+}
+
+export function getHarnessForAgent(
+  deps: Pick<Deps, "harnesses">,
+  agent: object & { harness_type?: string },
+): AgentHarness {
+  return deps.harnesses.forAgent(agent);
+}
+
 function attachUnavailableWorkspaceDeps(
-  deps: Omit<Deps, "opencode" | "agentsDB" | "getStream">,
+  deps: Omit<Deps, "harnesses" | "agentsDB" | "getBirdhouseEventBus">,
   contextName: string,
 ): Deps {
   const unavailable = (dependencyName: string): never => {
     throw new Error(`${dependencyName} is unavailable in ${contextName}`);
   };
 
-  Object.defineProperty(deps, "opencode", {
+  Object.defineProperty(deps, "harnesses", {
     get() {
-      return unavailable("opencode");
+      return unavailable("harnesses");
     },
     enumerable: true,
     configurable: true,
@@ -72,13 +110,37 @@ function attachUnavailableWorkspaceDeps(
     configurable: true,
   });
 
-  Object.defineProperty(deps, "getStream", {
-    value: () => unavailable("getStream"),
+  Object.defineProperty(deps, "getBirdhouseEventBus", {
+    value: () => unavailable("getBirdhouseEventBus"),
     enumerable: true,
     configurable: true,
   });
 
   return deps as Deps;
+}
+
+function attachTestHarnessAlias(
+  deps: Deps,
+  harnesses: WorkspaceHarnessResolver,
+  registeredHarnesses: Record<string, AgentHarness>,
+  defaultHarnessKind: string,
+): TestDeps {
+  const testDeps = deps as TestDeps;
+
+  Object.defineProperty(testDeps, "harness", {
+    get() {
+      return harnesses.default();
+    },
+    set(nextHarness: AgentHarness) {
+      registeredHarnesses[defaultHarnessKind] = nextHarness;
+      registeredHarnesses[nextHarness.kind] = nextHarness;
+      registeredHarnesses.opencode = nextHarness;
+    },
+    enumerable: true,
+    configurable: true,
+  });
+
+  return testDeps;
 }
 
 // ============================================================================
@@ -208,27 +270,119 @@ export function clearCapturedLogs(): void {
 }
 
 /**
- * Create test deps with optional opencode overrides
+ * Create test deps with optional harness overrides
  * Includes test logger and in-memory database automatically
  */
-export async function createTestDeps(opencode?: Partial<Deps["opencode"]>): Promise<Deps> {
-  return {
-    opencode: {
-      ...createTestOpenCodeClient(),
-      ...opencode,
+export async function createTestDeps(harnessOverrides?: LegacyHarnessOverrides): Promise<TestDeps> {
+  const defaultHarness: AgentHarness = createTestAgentHarness({
+    enableRevert: true,
+    enableSkills: true,
+    enableGenerate: true,
+    enableQuestions: true,
+    generatedText: "Mock Generated Title",
+    providers: {
+      providers: [
+        {
+          id: "anthropic",
+          name: "Anthropic",
+          models: {
+            "claude-sonnet-4": {
+              id: "claude-sonnet-4",
+              name: "Claude Sonnet 4",
+            },
+            "claude-sonnet-4-5": {
+              id: "claude-sonnet-4-5",
+              name: "Claude Sonnet 4.5",
+            },
+            "claude-haiku-4": {
+              id: "claude-haiku-4",
+              name: "Claude Haiku 4",
+            },
+            "claude-opus-4": {
+              id: "claude-opus-4",
+              name: "Claude Opus 4",
+            },
+          },
+        },
+      ],
     },
+  });
+
+  if (harnessOverrides) {
+    Object.assign(defaultHarness, harnessOverrides);
+
+    if (harnessOverrides.capabilities) {
+      defaultHarness.capabilities = {
+        ...defaultHarness.capabilities,
+        ...harnessOverrides.capabilities,
+      };
+    }
+
+    if (harnessOverrides.listSkills || harnessOverrides.reloadSkillState) {
+      defaultHarness.capabilities.skills = {
+        listSkills: harnessOverrides.listSkills ?? defaultHarness.capabilities.skills?.listSkills ?? (async () => []),
+        reloadSkills:
+          harnessOverrides.reloadSkillState ?? defaultHarness.capabilities.skills?.reloadSkills ?? (async () => {}),
+      };
+    }
+
+    if (harnessOverrides.generate) {
+      defaultHarness.capabilities.generate = {
+        generate: harnessOverrides.generate,
+      };
+    }
+
+    if (harnessOverrides.listPendingQuestions || harnessOverrides.replyToQuestion) {
+      defaultHarness.capabilities.questions = {
+        listPendingQuestions:
+          harnessOverrides.listPendingQuestions ??
+          defaultHarness.capabilities.questions?.listPendingQuestions ??
+          (async () => []),
+        replyToQuestion:
+          harnessOverrides.replyToQuestion ??
+          defaultHarness.capabilities.questions?.replyToQuestion ??
+          (async () => {}),
+      };
+    }
+
+    if (harnessOverrides.revertSession || harnessOverrides.unrevertSession) {
+      defaultHarness.capabilities.revert = {
+        revertSession:
+          harnessOverrides.revertSession ?? defaultHarness.capabilities.revert?.revertSession ?? (async () => {}),
+        unrevertSession:
+          harnessOverrides.unrevertSession ?? defaultHarness.capabilities.revert?.unrevertSession ?? (async () => {}),
+      };
+    }
+  }
+
+  const defaultEventStream = createTestHarnessEventStream();
+  const defaultHarnessKind = defaultHarness.kind;
+  const registeredHarnesses: Record<string, AgentHarness> = {
+    [defaultHarnessKind]: defaultHarness,
+    opencode: defaultHarness,
+  };
+
+  const harnesses = createWorkspaceHarnessResolver({
+    defaultKind: defaultHarnessKind,
+    harnesses: registeredHarnesses,
+    eventStreams: {
+      [defaultHarnessKind]: () => defaultEventStream,
+      opencode: () => defaultEventStream,
+    },
+  });
+
+  const deps = {
+    harnesses,
     log: testLoggerInstance.log,
     agentsDB: await initAgentsDB(":memory:"),
     dataDb: new TestDataDB(),
     posthog: createTestPosthogProxy(),
     telemetry: createTestTelemetryClient(),
-    getStream: (_opencodeBase: string, _workspaceDirectory: string) => {
-      // Tests: Return singleton so test events flow through to route
-      return getOpenCodeStream();
-    },
-    // Tests: returns no results by default; override per-test to inject fixture data
+    getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
     searchMessages: (_workspaceId: string, _query: string, _limit: number) => [],
   };
+
+  return attachTestHarnessAlias(deps, harnesses, registeredHarnesses, defaultHarnessKind);
 }
 
 export async function createPosthogDeps(): Promise<Deps> {

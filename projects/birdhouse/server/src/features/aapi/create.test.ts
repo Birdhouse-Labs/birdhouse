@@ -4,8 +4,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { Session } from "../../dependencies";
 import { createTestDeps, withDeps } from "../../dependencies";
+import type { BirdhouseMessage as Message } from "../../harness";
 import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
-import type { Message } from "../../lib/opencode-client";
 import { captureStreamEvents, createRootAgent, createTestApp } from "../../test-utils";
 import { create } from "./create";
 
@@ -64,7 +64,7 @@ describe("AAPI create agent with cloning", () => {
 
       const mockForkSession = async () => mockSession;
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_response",
           sessionID: "ses_fork_123",
@@ -92,19 +92,11 @@ describe("AAPI create agent with cloning", () => {
             messageID: "msg_1",
           },
         ],
-      };
-
-      const mockClient = {
-        session: {
-          prompt: async () => {
-            return { data: mockMessage };
-          },
-        },
-      };
+      } as Message;
 
       const deps = await createTestDeps({ forkSession: mockForkSession });
       deps.agentsDB = agentsDB;
-      deps.opencode.client = mockClient as never;
+      deps.harness.sendMessage = async () => mockMessage;
 
       await withDeps(deps, async () => {
         const { events, cleanup } = await captureStreamEvents();
@@ -213,7 +205,7 @@ describe("AAPI create agent with cloning", () => {
 
       const mockForkSession = async () => mockSession;
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_response",
           sessionID: "ses_fork_789",
@@ -241,19 +233,11 @@ describe("AAPI create agent with cloning", () => {
             messageID: "msg_1",
           },
         ],
-      };
-
-      const mockClient = {
-        session: {
-          prompt: async () => {
-            return { data: mockMessage };
-          },
-        },
-      };
+      } as Message;
 
       const deps = await createTestDeps({ forkSession: mockForkSession });
       deps.agentsDB = agentsDB;
-      deps.opencode.client = mockClient as never;
+      deps.harness.sendMessage = async () => mockMessage;
 
       await withDeps(deps, async () => {
         const { events, cleanup } = await captureStreamEvents();
@@ -334,7 +318,7 @@ describe("AAPI create agent with cloning", () => {
         id: "agent_source_no_caller",
       });
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_response",
           sessionID: "ses_fork_456",
@@ -362,19 +346,11 @@ describe("AAPI create agent with cloning", () => {
             messageID: "msg_1",
           },
         ],
-      };
-
-      const mockClient = {
-        session: {
-          prompt: async () => {
-            return { data: mockMessage };
-          },
-        },
-      };
+      } as Message;
 
       const deps = await createTestDeps({ forkSession: mockForkSession });
       deps.agentsDB = agentsDB;
-      deps.opencode.client = mockClient as never;
+      deps.harness.sendMessage = async () => mockMessage;
 
       await withDeps(deps, async () => {
         const app = await createTestApp({ agentsDb: agentsDB });

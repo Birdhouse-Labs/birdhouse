@@ -10,7 +10,7 @@ import { createWorkspaceRoutes } from "./workspaces";
 // Type definitions for health responses
 interface WorkspaceHealthResponse {
   workspaceId: string;
-  opencodeRunning: boolean;
+  harnessRunning: boolean;
   port: number | null;
   pid: number | null;
   error: string | null;
@@ -83,7 +83,7 @@ describe("GET /api/workspace/:id/health", () => {
     expect(data).toEqual({ error: "Workspace not found" });
   });
 
-  test("returns opencodeRunning:false when OpenCode not started", async () => {
+  test("returns harnessRunning:false when OpenCode not started", async () => {
     const dataDb = createMockDataDB();
     const workspace: Workspace = {
       workspace_id: "test-workspace",
@@ -105,7 +105,7 @@ describe("GET /api/workspace/:id/health", () => {
     const data = (await res.json()) as WorkspaceHealthResponse;
     expect(data).toEqual({
       workspaceId: "test-workspace",
-      opencodeRunning: false,
+      harnessRunning: false,
       port: null,
       pid: null,
       error: "Workspace environment not started for this workspace",
@@ -113,7 +113,7 @@ describe("GET /api/workspace/:id/health", () => {
     });
   });
 
-  test("returns opencodeRunning:true when OpenCode is valid and responding", async () => {
+  test("returns harnessRunning:true when OpenCode is valid and responding", async () => {
     const dataDb = createMockDataDB();
     const workspace: Workspace = {
       workspace_id: "test-workspace",
@@ -135,7 +135,7 @@ describe("GET /api/workspace/:id/health", () => {
     const data = (await res.json()) as WorkspaceHealthResponse;
     expect(data).toEqual({
       workspaceId: "test-workspace",
-      opencodeRunning: true,
+      harnessRunning: true,
       port: 3001,
       pid: 12345,
       error: null,
@@ -143,7 +143,7 @@ describe("GET /api/workspace/:id/health", () => {
     });
   });
 
-  test("returns opencodeRunning:false when OpenCode verification fails", async () => {
+  test("returns harnessRunning:false when OpenCode verification fails", async () => {
     const dataDb = createMockDataDB();
     const workspace: Workspace = {
       workspace_id: "test-workspace",
@@ -165,7 +165,7 @@ describe("GET /api/workspace/:id/health", () => {
     const data = (await res.json()) as WorkspaceHealthResponse;
     expect(data).toEqual({
       workspaceId: "test-workspace",
-      opencodeRunning: false,
+      harnessRunning: false,
       port: 3001,
       pid: 12345,
       error: "Workspace environment not responding or workspace ID mismatch",
@@ -199,7 +199,7 @@ describe("GET /api/workspace/:id/health", () => {
     const data = (await res.json()) as WorkspaceHealthResponse;
     expect(data).toEqual({
       workspaceId: "test-workspace",
-      opencodeRunning: false,
+      harnessRunning: false,
       port: 3001,
       pid: 12345,
       error: "Workspace environment not responding or workspace ID mismatch",
@@ -231,7 +231,7 @@ describe("GET /api/workspace/:id/health", () => {
     const data = (await res.json()) as WorkspaceHealthResponse;
     expect(data).toEqual({
       workspaceId: "test-workspace",
-      opencodeRunning: false,
+      harnessRunning: false,
       port: 3001,
       pid: 12345,
       error: "Network timeout",
@@ -277,7 +277,7 @@ describe("GET /api/workspaces/health", () => {
     expect(data).toEqual([
       {
         workspaceId: "test-workspace",
-        opencodeRunning: true,
+        harnessRunning: true,
         port: 3001,
         pid: 12345,
         error: null,
@@ -344,7 +344,7 @@ describe("GET /api/workspaces/health", () => {
 
     expect(ws1).toEqual({
       workspaceId: "workspace-1",
-      opencodeRunning: true,
+      harnessRunning: true,
       port: 3001,
       pid: 12345,
       error: null,
@@ -353,7 +353,7 @@ describe("GET /api/workspaces/health", () => {
 
     expect(ws2).toEqual({
       workspaceId: "workspace-2",
-      opencodeRunning: false,
+      harnessRunning: false,
       port: null,
       pid: null,
       error: "Workspace environment not started for this workspace",
@@ -362,7 +362,7 @@ describe("GET /api/workspaces/health", () => {
 
     expect(ws3).toEqual({
       workspaceId: "workspace-3",
-      opencodeRunning: false,
+      harnessRunning: false,
       port: 3003,
       pid: 54321,
       error: "Workspace environment not responding or workspace ID mismatch",
@@ -416,7 +416,7 @@ describe("GET /api/workspaces/health", () => {
 
     expect(ws1).toEqual({
       workspaceId: "workspace-1",
-      opencodeRunning: false,
+      harnessRunning: false,
       port: 3001,
       pid: 12345,
       error: "Connection refused",
@@ -425,7 +425,7 @@ describe("GET /api/workspaces/health", () => {
 
     expect(ws2).toEqual({
       workspaceId: "workspace-2",
-      opencodeRunning: true,
+      harnessRunning: true,
       port: 3002,
       pid: 54321,
       error: null,

@@ -3,6 +3,8 @@
 
 import type { Context } from "hono";
 import { type Deps, depsContext } from "../dependencies";
+import { createWorkspaceHarnessResolver, OpenCodeAgentHarness, OpenCodeHarnessEventStream } from "../harness";
+import { getWorkspaceEventBus } from "./birdhouse-event-bus";
 import { getDataDB } from "./data-db";
 import { log } from "./logger";
 import { createLiveOpenCodeClient } from "./opencode-client";
@@ -28,7 +30,7 @@ export function getDepsFromContext(c: Context): Deps {
   }
 
   // In tests, use existing test deps if available (from withDeps)
-  // This allows tests to mock opencode client while still using workspace-specific agentsDB
+  // This allows tests to mock the harness while still using workspace-specific agentsDB
   const existingDeps = depsContext.getStore();
   if (existingDeps) {
     return {
@@ -37,20 +39,30 @@ export function getDepsFromContext(c: Context): Deps {
     };
   }
 
-  // Production path: create live OpenCode client and stream factory
+  // Production path: create live OpenCode harness and stream factory
   const dataDb = getDataDB();
+  const harness = new OpenCodeAgentHarness(
+    createLiveOpenCodeClient(opencodeBase, workspace.directory),
+    workspace.directory,
+  );
+  const harnesses = createWorkspaceHarnessResolver({
+    defaultKind: harness.kind,
+    harnesses: {
+      [harness.kind]: harness,
+    },
+    eventStreams: {
+      [harness.kind]: () => new OpenCodeHarnessEventStream(getWorkspaceStream(opencodeBase, workspace.directory)),
+    },
+  });
+
   return {
-    opencode: createLiveOpenCodeClient(opencodeBase, workspace.directory),
+    harnesses,
     log,
     agentsDB,
     dataDb,
     posthog: createLivePosthogProxy(),
     telemetry: createLiveTelemetryClient(dataDb),
-    getStream: (streamOpencodeBase: string, workspaceDirectory: string) => {
-      // Production: Return workspace-scoped singleton stream
-      // This ensures the same stream instance is used for both emitting and listening
-      return getWorkspaceStream(streamOpencodeBase, workspaceDirectory);
-    },
+    getBirdhouseEventBus: (workspaceDirectory: string) => getWorkspaceEventBus(workspaceDirectory),
     searchMessages: (workspaceId: string, query: string, limit: number) =>
       searchOpenCodeMessages(getOpenCodeDbPath(workspaceId), query, limit),
   };

@@ -1,39 +1,67 @@
-// ABOUTME: SSE endpoint for streaming OpenCode events to clients with universal agent ID translation
-// ABOUTME: Workspace-scoped SSE stream using shared OpenCodeStream singleton
+// ABOUTME: SSE endpoint that merges harness runtime events with Birdhouse synthetic events.
+// ABOUTME: Resolves session IDs to agent IDs and forwards Birdhouse-owned events over one client stream.
 
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
+import {
+  type BirdhouseEvent,
+  type HarnessEvent,
+  hasValidFrontendConsumedHarnessEventProperties,
+  isFrontendConsumedHarnessEventType,
+} from "../harness";
 import { getDepsFromContext } from "../lib/context-deps";
 import { log } from "../lib/logger";
-import type { OpenCodeEvent } from "../lib/opencode-stream";
 import "../types/context";
+
+interface QueuedEvent {
+  event: BirdhouseEvent;
+  sessionID?: string;
+  expectsAgentId: boolean;
+}
+
+const EVENTS_EXPECTING_AGENT_ID = new Set([
+  "message.part.updated",
+  "message.part.delta",
+  "message.updated",
+  "message.removed",
+  "session.idle",
+  "session.error",
+  "session.created",
+  "session.updated",
+  "session.deleted",
+  "session.status",
+  "session.compacted",
+  "session.diff",
+  "todo.updated",
+  "permission.asked",
+  "permission.replied",
+  "question.asked",
+]);
+
+function mapHarnessEventToBirdhouseEvent(event: HarnessEvent): BirdhouseEvent {
+  return {
+    type: event.type,
+    properties: { ...event.properties },
+  };
+}
 
 export function createEventRoutes() {
   const app = new Hono();
 
-  // GET / - Stream OpenCode events via SSE (workspace-scoped)
   app.get("/", (c) => {
-    const { agentsDB, getStream } = getDepsFromContext(c);
-    const opencodeBase = c.get("opencodeBase");
+    const { agentsDB, harnesses, getBirdhouseEventBus } = getDepsFromContext(c);
     const workspace = c.get("workspace");
 
     return streamSSE(c, async (stream) => {
-      // Get OpenCodeStream from deps (singleton in tests, per-request in production)
-      const openCodeStream = getStream(opencodeBase, workspace.directory);
-      await openCodeStream.connect();
+      const harnessEventStreams = harnesses.createHarnessEventStreams();
+      const birdhouseEventBus = getBirdhouseEventBus(workspace.directory);
       let streamClosed = false;
-
-      // Event queue for sequential processing (prevents concurrent writeSSE calls)
-      const eventQueue: OpenCodeEvent[] = [];
+      const eventQueue: QueuedEvent[] = [];
       let processing = false;
-
-      // Cache for sessionId -> agentId lookups (to avoid DB queries on every event)
       const sessionToAgentCache = new Map<string, string>();
 
       log.stream.info("Client connected to SSE stream");
 
-      // Send immediate event to trigger browser's onopen and allow reconnection handlers
-      // Firefox's EventSource doesn't fire onopen until it receives data
       await stream.writeSSE({
         data: JSON.stringify({
           type: "birdhouse.connection.established",
@@ -41,123 +69,44 @@ export function createEventRoutes() {
         }),
       });
 
-      // Events that we expect to have agentId (used for logging when translation fails)
-      // We attempt translation on ALL events, but only log warnings for these specific events
-      const EVENTS_EXPECTING_AGENT_ID = new Set([
-        "message.part.updated",
-        "message.part.delta",
-        "message.updated",
-        "message.removed",
-        "session.idle",
-        "session.error",
-        "session.created",
-        "session.updated",
-        "session.deleted",
-        "session.status",
-        "session.compacted",
-        "session.diff",
-        "todo.updated",
-        "permission.asked",
-        "permission.replied",
-        "question.asked",
-      ]);
-
-      // Extract sessionID from event properties - tries all known patterns
-      // Returns undefined if the event type doesn't contain a sessionID
-      const extractSessionId = (eventType: string, properties: Record<string, unknown>): string | undefined => {
-        // Pattern 1: Top-level sessionID (most common)
-        // Used by: session.idle, session.error, session.status, session.compacted,
-        //          session.diff, todo.updated, permission.replied, message.removed
-        if (properties.sessionID) {
-          return properties.sessionID as string;
-        }
-
-        // Pattern 2: Nested in info.id (session lifecycle events)
-        // Used by: session.created, session.updated, session.deleted
-        if (eventType.startsWith("session.") && !eventType.includes("tui")) {
-          const info = properties.info as { id?: string } | undefined;
-          if (info?.id) return info.id;
-        }
-
-        // Pattern 3: Nested in info.sessionID (message events)
-        // Used by: message.updated
-        if (eventType.startsWith("message.") && !eventType.includes("part")) {
-          const info = properties.info as { sessionID?: string } | undefined;
-          if (info?.sessionID) return info.sessionID;
-        }
-
-        // Pattern 4: Nested in part.sessionID (message part events)
-        // Used by: message.part.updated, message.part.removed
-        // Note: message.part.delta has sessionID at top level (Pattern 1), so it never reaches here
-        if (eventType.startsWith("message.part.")) {
-          const part = properties.part as { sessionID?: string } | undefined;
-          if (part?.sessionID) return part.sessionID;
-        }
-
-        // Pattern 5: Permission events (at top level, already handled by Pattern 1)
-        // Used by: permission.asked (has sessionID at top level in PermissionRequest)
-
-        // No sessionID pattern matched - this event type doesn't have one
-        // (e.g., file.edited, vcs.branch.updated, installation.*, etc.)
-        return undefined;
-      };
-
-      // Process events sequentially to avoid concurrent writeSSE calls
       const processQueue = async () => {
-        // Prevent re-entrant calls
         if (processing || streamClosed) return;
         processing = true;
 
         while (eventQueue.length > 0 && !streamClosed) {
-          const event = eventQueue.shift();
-          if (!event) break;
+          const queued = eventQueue.shift();
+          if (!queued) break;
 
           try {
-            const properties = event.payload.properties as Record<string, unknown>;
-            const eventType = event.payload.type;
+            const properties = { ...queued.event.properties };
 
-            // Try to extract sessionID for ALL events (not just specific ones)
-            const sessionID = extractSessionId(eventType, properties);
-
-            if (sessionID) {
-              // We found a sessionID - try to translate to agentId
-
-              // Check cache first
-              let agentId = sessionToAgentCache.get(sessionID);
-
-              // If not in cache, lookup in database
+            if (queued.sessionID) {
+              let agentId = sessionToAgentCache.get(queued.sessionID);
               if (!agentId) {
-                const agent = agentsDB.getAgentBySessionId(sessionID);
+                const agent = agentsDB.getAgentBySessionId(queued.sessionID);
                 if (agent) {
                   agentId = agent.id;
-                  sessionToAgentCache.set(sessionID, agentId);
+                  sessionToAgentCache.set(queued.sessionID, agentId);
                 }
               }
 
               if (agentId) {
-                // Success: Add agentId to properties
                 properties.agentId = agentId;
-              } else {
-                // Failed to find agentId - only log if we expect this event to have one
-                if (EVENTS_EXPECTING_AGENT_ID.has(eventType)) {
-                  log.stream.debug({ sessionID, eventType }, "Event from non-Birdhouse session - ignoring");
-                }
-                // Note: We still forward the event even without agentId
               }
-            } else {
-              // No sessionID extracted - only warn if this is an event we expected to have one
-              if (EVENTS_EXPECTING_AGENT_ID.has(eventType)) {
-                log.stream.warn({ eventType }, "Expected event to have sessionID but none found - possible bug");
-              }
-              // Events without sessionID (like file.edited, vcs.branch.updated) silently pass through
+            } else if (queued.expectsAgentId) {
+              log.stream.warn(
+                { eventType: queued.event.type },
+                "Expected event to have sessionID but none found - possible bug",
+              );
             }
 
-            // Always forward the event (with or without agentId)
             await stream.writeSSE({
-              data: JSON.stringify(event.payload),
+              data: JSON.stringify({
+                type: queued.event.type,
+                properties,
+              }),
             });
           } catch (error) {
-            // Stream write failed - connection probably closed
             log.stream.warn({ error }, "Failed to write SSE event, closing stream");
             streamClosed = true;
             break;
@@ -167,26 +116,46 @@ export function createEventRoutes() {
         processing = false;
       };
 
-      // Subscribe to ALL events from OpenCode
-      // Synchronous handler that queues events for sequential processing
-      const handleEvent = (event: OpenCodeEvent) => {
+      const unsubscribeHarnesses = harnessEventStreams.map((harnessEventStream) =>
+        harnessEventStream.subscribe((event) => {
+          if (streamClosed) return;
+
+          if (
+            isFrontendConsumedHarnessEventType(event.type) &&
+            !hasValidFrontendConsumedHarnessEventProperties(event)
+          ) {
+            log.stream.warn(
+              { eventType: event.type, properties: event.properties },
+              "Dropped malformed frontend-consumed harness event",
+            );
+            return;
+          }
+
+          eventQueue.push({
+            event: mapHarnessEventToBirdhouseEvent(event),
+            sessionID: event.sessionID,
+            expectsAgentId: EVENTS_EXPECTING_AGENT_ID.has(event.type),
+          });
+          void processQueue();
+        }),
+      );
+
+      const unsubscribeBirdhouse = birdhouseEventBus.subscribe((event) => {
         if (streamClosed) return;
+        eventQueue.push({
+          event: { type: event.type, properties: { ...event.properties } },
+          sessionID: event.sessionID,
+          expectsAgentId: false,
+        });
+        void processQueue();
+      });
 
-        eventQueue.push(event);
-        processQueue();
-      };
-
-      // Subscribe to the wildcard event (all events)
-      openCodeStream.on("*", handleEvent);
-
-      // Keepalive: Send SSE comment every 15 seconds to prevent browser timeout
       const keepaliveInterval = setInterval(() => {
         if (streamClosed) {
           clearInterval(keepaliveInterval);
           return;
         }
         try {
-          // Send SSE comment (doesn't trigger onmessage, just keeps connection alive)
           stream.write(": keepalive\n\n");
         } catch {
           streamClosed = true;
@@ -194,13 +163,15 @@ export function createEventRoutes() {
         }
       }, 15000);
 
-      // Wait for client disconnect (keep stream open)
       await new Promise<void>((resolve) => {
         stream.onAbort(() => {
           log.stream.info("Client disconnected from SSE stream");
           streamClosed = true;
           clearInterval(keepaliveInterval);
-          openCodeStream.off("*", handleEvent);
+          for (const unsubscribeHarness of unsubscribeHarnesses) {
+            unsubscribeHarness();
+          }
+          unsubscribeBirdhouse();
           resolve();
         });
       });

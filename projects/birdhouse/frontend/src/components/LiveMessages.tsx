@@ -340,21 +340,20 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
 
       if (existingIndex === -1) {
         // New message - add to top (newest-at-top architecture)
-        // Type-cast info as the proper OpenCode message type
         const newMessage: Message = {
           id: info.id,
-          opencodeMessage: info,
+          messageInfo: info,
           role: info.role,
           content: "", // Parts will fill this in
           blocks: [],
-          timestamp: new Date(),
+          timestamp: new Date(info.time.created),
           isStreaming: info.role === "assistant",
         };
         setMessages([newMessage, ...messagesStore]);
       } else {
-        // Message exists - update opencodeMessage to capture error field, completion time, etc.
+        // Message exists - update messageInfo to capture error field, completion time, etc.
         // This happens when OpenCode sends a second message.updated with error details
-        setMessages(existingIndex, { opencodeMessage: info });
+        setMessages(existingIndex, { messageInfo: info, timestamp: new Date(info.time.created) });
       }
     });
 
@@ -403,7 +402,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
       const eventMessage: Message = {
         id: systemEvent.id,
         role: "system",
-        opencodeMessage: undefined,
+        messageInfo: undefined,
         content: "",
         blocks: [
           {

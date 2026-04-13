@@ -4,7 +4,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import { formatTimelineItem } from "../api/export-markdown";
 import { generateFilenameWithAgentId, generateMarkdownContent } from "./export-helpers";
 
@@ -12,8 +12,8 @@ import { generateFilenameWithAgentId, generateMarkdownContent } from "./export-h
  * POST /aapi/agents/:id/export - Export agent timeline to file
  * Returns filepath metadata (NOT markdown content to avoid context pollution)
  */
-export async function exportMarkdown(c: Context, deps: Pick<Deps, "agentsDB" | "opencode">) {
-  const { agentsDB, opencode } = deps;
+export async function exportMarkdown(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses">) {
+  const { agentsDB } = deps;
   const agentId = c.req.param("id");
 
   try {
@@ -33,7 +33,7 @@ export async function exportMarkdown(c: Context, deps: Pick<Deps, "agentsDB" | "
     }
 
     // Generate markdown content using shared helper
-    const markdown = await generateMarkdownContent(agent, agentsDB, opencode, {
+    const markdown = await generateMarkdownContent(agent, agentsDB, getHarnessForAgent(deps, agent), {
       formatTimelineItem,
     });
 

@@ -15,13 +15,9 @@ describe("POST /:id/stop-tree", () => {
     createChildAgent(agentsDB, child.id, { session_id: "ses_grandchild" });
     createRootAgent(agentsDB, { id: "agent_other", session_id: "ses_other" });
 
-    const abortMock = mock(async () => ({}));
+    const abortMock = mock(async () => {});
     const deps = await createTestDeps({
-      client: {
-        session: {
-          abort: abortMock,
-        },
-      } as never,
+      abortSession: abortMock,
     });
 
     await withDeps(deps, async () => {
@@ -30,18 +26,9 @@ describe("POST /:id/stop-tree", () => {
 
       expect(response.status).toBe(200);
       expect(abortMock).toHaveBeenCalledTimes(3);
-      expect(abortMock).toHaveBeenNthCalledWith(1, {
-        path: { id: "ses_root" },
-        query: { directory: "/test/workspace" },
-      });
-      expect(abortMock).toHaveBeenNthCalledWith(2, {
-        path: { id: "ses_child" },
-        query: { directory: "/test/workspace" },
-      });
-      expect(abortMock).toHaveBeenNthCalledWith(3, {
-        path: { id: "ses_grandchild" },
-        query: { directory: "/test/workspace" },
-      });
+      expect(abortMock).toHaveBeenNthCalledWith(1, "ses_root");
+      expect(abortMock).toHaveBeenNthCalledWith(2, "ses_child");
+      expect(abortMock).toHaveBeenNthCalledWith(3, "ses_grandchild");
     });
   });
 

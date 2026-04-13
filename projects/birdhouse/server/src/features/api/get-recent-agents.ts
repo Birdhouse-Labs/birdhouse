@@ -2,8 +2,8 @@
 // ABOUTME: Returns agents from last 30 days with last message snippets
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
-import type { Message } from "../../lib/opencode-client";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
+import type { BirdhouseMessage as Message } from "../../harness";
 
 // TODO(agent-search): Move search to db once we are setup for searching agents better
 const MAX_SNIPPET_LENGTH = 200;
@@ -45,11 +45,8 @@ function extractMessageText(message: Message, maxLength: number): string {
  * GET /api/agents/recent - Get recent agents with message context
  * Returns agents sorted by updated_at desc, with last message snippets
  */
-export async function getRecentAgents(c: Context, deps: Pick<Deps, "agentsDB" | "opencode">) {
-  const {
-    agentsDB,
-    opencode: { getMessages: getMessagesFromOpenCode },
-  } = deps;
+export async function getRecentAgents(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses">) {
+  const { agentsDB } = deps;
 
   try {
     // Parse optional query parameter
@@ -62,7 +59,9 @@ export async function getRecentAgents(c: Context, deps: Pick<Deps, "agentsDB" | 
     const agentsWithContext: RecentAgentResponse[] = await Promise.all(
       agents.map(async (agent) => {
         try {
-          const messages = await getMessagesFromOpenCode(agent.session_id, 100);
+          const harness = getHarnessForAgent(deps, agent);
+          const getMessagesFromHarness = harness.getMessages.bind(harness);
+          const messages = await getMessagesFromHarness(agent.session_id, 100);
 
           if (messages.length === 0) {
             return {

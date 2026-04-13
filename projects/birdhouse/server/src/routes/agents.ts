@@ -2,6 +2,7 @@
 // ABOUTME: Handles tree metadata calculation and coordinates between OpenCode API and agents DB
 
 import { Hono } from "hono";
+import { getHarnessForAgent } from "../dependencies";
 import * as handlers from "../features/api";
 import { archive } from "../features/api/archive";
 import { getAgentQuestions, replyToAgentQuestion } from "../features/api/question";
@@ -27,7 +28,8 @@ export function createAgentRoutes() {
 
   // GET /api/agents/:id - Get agent by ID
   app.get("/:id", async (c) => {
-    const { agentsDB, opencode } = getDepsFromContext(c);
+    const deps = getDepsFromContext(c);
+    const { agentsDB } = deps;
     const agentId = c.req.param("id");
 
     try {
@@ -37,7 +39,8 @@ export function createAgentRoutes() {
       }
 
       // Fetch session to check for revert state
-      const session = await opencode.getSession(agent.session_id);
+      const harness = getHarnessForAgent(deps, agent);
+      const session = await harness.getSession(agent.session_id);
 
       // Include revert state if present
       const response = session.revert ? { ...agent, revert: session.revert } : agent;
@@ -80,14 +83,12 @@ export function createAgentRoutes() {
 
       // Update agent title in Birdhouse, sync to OpenCode, and emit SSE event
       const deps = getDepsFromContext(c);
-      const opencodeBase = c.get("opencodeBase");
       const workspace = c.get("workspace");
 
       const updatedAgent = await syncAgentTitle(
         {
           agentsDB,
-          opencodeClient: deps.opencode,
-          opencodeBase,
+          harness: getHarnessForAgent(deps, existingAgent),
           workspaceDir: workspace.directory,
           log: deps.log,
         },

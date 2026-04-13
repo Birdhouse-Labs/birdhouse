@@ -2,13 +2,13 @@
 // ABOUTME: Used by /api/agents POST endpoint with optional prompt for first message
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { type Deps, getDefaultHarness } from "../../dependencies";
 import { createAgent } from "../../domain/agent-lifecycle";
 import { sendFirstMessage } from "../../lib/agent-messaging";
 import type { AgentRow } from "../../lib/agents-db";
 import { generateAgentId } from "../../lib/agents-db";
+import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
 import { parseFileAttachments } from "../../lib/message-parts";
-import { getWorkspaceStream } from "../../lib/opencode-stream";
 import { syncAgentTitle } from "../../lib/sync-agent-title";
 import { generateTitle as generateTitleService } from "../../lib/title-generator";
 import "../../types/context";
@@ -16,13 +16,9 @@ import "../../types/context";
 /**
  * POST /agents - Create a new agent with optional first message
  */
-export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
-  const {
-    opencode: { createSession },
-    agentsDB,
-    log,
-    telemetry,
-  } = deps;
+export async function create(c: Context, deps: Pick<Deps, "harnesses" | "agentsDB" | "dataDb" | "log" | "telemetry">) {
+  const { agentsDB, log, telemetry } = deps;
+  const harness = getDefaultHarness(deps);
 
   try {
     // 1. Parse and validate request body
@@ -76,16 +72,16 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
       log.server.info({ agent_id, title, level }, "Creating root agent");
     }
 
-    // 3. Create OpenCode session via API
-    log.server.info({ title }, "Creating OpenCode session");
-    const session = await createSession(title);
+    // 3. Create harness session via API
+    log.server.info({ title }, "Creating harness session");
+    const session = await harness.createSession(title);
     log.server.info(
       {
         sessionId: session.id,
         projectID: session.projectID,
         directory: session.directory,
       },
-      "OpenCode session created",
+      "Harness session created",
     );
 
     // 4. Insert into agents database
@@ -115,9 +111,9 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
       throw new Error("Workspace context not available");
     }
     const workspaceDir = workspace.directory;
-    const stream = getWorkspaceStream(opencodeBase, workspaceDir);
+    const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
 
-    const agent = createAgent(agentsDB, agentData, stream, telemetry, deps.dataDb);
+    const agent = createAgent(agentsDB, agentData, birdhouseEventBus, telemetry, deps.dataDb);
 
     log.server.info(
       {
@@ -134,15 +130,19 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
       const shouldWait = wait === true; // Default to false (async) for frontend
 
       try {
-        const result = await sendFirstMessage(deps, {
-          agentId: agent.id,
-          sessionId: agent.session_id,
-          model,
-          prompt: prompt.trim(),
-          wait: shouldWait,
-          attachments: requestAttachments,
-          ...(requestAgent && { agent: requestAgent }),
-        });
+        const result = await sendFirstMessage(
+          deps,
+          {
+            agentId: agent.id,
+            sessionId: agent.session_id,
+            model,
+            prompt: prompt.trim(),
+            wait: shouldWait,
+            attachments: requestAttachments,
+            ...(requestAgent && { agent: requestAgent }),
+          },
+          harness,
+        );
 
         // 6. Generate title if user didn't provide one
         if (!hasExplicitTitle) {
@@ -151,38 +151,30 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
           const workspaceId = workspace.workspace_id;
 
           // Fire-and-forget title generation (don't block response)
-          generateAndUpdateTitle(
-            deps,
-            agent.id,
-            prompt.trim(),
-            workspaceId,
-            opencodeBase,
-            workspaceDir,
-            deps.opencode,
-          ).catch((error) => {
-            log.server.error(
-              {
-                agentId: agent.id,
-                error: error instanceof Error ? error.message : "Unknown error",
-              },
-              "Failed to generate title — setting fallback title",
-            );
-            // Clear the "Creating Agent..." placeholder so the agent isn't stuck
-            const fallbackTitle = prompt.trim().slice(0, 60) || "New Agent";
-            syncAgentTitle(
-              { agentsDB: deps.agentsDB, opencodeClient: deps.opencode, opencodeBase, workspaceDir, log },
-              agent.id,
-              fallbackTitle,
-            ).catch((syncError) => {
+          generateAndUpdateTitle(deps, agent.id, prompt.trim(), workspaceId, opencodeBase, workspaceDir, harness).catch(
+            (error) => {
               log.server.error(
                 {
                   agentId: agent.id,
-                  error: syncError instanceof Error ? syncError.message : "Unknown error",
+                  error: error instanceof Error ? error.message : "Unknown error",
                 },
-                "Failed to set fallback title",
+                "Failed to generate title — setting fallback title",
               );
-            });
-          });
+              // Clear the "Creating Agent..." placeholder so the agent isn't stuck
+              const fallbackTitle = prompt.trim().slice(0, 60) || "New Agent";
+              syncAgentTitle({ agentsDB: deps.agentsDB, harness, workspaceDir, log }, agent.id, fallbackTitle).catch(
+                (syncError) => {
+                  log.server.error(
+                    {
+                      agentId: agent.id,
+                      error: syncError instanceof Error ? syncError.message : "Unknown error",
+                    },
+                    "Failed to set fallback title",
+                  );
+                },
+              );
+            },
+          );
         }
 
         if (result.parts) {
@@ -238,13 +230,13 @@ export async function create(c: Context, deps: Pick<Deps, "opencode" | "agentsDB
  * Generate title and update agent (async helper)
  */
 async function generateAndUpdateTitle(
-  deps: Pick<Deps, "agentsDB" | "log" | "opencode">,
+  deps: Pick<Deps, "agentsDB" | "log" | "harnesses">,
   agentId: string,
   message: string,
   _workspaceId: string,
-  opencodeBase: string,
+  _opencodeBase: string,
   workspaceDir: string,
-  opencodeClient: import("../../lib/opencode-client").OpenCodeClient,
+  harness: Pick<import("../../harness/agent-harness").AgentHarness, "updateSessionTitle">,
   _sourceTitle?: string,
 ): Promise<void> {
   const { agentsDB, log } = deps;
@@ -262,12 +254,11 @@ async function generateAndUpdateTitle(
 
     log.server.info({ agentId, generatedTitle }, "Title generated successfully");
 
-    // Update agent title in Birdhouse, sync to OpenCode, and emit SSE event
+    // Update agent title in Birdhouse, sync to the harness session, and emit SSE event
     await syncAgentTitle(
       {
         agentsDB,
-        opencodeClient,
-        opencodeBase,
+        harness,
         workspaceDir,
         log,
       },

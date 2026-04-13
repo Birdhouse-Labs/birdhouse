@@ -6,9 +6,9 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createTestDeps, withDeps } from "../dependencies";
+import type { BirdhouseSkill as Skill } from "../harness";
 import { DataDB, type Workspace } from "../lib/data-db";
 import { runMigrations } from "../lib/migrations/run-migrations";
-import type { Skill } from "../lib/opencode-client";
 import { captureStreamEvents, createTestApp } from "../test-utils";
 import { createSkillRoutes } from "./skills";
 

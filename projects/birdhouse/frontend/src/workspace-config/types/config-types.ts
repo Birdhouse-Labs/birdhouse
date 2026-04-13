@@ -28,12 +28,12 @@ export type McpServers = Record<string, McpServerConfig>;
  */
 export interface McpServerConfig {
   type: "local" | "remote";
-  command?: string | string[]; // Can be array (OpenCode format) or string
+  command?: string | string[]; // Can be an argument array or a single command string
   args?: string[]; // Legacy: separate args when command is a string
   url?: string;
   headers?: Record<string, string>; // For remote servers with API keys
   env?: Record<string, string>;
-  environment?: Record<string, string>; // Alias for env (OpenCode uses this)
+  environment?: Record<string, string>; // Alias for env used by the API payload
   enabled?: boolean;
 }
 

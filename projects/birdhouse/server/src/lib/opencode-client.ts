@@ -1,6 +1,7 @@
 import { createOpencodeClient } from "@opencode-ai/sdk";
 import type { AssistantMessage, FilePartInput, Part, TextPartInput, UserMessage } from "@opencode-ai/sdk/client";
 export type { UserMessage, AssistantMessage };
+
 // ABOUTME: OpenCode HTTP API client for session and message operations
 // ABOUTME: Provides both live (real API calls) and test (mocked) implementations
 
@@ -192,12 +193,13 @@ export function createLiveOpenCodeClient(baseUrl: string, workspaceRoot: string)
           }),
         },
       );
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to send message: ${response.statusText} - ${errorText}`);
-      }
 
       const responseText = await response.text();
+
+      if (!response.ok) {
+        throw new Error(`Failed to send message: ${response.statusText} - ${responseText}`);
+      }
+
       if (!responseText) {
         // Empty response is expected when noReply: true (async message sending)
         if (options?.noReply) {

@@ -2,18 +2,15 @@
 // ABOUTME: Used by /api/agents/:id/messages GET endpoint - returns TimelineItem[]
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import type { TimelineItem } from "../../types/agent-events";
 
 /**
  * GET /agents/:id/messages - Get timeline items for agent (messages + events)
- * Returns TimelineItem[] - a discriminated union of OpenCode messages and system events
+ * Returns TimelineItem[] - a discriminated union of harness messages and system events
  */
-export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "opencode">) {
-  const {
-    agentsDB,
-    opencode: { getMessages: getMessagesFromOpenCode },
-  } = deps;
+export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses">) {
+  const { agentsDB } = deps;
 
   const agentId = c.req.param("id");
 
@@ -27,8 +24,9 @@ export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "ope
     const limitParam = c.req.query("limit");
     const limit = limitParam ? Number.parseInt(limitParam, 10) : undefined;
 
-    // Fetch messages from OpenCode using session_id
-    const messages = await getMessagesFromOpenCode(agent.session_id, limit);
+    const harness = getHarnessForAgent(deps, agent);
+    const getMessagesFromHarness = harness.getMessages.bind(harness);
+    const messages = await getMessagesFromHarness(agent.session_id, limit);
 
     // Fetch events from events database
     const events = agentsDB.getEventsByAgentId(agentId);

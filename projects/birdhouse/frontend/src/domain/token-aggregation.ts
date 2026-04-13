@@ -1,12 +1,12 @@
-// ABOUTME: Token aggregation logic for calculating context usage statistics
-// ABOUTME: Shows current context window state from last assistant message (matches OpenCode TUI)
+// ABOUTME: Token aggregation logic for calculating context usage statistics.
+// ABOUTME: Shows current context window state from the last assistant message in the timeline.
 
 import { getModelLimit } from "../stores/model-limits";
 import type { Message } from "../types/messages";
 
 /**
  * Aggregated token statistics for an agent conversation
- * Matches OpenCode TUI behavior: shows last message's token usage
+ * Shows the last assistant message's token usage.
  */
 export interface TokenStats {
   used: number; // Current context usage from last message (input + output + reasoning + cache.read + cache.write)
@@ -16,7 +16,7 @@ export interface TokenStats {
 
 /**
  * Aggregate token statistics from last assistant message
- * Matches OpenCode TUI: shows current context window state (last message only)
+ * Shows current context window state from the last assistant message.
  * @param messages Array of messages in newest-first order (reversed by message-adapter)
  * @param modelName Model identifier for determining context limit
  * @returns Token statistics from last assistant message
@@ -40,7 +40,7 @@ export function aggregateTokenStats(messages: Message[], modelName: string): Tok
     };
   }
 
-  // Current context usage = last message's full token consumption (matches OpenCode TUI)
+  // Current context usage = last message's full token consumption.
   const used =
     lastAssistant.tokens.input +
     lastAssistant.tokens.output +

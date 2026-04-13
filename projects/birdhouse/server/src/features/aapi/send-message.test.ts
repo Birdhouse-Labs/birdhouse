@@ -3,8 +3,8 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../../dependencies";
+import type { BirdhouseMessage as Message } from "../../harness";
 import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
-import type { Message } from "../../lib/opencode-client";
 import { createTestApp } from "../../test-utils";
 import { createRootAgent } from "../../test-utils/agent-factories";
 import { sendMessage } from "./send-message";
@@ -30,7 +30,7 @@ describe("AAPI send-message", () => {
         title: "Target Agent",
       });
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_response",
           sessionID: "ses_target",
@@ -58,27 +58,16 @@ describe("AAPI send-message", () => {
             messageID: "msg_1",
           },
         ],
-      };
+      } as Message;
 
       let capturedPart: { text: string; metadata?: Record<string, unknown> } | undefined;
 
-      // Mock the OpenCode client's prompt method to capture the message part
-      const mockClient = {
-        session: {
-          prompt: async ({
-            body,
-          }: {
-            body: { parts: Array<{ text: string; metadata?: Record<string, unknown> }> };
-          }) => {
-            capturedPart = body.parts[0];
-            return { data: mockMessage };
-          },
-        },
-      };
-
       const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
-      deps.opencode.client = mockClient as never;
+      deps.harness.sendMessage = async (_sessionId, _text, options) => {
+        capturedPart = options?.parts?.[0] as typeof capturedPart;
+        return mockMessage;
+      };
 
       await withDeps(deps, async () => {
         const app = await createTestApp({ agentsDb: agentsDB });
@@ -117,7 +106,7 @@ describe("AAPI send-message", () => {
         title: "Target Agent",
       });
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_response",
           sessionID: "ses_target_no_sig",
@@ -145,23 +134,16 @@ describe("AAPI send-message", () => {
             messageID: "msg_1",
           },
         ],
-      };
+      } as Message;
 
       let capturedText: string | undefined;
 
-      // Mock the OpenCode client's prompt method to capture the message text
-      const mockClient = {
-        session: {
-          prompt: async ({ body }: { body: { parts: Array<{ text: string }> } }) => {
-            capturedText = body.parts[0].text;
-            return { data: mockMessage };
-          },
-        },
-      };
-
       const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
-      deps.opencode.client = mockClient as never;
+      deps.harness.sendMessage = async (_sessionId, _text, options) => {
+        capturedText = (options?.parts?.[0] as { text?: string } | undefined)?.text;
+        return mockMessage;
+      };
 
       await withDeps(deps, async () => {
         const app = await createTestApp({ agentsDb: agentsDB });
@@ -192,7 +174,7 @@ describe("AAPI send-message", () => {
         title: "Target Agent",
       });
 
-      const mockMessage: Message = {
+      const mockMessage = {
         info: {
           id: "msg_response",
           sessionID: "ses_target_invalid",
@@ -220,23 +202,16 @@ describe("AAPI send-message", () => {
             messageID: "msg_1",
           },
         ],
-      };
+      } as Message;
 
       let capturedText: string | undefined;
 
-      // Mock the OpenCode client's prompt method to capture the message text
-      const mockClient = {
-        session: {
-          prompt: async ({ body }: { body: { parts: Array<{ text: string }> } }) => {
-            capturedText = body.parts[0].text;
-            return { data: mockMessage };
-          },
-        },
-      };
-
       const deps = await createTestDeps();
       deps.agentsDB = agentsDB;
-      deps.opencode.client = mockClient as never;
+      deps.harness.sendMessage = async (_sessionId, _text, options) => {
+        capturedText = (options?.parts?.[0] as { text?: string } | undefined)?.text;
+        return mockMessage;
+      };
 
       await withDeps(deps, async () => {
         const app = await createTestApp({ agentsDb: agentsDB });

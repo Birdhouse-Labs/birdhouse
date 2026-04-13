@@ -3,7 +3,7 @@
 
 import type { Context } from "hono";
 import type { Deps } from "../../dependencies";
-import { getWorkspaceStream } from "../../lib/opencode-stream";
+import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
 
 /**
  * PATCH /api/agents/:id/unarchive
@@ -32,11 +32,14 @@ export async function unarchive(c: Context, deps: Pick<Deps, "agentsDB">) {
   const workspace = c.get("workspace");
   if (opencodeBase && workspace?.directory) {
     const workspaceDir = workspace.directory;
-    const stream = getWorkspaceStream(opencodeBase, workspaceDir);
-    stream.emitCustomEvent("birdhouse.agent.unarchived", {
-      agentId,
-      unarchivedCount: unarchivedIds.length,
-      unarchivedIds,
+    const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
+    birdhouseEventBus.emit({
+      type: "birdhouse.agent.unarchived",
+      properties: {
+        agentId,
+        unarchivedCount: unarchivedIds.length,
+        unarchivedIds,
+      },
     });
   }
 

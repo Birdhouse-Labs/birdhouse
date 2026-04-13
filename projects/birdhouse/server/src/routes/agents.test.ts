@@ -3,10 +3,9 @@
 
 import { describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
+import type { AgentHarness, BirdhouseMessage as Message, BirdhouseSession as Session } from "../harness";
 import type { AgentNode, AgentRow, AgentTree } from "../lib/agents-db";
 import { initAgentsDB } from "../lib/agents-db";
-import type { Message, Session } from "../lib/opencode-client";
-import { setMockSessionPrompt } from "../lib/opencode-client";
 import { createAgentTree, createChildAgent, createRootAgent, withWorkspaceContext } from "../test-utils";
 import { createAgentRoutes } from "./agents";
 
@@ -190,6 +189,47 @@ describe("POST /api/agents - Create root agent", () => {
     });
   });
 
+  test("creates root agent when createSession relies on harness this binding", async () => {
+    const mockSession: Session = {
+      id: "ses_bound_create",
+      title: "Bound Agent",
+      projectID: "birdhouse-playground",
+      directory: "/Users/test/projects/birdhouse",
+      version: "1.0.0",
+      time: { created: Date.now(), updated: Date.now() },
+    };
+
+    const agentsDB = await initAgentsDB(":memory:");
+    const deps = await createTestDeps();
+
+    deps.harness = {
+      ...deps.harness,
+      marker: "bound-harness",
+      async createSession(title?: string) {
+        expect(title).toBe("Bound Agent");
+        expect((this as AgentHarness & { marker: string }).marker).toBe("bound-harness");
+        return mockSession;
+      },
+    } as AgentHarness & { marker: string };
+    deps.agentsDB = agentsDB;
+
+    await withDeps(deps, async () => {
+      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
+      const res = await app.request("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Bound Agent",
+          model: "anthropic/claude-sonnet-4",
+        }),
+      });
+
+      expect(res.status).toBe(201);
+      const agent = (await res.json()) as AgentRow;
+      expect(agent.session_id).toBe("ses_bound_create");
+    });
+  });
+
   test("emits birdhouse.agent.created event after creating root agent", async () => {
     const mockSession: Session = {
       id: "ses_event_test",
@@ -208,18 +248,15 @@ describe("POST /api/agents - Create root agent", () => {
     deps.agentsDB = agentsDB;
 
     await withDeps(deps, async () => {
-      const { getOpenCodeStream } = await import("../lib/opencode-stream");
-      const stream = getOpenCodeStream();
+      const { getWorkspaceEventBus } = await import("../lib/birdhouse-event-bus");
+      const bus = getWorkspaceEventBus("/test/workspace");
 
-      // Spy on emitCustomEvent
       let capturedEventType: string | undefined;
       let capturedEventData: Record<string, unknown> | undefined;
-      const originalEmit = stream.emitCustomEvent.bind(stream);
-      stream.emitCustomEvent = (type: string, properties: Record<string, unknown>) => {
-        capturedEventType = type;
-        capturedEventData = properties;
-        originalEmit(type, properties);
-      };
+      const unsubscribe = bus.subscribe((event) => {
+        capturedEventType = event.type;
+        capturedEventData = event.properties;
+      });
 
       const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/", {
@@ -240,8 +277,7 @@ describe("POST /api/agents - Create root agent", () => {
       expect(capturedEventData?.agentId).toBe(agent.id);
       expect(capturedEventData?.agent).toEqual(agent);
 
-      // Restore original function
-      stream.emitCustomEvent = originalEmit;
+      unsubscribe();
     });
   });
 
@@ -295,7 +331,7 @@ describe("POST /api/agents - Create root agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const mockMessage: Message = {
+    const mockMessage = {
       info: {
         id: "msg_first",
         sessionID: "ses_with_prompt",
@@ -323,7 +359,7 @@ describe("POST /api/agents - Create root agent", () => {
           messageID: "msg_1",
         },
       ],
-    };
+    } as Message;
 
     const agentsDB = await initAgentsDB(":memory:");
 
@@ -382,7 +418,7 @@ describe("POST /api/agents - Create root agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const mockMessage: Message = {
+    const mockMessage = {
       info: {
         id: "msg_with_image_prompt",
         sessionID: "ses_with_image_prompt",
@@ -402,7 +438,7 @@ describe("POST /api/agents - Create root agent", () => {
         path: { cwd: "/", root: "/" },
       },
       parts: [],
-    };
+    } as Message;
 
     const agentsDB = await initAgentsDB(":memory:");
 
@@ -474,7 +510,7 @@ describe("POST /api/agents - Create root agent", () => {
       time: { created: Date.now(), updated: Date.now() },
     };
 
-    const mockMessage: Message = {
+    const mockMessage = {
       info: {
         id: "msg_async",
         sessionID: "ses_async",
@@ -502,7 +538,7 @@ describe("POST /api/agents - Create root agent", () => {
           messageID: "msg_1",
         },
       ],
-    };
+    } as Message;
 
     const agentsDB = await initAgentsDB(":memory:");
 
@@ -893,7 +929,7 @@ describe("GET /api/agents/:id/messages - Get messages for agent", () => {
     const deps = await createTestDeps({
       getMessages: async (sessionId: string, _limit?: number) => {
         expect(sessionId).toBe("ses_msgs123");
-        return mockMessages as Message[];
+        return mockMessages as unknown as Message[];
       },
     });
     deps.agentsDB = agentsDB;
@@ -965,45 +1001,37 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
+    deps.harness.sendMessage = async (_sessionId, _text) => ({
+      info: {
+        id: "msg_response",
+        role: "assistant",
+        sessionID: "ses_send123",
+        time: { created: Date.now(), completed: Date.now() },
+        parentID: "msg_user",
+        modelID: "claude-sonnet-4",
+        providerID: "anthropic",
+        mode: "build",
+        cost: 0,
+        tokens: {
+          input: 100,
+          output: 50,
+          reasoning: 0,
+          cache: { read: 0, write: 0 },
+        },
+        path: { cwd: "/", root: "/" },
+      },
+      parts: [
+        {
+          type: "text",
+          text: "Response",
+          id: "part_1",
+          sessionID: "ses_send123",
+          messageID: "msg_response",
+        },
+      ],
+    });
 
     await withDeps(deps, async () => {
-      // Set mock to verify the request was made with correct params
-      setMockSessionPrompt(async (options) => {
-        expect(options.path?.id).toBe("ses_send123");
-        expect(options.body?.parts?.[0]?.text).toBe("Hello agent");
-        return {
-          data: {
-            info: {
-              id: "msg_response",
-              role: "assistant",
-              sessionID: "ses_send123",
-              time: { created: Date.now(), completed: Date.now() },
-              parentID: "msg_user",
-              modelID: "claude-sonnet-4",
-              providerID: "anthropic",
-              mode: "build",
-              cost: 0,
-              tokens: {
-                input: 100,
-                output: 50,
-                reasoning: 0,
-                cache: { read: 0, write: 0 },
-              },
-              path: { cwd: "/", root: "/" },
-            },
-            parts: [
-              {
-                type: "text",
-                text: "Response",
-                id: "part_1",
-                sessionID: "ses_send123",
-                messageID: "msg_response",
-              },
-            ],
-          },
-        };
-      });
-
       const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
 
       const beforeTimestamp = agentsDB.getAgentById("agent_send123")?.updated_at;
@@ -1024,9 +1052,6 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
       const afterTimestamp = agentsDB.getAgentById("agent_send123")?.updated_at;
       expect(afterTimestamp).toBeDefined();
       expect(afterTimestamp).toBeGreaterThan(beforeTimestamp ?? 0);
-
-      // Reset mock
-      setMockSessionPrompt(undefined);
     });
   });
 
@@ -1060,13 +1085,11 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
+    deps.harness.sendMessage = async () => {
+      throw new Error("OpenCode API failure");
+    };
 
     await withDeps(deps, async () => {
-      // Set mock to throw an error
-      setMockSessionPrompt(async () => {
-        throw new Error("OpenCode API failure");
-      });
-
       const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_error/messages", {
         method: "POST",
@@ -1075,9 +1098,6 @@ describe("POST /api/agents/:id/messages - Send message to agent", () => {
       });
 
       expect(res.status).toBe(500);
-
-      // Reset mock
-      setMockSessionPrompt(undefined);
     });
   });
 });
@@ -1753,8 +1773,8 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
     let capturedTitle = "";
 
     // Wrap the opencode client to spy on updateSessionTitle
-    const originalUpdateSessionTitle = deps.opencode.updateSessionTitle.bind(deps.opencode);
-    deps.opencode.updateSessionTitle = async (sessionId: string, title: string) => {
+    const originalUpdateSessionTitle = deps.harness.updateSessionTitle.bind(deps.harness);
+    deps.harness.updateSessionTitle = async (sessionId: string, title: string) => {
       updateSessionTitleCalled = true;
       capturedSessionId = sessionId;
       capturedTitle = title;
@@ -1762,18 +1782,15 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
     };
 
     await withDeps(deps, async () => {
-      const { getOpenCodeStream } = await import("../lib/opencode-stream");
-      const stream = getOpenCodeStream();
+      const { getWorkspaceEventBus } = await import("../lib/birdhouse-event-bus");
+      const bus = getWorkspaceEventBus("/test/workspace");
 
-      // Spy on emitCustomEvent
       let capturedEventType: string | undefined;
       let capturedEventData: Record<string, unknown> | undefined;
-      const originalEmit = stream.emitCustomEvent.bind(stream);
-      stream.emitCustomEvent = (type: string, properties: Record<string, unknown>) => {
-        capturedEventType = type;
-        capturedEventData = properties;
-        originalEmit(type, properties);
-      };
+      const unsubscribe = bus.subscribe((event) => {
+        capturedEventType = event.type;
+        capturedEventData = event.properties;
+      });
 
       const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_sync_test", {
@@ -1799,8 +1816,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
       expect(capturedEventData?.agentId).toBe("agent_sync_test");
       expect(capturedEventData?.agent).toEqual(updatedAgent);
 
-      // Restore original function
-      stream.emitCustomEvent = originalEmit;
+      unsubscribe();
     });
   });
 
@@ -1822,23 +1838,20 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
     deps.agentsDB = agentsDB;
 
     // Make updateSessionTitle throw an error
-    deps.opencode.updateSessionTitle = async (_sessionId: string, _title: string) => {
+    deps.harness.updateSessionTitle = async (_sessionId: string, _title: string) => {
       throw new Error("OpenCode is down");
     };
 
     await withDeps(deps, async () => {
-      const { getOpenCodeStream } = await import("../lib/opencode-stream");
-      const stream = getOpenCodeStream();
+      const { getWorkspaceEventBus } = await import("../lib/birdhouse-event-bus");
+      const bus = getWorkspaceEventBus("/test/workspace");
 
-      // Spy on emitCustomEvent
       let capturedEventType: string | undefined;
       let capturedEventData: Record<string, unknown> | undefined;
-      const originalEmit = stream.emitCustomEvent.bind(stream);
-      stream.emitCustomEvent = (type: string, properties: Record<string, unknown>) => {
-        capturedEventType = type;
-        capturedEventData = properties;
-        originalEmit(type, properties);
-      };
+      const unsubscribe = bus.subscribe((event) => {
+        capturedEventType = event.type;
+        capturedEventData = event.properties;
+      });
 
       const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
       const res = await app.request("/agent_fail_test", {
@@ -1864,8 +1877,7 @@ describe("PATCH /api/agents/:id - Update agent title", () => {
       expect(capturedEventData?.agentId).toBe("agent_fail_test");
       expect(capturedEventData?.agent).toEqual(updatedAgent);
 
-      // Restore original function
-      stream.emitCustomEvent = originalEmit;
+      unsubscribe();
     });
   });
 });

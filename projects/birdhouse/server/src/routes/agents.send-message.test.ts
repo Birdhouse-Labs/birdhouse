@@ -4,8 +4,8 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
 import { sendMessage } from "../features/api/send-message";
+import type { BirdhouseMessage as Message } from "../harness";
 import { type AgentsDB, initAgentsDB } from "../lib/agents-db";
-import type { Message } from "../lib/opencode-client";
 import type { TelemetryClient } from "../lib/telemetry";
 import { createRootAgent } from "../test-utils/agent-factories";
 import { createTestApp } from "../test-utils/workspace-context";
@@ -48,13 +48,9 @@ describe("POST /agents/:id/messages — token recording", () => {
     const agent = createRootAgent(agentsDB, { session_id: "ses_test_tokens" });
     const message = makeAssistantMessage("ses_test_tokens");
 
-    const mockClient = {
-      session: { prompt: async () => ({ data: message }) },
-    };
-
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.client = mockClient as never;
+    deps.harness.sendMessage = async () => message;
     deps.telemetry = mockTelemetry;
 
     await withDeps(deps, async () => {
@@ -81,13 +77,9 @@ describe("POST /agents/:id/messages — token recording", () => {
     const agent = createRootAgent(agentsDB, { session_id: "ses_telemetry_fail" });
     const message = makeAssistantMessage("ses_telemetry_fail");
 
-    const mockClient = {
-      session: { prompt: async () => ({ data: message }) },
-    };
-
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.client = mockClient as never;
+    deps.harness.sendMessage = async () => message;
     deps.telemetry = mockTelemetry;
 
     let responseStatus: number | undefined;

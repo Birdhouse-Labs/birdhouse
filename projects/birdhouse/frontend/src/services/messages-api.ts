@@ -34,8 +34,8 @@ export async function fetchMessages(workspaceId: string, agentId: string): Promi
     throw new Error(`Failed to fetch messages: ${response.statusText}`);
   }
 
-  const opencodeMessages = await response.json();
-  return mapMessages(opencodeMessages);
+  const timelineItems = await response.json();
+  return mapMessages(timelineItems);
 }
 
 /**

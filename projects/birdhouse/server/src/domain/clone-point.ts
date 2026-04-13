@@ -1,7 +1,7 @@
 // ABOUTME: Utilities for finding safe clone points when cloning agents
 // ABOUTME: Determines the message ID to clone from to avoid incomplete assistant responses
 
-import type { Message } from "../lib/opencode-client";
+import type { BirdhouseMessage as Message } from "../harness";
 
 /**
  * Check if a conversation turn (starting at a user message) has a completed assistant response.

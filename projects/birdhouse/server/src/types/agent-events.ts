@@ -1,7 +1,7 @@
-// ABOUTME: Shared types for agent timeline events and messages API
-// ABOUTME: Defines discriminated union for merging server messages with system events
+// ABOUTME: Shared timeline item types for system events and Birdhouse-owned harness messages.
+// ABOUTME: Defines the message-plus-event union returned by agent timeline endpoints.
 
-import type { AssistantMessage, Part, UserMessage } from "@opencode-ai/sdk/client";
+import type { BirdhouseMessage } from "../harness/types";
 
 /**
  * Event type discriminator for system timeline events (action-centric model)
@@ -46,13 +46,9 @@ export interface SystemEvent {
 }
 
 /**
- * Server message structure (from OpenCode SDK)
- * Self-contained definition so frontend doesn't need to import OpenCode SDK types
+ * Server message structure using Birdhouse-owned harness message types.
  */
-export interface ServerMessage {
-  info: UserMessage | AssistantMessage;
-  parts: Part[];
-}
+export type ServerMessage = BirdhouseMessage;
 
 /**
  * Timeline item - discriminated union of messages and events

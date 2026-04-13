@@ -2,19 +2,16 @@
 // ABOUTME: Used by /aapi/agents/:id/messages GET endpoint (unique to /aapi)
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
-import type { Message } from "../../lib/opencode-client";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
+import type { BirdhouseMessage as Message } from "../../harness";
 import { filterMessagesForView } from "./helpers/message-filter";
 
 /**
  * GET /agents/:id/messages - Get filtered and selected messages for plugin consumption
  * Supports mode parameter for message selection
  */
-export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "opencode">) {
-  const {
-    agentsDB,
-    opencode: { getMessages: getMessagesFromOpenCode },
-  } = deps;
+export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses">) {
+  const { agentsDB } = deps;
 
   const agentId = c.req.param("id");
   const mode = c.req.query("mode") || "last"; // Default: last assistant message
@@ -38,7 +35,8 @@ export async function getMessages(c: Context, deps: Pick<Deps, "agentsDB" | "ope
     }
 
     const historyLimit = mode === "last" ? 1000 : undefined;
-    const allMessages = await getMessagesFromOpenCode(agent.session_id, historyLimit);
+    const harness = getHarnessForAgent(deps, agent);
+    const allMessages = await harness.getMessages(agent.session_id, historyLimit);
 
     // SELECT messages based on mode
     let selected: Message[];

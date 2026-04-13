@@ -4,11 +4,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { Hono } from "hono";
+import { getWorkspaceEventBus } from "../lib/birdhouse-event-bus";
 import type { DataDB } from "../lib/data-db";
 import { getOpenCodeDataDir } from "../lib/database-paths";
 import { log } from "../lib/logger";
 import type { OpenCodeManager } from "../lib/opencode-manager";
-import { getWorkspaceStream } from "../lib/opencode-stream";
 import { generateWorkspaceId } from "../lib/workspace";
 
 export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeManager) {
@@ -245,19 +245,19 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
 
   /**
    * GET /api/workspaces/health
-   * Check OpenCode health for all workspaces
+   * Check harness health for all workspaces
    */
   app.get("/health", async (c) => {
     const workspaces = dataDb.getAllWorkspaces();
 
     const healthStatuses = await Promise.all(
       workspaces.map(async (workspace) => {
-        // Check if OpenCode info exists in database
+        // Check if harness runtime info exists in database
         if (!workspace.opencode_port || !workspace.opencode_pid) {
           return {
             workspaceId: workspace.workspace_id,
             title: workspace.title,
-            opencodeRunning: false,
+            harnessRunning: false,
             port: null,
             pid: null,
             error: "Workspace environment not started for this workspace",
@@ -266,7 +266,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
         }
 
         try {
-          // Verify the OpenCode instance is actually valid and responding
+          // Verify the harness runtime is actually valid and responding
           const { healthy: isValid, configError = null } = await opencodeManager.verifyOpenCodeInstance(
             workspace.opencode_port,
             workspace.opencode_pid,
@@ -277,7 +277,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
             return {
               workspaceId: workspace.workspace_id,
               title: workspace.title,
-              opencodeRunning: true,
+              harnessRunning: true,
               port: workspace.opencode_port,
               pid: workspace.opencode_pid,
               error: null,
@@ -288,7 +288,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
           return {
             workspaceId: workspace.workspace_id,
             title: workspace.title,
-            opencodeRunning: false,
+            harnessRunning: false,
             port: workspace.opencode_port,
             pid: workspace.opencode_pid,
             error: "Workspace environment not responding or workspace ID mismatch",
@@ -306,7 +306,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
           return {
             workspaceId: workspace.workspace_id,
             title: workspace.title,
-            opencodeRunning: false,
+            harnessRunning: false,
             port: workspace.opencode_port,
             pid: workspace.opencode_pid,
             error: error instanceof Error ? error.message : "Unknown error during health check",
@@ -321,7 +321,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
 
   /**
    * POST /api/workspace/:id/start
-   * Trigger OpenCode spawn for workspace (fire-and-forget)
+   * Trigger workspace harness startup for workspace (fire-and-forget)
    * Returns 202 immediately; spawn happens in the background
    */
   app.post("/:id/start", (c) => {
@@ -336,7 +336,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
     opencodeManager.getOrSpawnOpenCode(workspaceId).catch((error) => {
       log.server.warn(
         { workspaceId, error: error instanceof Error ? error.message : "Unknown" },
-        "Background OpenCode spawn failed",
+        "Background harness startup failed",
       );
     });
 
@@ -345,7 +345,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
 
   /**
    * GET /api/workspace/:id/logs
-   * Return recent OpenCode log lines for the workspace
+   * Return recent harness log lines for the workspace
    * Dev mode: reads from log file; prod mode: returns available:false
    */
   app.get("/:id/logs", (c) => {
@@ -376,7 +376,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
     } catch (error) {
       log.server.error(
         { workspaceId, logFile, error: error instanceof Error ? error.message : "Unknown" },
-        "Failed to read OpenCode log file",
+        "Failed to read harness log file",
       );
       return c.json({ lines: [], available: true });
     }
@@ -395,19 +395,19 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
       return c.json({ error: "Workspace not found" }, 404);
     }
 
-    // Include OpenCode status
+    // Include harness status
     const opencodeBase = opencodeManager.getOpenCodeBase(workspaceId);
 
     return c.json({
       ...workspace,
-      opencode_running: opencodeBase !== null,
-      opencode_base: opencodeBase,
+      harness_running: opencodeBase !== null,
+      harness_base: opencodeBase,
     });
   });
 
   /**
    * GET /api/workspace/:id/health
-   * Check OpenCode health for a specific workspace
+   * Check harness health for a specific workspace
    */
   app.get("/:id/health", async (c) => {
     const workspaceId = c.req.param("id");
@@ -418,11 +418,11 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
       return c.json({ error: "Workspace not found" }, 404);
     }
 
-    // Check if OpenCode info exists in database
+    // Check if harness runtime info exists in database
     if (!workspace.opencode_port || !workspace.opencode_pid) {
       return c.json({
         workspaceId,
-        opencodeRunning: false,
+        harnessRunning: false,
         port: null,
         pid: null,
         error: "Workspace environment not started for this workspace",
@@ -431,7 +431,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
     }
 
     try {
-      // Verify the OpenCode instance is actually valid and responding
+      // Verify the harness runtime is actually valid and responding
       const { healthy: isValid, configError = null } = await opencodeManager.verifyOpenCodeInstance(
         workspace.opencode_port,
         workspace.opencode_pid,
@@ -441,7 +441,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
       if (isValid) {
         return c.json({
           workspaceId,
-          opencodeRunning: true,
+          harnessRunning: true,
           port: workspace.opencode_port,
           pid: workspace.opencode_pid,
           error: null,
@@ -451,7 +451,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
 
       return c.json({
         workspaceId,
-        opencodeRunning: false,
+        harnessRunning: false,
         port: workspace.opencode_port,
         pid: workspace.opencode_pid,
         error: "Workspace environment not responding or workspace ID mismatch",
@@ -469,7 +469,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
       return c.json(
         {
           workspaceId,
-          opencodeRunning: false,
+          harnessRunning: false,
           port: workspace.opencode_port,
           pid: workspace.opencode_pid,
           error: error instanceof Error ? error.message : "Unknown error during health check",
@@ -482,7 +482,7 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
 
   /**
    * POST /api/workspace/:id/restart
-   * Restart OpenCode instance for a workspace
+   * Restart the harness runtime for a workspace
    */
   app.post("/:id/restart", async (c) => {
     const workspaceId = c.req.param("id");
@@ -496,12 +496,12 @@ export function createWorkspaceRoutes(dataDb: DataDB, opencodeManager: OpenCodeM
     try {
       // Notify connected clients the workspace is about to restart
       // Must fire before restartOpenCode() — the SSE stream is still alive at this point
-      const opencodeBase = opencodeManager.getOpenCodeBase(workspaceId);
-      if (opencodeBase) {
-        getWorkspaceStream(opencodeBase, workspace.directory).emitCustomEvent("birdhouse.workspace.restarting", {
+      getWorkspaceEventBus(workspace.directory).emit({
+        type: "birdhouse.workspace.restarting",
+        properties: {
           workspaceId,
-        });
-      }
+        },
+      });
 
       // Use centralized restart method (ensures safety delay and consistent behavior)
       const { port, pid } = await opencodeManager.restartOpenCode(workspaceId);

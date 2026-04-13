@@ -66,7 +66,7 @@ const WorkspaceLayout: Component = () => {
     const pollHealth = async () => {
       try {
         const health = await fetchWorkspaceHealth(id);
-        if (health.opencodeRunning) {
+        if (health.harnessRunning) {
           setIsReady(true);
           setHealthError(null);
           setConfigError(null);
@@ -78,7 +78,7 @@ const WorkspaceLayout: Component = () => {
           errorSince = null;
           setHealthError(null);
         } else {
-          // health.error while opencodeRunning=false is a normal transient state
+          // health.error while harnessRunning=false is a normal transient state
           // during cold start (e.g. "not started yet") — clear any prior errors
           errorSince = null;
           setHealthError(null);

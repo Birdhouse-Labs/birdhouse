@@ -2,7 +2,7 @@
 // ABOUTME: Validates safe clone point logic for cloning agents
 
 import { describe, expect, test } from "bun:test";
-import type { Message } from "../lib/opencode-client";
+import type { BirdhouseMessage as Message } from "../harness";
 import { findSafeClonePoint } from "./clone-point";
 
 /**
@@ -19,7 +19,7 @@ function createUserMessage(id: string): Message {
       model: { providerID: "test", modelID: "test" },
     },
     parts: [],
-  } as Message;
+  };
 }
 
 /**
@@ -41,7 +41,6 @@ function createAssistantMessage(id: string, finish?: string): Message {
       modelID: "test-model",
       providerID: "test-provider",
       mode: "test",
-      agent: "test",
       cost: 0,
       tokens: {
         input: 0,
@@ -53,7 +52,7 @@ function createAssistantMessage(id: string, finish?: string): Message {
       ...(finish && { finish }),
     },
     parts: [],
-  } as Message;
+  };
 }
 
 describe("findSafeClonePoint", () => {

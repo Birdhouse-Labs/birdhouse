@@ -1,8 +1,8 @@
 // ABOUTME: Anonymous telemetry pushes to Supabase for marketing aggregate counters
 // ABOUTME: Fire-and-forget — never throws, never blocks
 
+import type { BirdhouseMessage as Message } from "../harness";
 import type { DataDB } from "./data-db";
-import type { Message } from "./opencode-client";
 
 const SUPABASE_URL = "https://hzqxwcbohrtxyvmmamsn.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_qNuDf5Rh9PIh1hUvWT2GWA_PHi8V_QF";
@@ -62,6 +62,7 @@ export function createLiveTelemetryClient(dataDb: DataDB): TelemetryClient {
   function recordMessageTokens(agentId: string, message: Message): void {
     try {
       if (message.info.role !== "assistant") return;
+      if (!message.info.tokens) return;
       const { input, output, reasoning, cache } = message.info.tokens;
       const installId = dataDb.getOrCreateInstallId();
       trackTokens(installId, agentId, {

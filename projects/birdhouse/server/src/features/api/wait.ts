@@ -1,18 +1,14 @@
-// ABOUTME: Wait for agent completion by proxying to OpenCode's wait endpoint
+// ABOUTME: Wait for agent completion through the active harness.
 // ABOUTME: Used by /api/agents/:id/wait and /aapi/agents/:id/wait GET endpoints
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 
 /**
  * GET /agents/:id/wait - Wait for agent completion (proxies to OpenCode)
  */
-export async function wait(c: Context, deps: Pick<Deps, "agentsDB" | "opencode" | "log">) {
-  const {
-    agentsDB,
-    opencode: { waitForSessionCompletion },
-    log,
-  } = deps;
+export async function wait(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses" | "log">) {
+  const { agentsDB, log } = deps;
 
   const agentId = c.req.param("id");
 
@@ -22,10 +18,12 @@ export async function wait(c: Context, deps: Pick<Deps, "agentsDB" | "opencode" 
       return c.json({ error: `Agent ${agentId} not found` }, 404);
     }
 
+    const harness = getHarnessForAgent(deps, agent);
+    const waitForCompletion = harness.waitForCompletion.bind(harness);
+
     log.server.info({ agentId, sessionId: agent.session_id }, "Waiting for agent completion");
 
-    // Call OpenCode's wait endpoint (blocks until truly complete)
-    await waitForSessionCompletion(agent.session_id);
+    await waitForCompletion(agent.session_id);
 
     log.server.info({ agentId }, "Agent completed");
 

@@ -1,7 +1,6 @@
-// ABOUTME: Streaming context for subscribing to OpenCode SSE events (messages, parts, sessions)
+// ABOUTME: Streaming context for subscribing to harness SSE events (messages, parts, sessions)
 // ABOUTME: Single EventSource connection shared across all components
 
-import type { Message as OpencodeMessage } from "@opencode-ai/sdk/client";
 import {
   type Accessor,
   createContext,
@@ -11,6 +10,7 @@ import {
   type ParentComponent,
   useContext,
 } from "solid-js";
+import type { BirdhouseMessageInfo, BirdhouseSessionStatus } from "../../../server/src/harness/types";
 import { API_ENDPOINT_BASE } from "../config/api";
 import type { StreamingPart } from "../domain/message-updates";
 import { log } from "../lib/logger";
@@ -44,7 +44,7 @@ export type PartDeltaHandler = (delta: {
 /**
  * Handler function for message updates (full message with role)
  */
-export type MessageUpdateHandler = (message: { info: OpencodeMessage }) => void;
+export type MessageUpdateHandler = (message: { info: BirdhouseMessageInfo }) => void;
 
 /**
  * Handler function for session updates (session metadata changes like revert state)
@@ -75,12 +75,9 @@ export type AgentErrorHandler = (error: {
 export type SessionCreatedHandler = (sessionInfo: { id: string; title: string; agentId?: string }) => void;
 
 /**
- * Session status from OpenCode
+ * Session status from the harness
  */
-export type SessionStatus =
-  | { type: "idle" }
-  | { type: "busy" }
-  | { type: "retry"; attempt: number; message: string; next: number };
+export type SessionStatus = BirdhouseSessionStatus;
 
 /**
  * Handler function for session status events
@@ -146,7 +143,7 @@ export type ConnectionEstablishedHandler = () => void;
 
 /**
  * Handler function for workspace restarting events
- * Fires when a workspace restart is initiated — before OpenCode shuts down
+ * Fires when a workspace restart is initiated — before the workspace harness shuts down
  */
 export type WorkspaceRestartingHandler = () => void;
 
@@ -157,7 +154,7 @@ export type WorkspaceRestartingHandler = () => void;
 export type SkillUpdatedHandler = (payload: { skillName: string }) => void;
 
 /**
- * Handler function for question asked events (OpenCode question tool)
+ * Handler function for question asked events (harness question tool)
  * Fires when an AI agent pauses to ask the human a question
  */
 export type QuestionAskedHandler = (question: QuestionRequest) => void;
@@ -285,7 +282,7 @@ interface StreamingContextValue {
 
   /**
    * Subscribe to workspace restarting events
-   * Fires when a workspace restart is initiated — before OpenCode shuts down
+   * Fires when a workspace restart is initiated — before the workspace harness shuts down
    * @returns Cleanup function to unsubscribe
    */
   subscribeToWorkspaceRestarting: (handler: WorkspaceRestartingHandler) => () => void;
@@ -390,7 +387,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
   // Event handler helpers (extracted to reduce complexity)
   const handleMessageUpdate = (properties: Record<string, unknown>) => {
     const messageData = properties as {
-      info: OpencodeMessage;
+      info: BirdhouseMessageInfo;
       agentId?: string;
     };
 

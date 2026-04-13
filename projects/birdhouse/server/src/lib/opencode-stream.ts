@@ -3,6 +3,7 @@
 
 import { EventEmitter } from "node:events";
 import { EventSource } from "eventsource";
+import { getWorkspaceEventBus } from "./birdhouse-event-bus";
 import { log } from "./logger";
 
 // Event payload structure (from OpenCode's GlobalBus)
@@ -108,23 +109,25 @@ const workspaceStreams: Map<string, OpenCodeStream> = new Map();
  * @returns OpenCodeStream instance for this workspace
  */
 /**
- * Broadcast event to all active workspace streams
- * Used for cross-workspace events (user patterns, birdhouse patterns, etc)
+ * Broadcast Birdhouse synthetic events to all active workspace event buses.
+ * Used for cross-workspace events like skill updates.
  */
 export function broadcastToAllWorkspaces(eventType: string, properties: Record<string, unknown>): void {
   const isTest = process.env.NODE_ENV === "test" || (typeof Bun !== "undefined" && Bun?.main?.includes(".test."));
 
   if (isTest) {
-    // In tests, emit to test stream
-    if (testStream) {
-      testStream.emitCustomEvent(eventType, properties);
-    }
+    getWorkspaceEventBus("/test/workspace").emit({
+      type: eventType,
+      properties,
+    });
     return;
   }
 
-  // Production: Emit to all workspace streams
-  for (const stream of workspaceStreams.values()) {
-    stream.emitCustomEvent(eventType, properties);
+  for (const workspaceDirectory of workspaceStreams.keys()) {
+    getWorkspaceEventBus(workspaceDirectory).emit({
+      type: eventType,
+      properties,
+    });
   }
 
   log.stream.debug({ eventType, workspaceCount: workspaceStreams.size }, "Broadcasted event to all workspaces");

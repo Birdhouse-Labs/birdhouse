@@ -2,9 +2,9 @@
 // ABOUTME: Emits clone_created timeline events on both source and target agents
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import { cloneAgent as cloneAgentDomain } from "../../domain/agent-lifecycle";
-import { getWorkspaceStream } from "../../lib/opencode-stream";
+import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
 
 /**
  * POST /api/workspace/:workspaceId/agents/:id/clone
@@ -12,7 +12,7 @@ import { getWorkspaceStream } from "../../lib/opencode-stream";
  */
 export async function cloneAgent(
   c: Context,
-  deps: Pick<Deps, "agentsDB" | "dataDb" | "opencode" | "log" | "telemetry">,
+  deps: Pick<Deps, "agentsDB" | "dataDb" | "harnesses" | "log" | "telemetry">,
 ) {
   const { agentsDB, log } = deps;
   const agentId = c.req.param("id");
@@ -48,10 +48,17 @@ export async function cloneAgent(
     );
 
     // Clone the agent
-    const stream = getWorkspaceStream(opencodeBase, workspaceDir);
+    const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
     const clonedAgent = await cloneAgentDomain(
       sourceAgent,
-      { ...deps, stream },
+      {
+        harness: getHarnessForAgent(deps, sourceAgent),
+        agentsDB: deps.agentsDB,
+        dataDb: deps.dataDb,
+        log: deps.log,
+        telemetry: deps.telemetry,
+        birdhouseEventBus,
+      },
       {
         title: sourceAgent.title, // Keep same title
         messageId: messageId || undefined, // Clone from specific message or full clone
@@ -92,19 +99,22 @@ export async function cloneAgent(
         ...eventData,
       });
 
-      stream.emitCustomEvent("birdhouse.event.created", {
-        agentId: sourceAgent.id,
-        event: {
-          id: sourceEvent.id,
-          event_type: sourceEvent.event_type,
-          timestamp: sourceEvent.timestamp,
-          actor_agent_id: sourceEvent.actor_agent_id,
-          actor_agent_title: sourceEvent.actor_agent_title,
-          source_agent_id: sourceEvent.source_agent_id,
-          source_agent_title: sourceEvent.source_agent_title,
-          target_agent_id: sourceEvent.target_agent_id,
-          target_agent_title: sourceEvent.target_agent_title,
-          metadata: sourceEvent.metadata ? JSON.parse(sourceEvent.metadata) : undefined,
+      birdhouseEventBus.emit({
+        type: "birdhouse.event.created",
+        properties: {
+          agentId: sourceAgent.id,
+          event: {
+            id: sourceEvent.id,
+            event_type: sourceEvent.event_type,
+            timestamp: sourceEvent.timestamp,
+            actor_agent_id: sourceEvent.actor_agent_id,
+            actor_agent_title: sourceEvent.actor_agent_title,
+            source_agent_id: sourceEvent.source_agent_id,
+            source_agent_title: sourceEvent.source_agent_title,
+            target_agent_id: sourceEvent.target_agent_id,
+            target_agent_title: sourceEvent.target_agent_title,
+            metadata: sourceEvent.metadata ? JSON.parse(sourceEvent.metadata) : undefined,
+          },
         },
       });
 
@@ -114,19 +124,22 @@ export async function cloneAgent(
         ...eventData,
       });
 
-      stream.emitCustomEvent("birdhouse.event.created", {
-        agentId: clonedAgent.id,
-        event: {
-          id: targetEvent.id,
-          event_type: targetEvent.event_type,
-          timestamp: targetEvent.timestamp,
-          actor_agent_id: targetEvent.actor_agent_id,
-          actor_agent_title: targetEvent.actor_agent_title,
-          source_agent_id: targetEvent.source_agent_id,
-          source_agent_title: targetEvent.source_agent_title,
-          target_agent_id: targetEvent.target_agent_id,
-          target_agent_title: targetEvent.target_agent_title,
-          metadata: targetEvent.metadata ? JSON.parse(targetEvent.metadata) : undefined,
+      birdhouseEventBus.emit({
+        type: "birdhouse.event.created",
+        properties: {
+          agentId: clonedAgent.id,
+          event: {
+            id: targetEvent.id,
+            event_type: targetEvent.event_type,
+            timestamp: targetEvent.timestamp,
+            actor_agent_id: targetEvent.actor_agent_id,
+            actor_agent_title: targetEvent.actor_agent_title,
+            source_agent_id: targetEvent.source_agent_id,
+            source_agent_title: targetEvent.source_agent_title,
+            target_agent_id: targetEvent.target_agent_id,
+            target_agent_title: targetEvent.target_agent_title,
+            metadata: targetEvent.metadata ? JSON.parse(targetEvent.metadata) : undefined,
+          },
         },
       });
 

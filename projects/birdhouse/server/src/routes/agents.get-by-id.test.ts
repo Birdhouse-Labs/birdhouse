@@ -3,8 +3,8 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
+import type { BirdhouseSession as Session } from "../harness";
 import { type AgentsDB, initAgentsDB } from "../lib/agents-db";
-import type { Session } from "../lib/opencode-client";
 import { createRootAgent, createTestApp } from "../test-utils";
 import { createAgentRoutes } from "./agents";
 
@@ -40,7 +40,7 @@ describe("GET /api/agents/:id with revert state", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getSession = async () => mockSession;
+    deps.harness.getSession = async () => mockSession;
 
     await withDeps(deps, async () => {
       const app = await createTestApp({ agentsDb: agentsDB });
@@ -78,7 +78,7 @@ describe("GET /api/agents/:id with revert state", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getSession = async () => mockSession;
+    deps.harness.getSession = async () => mockSession;
 
     await withDeps(deps, async () => {
       const app = await createTestApp({ agentsDb: agentsDB });

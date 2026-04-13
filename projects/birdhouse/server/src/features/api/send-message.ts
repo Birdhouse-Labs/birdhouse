@@ -1,16 +1,16 @@
 // ABOUTME: Send a message to an agent (blocking or async mode, with optional cloning)
 // ABOUTME: Used by /api/agents/:id/messages POST endpoint
 
-import type { FilePartInput } from "@opencode-ai/sdk/client";
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import { cloneAgent } from "../../domain/agent-lifecycle";
 import { findSafeClonePoint } from "../../domain/clone-point";
+import type { AgentHarness, BirdhouseInputFilePart } from "../../harness";
 import type { AgentRow } from "../../lib/agents-db";
+import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "../../lib/birdhouse-system-prompt";
 import { buildPromptParts, parseFileAttachments } from "../../lib/message-parts";
 import { parseModelId } from "../../lib/model-validator";
-import { getWorkspaceStream } from "../../lib/opencode-stream";
 import { buildSkillAttachmentPreview, enrichMessageWithSkillAttachments } from "../../lib/skill-attachments";
 import { syncAgentTitle } from "../../lib/sync-agent-title";
 import { generateTitle as generateTitleService } from "../../lib/title-generator";
@@ -21,14 +21,9 @@ import "../../types/context";
  */
 export async function sendMessage(
   c: Context,
-  deps: Pick<Deps, "agentsDB" | "dataDb" | "opencode" | "log" | "telemetry">,
+  deps: Pick<Deps, "agentsDB" | "dataDb" | "harnesses" | "log" | "telemetry">,
 ) {
-  const {
-    agentsDB,
-    opencode: { client },
-    log,
-    telemetry,
-  } = deps;
+  const { agentsDB, log, telemetry } = deps;
 
   // Get workspace context for stream creation
   const opencodeBase = c.get("opencodeBase");
@@ -42,7 +37,7 @@ export async function sendMessage(
   const agentId = c.req.param("id");
   const { text, agent: agentName, clone_and_send, metadata, attachments } = await c.req.json();
   const rawText = typeof text === "string" ? text : "";
-  let requestAttachments: FilePartInput[];
+  let requestAttachments: BirdhouseInputFilePart[];
   try {
     requestAttachments = parseFileAttachments(attachments);
   } catch (error) {
@@ -50,17 +45,6 @@ export async function sendMessage(
     return c.json({ error: message }, 400);
   }
   const workspaceRoot = workspaceDir;
-  const visibleSkills = await deps.opencode.listSkills();
-  const enrichedText = enrichMessageWithSkillAttachments(
-    rawText,
-    buildSkillAttachmentPreview(
-      rawText,
-      visibleSkills.map((skill) => ({
-        name: skill.name,
-        content: skill.content,
-      })),
-    ),
-  );
 
   // Check for wait query parameter (default: true for blocking)
   const waitParam = c.req.query("wait");
@@ -71,6 +55,19 @@ export async function sendMessage(
   if (!sourceAgent) {
     return c.json({ error: `Agent ${agentId} not found` }, 404);
   }
+
+  const sourceHarness = getHarnessForAgent(deps, sourceAgent);
+  const visibleSkills = (await sourceHarness.capabilities.skills?.listSkills()) ?? [];
+  const enrichedText = enrichMessageWithSkillAttachments(
+    rawText,
+    buildSkillAttachmentPreview(
+      rawText,
+      visibleSkills.map((skill) => ({
+        name: skill.name,
+        content: skill.content,
+      })),
+    ),
+  );
 
   // Determine target agent (clone if requested, otherwise use original)
   let targetAgent: AgentRow = sourceAgent;
@@ -88,9 +85,9 @@ export async function sendMessage(
 
     // Find safe clone point to avoid copying incomplete work
     // This is especially important when cloning a busy agent
-    const messages = await deps.opencode.getMessages(sourceAgent.session_id);
+    const messages = await sourceHarness.getMessages(sourceAgent.session_id);
 
-    // DEBUG: Log message order received from OpenCode
+    // DEBUG: Log message order returned by the harness
     log.server.info(
       {
         source_agent_id: sourceAgent.id,
@@ -103,7 +100,7 @@ export async function sendMessage(
           finish: m.info.role === "assistant" ? ("finish" in m.info ? m.info.finish : "none") : "n/a",
         })),
       },
-      "Messages received from OpenCode (should be chronological/oldest-first)",
+      "Messages received from harness (should be chronological/oldest-first)",
     );
 
     const clonePointMessageId = findSafeClonePoint(messages);
@@ -134,10 +131,17 @@ export async function sendMessage(
 
     // Clone with temporary title (will be replaced after message sent)
     const workspaceDir = workspace.directory || workspaceRoot;
-    const stream = getWorkspaceStream(opencodeBase, workspaceDir);
+    const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
     clonedAgent = await cloneAgent(
       sourceAgent,
-      { ...deps, stream },
+      {
+        harness: sourceHarness,
+        agentsDB: deps.agentsDB,
+        dataDb: deps.dataDb,
+        log: deps.log,
+        telemetry: deps.telemetry,
+        birdhouseEventBus,
+      },
       {
         title: "Cloning Agent...",
         messageId: clonePointMessageId,
@@ -157,7 +161,7 @@ export async function sendMessage(
     // Insert timeline events for clone_and_send (action-centric model)
     try {
       const now = Date.now();
-      const stream = getWorkspaceStream(opencodeBase, workspaceDir);
+      const birdhouseEventBus = getWorkspaceEventBus(workspaceDir);
 
       // Common event data for both events (human-initiated, so actor is null)
       const eventData = {
@@ -178,19 +182,22 @@ export async function sendMessage(
         ...eventData,
       });
 
-      stream.emitCustomEvent("birdhouse.event.created", {
-        agentId: sourceAgent.id,
-        event: {
-          id: sourceEvent.id,
-          event_type: sourceEvent.event_type,
-          timestamp: sourceEvent.timestamp,
-          actor_agent_id: sourceEvent.actor_agent_id,
-          actor_agent_title: sourceEvent.actor_agent_title,
-          source_agent_id: sourceEvent.source_agent_id,
-          source_agent_title: sourceEvent.source_agent_title,
-          target_agent_id: sourceEvent.target_agent_id,
-          target_agent_title: sourceEvent.target_agent_title,
-          metadata: sourceEvent.metadata ? JSON.parse(sourceEvent.metadata) : undefined,
+      birdhouseEventBus.emit({
+        type: "birdhouse.event.created",
+        properties: {
+          agentId: sourceAgent.id,
+          event: {
+            id: sourceEvent.id,
+            event_type: sourceEvent.event_type,
+            timestamp: sourceEvent.timestamp,
+            actor_agent_id: sourceEvent.actor_agent_id,
+            actor_agent_title: sourceEvent.actor_agent_title,
+            source_agent_id: sourceEvent.source_agent_id,
+            source_agent_title: sourceEvent.source_agent_title,
+            target_agent_id: sourceEvent.target_agent_id,
+            target_agent_title: sourceEvent.target_agent_title,
+            metadata: sourceEvent.metadata ? JSON.parse(sourceEvent.metadata) : undefined,
+          },
         },
       });
 
@@ -200,19 +207,22 @@ export async function sendMessage(
         ...eventData,
       });
 
-      stream.emitCustomEvent("birdhouse.event.created", {
-        agentId: clonedAgent.id,
-        event: {
-          id: targetEvent.id,
-          event_type: targetEvent.event_type,
-          timestamp: targetEvent.timestamp,
-          actor_agent_id: targetEvent.actor_agent_id,
-          actor_agent_title: targetEvent.actor_agent_title,
-          source_agent_id: targetEvent.source_agent_id,
-          source_agent_title: targetEvent.source_agent_title,
-          target_agent_id: targetEvent.target_agent_id,
-          target_agent_title: targetEvent.target_agent_title,
-          metadata: targetEvent.metadata ? JSON.parse(targetEvent.metadata) : undefined,
+      birdhouseEventBus.emit({
+        type: "birdhouse.event.created",
+        properties: {
+          agentId: clonedAgent.id,
+          event: {
+            id: targetEvent.id,
+            event_type: targetEvent.event_type,
+            timestamp: targetEvent.timestamp,
+            actor_agent_id: targetEvent.actor_agent_id,
+            actor_agent_title: targetEvent.actor_agent_title,
+            source_agent_id: targetEvent.source_agent_id,
+            source_agent_title: targetEvent.source_agent_title,
+            target_agent_id: targetEvent.target_agent_id,
+            target_agent_title: targetEvent.target_agent_title,
+            metadata: targetEvent.metadata ? JSON.parse(targetEvent.metadata) : undefined,
+          },
         },
       });
 
@@ -246,7 +256,7 @@ export async function sendMessage(
       workspaceId,
       opencodeBase,
       workspaceDir,
-      deps.opencode,
+      sourceHarness,
     ).catch((error) => {
       log.server.error(
         {
@@ -259,6 +269,8 @@ export async function sendMessage(
 
     targetAgent = clonedAgent;
   }
+
+  const targetHarness = getHarnessForAgent(deps, targetAgent);
 
   log.server.info(
     {
@@ -289,22 +301,14 @@ export async function sendMessage(
   if (!shouldWait) {
     // Async mode: Fire-and-forget (detach from the process)
     // Build collaboration context if tagged agents are present
-    client.session
-      .prompt({
-        body: {
-          model: { providerID, modelID },
-          agent: agentName,
-          system: BIRDHOUSE_SYSTEM_PROMPT,
-          parts: messageParts,
-        },
-        path: {
-          id: targetAgent.session_id,
-        },
-        query: {
-          directory: workspaceRoot,
-        },
+    targetHarness
+      .sendMessage(targetAgent.session_id, enrichedText, {
+        model: { providerID, modelID },
+        agent: agentName,
+        system: BIRDHOUSE_SYSTEM_PROMPT,
+        parts: messageParts,
       })
-      .then(({ data: messageResponse }) => {
+      .then((messageResponse) => {
         agentsDB.updateAgentTimestamp(targetAgent.id);
         if (messageResponse) telemetry.recordMessageTokens(targetAgent.id, messageResponse);
         log.server.info(
@@ -339,23 +343,15 @@ export async function sendMessage(
     return c.json(response);
   }
 
-  const { data: messageResponse } = await client.session.prompt({
-    body: {
-      model: { providerID, modelID },
-      agent: agentName,
-      system: BIRDHOUSE_SYSTEM_PROMPT,
-      parts: messageParts,
-    },
-    path: {
-      id: targetAgent.session_id,
-    },
-    query: {
-      directory: workspaceRoot,
-    },
+  const messageResponse = await targetHarness.sendMessage(targetAgent.session_id, enrichedText, {
+    model: { providerID, modelID },
+    agent: agentName,
+    system: BIRDHOUSE_SYSTEM_PROMPT,
+    parts: messageParts,
   });
 
   if (!messageResponse) {
-    throw new Error("No message response received from OpenCode");
+    throw new Error("No message response received from harness");
   }
 
   // Update agent's updated_at timestamp
@@ -384,14 +380,14 @@ export async function sendMessage(
  * Generate title for cloned agent and update (async helper)
  */
 async function generateAndUpdateTitleForClone(
-  deps: Pick<Deps, "agentsDB" | "log" | "opencode">,
+  deps: Pick<Deps, "agentsDB" | "log" | "harnesses">,
   agentId: string,
   message: string,
   sourceTitle: string,
   _workspaceId: string,
-  opencodeBase: string,
+  _opencodeBase: string,
   workspaceDir: string,
-  opencodeClient: import("../../lib/opencode-client").OpenCodeClient,
+  harness: Pick<AgentHarness, "updateSessionTitle">,
 ): Promise<void> {
   const { agentsDB, log } = deps;
 
@@ -410,12 +406,11 @@ async function generateAndUpdateTitleForClone(
 
     log.server.info({ agentId, generatedTitle, sourceTitle }, "Clone title generated successfully");
 
-    // Update agent title in Birdhouse, sync to OpenCode, and emit SSE event
+    // Update agent title in Birdhouse, sync to the harness session, and emit SSE event
     await syncAgentTitle(
       {
         agentsDB,
-        opencodeClient,
-        opencodeBase,
+        harness,
         workspaceDir,
         log,
       },

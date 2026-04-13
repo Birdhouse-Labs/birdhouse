@@ -2,15 +2,15 @@
 // ABOUTME: Revert returns the text of the user message being reverted to
 
 import type { Context } from "hono";
-import type { Deps } from "../../dependencies";
+import { type Deps, getHarnessForAgent } from "../../dependencies";
 import { extractRestorableComposerFileAttachments } from "../../lib/message-parts";
 
 /**
  * POST /api/workspace/:workspaceId/agents/:id/revert
  * Revert agent session to a specific user message
  */
-export async function revert(c: Context, deps: Pick<Deps, "agentsDB" | "opencode" | "log">) {
-  const { agentsDB, opencode, log } = deps;
+export async function revert(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses" | "log">) {
+  const { agentsDB, log } = deps;
   const agentId = c.req.param("id");
 
   // Lookup agent
@@ -19,7 +19,14 @@ export async function revert(c: Context, deps: Pick<Deps, "agentsDB" | "opencode
     return c.json({ error: `Agent ${agentId} not found` }, 404);
   }
 
+  const harness = getHarnessForAgent(deps, agent);
+  const revertCapability = harness.capabilities.revert;
+
   try {
+    if (!revertCapability) {
+      return c.json({ error: "Revert not supported by harness" }, 501);
+    }
+
     // Parse request body
     const body = await c.req.json();
     const { messageId } = body;
@@ -38,7 +45,7 @@ export async function revert(c: Context, deps: Pick<Deps, "agentsDB" | "opencode
     );
 
     // Fetch messages BEFORE reverting (to extract text from the target message)
-    const messages = await opencode.getMessages(agent.session_id);
+    const messages = await harness.getMessages(agent.session_id);
 
     // Find the target message
     const targetMessage = messages.find((msg) => msg.info.id === messageId);
@@ -58,7 +65,7 @@ export async function revert(c: Context, deps: Pick<Deps, "agentsDB" | "opencode
     const attachments = extractRestorableComposerFileAttachments(targetMessage.parts);
 
     // Perform the revert
-    await opencode.revertSession(agent.session_id, messageId);
+    await revertCapability.revertSession(agent.session_id, messageId);
 
     log.server.info(
       {
@@ -96,8 +103,8 @@ export async function revert(c: Context, deps: Pick<Deps, "agentsDB" | "opencode
  * POST /api/workspace/:workspaceId/agents/:id/unrevert
  * Unrevert a previously reverted session
  */
-export async function unrevert(c: Context, deps: Pick<Deps, "agentsDB" | "opencode" | "log">) {
-  const { agentsDB, opencode, log } = deps;
+export async function unrevert(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses" | "log">) {
+  const { agentsDB, log } = deps;
   const agentId = c.req.param("id");
 
   // Lookup agent
@@ -106,7 +113,14 @@ export async function unrevert(c: Context, deps: Pick<Deps, "agentsDB" | "openco
     return c.json({ error: `Agent ${agentId} not found` }, 404);
   }
 
+  const harness = getHarnessForAgent(deps, agent);
+  const revertCapability = harness.capabilities.revert;
+
   try {
+    if (!revertCapability) {
+      return c.json({ error: "Revert not supported by harness" }, 501);
+    }
+
     log.server.info(
       {
         agent_id: agent.id,
@@ -116,7 +130,7 @@ export async function unrevert(c: Context, deps: Pick<Deps, "agentsDB" | "openco
     );
 
     // Perform the unrevert
-    await opencode.unrevertSession(agent.session_id);
+    await revertCapability.unrevertSession(agent.session_id);
 
     log.server.info(
       {

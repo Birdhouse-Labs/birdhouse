@@ -4,8 +4,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import { createTestDeps, withDeps } from "../../dependencies";
+import { createTestAgentHarness, type BirdhouseMessage as Message } from "../../harness";
 import { type AgentsDB, initAgentsDB } from "../../lib/agents-db";
-import type { Message } from "../../lib/opencode-client";
 import { createRootAgent, withWorkspaceContext } from "../../test-utils";
 import { revert, unrevert } from "./revert";
 
@@ -25,7 +25,7 @@ describe("API revert", () => {
     });
 
     // Mock messages with a user message to revert to
-    const mockMessages: Message[] = [
+    const mockMessages = [
       {
         info: {
           id: "msg_user_1",
@@ -67,11 +67,11 @@ describe("API revert", () => {
           },
         ],
       },
-    ];
+    ] as Message[];
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => mockMessages;
+    deps.harness.getMessages = async () => mockMessages;
 
     await withDeps(deps, async () => {
       const app = await withWorkspaceContext(
@@ -108,7 +108,7 @@ describe("API revert", () => {
       title: "Test Agent",
     });
 
-    const mockMessages: Message[] = [
+    const mockMessages = [
       {
         info: {
           id: "msg_user_with_image",
@@ -144,11 +144,11 @@ describe("API revert", () => {
           },
         ],
       },
-    ];
+    ] as Message[];
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => mockMessages;
+    deps.harness.getMessages = async () => mockMessages;
 
     await withDeps(deps, async () => {
       const app = await withWorkspaceContext(
@@ -226,7 +226,7 @@ describe("API revert", () => {
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => []; // No messages
+    deps.harness.getMessages = async () => []; // No messages
 
     await withDeps(deps, async () => {
       const app = await withWorkspaceContext(
@@ -251,6 +251,39 @@ describe("API revert", () => {
     });
   });
 
+  test("returns 501 when revert capability is absent", async () => {
+    const agent = createRootAgent(agentsDB, {
+      id: "agent_1",
+      session_id: "ses_1",
+      title: "Test Agent",
+    });
+
+    const deps = await createTestDeps();
+    deps.agentsDB = agentsDB;
+    deps.harness = createTestAgentHarness({ enableRevert: false });
+
+    await withDeps(deps, async () => {
+      const app = await withWorkspaceContext(
+        () => {
+          const hono = new Hono();
+          hono.post("/:id/revert", (c) => revert(c, deps));
+          return hono;
+        },
+        { agentsDb: agentsDB },
+      );
+
+      const response = await app.request(`/${agent.id}/revert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId: "msg_user_1" }),
+      });
+
+      expect(response.status).toBe(501);
+      const data = (await response.json()) as { error: string };
+      expect(data.error).toBe("Revert not supported by harness");
+    });
+  });
+
   test("returns 400 when reverting to non-user message", async () => {
     const agent = createRootAgent(agentsDB, {
       id: "agent_1",
@@ -259,7 +292,7 @@ describe("API revert", () => {
     });
 
     // Mock messages with assistant message
-    const mockMessages: Message[] = [
+    const mockMessages = [
       {
         info: {
           id: "msg_assistant_1",
@@ -284,11 +317,11 @@ describe("API revert", () => {
           },
         ],
       },
-    ];
+    ] as Message[];
 
     const deps = await createTestDeps();
     deps.agentsDB = agentsDB;
-    deps.opencode.getMessages = async () => mockMessages;
+    deps.harness.getMessages = async () => mockMessages;
 
     await withDeps(deps, async () => {
       const app = await withWorkspaceContext(
@@ -371,6 +404,37 @@ describe("API unrevert", () => {
       expect(response.status).toBe(404);
       const data = (await response.json()) as { error: string };
       expect(data.error).toContain("not found");
+    });
+  });
+
+  test("returns 501 when unrevert capability is absent", async () => {
+    const agent = createRootAgent(agentsDB, {
+      id: "agent_1",
+      session_id: "ses_1",
+      title: "Test Agent",
+    });
+
+    const deps = await createTestDeps();
+    deps.agentsDB = agentsDB;
+    deps.harness = createTestAgentHarness({ enableRevert: false });
+
+    await withDeps(deps, async () => {
+      const app = await withWorkspaceContext(
+        () => {
+          const hono = new Hono();
+          hono.post("/:id/unrevert", (c) => unrevert(c, deps));
+          return hono;
+        },
+        { agentsDb: agentsDB },
+      );
+
+      const response = await app.request(`/${agent.id}/unrevert`, {
+        method: "POST",
+      });
+
+      expect(response.status).toBe(501);
+      const data = (await response.json()) as { error: string };
+      expect(data.error).toBe("Revert not supported by harness");
     });
   });
 });

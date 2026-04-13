@@ -2,7 +2,7 @@
 // ABOUTME: Provides endpoints for finding files in the workspace using the OpencodeClient
 
 import { Hono } from "hono";
-import { getDepsFromContext } from "../lib/context-deps";
+import { createLiveOpenCodeClient } from "../lib/opencode-client";
 import "../types/context";
 
 export function createFileRoutes() {
@@ -10,8 +10,9 @@ export function createFileRoutes() {
 
   // POST /api/files/find/files - Find files and directories by name/pattern
   app.post("/find/files", async (c) => {
-    const { opencode } = getDepsFromContext(c);
     const workspace = c.get("workspace");
+    const opencodeBase = c.get("opencodeBase");
+    const opencode = createLiveOpenCodeClient(opencodeBase, workspace.directory);
 
     // Parse query parameters
     const query = c.req.query("query");
@@ -39,7 +40,7 @@ export function createFileRoutes() {
       }
       const response = await opencode.client.file.list({ query: listQueryObj });
       // console.log(response.error.error)
-      const filePaths = (response.data || []).map(({ path }) => path);
+      const filePaths = (response.data || []).map((item) => item.path);
 
       return c.json(filePaths);
     }

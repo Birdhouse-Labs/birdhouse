@@ -1,8 +1,8 @@
 // ABOUTME: Domain logic for sending first message to agents with Birdhouse system prompt
 // ABOUTME: Encapsulates blocking vs fire-and-forget modes and model parsing
 
-import type { FilePartInput } from "@opencode-ai/sdk/client";
-import type { Deps } from "../dependencies";
+import { type Deps, getDefaultHarness } from "../dependencies";
+import type { AgentHarness, BirdhouseFilePart } from "../harness";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "./birdhouse-system-prompt";
 import { buildPromptParts } from "./message-parts";
 import { parseModelId } from "./model-validator";
@@ -15,7 +15,7 @@ export interface SendFirstMessageOptions {
   prompt: string;
   wait: boolean;
   agent?: string;
-  attachments?: FilePartInput[];
+  attachments?: BirdhouseFilePart[];
   senderMetadata?: {
     sent_by_agent_id: string;
     sent_by_agent_title: string;
@@ -38,13 +38,15 @@ export interface SendFirstMessageResult {
  */
 
 export async function sendFirstMessage(
-  deps: Pick<Deps, "opencode" | "agentsDB" | "log" | "telemetry">,
+  deps: Pick<Deps, "agentsDB" | "harnesses" | "log" | "telemetry">,
   options: SendFirstMessageOptions,
+  harnessArg?: Pick<AgentHarness, "capabilities" | "sendMessage">,
 ): Promise<SendFirstMessageResult> {
   const { agentId, sessionId, model, prompt, wait, agent, attachments = [], senderMetadata } = options;
-  const { opencode, agentsDB, log, telemetry } = deps;
+  const { agentsDB, log, telemetry } = deps;
+  const harness = harnessArg ?? getDefaultHarness(deps);
 
-  const visibleSkills = await opencode.listSkills();
+  const visibleSkills = (await harness.capabilities.skills?.listSkills()) ?? [];
   const enrichedPrompt = enrichMessageWithSkillAttachments(
     prompt,
     buildSkillAttachmentPreview(
@@ -63,7 +65,7 @@ export async function sendFirstMessage(
     // Blocking mode: Wait for agent to complete before returning
     log.server.info({ agent_id: agentId, session_id: sessionId, wait }, "Sending first message (blocking)");
 
-    const messageResponse = await opencode.sendMessage(sessionId, enrichedPrompt, {
+    const messageResponse = await harness.sendMessage(sessionId, enrichedPrompt, {
       model: { providerID, modelID },
       system: BIRDHOUSE_SYSTEM_PROMPT,
       parts: promptParts,
@@ -86,7 +88,7 @@ export async function sendFirstMessage(
     // Async mode: Fire-and-forget (return immediately, process in background)
     log.server.info({ agent_id: agentId, session_id: sessionId, wait }, "Sending first message (async)");
 
-    opencode
+    harness
       .sendMessage(sessionId, enrichedPrompt, {
         model: { providerID, modelID },
         system: BIRDHOUSE_SYSTEM_PROMPT,

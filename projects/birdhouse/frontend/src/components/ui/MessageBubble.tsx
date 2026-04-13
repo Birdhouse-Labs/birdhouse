@@ -1,10 +1,10 @@
 // ABOUTME: Renders individual chat message bubbles with role-based styling
 // ABOUTME: Supports user and assistant messages with markdown content
 
-import type { Message as OpencodeMessage } from "@opencode-ai/sdk/client";
 import Popover from "corvu/popover";
 import { Braces, Check, Copy, LibraryBig, MoreVertical, RotateCcw, Split } from "lucide-solid";
 import { type Accessor, type Component, createMemo, createSignal, For, Show } from "solid-js";
+import type { BirdhouseAssistantMessageInfo, BirdhouseMessageInfo } from "../../../../server/src/harness/types";
 import { formatSmartTime } from "../../adapters/utils/time-utils";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useZIndex } from "../../contexts/ZIndexContext";
@@ -47,20 +47,21 @@ export interface MessageBubbleProps {
   onQuestionAnswered?: (questionId: string) => void;
 }
 const formatError = (
-  opencodeMessage: OpencodeMessage | undefined,
+  messageInfo: BirdhouseMessageInfo | undefined,
 ): { id: string; type: "error"; errorType: string; message: string } | undefined => {
-  if (!opencodeMessage) return;
-  if (opencodeMessage.role === "user") return;
-  if (!opencodeMessage.error) return;
-  if (opencodeMessage.error.name === "MessageAbortedError") return;
+  if (!messageInfo || messageInfo.role !== "assistant") return;
+  if (!messageInfo.error) return;
+  if (messageInfo.error.name === "MessageAbortedError") return;
 
-  const ocError = opencodeMessage.error;
+  const assistantInfo = messageInfo as BirdhouseAssistantMessageInfo;
+  const assistantError = assistantInfo.error;
+  if (!assistantError) return;
 
   return {
-    id: `error_${opencodeMessage.id}`,
+    id: `error_${assistantInfo.id}`,
     type: "error",
-    errorType: ocError.name,
-    message: String(ocError.data.message),
+    errorType: assistantError.name,
+    message: String(assistantError.data?.["message"] ?? assistantError.name),
   };
 };
 
@@ -123,15 +124,13 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
     return props.message.isStreaming || (props.message.blocks?.some((b) => b.type === "tool") ?? false);
   });
 
-  // Get OpenCode message (undefined for system events, which is OK)
-  const opencodeMessage = props.message.opencodeMessage;
+  const messageInfo = props.message.messageInfo;
 
-  const wasInterrupted =
-    opencodeMessage?.role === "user" ? false : opencodeMessage?.error?.name === "MessageAbortedError";
+  const wasInterrupted = messageInfo?.role === "assistant" ? messageInfo.error?.name === "MessageAbortedError" : false;
 
-  const mode = opencodeMessage?.role === "user" ? null : opencodeMessage?.mode;
+  const mode = messageInfo?.role === "assistant" ? messageInfo.mode : null;
 
-  const error = formatError(opencodeMessage);
+  const error = formatError(messageInfo);
   const fileAttachments = createMemo(() => props.message.blocks?.filter(isFileBlock) ?? []);
 
   const formatErrorForDialog = () => {

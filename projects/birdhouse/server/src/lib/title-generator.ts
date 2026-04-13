@@ -1,7 +1,7 @@
-// ABOUTME: Title generation service using OpenCode's LLM generation API.
+// ABOUTME: Title generation service using the harness generation capability.
 // ABOUTME: Applies Birdhouse-owned title rules from a dedicated prompt file.
 
-import type { Deps } from "../dependencies";
+import { type Deps, getDefaultHarness } from "../dependencies";
 import { getOpenCodeDataDir } from "./database-paths";
 import { buildTitleMessage, TITLE_PROMPT } from "./prompts/title-prompt";
 
@@ -17,20 +17,19 @@ export interface TitleGenerationResult {
 
 /**
  * Generate a title for an agent conversation using Birdhouse title rules
- * @param deps OpenCode and log dependencies
+ * @param deps Harness and log dependencies
  * @param options Message to generate title for
  * @returns Generated title
  */
 export async function generateTitle(
-  deps: Pick<Deps, "opencode" | "log">,
+  deps: Pick<Deps, "harnesses" | "log">,
   options: TitleGenerationOptions,
 ): Promise<TitleGenerationResult> {
-  const {
-    opencode: { generate },
-    log,
-  } = deps;
+  const { log } = deps;
+  const harness = getDefaultHarness(deps);
 
   const { message, sourceAgentTitle, workspaceId } = options;
+  const generateCapability = harness.capabilities.generate;
 
   // Build system instructions for clone context
   const systemInstructions: string[] = [];
@@ -51,7 +50,11 @@ export async function generateTitle(
   );
 
   try {
-    const title = await generate({
+    if (!generateCapability) {
+      throw new Error("Title generation not supported by harness");
+    }
+
+    const title = await generateCapability.generate({
       prompt: TITLE_PROMPT,
       system: systemInstructions.length > 0 ? systemInstructions : undefined,
       message: buildTitleMessage(message),

@@ -1,8 +1,8 @@
 // ABOUTME: Tests for token aggregation logic
 // ABOUTME: Validates last-message-only calculation matching OpenCode TUI behavior
 
-import type { AssistantMessage, UserMessage } from "@opencode-ai/sdk";
 import { describe, expect, test, vi } from "vitest";
+import type { BirdhouseAssistantMessageInfo, BirdhouseUserMessageInfo } from "../../../server/src/harness/types";
 import type { Message } from "../types/messages";
 import { aggregateTokenStats } from "./token-aggregation";
 
@@ -22,16 +22,19 @@ vi.mock("../stores/model-limits", () => ({
 }));
 
 /**
- * Helper to create mock OpenCode message info for tests
+ * Helper to create mock harness message info for tests
  */
-function createMockOpencodeMessage(id: string, role: "user" | "assistant"): UserMessage | AssistantMessage {
+function createMockMessageInfo(
+  id: string,
+  role: "user" | "assistant",
+): BirdhouseUserMessageInfo | BirdhouseAssistantMessageInfo {
   if (role === "user") {
     return {
       id,
       sessionID: "test_session",
       role: "user",
       time: { created: Date.now() },
-    } as UserMessage;
+    } as BirdhouseUserMessageInfo;
   }
   return {
     id,
@@ -50,7 +53,7 @@ function createMockOpencodeMessage(id: string, role: "user" | "assistant"): User
       cache: { read: 0, write: 0 },
     },
     path: { cwd: "/", root: "/" },
-  } as AssistantMessage;
+  } as BirdhouseAssistantMessageInfo;
 }
 
 describe("aggregateTokenStats", () => {
@@ -90,7 +93,7 @@ describe("aggregateTokenStats", () => {
           reasoning: 0,
           cache: { read: 200, write: 100 },
         },
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ];
 
@@ -109,7 +112,7 @@ describe("aggregateTokenStats", () => {
         content: "Hello",
         blocks: [],
         timestamp: new Date(),
-        opencodeMessage: createMockOpencodeMessage("msg_1", "user"),
+        messageInfo: createMockMessageInfo("msg_1", "user"),
       },
       {
         id: "msg_2",
@@ -117,7 +120,7 @@ describe("aggregateTokenStats", () => {
         content: "Hi there",
         blocks: [],
         timestamp: new Date(),
-        opencodeMessage: createMockOpencodeMessage("msg_2", "assistant"),
+        messageInfo: createMockMessageInfo("msg_2", "assistant"),
       },
     ];
 
@@ -142,7 +145,7 @@ describe("aggregateTokenStats", () => {
           reasoning: 100,
           cache: { read: 500, write: 0 },
         },
-        opencodeMessage: createMockOpencodeMessage("msg_2", "assistant"),
+        messageInfo: createMockMessageInfo("msg_2", "assistant"),
       },
       {
         id: "msg_1",
@@ -156,7 +159,7 @@ describe("aggregateTokenStats", () => {
           reasoning: 0,
           cache: { read: 200, write: 100 },
         },
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ];
 
@@ -176,7 +179,7 @@ describe("aggregateTokenStats", () => {
         content: "Response without tokens",
         blocks: [],
         timestamp: new Date(),
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ];
 
@@ -199,7 +202,7 @@ describe("aggregateTokenStats", () => {
           reasoning: 0,
           cache: { read: 1000, write: 200 },
         },
-        opencodeMessage: createMockOpencodeMessage("msg_3", "assistant"),
+        messageInfo: createMockMessageInfo("msg_3", "assistant"),
       },
       {
         id: "msg_2",
@@ -213,7 +216,7 @@ describe("aggregateTokenStats", () => {
           reasoning: 1000,
           cache: { read: 500, write: 100 },
         },
-        opencodeMessage: createMockOpencodeMessage("msg_2", "assistant"),
+        messageInfo: createMockMessageInfo("msg_2", "assistant"),
       },
       {
         id: "msg_1",
@@ -227,7 +230,7 @@ describe("aggregateTokenStats", () => {
           reasoning: 500,
           cache: { read: 100, write: 50 },
         },
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ];
 
@@ -252,7 +255,7 @@ describe("aggregateTokenStats", () => {
           reasoning: 200,
           cache: { read: 300, write: 100 },
         },
-        opencodeMessage: createMockOpencodeMessage("msg_1", "assistant"),
+        messageInfo: createMockMessageInfo("msg_1", "assistant"),
       },
     ];
 
@@ -278,7 +281,7 @@ describe("aggregateTokenStats", () => {
           reasoning: 0,
           cache: { read: 140147, write: 977 },
         },
-        opencodeMessage: createMockOpencodeMessage("msg_last", "assistant"),
+        messageInfo: createMockMessageInfo("msg_last", "assistant"),
       },
     ];
 

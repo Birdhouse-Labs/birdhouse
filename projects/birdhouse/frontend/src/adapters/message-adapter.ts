@@ -1,8 +1,14 @@
-// ABOUTME: Main adapter that converts server messages (OpenCode) to UI message format
+// ABOUTME: Main adapter that converts server harness messages to UI message format
 // ABOUTME: Orchestrates part adapters and handles message-level metadata
 
-import type { Part } from "@opencode-ai/sdk";
-import type { Message as OCMessage } from "../../../server/src/lib/opencode-client";
+import type {
+  BirdhouseFilePart,
+  BirdhouseMessage,
+  BirdhousePart,
+  BirdhouseReasoningPart,
+  BirdhouseTextPart,
+  BirdhouseToolPart,
+} from "../../../server/src/harness/types";
 import type { ServerMessage, SystemEvent, TimelineItem } from "../../../server/src/types/agent-events";
 import type { AgentEventBlock, ContentBlock, Message as UIMessage } from "../types/messages";
 import { mapFilePart } from "./part-adapters/file-adapter";
@@ -11,33 +17,43 @@ import { mapTextPart } from "./part-adapters/text-adapter";
 import { mapToolPart } from "./part-adapters/tool-adapter";
 import { parseTimestamp } from "./utils/time-utils";
 
+function isTextPart(part: BirdhousePart): part is BirdhouseTextPart {
+  return part.type === "text" && "text" in part;
+}
+
+function isToolPart(part: BirdhousePart): part is BirdhouseToolPart {
+  return part.type === "tool";
+}
+
+function isReasoningPart(part: BirdhousePart): part is BirdhouseReasoningPart {
+  return part.type === "reasoning" && "text" in part;
+}
+
+function isFilePart(part: BirdhousePart): part is BirdhouseFilePart {
+  return part.type === "file" && "mime" in part && "url" in part;
+}
+
 /**
  * Map a single server message part to a UI ContentBlock
  * Returns null for unknown part types (like step-start) to gracefully skip them
  */
-function mapPart(part: Part): ContentBlock | null {
-  switch (part.type) {
-    case "text":
-      return mapTextPart(part);
-    case "tool":
-      return mapToolPart(part);
-    case "reasoning":
-      return mapReasoningPart(part);
-    case "file":
-      return mapFilePart(part);
-    default:
-      // Unknown part type - skip it gracefully (e.g., step-start, step-end)
-      return null;
-  }
+function mapPart(part: BirdhousePart): ContentBlock | null {
+  if (isTextPart(part)) return mapTextPart(part);
+  if (isToolPart(part)) return mapToolPart(part);
+  if (isReasoningPart(part)) return mapReasoningPart(part);
+  if (isFilePart(part)) return mapFilePart(part);
+
+  // Unknown part type - skip it gracefully (e.g., step-start, step-end)
+  return null;
 }
 
 /**
  * Extract plain text content from message parts
  * Concatenates all text parts for the message.content field
  */
-function extractTextContent(parts: Part[]): string {
+function extractTextContent(parts: BirdhousePart[]): string {
   return parts
-    .filter((part): part is Part & { type: "text" } => part.type === "text")
+    .filter(isTextPart)
     .map((part) => part.text)
     .join("\n\n");
 }
@@ -59,7 +75,7 @@ function mapServerMessage(serverMessage: ServerMessage): UIMessage {
   const uiMessage: UIMessage = {
     id: info.id,
     role: info.role,
-    opencodeMessage: info,
+    messageInfo: info,
     content,
     blocks,
     timestamp: parseTimestamp(info.time.created),
@@ -71,15 +87,17 @@ function mapServerMessage(serverMessage: ServerMessage): UIMessage {
     uiMessage.provider = info.providerID;
 
     // Add token usage data
-    uiMessage.tokens = {
-      input: info.tokens.input,
-      output: info.tokens.output,
-      reasoning: info.tokens.reasoning,
-      cache: {
-        read: info.tokens.cache.read,
-        write: info.tokens.cache.write,
-      },
-    };
+    if (info.tokens) {
+      uiMessage.tokens = {
+        input: info.tokens.input,
+        output: info.tokens.output,
+        reasoning: info.tokens.reasoning,
+        cache: {
+          read: info.tokens.cache.read,
+          write: info.tokens.cache.write,
+        },
+      };
+    }
   }
   return uiMessage;
 }
@@ -105,7 +123,7 @@ function mapSystemEvent(event: SystemEvent): UIMessage {
   return {
     id: event.id,
     role: "system",
-    opencodeMessage: undefined, // No real OpenCode message
+    messageInfo: undefined,
     content: "", // Empty per requirements
     blocks: [eventBlock],
     timestamp: new Date(event.timestamp),
@@ -132,9 +150,8 @@ export function mapMessages(items: TimelineItem[]): UIMessage[] {
 }
 
 /**
- * Map a single OpenCode message to UI Message
- * Kept for backward compatibility with existing code that expects OCMessage
+ * Map a single harness message to UI Message
  */
-export function mapMessage(ocMessage: OCMessage): UIMessage {
-  return mapServerMessage(ocMessage);
+export function mapMessage(message: BirdhouseMessage): UIMessage {
+  return mapServerMessage(message);
 }

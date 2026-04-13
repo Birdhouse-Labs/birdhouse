@@ -1,12 +1,12 @@
-// ABOUTME: Converts OpenCode tool parts to UI ToolBlock format
+// ABOUTME: Converts harness tool parts to UI ToolBlock format
 // ABOUTME: Parses tool state and maps to pending/running/completed/error status
 
-import type { ToolPart } from "@opencode-ai/sdk";
+import type { BirdhouseToolPart } from "../../../../server/src/harness/types";
 import type { ToolBlock } from "../../types/messages";
 import { extractMetadata } from "../utils/metadata-utils";
 
 /**
- * Structure of OpenCode tool state (based on API observation)
+ * Structure of harness tool state (based on API observation)
  */
 interface ToolState {
   status?: "pending" | "running" | "completed" | "error";
@@ -19,20 +19,20 @@ interface ToolState {
 }
 
 /**
- * Map OpenCode tool part to UI ToolBlock
+ * Map harness tool part to UI ToolBlock
  * Handles all 4 tool states: pending, running, completed, error
  */
-export function mapToolPart(part: ToolPart): ToolBlock {
+export function mapToolPart(part: BirdhouseToolPart): ToolBlock {
   const state = extractMetadata(part.state) as ToolState;
 
   const block: ToolBlock = {
     id: part.id,
     type: "tool",
-    callID: part.callID,
-    name: part.tool,
+    callID: part.callID || "",
+    name: part.tool || "",
     status: state.status || "pending",
     input: state.input || {},
-    timestamp: new Date(),
+    ...(part.time?.start !== undefined ? { timestamp: new Date(part.time.start), time: part.time } : {}),
   };
 
   // Add optional fields only if they exist
