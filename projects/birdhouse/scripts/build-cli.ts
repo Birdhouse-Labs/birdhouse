@@ -113,6 +113,7 @@ const frontendBuild = Bun.spawn(['bun', 'run', 'build'], {
   env: {
     ...process.env,
     VITE_SERVER_PORT: '50100', // Production: server serves frontend on base port
+    NODE_OPTIONS: '--max-old-space-size=4096',
   },
   stdout: 'inherit',
   stderr: 'inherit',
