@@ -15,6 +15,7 @@ export async function generateTitle(c: Context, deps: Pick<Deps, "harnesses" | "
     // Parse and validate request body
     const body = await c.req.json();
     const { message, source_agent_title } = body;
+    const workspace = c.get("workspace");
 
     // Validate required fields
     if (!message || typeof message !== "string" || message.trim() === "") {
@@ -33,6 +34,7 @@ export async function generateTitle(c: Context, deps: Pick<Deps, "harnesses" | "
     const result = await generateTitleService(deps, {
       message: message.trim(),
       sourceAgentTitle: source_agent_title?.trim(),
+      workspaceId: workspace?.workspace_id,
     });
 
     // Return generated title
