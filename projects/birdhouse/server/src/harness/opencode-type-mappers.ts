@@ -229,7 +229,9 @@ export function mapOpenCodeProvidersResponseToBirdhouseProvidersResponse(
           {
             id: model.id,
             name: model.name,
-            ...(model.limit !== undefined ? { limit: { context: model.limit.context, output: model.limit.output } } : {}),
+            ...(model.limit !== undefined
+              ? { limit: { context: model.limit.context, output: model.limit.output } }
+              : {}),
           },
         ]),
       ),
