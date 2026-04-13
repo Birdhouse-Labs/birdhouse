@@ -23,6 +23,8 @@ vi.mock("../services/agents-api", () => ({
 // Mock the router navigate function
 vi.mock("@solidjs/router", () => ({
   useNavigate: () => vi.fn(),
+  useSearchParams: () => [{}, vi.fn()],
+  useParams: () => ({}),
 }));
 
 // Mock fetch for status endpoint

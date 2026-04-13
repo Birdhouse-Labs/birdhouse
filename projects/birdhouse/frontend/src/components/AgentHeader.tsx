@@ -1,21 +1,24 @@
 // ABOUTME: Agent top bar component with context usage indicator and gradient pulse
-// ABOUTME: Shows agent title, model, context donut, and working state with gradient pulse
+// ABOUTME: Shows agent title, context donut, and working state with gradient pulse
 
 import Popover from "corvu/popover";
+import Tooltip from "corvu/tooltip";
 import { Archive, Download, Edit, Hammer, Lightbulb, MoreVertical, Notebook, NotebookText, X } from "lucide-solid";
 import { type Component, createEffect, createMemo, createResource, createSignal, onCleanup, Show } from "solid-js";
 import { API_ENDPOINT_BASE, buildWorkspaceUrl } from "../config/api";
 import { useStreaming } from "../contexts/StreamingContext";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { aggregateTokenStats } from "../domain/token-aggregation";
+import { useModalRoute } from "../lib/routing";
 import { getAgentNote } from "../services/agent-notes-api";
-
 import { borderColor } from "../styles/containerStyles";
 import type { Message } from "../types/messages";
+import { recordAgentView } from "../utils/agent-navigation";
 import AgentNotesDialog from "./AgentNotesDialog";
 import ArchiveAgentDialog from "./ArchiveAgentDialog";
 import ContextUsageIndicator from "./ContextUsageIndicator";
 import EditAgentDialog from "./EditAgentDialog";
+import MarkdownRenderer from "./MarkdownRenderer";
 import UnarchiveAgentDialog from "./UnarchiveAgentDialog";
 import { IconButton, MenuItemButton } from "./ui";
 
@@ -36,13 +39,14 @@ export interface AgentHeaderProps {
 export const AgentHeader: Component<AgentHeaderProps> = (props) => {
   const streaming = useStreaming();
   const baseZIndex = useZIndex();
+  const { openModal } = useModalRoute();
   const [isWorking, setIsWorking] = createSignal(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = createSignal(false);
   const [isArchiveDialogOpen, setIsArchiveDialogOpen] = createSignal(false);
   const [isUnarchiveDialogOpen, setIsUnarchiveDialogOpen] = createSignal(false);
   const [isPopoverOpen, setIsPopoverOpen] = createSignal(false);
   const [isNotesDialogOpen, setIsNotesDialogOpen] = createSignal(false);
-  const [hasNotes, setHasNotes] = createSignal(false);
+  const [noteContent, setNoteContent] = createSignal("");
   const [currentTitle, setCurrentTitle] = createSignal(props.title);
   const [showClickFeedback, setShowClickFeedback] = createSignal(false);
   const [isExporting, setIsExporting] = createSignal(false);
@@ -125,12 +129,12 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
     getAgentNote(workspaceId, agentId)
       .then((note) => {
         if (!cancelled) {
-          setHasNotes(note.trim().length > 0);
+          setNoteContent(note);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setHasNotes(false);
+          setNoteContent("");
         }
       });
 
@@ -240,8 +244,8 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
     }
 
     getAgentNote(props.workspaceId, props.agentId)
-      .then((note) => setHasNotes(note.trim().length > 0))
-      .catch(() => setHasNotes(false));
+      .then((note) => setNoteContent(note))
+      .catch(() => setNoteContent(""));
   };
 
   const handleHeaderClick = (e: MouseEvent) => {
@@ -291,151 +295,172 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
 
         {/* Content wrapper - creates separate stacking context above gradient (z:2) */}
         <div class="content-wrapper">
-          {/* Context Usage Donut Indicator */}
-          <ContextUsageIndicator
-            percentage={percentage()}
-            model={tokenStats().model}
-            limit={tokenStats().limit}
-            used={tokenStats().used}
-          />
-
-          {/* Title - primary color always, white when working */}
-          <span
-            class="text-sm font-medium transition-all"
-            classList={{
-              "text-text-primary": !isWorking(),
-              "text-text-on-accent": isWorking(),
-            }}
-          >
-            {currentTitle()}
-          </span>
-
-          {/* Model name - secondary normally, white when working */}
-          <span
-            class="text-xs ml-auto mr-2 transition-colors"
-            classList={{
-              "text-text-secondary": !isWorking(),
-              "text-text-on-accent": isWorking(),
-            }}
-          >
-            {props.modelName}
-          </span>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsNotesDialogOpen(true);
-            }}
-            class="relative z-10 flex items-center justify-center w-7 h-7 rounded-lg transition-all text-text-secondary hover:bg-surface-overlay hover:text-text-primary"
-            classList={{
-              "!text-text-on-accent hover:bg-white/20": isWorking(),
-              "bg-accent/15 text-accent hover:bg-accent/25": hasNotes() && !isWorking(),
-            }}
-            aria-label="Open agent notes"
-            title="Open agent notes"
-            data-ph-capture-attribute-button-type="open-agent-notes"
-            data-ph-capture-attribute-agent-id={props.agentId}
-            data-ph-capture-attribute-has-notes={hasNotes() ? "true" : "false"}
-          >
-            <Show when={hasNotes()} fallback={<Notebook size={14} />}>
-              <NotebookText size={14} />
-            </Show>
-          </button>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              props.onModeChange(props.mode === "build" ? "plan" : "build");
-            }}
-            class="relative z-10 flex items-center justify-center w-7 h-7 rounded-lg transition-all"
-            classList={{
-              "bg-accent/20 text-accent hover:bg-accent/30": props.mode === "plan" && !isWorking(),
-              "text-text-secondary hover:bg-surface-overlay hover:text-text-primary":
-                props.mode === "build" && !isWorking(),
-              "!text-text-on-accent hover:bg-white/20": isWorking(),
-            }}
-            aria-label={`Switch to ${props.mode === "build" ? "plan" : "build"} mode`}
-            title={`Current: ${props.mode} mode. Click to switch.`}
-          >
-            {props.mode === "plan" ? <Lightbulb size={14} /> : <Hammer size={14} />}
-          </button>
-
-          {/* Menu Button with Popover */}
-          <Popover open={isPopoverOpen()} onOpenChange={setIsPopoverOpen}>
-            <Popover.Trigger
-              as={IconButton}
-              icon={<MoreVertical size={16} />}
-              variant={isWorking() ? "secondary" : "ghost"}
-              aria-label="Actions menu"
-              fixedSize
-              class={isWorking() ? "!text-text-on-accent !bg-transparent hover:!bg-white/20" : ""}
-              data-ph-capture-attribute-button-type="open-agent-actions-menu"
-              data-ph-capture-attribute-agent-id={props.agentId}
+          {/* Left zone: donut + title — flex-1 so it fills remaining space and title can truncate */}
+          <div class="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
+            {/* Context Usage Donut Indicator */}
+            <ContextUsageIndicator
+              percentage={percentage()}
+              model={tokenStats().model}
+              limit={tokenStats().limit}
+              used={tokenStats().used}
             />
-            <Popover.Portal>
-              <Popover.Content
-                class="w-48 rounded-xl py-1 px-2 border shadow-2xl bg-surface-raised border-border"
-                style={{ "z-index": baseZIndex }}
-              >
-                <MenuItemButton
-                  icon={<Edit size={16} />}
-                  onClick={handleEditClick}
-                  data-ph-capture-attribute-button-type="edit-agent"
-                  data-ph-capture-attribute-agent-id={props.agentId}
-                >
-                  Edit
-                </MenuItemButton>
-                <MenuItemButton
-                  icon={<Download size={16} />}
-                  onClick={handleExportClick}
-                  disabled={isExporting()}
-                  data-ph-capture-attribute-button-type="export-agent"
-                  data-ph-capture-attribute-agent-id={props.agentId}
-                  data-ph-capture-attribute-is-exporting={isExporting() ? "true" : "false"}
-                >
-                  {isExporting() ? "Exporting..." : "Export"}
-                </MenuItemButton>
-                {isArchived() ? (
-                  <MenuItemButton
-                    icon={<Archive size={16} />}
-                    onClick={handleUnarchiveClick}
-                    data-ph-capture-attribute-button-type="unarchive-agent-menu"
-                    data-ph-capture-attribute-agent-id={props.agentId}
-                  >
-                    Unarchive
-                  </MenuItemButton>
-                ) : (
-                  <MenuItemButton
-                    icon={<Archive size={16} />}
-                    onClick={handleArchiveClick}
-                    data-ph-capture-attribute-button-type="archive-agent-menu"
-                    data-ph-capture-attribute-agent-id={props.agentId}
-                  >
-                    Archive
-                  </MenuItemButton>
-                )}
-              </Popover.Content>
-            </Popover.Portal>
-          </Popover>
 
-          {/* Close Button (for modals) */}
-          <Show when={props.showCloseButton}>
+            {/* Title - truncates when the container is too narrow */}
+            <span
+              class="text-sm font-medium truncate transition-all"
+              classList={{
+                "text-text-primary": !isWorking(),
+                "text-text-on-accent": isWorking(),
+              }}
+            >
+              {currentTitle()}
+            </span>
+          </div>
+
+          {/* Right zone: buttons — flex-shrink-0 so they're never pushed off screen */}
+          <div class="flex items-center gap-3 flex-shrink-0">
+            <Tooltip openDelay={150} closeDelay={0} openOnFocus={false} placement="bottom">
+              <Tooltip.Trigger
+                as="button"
+                type="button"
+                onClick={(e: MouseEvent) => {
+                  e.stopPropagation();
+                  setIsNotesDialogOpen(true);
+                }}
+                class="relative z-10 flex items-center justify-center w-7 h-7 rounded-lg transition-all text-text-secondary hover:bg-surface-overlay hover:text-text-primary"
+                classList={{
+                  "!text-text-on-accent hover:bg-white/20": isWorking(),
+                  "bg-accent/15 text-accent hover:bg-accent/25": noteContent().trim().length > 0 && !isWorking(),
+                }}
+                aria-label="Open agent notes"
+                data-ph-capture-attribute-button-type="open-agent-notes"
+                data-ph-capture-attribute-agent-id={props.agentId}
+                data-ph-capture-attribute-has-notes={noteContent().trim().length > 0 ? "true" : "false"}
+              >
+                <Show when={noteContent().trim().length > 0} fallback={<Notebook size={14} />}>
+                  <NotebookText size={14} />
+                </Show>
+              </Tooltip.Trigger>
+
+              <Show when={noteContent().trim().length > 0}>
+                <Tooltip.Portal>
+                  <Tooltip.Content
+                    class="w-[min(92vw,36rem)] max-h-[80vh] overflow-y-auto rounded-xl border shadow-2xl bg-surface-raised border-border"
+                    style={{ "z-index": baseZIndex }}
+                  >
+                    <div class="px-4 py-3">
+                      <MarkdownRenderer
+                        content={noteContent()}
+                        workspaceId={props.workspaceId}
+                        onReferenceLinkClick={(reference) => {
+                          if (reference.type === "agent") {
+                            recordAgentView(reference.identifier);
+                            openModal("agent", reference.identifier);
+                          }
+                        }}
+                        class="text-sm"
+                      />
+                    </div>
+                  </Tooltip.Content>
+                </Tooltip.Portal>
+              </Show>
+            </Tooltip>
+
             <button
               type="button"
-              onClick={props.onClose}
-              class="relative z-10 flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
-              classList={{
-                "text-text-on-accent hover:bg-white/10": isWorking(),
-                "text-text-muted hover:bg-surface-overlay hover:text-text-primary": !isWorking(),
+              onClick={(e) => {
+                e.stopPropagation();
+                props.onModeChange(props.mode === "build" ? "plan" : "build");
               }}
-              aria-label="Close modal"
-              title="Close modal"
+              class="relative z-10 flex items-center justify-center w-7 h-7 rounded-lg transition-all"
+              classList={{
+                "bg-accent/20 text-accent hover:bg-accent/30": props.mode === "plan" && !isWorking(),
+                "text-text-secondary hover:bg-surface-overlay hover:text-text-primary":
+                  props.mode === "build" && !isWorking(),
+                "!text-text-on-accent hover:bg-white/20": isWorking(),
+              }}
+              aria-label={`Switch to ${props.mode === "build" ? "plan" : "build"} mode`}
+              title={`Current: ${props.mode} mode. Click to switch.`}
             >
-              <X size={16} />
+              {props.mode === "plan" ? <Lightbulb size={14} /> : <Hammer size={14} />}
             </button>
-          </Show>
+
+            {/* Menu Button with Popover */}
+            <Popover open={isPopoverOpen()} onOpenChange={setIsPopoverOpen}>
+              <Popover.Trigger
+                as={IconButton}
+                icon={<MoreVertical size={16} />}
+                variant={isWorking() ? "secondary" : "ghost"}
+                aria-label="Actions menu"
+                fixedSize
+                class={isWorking() ? "!text-text-on-accent !bg-transparent hover:!bg-white/20" : ""}
+                data-ph-capture-attribute-button-type="open-agent-actions-menu"
+                data-ph-capture-attribute-agent-id={props.agentId}
+              />
+              <Popover.Portal>
+                <Popover.Content
+                  class="w-48 rounded-xl py-1 px-2 border shadow-2xl bg-surface-raised border-border"
+                  style={{ "z-index": baseZIndex }}
+                >
+                  <MenuItemButton
+                    icon={<Edit size={16} />}
+                    onClick={handleEditClick}
+                    data-ph-capture-attribute-button-type="edit-agent"
+                    data-ph-capture-attribute-agent-id={props.agentId}
+                  >
+                    Edit
+                  </MenuItemButton>
+                  <MenuItemButton
+                    icon={<Download size={16} />}
+                    onClick={handleExportClick}
+                    disabled={isExporting()}
+                    data-ph-capture-attribute-button-type="export-agent"
+                    data-ph-capture-attribute-agent-id={props.agentId}
+                    data-ph-capture-attribute-is-exporting={isExporting() ? "true" : "false"}
+                  >
+                    {isExporting() ? "Exporting..." : "Export"}
+                  </MenuItemButton>
+                  {isArchived() ? (
+                    <MenuItemButton
+                      icon={<Archive size={16} />}
+                      onClick={handleUnarchiveClick}
+                      data-ph-capture-attribute-button-type="unarchive-agent-menu"
+                      data-ph-capture-attribute-agent-id={props.agentId}
+                    >
+                      Unarchive
+                    </MenuItemButton>
+                  ) : (
+                    <MenuItemButton
+                      icon={<Archive size={16} />}
+                      onClick={handleArchiveClick}
+                      data-ph-capture-attribute-button-type="archive-agent-menu"
+                      data-ph-capture-attribute-agent-id={props.agentId}
+                    >
+                      Archive
+                    </MenuItemButton>
+                  )}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover>
+
+            {/* Close Button (for modals) */}
+            <Show when={props.showCloseButton}>
+              <button
+                type="button"
+                onClick={props.onClose}
+                class="relative z-10 flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
+                classList={{
+                  "text-text-on-accent hover:bg-white/10": isWorking(),
+                  "text-text-muted hover:bg-surface-overlay hover:text-text-primary": !isWorking(),
+                }}
+                aria-label="Close modal"
+                title="Close modal"
+              >
+                <X size={16} />
+              </button>
+            </Show>
+          </div>
+          {/* end right zone */}
         </div>
 
         <div

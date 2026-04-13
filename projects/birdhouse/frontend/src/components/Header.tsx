@@ -213,11 +213,12 @@ const Header: Component<HeaderProps> = (props) => {
         {/* Settings Popover */}
         <Popover open={settingsOpen()} onOpenChange={setSettingsOpen}>
           <Popover.Trigger
-            class="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all hover:bg-surface-overlay text-text-secondary"
+            class="flex items-center gap-2 px-2 py-1.5 sm:px-3 rounded-lg transition-all hover:bg-surface-overlay text-text-secondary"
+            aria-label="Settings"
             data-ph-capture-attribute-button-type="open-settings-popover"
           >
             <Settings size={18} />
-            <span class="text-sm font-medium">Settings</span>
+            <span class="hidden sm:inline text-sm font-medium">Settings</span>
           </Popover.Trigger>
           <Popover.Portal>
             <Popover.Content

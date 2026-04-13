@@ -47,6 +47,8 @@ vi.mock("../services/agents-api", () => ({
 
 vi.mock("@solidjs/router", () => ({
   useNavigate: () => vi.fn(),
+  useSearchParams: () => [{}, vi.fn()],
+  useParams: () => ({}),
 }));
 
 globalThis.fetch = vi.fn() as typeof fetch;

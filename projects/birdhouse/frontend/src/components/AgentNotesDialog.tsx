@@ -2,10 +2,12 @@
 // ABOUTME: Loads notes on open and saves them when the user closes the scratchpad.
 
 import Dialog from "corvu/dialog";
-import { type Component, createEffect, createSignal, Show } from "solid-js";
+import { batch, type Component, createEffect, createMemo, createSignal, Show } from "solid-js";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { clearAgentNote, getAgentNote, saveAgentNote } from "../services/agent-notes-api";
 import { borderColor, cardSurfaceFlat } from "../styles/containerStyles";
+import MarkdownRenderer from "./MarkdownRenderer";
+import { ButtonGroup } from "./ui";
 
 export interface AgentNotesDialogProps {
   agentId: string;
@@ -34,7 +36,8 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
   const [saveState, setSaveState] = createSignal<SaveState>("idle");
   const [hasLoaded, setHasLoaded] = createSignal(false);
   const [loadFailed, setLoadFailed] = createSignal(false);
-  let textareaRef: HTMLTextAreaElement | undefined;
+  const [viewMode, setViewMode] = createSignal<"edit" | "preview">("edit");
+  const [textareaRef, setTextareaRef] = createSignal<HTMLTextAreaElement | null>(null);
   let lastPersistedText = "";
   let activeLoad = 0;
   let isClosing = false;
@@ -87,10 +90,13 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
     }
 
     const loadId = ++activeLoad;
-    setHasLoaded(false);
-    setLoadFailed(false);
-    setSaveState("idle");
-    setText("");
+    batch(() => {
+      setHasLoaded(false);
+      setLoadFailed(false);
+      setSaveState("idle");
+      setText("");
+      setViewMode("edit");
+    });
     lastPersistedText = "";
 
     getAgentNote(props.workspaceId, props.agentId)
@@ -107,12 +113,26 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
       });
   });
 
+  const autoResize = () => {
+    const el = textareaRef();
+    if (!el) return;
+    el.style.height = "auto";
+    const maxHeight = window.innerHeight * 0.5;
+    const newHeight = Math.min(el.scrollHeight, maxHeight);
+    el.style.height = `${newHeight}px`;
+    el.style.overflow = el.scrollHeight > maxHeight ? "auto" : "hidden";
+  };
+
+  // Re-runs whenever the textarea mounts or unmounts (e.g. switching edit/preview),
+  // and whenever hasLoaded changes — ensuring height and focus are always current.
   createEffect(() => {
-    if (!props.open || !hasLoaded() || !textareaRef) return;
-    textareaRef.focus();
+    const el = textareaRef();
+    if (!props.open || !hasLoaded() || !el) return;
+    el.focus();
+    queueMicrotask(() => autoResize());
   });
 
-  const uiState = () => getAgentNotesDialogUiState(hasLoaded(), loadFailed(), saveState());
+  const uiState = createMemo(() => getAgentNotesDialogUiState(hasLoaded(), loadFailed(), saveState()));
 
   return (
     <Dialog
@@ -134,24 +154,57 @@ const AgentNotesDialog: Component<AgentNotesDialogProps> = (props) => {
           class={`fixed left-1/2 top-1/2 w-[min(92vw,42rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl ${cardSurfaceFlat} shadow-2xl`}
           style={{ "z-index": baseZIndex }}
         >
-          <div class={`border-b px-5 py-4 ${borderColor}`}>
-            <div>
-              <Dialog.Label class="text-lg font-semibold text-heading">Agent Notes</Dialog.Label>
-              <p class="mt-1 text-sm text-text-secondary">Jot down anything you want to remember for this agent.</p>
+          <div class={`border-b px-5 py-3 ${borderColor}`}>
+            <div class="flex items-center gap-4">
+              <Dialog.Label class="text-lg font-semibold text-heading flex-1 min-w-0 truncate">
+                Agent Notes
+              </Dialog.Label>
+              <ButtonGroup
+                items={[
+                  { value: "edit", label: "Edit" },
+                  { value: "preview", label: "Preview" },
+                ]}
+                value={viewMode()}
+                onChange={(v) => setViewMode(v as "edit" | "preview")}
+                class="flex-shrink-0"
+              />
             </div>
           </div>
 
           <div class="p-5">
-            <textarea
-              ref={(el) => {
-                textareaRef = el;
-              }}
-              value={text()}
-              onInput={(e) => setText(e.currentTarget.value)}
-              disabled={uiState().isTextareaDisabled}
-              class="min-h-64 w-full resize-y rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-accent"
-              placeholder="Scratchpad notes for this agent"
-            />
+            <Show
+              when={viewMode() === "edit"}
+              fallback={
+                <div class="max-h-[50vh] overflow-y-auto rounded-xl border border-border bg-surface px-4 py-3">
+                  <Show
+                    when={text().trim().length > 0}
+                    fallback={<p class="text-sm text-text-muted">Nothing to preview.</p>}
+                  >
+                    <MarkdownRenderer content={text()} class="text-sm" />
+                  </Show>
+                </div>
+              }
+            >
+              <textarea
+                ref={setTextareaRef}
+                value={text()}
+                onInput={(e) => {
+                  setText(e.currentTarget.value);
+                  autoResize();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && e.metaKey && !uiState().isSaveDisabled) {
+                    e.preventDefault();
+                    void handleSaveAndClose();
+                  }
+                }}
+                disabled={uiState().isTextareaDisabled}
+                rows={6}
+                class="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-accent"
+                style={{ overflow: "hidden" }}
+                placeholder="Scratchpad notes for this agent"
+              />
+            </Show>
 
             <Show when={uiState().errorMessage}>
               {(message) => <p class="mt-3 text-sm text-danger">{message()}</p>}
