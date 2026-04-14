@@ -297,13 +297,15 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
         <div class="content-wrapper">
           {/* Left zone: donut + title — flex-1 so it fills remaining space and title can truncate */}
           <div class="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
-            {/* Context Usage Donut Indicator */}
-            <ContextUsageIndicator
-              percentage={percentage()}
-              model={tokenStats().model}
-              limit={tokenStats().limit}
-              used={tokenStats().used}
-            />
+            {/* Context Usage Donut Indicator — hidden when limit is unknown (0) */}
+            <Show when={tokenStats().limit > 0}>
+              <ContextUsageIndicator
+                percentage={percentage()}
+                model={tokenStats().model}
+                limit={tokenStats().limit}
+                used={tokenStats().used}
+              />
+            </Show>
 
             {/* Title - truncates when the container is too narrow */}
             <span

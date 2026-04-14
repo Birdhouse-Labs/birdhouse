@@ -72,7 +72,9 @@ describe("GET /api/models", () => {
     });
   });
 
-  test("should use default contextLimit of 200_000 when limit is missing", async () => {
+  test("should use contextLimit of 0 when limit is missing (unknown limit)", async () => {
+    // Models without a limit from opencode get contextLimit=0, meaning unknown.
+    // The frontend hides the context indicator when limit=0.
     const mockProviders = {
       providers: [
         {
@@ -111,9 +113,43 @@ describe("GET /api/models", () => {
         id: "custom-provider/custom-model",
         name: "Custom Model",
         provider: "Custom Provider",
-        contextLimit: 200_000,
+        contextLimit: 0,
         outputLimit: 0,
       });
+    });
+  });
+
+  test("should use contextLimit of 0 when opencode reports limit.context=0 (unknown limit)", async () => {
+    // opencode returns limit.context=0 for models it has no context data for.
+    // We treat this the same as missing — 0 means unknown, not actually 0 tokens.
+    const mockProviders = {
+      providers: [
+        {
+          id: "some-provider",
+          name: "Some Provider",
+          models: {
+            "some-model": {
+              id: "some-model",
+              name: "Some Model",
+              limit: { context: 0, output: 0 },
+            },
+          },
+        },
+      ],
+    };
+
+    const deps = await createTestDeps();
+    deps.harness.getProviders = async () => mockProviders as never;
+
+    await withDeps(deps, async () => {
+      const app = await withWorkspaceContext(createModelRoutes);
+      const req = new Request("http://localhost/");
+      const res = await app.fetch(req);
+
+      expect(res.status).toBe(200);
+
+      const models = (await res.json()) as Array<{ contextLimit: number }>;
+      expect(models[0].contextLimit).toBe(0);
     });
   });
 

@@ -41,6 +41,10 @@ export interface BirdhouseModelRef {
 export interface BirdhouseProviderModel {
   id: string;
   name: string;
+  limit?: {
+    context: number;
+    output: number;
+  };
 }
 
 export interface BirdhouseProvider {
