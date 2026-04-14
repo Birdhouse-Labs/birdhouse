@@ -1,5 +1,5 @@
 // ABOUTME: Tests for AgentSearchDialog component
-// ABOUTME: Verifies open/close, idle state, debounce API call, and result rendering
+// ABOUTME: Verifies open/close, idle state, debounce API call, result rendering, and keyboard nav
 
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
@@ -20,6 +20,7 @@ vi.mock("../services/agents-api", () => ({
 let mockIsOpen = true;
 const mockCloseModal = vi.fn();
 const mockOpenModal = vi.fn();
+const mockNavigate = vi.fn();
 
 vi.mock("../lib/routing", () => ({
   useModalRoute: () => ({
@@ -28,6 +29,11 @@ vi.mock("../lib/routing", () => ({
     removeModalByType: vi.fn(),
     openModal: mockOpenModal,
   }),
+  useWorkspaceId: () => () => "test-workspace",
+}));
+
+vi.mock("@solidjs/router", () => ({
+  useNavigate: () => mockNavigate,
 }));
 
 vi.mock("corvu/dialog", () => {
@@ -36,8 +42,11 @@ vi.mock("corvu/dialog", () => {
   );
   Dialog.Portal = (props: { children: JSX.Element }) => <>{props.children}</>;
   Dialog.Overlay = () => null;
-  Dialog.Content = (props: { children: JSX.Element; class?: string }) => (
-    <div class={props.class}>{props.children}</div>
+  Dialog.Content = (props: { children: JSX.Element; class?: string; onKeyDown?: (e: KeyboardEvent) => void }) => (
+    // biome-ignore lint/a11y/noStaticElementInteractions: test mock — not a real interactive element
+    <div role="presentation" class={props.class} onKeyDown={props.onKeyDown}>
+      {props.children}
+    </div>
   );
   Dialog.Close = (props: { children: JSX.Element; class?: string; onClick?: () => void }) => (
     <button type="button" class={props.class} onClick={props.onClick}>
@@ -117,5 +126,111 @@ describe("AgentSearchDialog", () => {
       },
       { timeout: 1000 },
     );
+  });
+
+  // ---------------------------------------------------------------------------
+  // Keyboard navigation tests
+  // ---------------------------------------------------------------------------
+
+  describe("keyboard navigation", () => {
+    const twoResults = [
+      makeResult({ agentId: "agent-1", title: "Alpha Agent" }),
+      makeResult({ agentId: "agent-2", sessionId: "ses-2", title: "Beta Agent" }),
+    ];
+
+    async function renderWithResults() {
+      mockSearchAgentMessages.mockResolvedValue(makeResponse(twoResults));
+      renderDialog();
+      const input = screen.getByLabelText("Search agent messages") as HTMLInputElement;
+      fireEvent.input(input, { target: { value: "agent" } });
+      // Wait for debounce + results
+      await waitFor(() => expect(screen.getByText("Alpha Agent")).toBeInTheDocument(), { timeout: 1000 });
+    }
+
+    it("ArrowDown moves active index from -1 to 0, highlighting the first result", async () => {
+      await renderWithResults();
+      const input = screen.getByLabelText("Search agent messages");
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      // First result link should become active (aria-current or highlighted)
+      await waitFor(() => {
+        const firstLink = screen.getByText("Alpha Agent").closest("a");
+        expect(firstLink).toHaveAttribute("aria-current", "true");
+      });
+    });
+
+    it("Enter with an active result opens agent in modal", async () => {
+      await renderWithResults();
+      const input = screen.getByLabelText("Search agent messages");
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      fireEvent.keyDown(input, { key: "Enter" });
+      await waitFor(() => expect(mockOpenModal).toHaveBeenCalledWith("agent", "agent-1"));
+    });
+
+    it("Cmd+Enter with an active result navigates directly to the agent", async () => {
+      await renderWithResults();
+      const input = screen.getByLabelText("Search agent messages");
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      fireEvent.keyDown(input, { key: "Enter", metaKey: true });
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/workspace/test-workspace/agent/agent-1"));
+    });
+
+    it("Ctrl+Enter with an active result navigates directly to the agent", async () => {
+      await renderWithResults();
+      const input = screen.getByLabelText("Search agent messages");
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      fireEvent.keyDown(input, { key: "Enter", ctrlKey: true });
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/workspace/test-workspace/agent/agent-1"));
+    });
+
+    it("ArrowDown wraps from last result to first", async () => {
+      await renderWithResults();
+      const input = screen.getByLabelText("Search agent messages");
+      // Move to index 0, then 1, then wrap back to 0
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      await waitFor(() => {
+        const firstLink = screen.getByText("Alpha Agent").closest("a");
+        expect(firstLink).toHaveAttribute("aria-current", "true");
+      });
+    });
+
+    it("ArrowUp from no selection moves to the last result", async () => {
+      await renderWithResults();
+      const input = screen.getByLabelText("Search agent messages");
+      fireEvent.keyDown(input, { key: "ArrowUp" });
+      await waitFor(() => {
+        const lastLink = screen.getByText("Beta Agent").closest("a");
+        expect(lastLink).toHaveAttribute("aria-current", "true");
+      });
+    });
+
+    it("Enter with no active result (index -1) does nothing", async () => {
+      await renderWithResults();
+      const input = screen.getByLabelText("Search agent messages");
+      // No ArrowDown pressed — index stays at -1
+      fireEvent.keyDown(input, { key: "Enter" });
+      expect(mockOpenModal).not.toHaveBeenCalled();
+    });
+
+    it("active index resets to -1 when a new search is triggered", async () => {
+      await renderWithResults();
+      const input = screen.getByLabelText("Search agent messages");
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      // Confirm first result is highlighted
+      await waitFor(() => {
+        const firstLink = screen.getByText("Alpha Agent").closest("a");
+        expect(firstLink).toHaveAttribute("aria-current", "true");
+      });
+      // Change the query
+      mockSearchAgentMessages.mockResolvedValue(
+        makeResponse([makeResult({ agentId: "agent-3", title: "Gamma Agent" })]),
+      );
+      fireEvent.input(input, { target: { value: "gamma" } });
+      await waitFor(() => screen.getByText("Gamma Agent"));
+      // No result should be highlighted (aria-current should be absent or false)
+      const gammaLink = screen.getByText("Gamma Agent").closest("a");
+      expect(gammaLink).not.toHaveAttribute("aria-current", "true");
+    });
   });
 });
