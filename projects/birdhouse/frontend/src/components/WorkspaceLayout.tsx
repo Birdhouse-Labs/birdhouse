@@ -38,7 +38,7 @@ const WorkspaceLayout: Component = () => {
   const workspaceId = useWorkspaceId();
   const isDesktop = createMediaQuery("(min-width: 768px)");
   const [sidebarOpen, setSidebarOpen] = createSignal(isDesktop());
-  const { currentModal, isModalOpen, closeModal } = useModalRoute();
+  const { currentModal, isModalOpen, closeModal, openModal } = useModalRoute();
 
   // Workspace readiness state
   const [isReady, setIsReady] = createSignal(false);
@@ -130,6 +130,10 @@ const WorkspaceLayout: Component = () => {
       [shortcut]: (e: KeyboardEvent) => {
         e.preventDefault();
         setIsCommandPaletteOpen(true);
+      },
+      "$mod+o": (e: KeyboardEvent) => {
+        e.preventDefault();
+        openModal("agent-search", "main");
       },
     });
     onCleanup(unsubscribe);
