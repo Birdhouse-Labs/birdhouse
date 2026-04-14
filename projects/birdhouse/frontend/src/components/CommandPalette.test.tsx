@@ -18,9 +18,9 @@ function makeAction(label: string, group: "agent" | "navigation" = "navigation")
 
 describe("filterActions", () => {
   const actions: PaletteAction[] = [
-    makeAction("Open Workspace Settings", "navigation"),
-    makeAction("Open Skills", "navigation"),
-    makeAction("Open Agent Search", "navigation"),
+    makeAction("Workspace Settings", "navigation"),
+    makeAction("Skills", "navigation"),
+    makeAction("Agent Search", "navigation"),
     makeAction("New Agent", "navigation"),
     makeAction("Edit Title", "agent"),
     makeAction("Edit Notes", "agent"),
@@ -40,7 +40,7 @@ describe("filterActions", () => {
   it("filters by case-insensitive substring match on label", () => {
     const result = filterActions(actions, "agent");
     const labels = result.map((a) => a.label);
-    expect(labels).toContain("Open Agent Search");
+    expect(labels).toContain("Agent Search");
     expect(labels).toContain("New Agent");
     expect(labels).toContain("Archive Agent");
     expect(labels).toContain("Unarchive Agent");
@@ -54,7 +54,7 @@ describe("filterActions", () => {
     const upper = filterActions(actions, "WORKSPACE");
     expect(lower).toEqual(upper);
     expect(lower.length).toBe(1);
-    expect(lower[0]?.label).toBe("Open Workspace Settings");
+    expect(lower[0]?.label).toBe("Workspace Settings");
   });
 
   it("returns empty array when nothing matches", () => {
