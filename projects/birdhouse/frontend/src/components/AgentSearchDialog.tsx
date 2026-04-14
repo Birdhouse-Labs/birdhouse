@@ -197,6 +197,7 @@ const AgentSearchDialog: Component = () => {
   let recentRequestId = 0;
 
   let inputRef: HTMLInputElement | undefined;
+  let resultItemRefs: Array<HTMLDivElement | undefined> = [];
 
   // Clear state when dialog closes
   createEffect(() => {
@@ -316,7 +317,15 @@ const AgentSearchDialog: Component = () => {
   createEffect(() => {
     if (!isOpen()) {
       setActiveIndex(-1);
+      resultItemRefs = [];
     }
+  });
+
+  createEffect(() => {
+    const idx = activeIndex();
+    if (idx < 0) return;
+
+    resultItemRefs[idx]?.scrollIntoView({ block: "nearest" });
   });
 
   const handleAgentClick = (agentId: string | null, e: MouseEvent) => {
@@ -447,6 +456,9 @@ const AgentSearchDialog: Component = () => {
                         agent={agent}
                         onAgentClick={(e) => handleAgentClick(agent.id, e)}
                         onPointerEnter={() => setActiveIndex(index())}
+                        itemRef={(el) => {
+                          resultItemRefs[index()] = el;
+                        }}
                         agentHref={agentHref(agent.id)}
                         isActive={activeIndex() === index()}
                       />
@@ -472,6 +484,9 @@ const AgentSearchDialog: Component = () => {
                       group={group}
                       onAgentClick={(e) => handleAgentClick(group.agentId, e)}
                       onPointerEnter={() => setActiveIndex(index())}
+                      itemRef={(el) => {
+                        resultItemRefs[index()] = el;
+                      }}
                       agentHref={agentHref(group.agentId)}
                       isActive={activeIndex() === index()}
                     />
@@ -502,6 +517,7 @@ interface SearchResultCardProps {
   group: GroupedResult;
   onAgentClick: (e: MouseEvent) => void;
   onPointerEnter: () => void;
+  itemRef: (el: HTMLDivElement) => void;
   agentHref: string | undefined;
   isActive: boolean;
 }
@@ -510,6 +526,7 @@ interface RecentAgentCardProps {
   agent: RecentAgentForTypeahead;
   onAgentClick: (e: MouseEvent) => void;
   onPointerEnter: () => void;
+  itemRef: (el: HTMLDivElement) => void;
   agentHref: string | undefined;
   isActive: boolean;
 }
@@ -519,6 +536,7 @@ const RecentAgentCard: Component<RecentAgentCardProps> = (props) => {
 
   return (
     <div
+      ref={props.itemRef}
       class="rounded-xl border border-transparent px-3 py-3 transition-colors"
       classList={{
         "bg-accent/15 text-accent border-accent/30": props.isActive,
@@ -556,6 +574,7 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
 
   return (
     <div
+      ref={props.itemRef}
       class="px-4 py-4 space-y-2 transition-colors"
       classList={{
         "bg-accent/15": props.isActive,

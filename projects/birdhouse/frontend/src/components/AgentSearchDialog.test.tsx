@@ -59,6 +59,7 @@ vi.mock("corvu/dialog", () => {
 
 const mockSearchAgentMessages = agentsApi.searchAgentMessages as ReturnType<typeof vi.fn>;
 const mockFetchRecentAgents = agentsApi.fetchRecentAgents as ReturnType<typeof vi.fn>;
+const scrollIntoViewMock = vi.fn();
 
 const makeResponse = (results: AgentMessageSearchResponse["results"]): AgentMessageSearchResponse => ({
   results,
@@ -106,11 +107,17 @@ const renderDialog = (open = true) => {
 
 describe("AgentSearchDialog", () => {
   beforeEach(() => {
+    scrollIntoViewMock.mockReset();
+    Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoViewMock,
+    });
     mockFetchRecentAgents.mockResolvedValue([]);
     mockSearchAgentMessages.mockResolvedValue(makeResponse([]));
   });
 
   afterEach(() => {
+    delete (window.HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
     vi.clearAllMocks();
   });
 
@@ -234,6 +241,17 @@ describe("AgentSearchDialog", () => {
       await waitFor(() => expect(mockOpenModal).toHaveBeenCalledWith("agent", "agent-1"));
     });
 
+    it("scrolls the active search result into view during keyboard navigation", async () => {
+      await renderWithResults();
+      const input = screen.getByLabelText("Search agent messages");
+
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+
+      await waitFor(() => {
+        expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: "nearest" });
+      });
+    });
+
     it("Cmd+Enter with an active result navigates directly to the agent", async () => {
       await renderWithResults();
       const input = screen.getByLabelText("Search agent messages");
@@ -319,6 +337,17 @@ describe("AgentSearchDialog", () => {
       fireEvent.keyDown(input, { key: "Enter" });
 
       await waitFor(() => expect(mockOpenModal).toHaveBeenCalledWith("agent", "agent-recent-1"));
+    });
+
+    it("scrolls the active recent agent into view during keyboard navigation", async () => {
+      await renderWithRecentAgents();
+      const input = screen.getByLabelText("Search agent messages");
+
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+
+      await waitFor(() => {
+        expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: "nearest" });
+      });
     });
 
     it("Cmd+Enter with an active recent agent navigates directly", async () => {
