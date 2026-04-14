@@ -26,6 +26,7 @@ export interface PaletteAction {
   label: string;
   group: "agent" | "navigation";
   icon?: Component<LucideProps>;
+  disabled?: boolean;
   run: () => void;
 }
 
@@ -71,12 +72,14 @@ const ActionRow: Component<ActionRowProps> = (props) => (
     type="button"
     class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left transition-colors"
     classList={{
-      "bg-accent/15 text-accent": props.isActive,
-      "text-text-primary hover:bg-surface-overlay": !props.isActive,
+      "bg-accent/15 text-accent": props.isActive && !props.action.disabled,
+      "text-text-primary hover:bg-surface-overlay": !props.isActive && !props.action.disabled,
+      "text-text-muted opacity-50 cursor-not-allowed": !!props.action.disabled,
     }}
-    onPointerEnter={props.onPointerEnter}
-    onClick={props.onClick}
+    onPointerEnter={props.action.disabled ? undefined : props.onPointerEnter}
+    onClick={props.action.disabled ? undefined : props.onClick}
     tabIndex={-1}
+    aria-disabled={props.action.disabled ? "true" : undefined}
   >
     <Show when={props.action.icon}>
       {(icon) => (
@@ -222,25 +225,36 @@ const CommandPalette: Component = () => {
         icon: Notebook,
         run: () => setTimeout(() => setIsNotesDialogOpen(true), 50),
       },
-      ...(isArchived
+      ...(agent === undefined
         ? [
-            {
-              id: "unarchive-agent",
-              label: "Unarchive Agent",
-              group: "agent" as const,
-              icon: Archive,
-              run: () => setTimeout(() => setIsUnarchiveDialogOpen(true), 50),
-            },
-          ]
-        : [
             {
               id: "archive-agent",
               label: "Archive Agent",
               group: "agent" as const,
               icon: Archive,
-              run: () => setTimeout(() => setIsArchiveDialogOpen(true), 50),
+              disabled: true,
+              run: () => {},
             },
-          ]),
+          ]
+        : isArchived
+          ? [
+              {
+                id: "unarchive-agent",
+                label: "Unarchive Agent",
+                group: "agent" as const,
+                icon: Archive,
+                run: () => setTimeout(() => setIsUnarchiveDialogOpen(true), 50),
+              },
+            ]
+          : [
+              {
+                id: "archive-agent",
+                label: "Archive Agent",
+                group: "agent" as const,
+                icon: Archive,
+                run: () => setTimeout(() => setIsArchiveDialogOpen(true), 50),
+              },
+            ]),
       {
         id: "export-agent",
         label: "Export Agent",
@@ -294,7 +308,7 @@ const CommandPalette: Component = () => {
     } else if (e.key === "Enter") {
       e.preventDefault();
       const action = items[activeIndex()];
-      if (action) runAction(action);
+      if (action && !action.disabled) runAction(action);
     }
   };
 
