@@ -170,14 +170,24 @@ function shortcutToDisplay(binding: string): string {
 /** Converts a KeyboardEvent to a tinykeys binding string. */
 function eventToBinding(e: KeyboardEvent): string | null {
   const key = e.key;
-  // Ignore standalone modifier key presses
-  if (["Meta", "Control", "Shift", "Alt"].includes(key)) return null;
+  // Ignore standalone modifier keys and keys that would produce broken/dangerous bindings
+  if (["Meta", "Control", "Shift", "Alt", "Escape", "Tab", "Enter", "Backspace"].includes(key)) return null;
 
   const parts: string[] = [];
   if (e.metaKey || e.ctrlKey) parts.push("$mod");
   if (e.shiftKey) parts.push("Shift");
   if (e.altKey) parts.push("Alt");
-  parts.push(key.length === 1 ? key.toLowerCase() : key);
+
+  // On Mac, Alt+key sets e.key to the composed character (e.g. Alt+k → "°").
+  // Use the physical key from e.code instead when Alt is held, stripping the
+  // "Key" prefix (e.g. "KeyK" → "k").
+  let keyName: string;
+  if (e.altKey && e.code.startsWith("Key")) {
+    keyName = e.code.slice(3).toLowerCase();
+  } else {
+    keyName = key.length === 1 ? key.toLowerCase() : key;
+  }
+  parts.push(keyName);
   return parts.join("+");
 }
 
