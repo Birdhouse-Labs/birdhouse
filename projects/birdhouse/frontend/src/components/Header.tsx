@@ -2,10 +2,11 @@
 // ABOUTME: Contains app title and settings for color mode, UI size, and theme
 
 import Popover from "corvu/popover";
-import { Menu, Settings } from "lucide-solid";
+import { Command, Menu, Settings } from "lucide-solid";
 import { type Component, createSignal, type JSX, Show } from "solid-js";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { AgentIcon, SkillIcon } from "../design-system";
+import { setIsCommandPaletteOpen } from "../lib/command-palette-state";
 import {
   commandPaletteShortcut,
   DEFAULT_COMMAND_PALETTE_SHORTCUT,
@@ -313,6 +314,19 @@ const Header: Component<HeaderProps> = (props) => {
           data-ph-capture-attribute-workspace-id={workspaceId()}
         >
           <SkillIcon size={18} />
+        </button>
+
+        {/* Command Palette Button */}
+        <button
+          type="button"
+          onClick={() => setIsCommandPaletteOpen(true)}
+          class="flex items-center justify-center p-2 rounded-lg transition-all hover:bg-surface-overlay text-text-secondary"
+          aria-label="Open command palette"
+          title={`Command Palette\n${shortcutToDisplay(commandPaletteShortcut())}`}
+          data-ph-capture-attribute-button-type="open-command-palette"
+          data-ph-capture-attribute-workspace-id={workspaceId()}
+        >
+          <Command size={18} />
         </button>
 
         {/* Settings Popover */}
