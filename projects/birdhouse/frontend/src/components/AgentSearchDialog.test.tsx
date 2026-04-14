@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessageSearchResponse } from "../services/agents-api";
+import type { AgentMessageSearchResponse, RecentAgentForTypeahead } from "../services/agents-api";
 import * as agentsApi from "../services/agents-api";
 import AgentSearchDialog from "./AgentSearchDialog";
 
@@ -13,6 +13,7 @@ vi.mock("../contexts/WorkspaceContext", () => ({
 }));
 
 vi.mock("../services/agents-api", () => ({
+  fetchRecentAgents: vi.fn(),
   searchAgentMessages: vi.fn(),
 }));
 
@@ -57,6 +58,7 @@ vi.mock("corvu/dialog", () => {
 });
 
 const mockSearchAgentMessages = agentsApi.searchAgentMessages as ReturnType<typeof vi.fn>;
+const mockFetchRecentAgents = agentsApi.fetchRecentAgents as ReturnType<typeof vi.fn>;
 
 const makeResponse = (results: AgentMessageSearchResponse["results"]): AgentMessageSearchResponse => ({
   results,
@@ -82,6 +84,21 @@ const makeResult = (overrides?: Partial<AgentMessageSearchResponse["results"][nu
   ...overrides,
 });
 
+const makeRecentAgent = (overrides?: Partial<RecentAgentForTypeahead>): RecentAgentForTypeahead => ({
+  id: "agent-recent-1",
+  title: "Recent Agent",
+  session_id: "ses-recent-1",
+  parent_id: null,
+  tree_id: "tree-recent-1",
+  lastMessageAt: Date.now() - 30000,
+  lastUserMessage: {
+    text: "Latest user prompt",
+    isAgentSent: false,
+  },
+  lastAgentMessage: "Latest agent response",
+  ...overrides,
+});
+
 const renderDialog = (open = true) => {
   mockIsOpen = open;
   render(() => <AgentSearchDialog />);
@@ -89,6 +106,7 @@ const renderDialog = (open = true) => {
 
 describe("AgentSearchDialog", () => {
   beforeEach(() => {
+    mockFetchRecentAgents.mockResolvedValue([]);
     mockSearchAgentMessages.mockResolvedValue(makeResponse([]));
   });
 
@@ -101,9 +119,45 @@ describe("AgentSearchDialog", () => {
     expect(screen.getByLabelText("Search agent messages")).toBeInTheDocument();
   });
 
-  it("shows idle prompt when no query is entered", () => {
+  it("fetches and shows recent agents immediately on open", async () => {
     renderDialog();
-    expect(screen.getByText("Type to search agent messages")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mockFetchRecentAgents).toHaveBeenCalledWith("test-workspace");
+    });
+  });
+
+  it("renders a Recent section with fetched agents when no query is entered", async () => {
+    mockFetchRecentAgents.mockResolvedValue([makeRecentAgent()]);
+    renderDialog();
+
+    expect(await screen.findByText("Recent")).toBeInTheDocument();
+    expect(screen.getByText("Recent Agent")).toBeInTheDocument();
+  });
+
+  it("caps recent agents at 100 items", async () => {
+    mockFetchRecentAgents.mockResolvedValue(
+      Array.from({ length: 101 }, (_, index) =>
+        makeRecentAgent({
+          id: `agent-recent-${index + 1}`,
+          session_id: `ses-recent-${index + 1}`,
+          tree_id: `tree-recent-${index + 1}`,
+          title: `Recent Agent ${index + 1}`,
+        }),
+      ),
+    );
+    renderDialog();
+
+    expect(await screen.findByText("Recent Agent 100")).toBeInTheDocument();
+    expect(screen.queryByText("Recent Agent 101")).not.toBeInTheDocument();
+  });
+
+  it("shows the keyboard hint footer", () => {
+    renderDialog();
+
+    expect(screen.getByText("navigate")).toBeInTheDocument();
+    expect(screen.getByText("peek")).toBeInTheDocument();
+    expect(screen.getByText("open")).toBeInTheDocument();
   });
 
   it("does not render when closed", () => {
@@ -145,6 +199,20 @@ describe("AgentSearchDialog", () => {
       fireEvent.input(input, { target: { value: "agent" } });
       // Wait for debounce + results
       await waitFor(() => expect(screen.getByText("Alpha Agent")).toBeInTheDocument(), { timeout: 1000 });
+    }
+
+    async function renderWithRecentAgents() {
+      mockFetchRecentAgents.mockResolvedValue([
+        makeRecentAgent({ id: "agent-recent-1", title: "Alpha Recent" }),
+        makeRecentAgent({
+          id: "agent-recent-2",
+          session_id: "ses-recent-2",
+          tree_id: "tree-recent-2",
+          title: "Beta Recent",
+        }),
+      ]);
+      renderDialog();
+      await waitFor(() => expect(screen.getByText("Alpha Recent")).toBeInTheDocument(), { timeout: 1000 });
     }
 
     it("ArrowDown moves active index from -1 to 0, highlighting the first result", async () => {
@@ -231,6 +299,35 @@ describe("AgentSearchDialog", () => {
       // No result should be highlighted (aria-current should be absent or false)
       const gammaLink = screen.getByText("Gamma Agent").closest("a");
       expect(gammaLink).not.toHaveAttribute("aria-current", "true");
+    });
+
+    it("ArrowDown highlights the first recent agent when query is empty", async () => {
+      await renderWithRecentAgents();
+      const input = screen.getByLabelText("Search agent messages");
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+
+      await waitFor(() => {
+        const firstLink = screen.getByText("Alpha Recent").closest("a");
+        expect(firstLink).toHaveAttribute("aria-current", "true");
+      });
+    });
+
+    it("Enter with an active recent agent opens it in a modal", async () => {
+      await renderWithRecentAgents();
+      const input = screen.getByLabelText("Search agent messages");
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      await waitFor(() => expect(mockOpenModal).toHaveBeenCalledWith("agent", "agent-recent-1"));
+    });
+
+    it("Cmd+Enter with an active recent agent navigates directly", async () => {
+      await renderWithRecentAgents();
+      const input = screen.getByLabelText("Search agent messages");
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      fireEvent.keyDown(input, { key: "Enter", metaKey: true });
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/workspace/test-workspace/agent/agent-recent-1"));
     });
   });
 });

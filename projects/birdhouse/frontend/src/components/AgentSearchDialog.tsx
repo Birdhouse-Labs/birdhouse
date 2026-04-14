@@ -9,8 +9,8 @@ import { type Component, createEffect, createMemo, createSignal, For, onCleanup,
 import { useWorkspace } from "../contexts/WorkspaceContext";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { useModalRoute, useWorkspaceId } from "../lib/routing";
-import type { AgentMessageSearchResult, MessagePart } from "../services/agents-api";
-import { searchAgentMessages } from "../services/agents-api";
+import type { AgentMessageSearchResult, MessagePart, RecentAgentForTypeahead } from "../services/agents-api";
+import { fetchRecentAgents, searchAgentMessages } from "../services/agents-api";
 import { cardSurfaceFlat } from "../styles/containerStyles";
 
 export const MODAL_TYPE_AGENT_SEARCH = "agent-search";
@@ -156,8 +156,23 @@ interface GroupedResult {
   matches: AgentMessageSearchResult[];
 }
 
+interface VisibleAgentResult {
+  agentId: string | null;
+}
+
 const SEARCH_LIMIT = 50;
+const RECENT_LIMIT = 100;
 const DEBOUNCE_MS = 300;
+
+const SectionHeader: Component<{ label: string }> = (props) => (
+  <div class="px-4 py-2 text-[11px] font-semibold text-text-muted uppercase tracking-wider select-none">
+    {props.label}
+  </div>
+);
+
+function getRecentAgentPreview(agent: RecentAgentForTypeahead): string {
+  return agent.lastAgentMessage ?? agent.lastUserMessage?.text ?? "No messages yet";
+}
 
 const AgentSearchDialog: Component = () => {
   const { workspaceId } = useWorkspace();
@@ -171,12 +186,15 @@ const AgentSearchDialog: Component = () => {
 
   const [query, setQuery] = createSignal("");
   const [results, setResults] = createSignal<AgentMessageSearchResult[]>([]);
+  const [recentAgents, setRecentAgents] = createSignal<RecentAgentForTypeahead[]>([]);
   const [isSearching, setIsSearching] = createSignal(false);
+  const [isLoadingRecent, setIsLoadingRecent] = createSignal(false);
   const [searchError, setSearchError] = createSignal<string | null>(null);
   const [hasSearched, setHasSearched] = createSignal(false);
   // -1 means no result is keyboard-selected
   const [activeIndex, setActiveIndex] = createSignal(-1);
   let requestId = 0;
+  let recentRequestId = 0;
 
   let inputRef: HTMLInputElement | undefined;
 
@@ -187,14 +205,40 @@ const AgentSearchDialog: Component = () => {
       setQuery("");
       if (inputRef) inputRef.value = "";
       setResults([]);
+      setRecentAgents([]);
       setIsSearching(false);
+      setIsLoadingRecent(false);
       setSearchError(null);
       setHasSearched(false);
     }
   });
 
+  createEffect(() => {
+    if (!isOpen()) return;
+
+    const thisRequest = ++recentRequestId;
+    setIsLoadingRecent(true);
+
+    void fetchRecentAgents(workspaceId)
+      .then((agents) => {
+        if (thisRequest !== recentRequestId) return;
+        setRecentAgents(agents.slice(0, RECENT_LIMIT));
+      })
+      .catch(() => {
+        if (thisRequest !== recentRequestId) return;
+        setRecentAgents([]);
+      })
+      .finally(() => {
+        if (thisRequest === recentRequestId) {
+          setIsLoadingRecent(false);
+        }
+      });
+  });
+
   // Debounced search
   createEffect(() => {
+    if (!isOpen()) return;
+
     const q = query().trim();
 
     if (!q) {
@@ -254,9 +298,17 @@ const AgentSearchDialog: Component = () => {
     return order.map((key) => map.get(key) as GroupedResult);
   });
 
+  const visibleResults = createMemo<VisibleAgentResult[]>(() => {
+    if (!query().trim()) {
+      return recentAgents().map((agent) => ({ agentId: agent.id }));
+    }
+
+    return groupedResults().map((group) => ({ agentId: group.agentId }));
+  });
+
   // Reset keyboard selection whenever results change
   createEffect(() => {
-    groupedResults();
+    visibleResults();
     setActiveIndex(-1);
   });
 
@@ -283,27 +335,27 @@ const AgentSearchDialog: Component = () => {
   // Keyboard navigation: arrow up/down moves through grouped results;
   // Enter opens the active result in a modal; Cmd/Ctrl+Enter navigates directly.
   const handleKeyDown = (e: KeyboardEvent) => {
-    const groups = groupedResults();
-    if (groups.length === 0) return;
+    const items = visibleResults();
+    if (items.length === 0) return;
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((i) => (i + 1) % groups.length);
+      setActiveIndex((i) => (i + 1) % items.length);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActiveIndex((i) => (i <= 0 ? groups.length - 1 : i - 1));
+      setActiveIndex((i) => (i <= 0 ? items.length - 1 : i - 1));
     } else if (e.key === "Enter") {
       const idx = activeIndex();
       if (idx < 0) return;
-      const group = groups[idx];
-      if (!group?.agentId) return;
+      const item = items[idx];
+      if (!item?.agentId) return;
       e.preventDefault();
       if (e.metaKey || e.ctrlKey) {
         // Direct navigation — close search and navigate to the agent's main view
         closeSearch();
-        navigate(`/workspace/${routeWorkspaceId()}/agent/${group.agentId}`);
+        navigate(`/workspace/${routeWorkspaceId()}/agent/${item.agentId}`);
       } else {
-        openModal("agent", group.agentId);
+        openModal("agent", item.agentId);
       }
     }
   };
@@ -352,7 +404,7 @@ const AgentSearchDialog: Component = () => {
                 aria-label="Search agent messages"
                 data-ph-capture-attribute-element-type="agent-search-dialog-input"
               />
-              <Show when={isSearching()}>
+              <Show when={isSearching() || isLoadingRecent()}>
                 <div class="animate-spin rounded-full h-4 w-4 border-2 border-accent border-t-transparent flex-shrink-0" />
               </Show>
             </div>
@@ -384,10 +436,30 @@ const AgentSearchDialog: Component = () => {
               </div>
             </Show>
 
-            {/* Idle state — nothing typed yet */}
-            <Show when={!query().trim() && !hasSearched()}>
+            {/* Recent agents */}
+            <Show when={!query().trim() && recentAgents().length > 0}>
+              <div class="py-2">
+                <SectionHeader label="Recent" />
+                <div class="px-2 pb-1 space-y-1">
+                  <For each={recentAgents()}>
+                    {(agent, index) => (
+                      <RecentAgentCard
+                        agent={agent}
+                        onAgentClick={(e) => handleAgentClick(agent.id, e)}
+                        onPointerEnter={() => setActiveIndex(index())}
+                        agentHref={agentHref(agent.id)}
+                        isActive={activeIndex() === index()}
+                      />
+                    )}
+                  </For>
+                </div>
+              </div>
+            </Show>
+
+            {/* Empty recent state */}
+            <Show when={!query().trim() && !isLoadingRecent() && recentAgents().length === 0}>
               <div class="px-4 py-10 text-center">
-                <p class="text-sm text-text-muted">Type to search agent messages</p>
+                <p class="text-sm text-text-muted">No recent agents</p>
               </div>
             </Show>
 
@@ -399,6 +471,7 @@ const AgentSearchDialog: Component = () => {
                     <SearchResultCard
                       group={group}
                       onAgentClick={(e) => handleAgentClick(group.agentId, e)}
+                      onPointerEnter={() => setActiveIndex(index())}
                       agentHref={agentHref(group.agentId)}
                       isActive={activeIndex() === index()}
                     />
@@ -406,6 +479,18 @@ const AgentSearchDialog: Component = () => {
                 </For>
               </div>
             </Show>
+          </div>
+
+          <div class="px-4 py-2 border-t border-border flex-shrink-0 flex items-center gap-4 text-xs text-text-muted">
+            <span>
+              <kbd class="font-mono">↑↓</kbd> navigate
+            </span>
+            <span>
+              <kbd class="font-mono">↵</kbd> peek
+            </span>
+            <span>
+              <kbd class="font-mono">⌘↵</kbd> open
+            </span>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
@@ -416,9 +501,53 @@ const AgentSearchDialog: Component = () => {
 interface SearchResultCardProps {
   group: GroupedResult;
   onAgentClick: (e: MouseEvent) => void;
+  onPointerEnter: () => void;
   agentHref: string | undefined;
   isActive: boolean;
 }
+
+interface RecentAgentCardProps {
+  agent: RecentAgentForTypeahead;
+  onAgentClick: (e: MouseEvent) => void;
+  onPointerEnter: () => void;
+  agentHref: string | undefined;
+  isActive: boolean;
+}
+
+const RecentAgentCard: Component<RecentAgentCardProps> = (props) => {
+  const preview = () => getRecentAgentPreview(props.agent);
+
+  return (
+    <div
+      class="rounded-xl border border-transparent px-3 py-3 transition-colors"
+      classList={{
+        "bg-accent/15 text-accent border-accent/30": props.isActive,
+        "text-text-primary hover:bg-surface-overlay": !props.isActive,
+      }}
+      onPointerEnter={props.onPointerEnter}
+    >
+      <div class="flex flex-col gap-1">
+        <a
+          href={props.agentHref}
+          onClick={(e) => props.onAgentClick(e)}
+          class="text-sm font-medium leading-snug"
+          classList={{
+            "text-accent": props.isActive,
+            "text-text-primary hover:text-accent": !props.isActive,
+          }}
+          aria-current={props.isActive ? "true" : undefined}
+          data-agent-id={props.agent.id}
+        >
+          {props.agent.title || props.agent.id}
+        </a>
+        <Show when={props.agent.lastMessageAt !== null}>
+          <span class="text-[11px] text-text-secondary">{formatDateTime(props.agent.lastMessageAt ?? 0)}</span>
+        </Show>
+        <p class="text-sm text-text-secondary leading-relaxed line-clamp-2">{preview()}</p>
+      </div>
+    </div>
+  );
+};
 
 const SearchResultCard: Component<SearchResultCardProps> = (props) => {
   const baseZIndex = useZIndex();
@@ -426,13 +555,24 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
   const matchCount = () => props.group.matches.length;
 
   return (
-    <div class="px-4 py-4 space-y-2" classList={{ "bg-accent/5": props.isActive }}>
+    <div
+      class="px-4 py-4 space-y-2 transition-colors"
+      classList={{
+        "bg-accent/15": props.isActive,
+        "hover:bg-surface-overlay": !props.isActive,
+      }}
+      onPointerEnter={props.onPointerEnter}
+    >
       {/* Agent title + session date range */}
       <div class="flex flex-col gap-0.5">
         <a
           href={props.agentHref}
           onClick={(e) => props.onAgentClick(e)}
-          class="text-sm font-medium text-accent hover:underline leading-snug"
+          class="text-sm font-medium leading-snug"
+          classList={{
+            "text-accent": props.isActive,
+            "text-text-primary hover:text-accent": !props.isActive,
+          }}
           aria-current={props.isActive ? "true" : undefined}
           data-agent-id={props.group.agentId}
         >
