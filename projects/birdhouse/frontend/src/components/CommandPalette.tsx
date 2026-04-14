@@ -174,6 +174,20 @@ const CommandPalette: Component = () => {
 
     const navigationActions: PaletteAction[] = [
       {
+        id: "agent-search",
+        label: "Agent Search",
+        group: "navigation",
+        icon: Search,
+        run: () => openModal("agent-search", "main"),
+      },
+      {
+        id: "skills",
+        label: "Skills",
+        group: "navigation",
+        icon: Terminal,
+        run: () => openModal("skill-library-v2", "main"),
+      },
+      {
         id: "new-agent",
         label: "New Agent",
         group: "navigation",
@@ -188,20 +202,6 @@ const CommandPalette: Component = () => {
         group: "navigation",
         icon: Settings,
         run: () => openModal("workspace_config", workspaceId),
-      },
-      {
-        id: "skills",
-        label: "Skills",
-        group: "navigation",
-        icon: Terminal,
-        run: () => openModal("skill-library-v2", "main"),
-      },
-      {
-        id: "agent-search",
-        label: "Agent Search",
-        group: "navigation",
-        icon: Search,
-        run: () => openModal("agent-search", "main"),
       },
     ];
 
