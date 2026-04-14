@@ -1,13 +1,14 @@
 // ABOUTME: Modal dialog for searching agent messages by content
 // ABOUTME: Shows results grouped by agent with a match-count popover for each
 
+import { useNavigate } from "@solidjs/router";
 import Dialog from "corvu/dialog";
 import Popover from "corvu/popover";
 import { Search, X } from "lucide-solid";
 import { type Component, createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import { useWorkspace } from "../contexts/WorkspaceContext";
 import { useZIndex } from "../contexts/ZIndexContext";
-import { useModalRoute } from "../lib/routing";
+import { useModalRoute, useWorkspaceId } from "../lib/routing";
 import type { AgentMessageSearchResult, MessagePart } from "../services/agents-api";
 import { searchAgentMessages } from "../services/agents-api";
 import { cardSurfaceFlat } from "../styles/containerStyles";
@@ -160,6 +161,8 @@ const DEBOUNCE_MS = 300;
 
 const AgentSearchDialog: Component = () => {
   const { workspaceId } = useWorkspace();
+  const routeWorkspaceId = useWorkspaceId();
+  const navigate = useNavigate();
   const { modalStack, removeModalByType, openModal } = useModalRoute();
 
   const isOpen = createMemo(() => modalStack().some((m) => m.type === MODAL_TYPE_AGENT_SEARCH));
@@ -171,6 +174,8 @@ const AgentSearchDialog: Component = () => {
   const [isSearching, setIsSearching] = createSignal(false);
   const [searchError, setSearchError] = createSignal<string | null>(null);
   const [hasSearched, setHasSearched] = createSignal(false);
+  // -1 means no result is keyboard-selected
+  const [activeIndex, setActiveIndex] = createSignal(-1);
   let requestId = 0;
 
   let inputRef: HTMLInputElement | undefined;
@@ -249,6 +254,19 @@ const AgentSearchDialog: Component = () => {
     return order.map((key) => map.get(key) as GroupedResult);
   });
 
+  // Reset keyboard selection whenever results change
+  createEffect(() => {
+    groupedResults();
+    setActiveIndex(-1);
+  });
+
+  // Also reset when dialog closes
+  createEffect(() => {
+    if (!isOpen()) {
+      setActiveIndex(-1);
+    }
+  });
+
   const handleAgentClick = (agentId: string | null, e: MouseEvent) => {
     if (!agentId) return;
     // Let Cmd/Ctrl+click fall through to the browser for new-tab behavior
@@ -260,6 +278,34 @@ const AgentSearchDialog: Component = () => {
   const agentHref = (agentId: string | null) => {
     if (!agentId) return undefined;
     return `/workspace/${workspaceId}/agent/${agentId}`;
+  };
+
+  // Keyboard navigation: arrow up/down moves through grouped results;
+  // Enter opens the active result in a modal; Cmd/Ctrl+Enter navigates directly.
+  const handleKeyDown = (e: KeyboardEvent) => {
+    const groups = groupedResults();
+    if (groups.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((i) => (i + 1) % groups.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((i) => (i <= 0 ? groups.length - 1 : i - 1));
+    } else if (e.key === "Enter") {
+      const idx = activeIndex();
+      if (idx < 0) return;
+      const group = groups[idx];
+      if (!group?.agentId) return;
+      e.preventDefault();
+      if (e.metaKey || e.ctrlKey) {
+        // Direct navigation — close search and navigate to the agent's main view
+        closeSearch();
+        navigate(`/workspace/${routeWorkspaceId()}/agent/${group.agentId}`);
+      } else {
+        openModal("agent", group.agentId);
+      }
+    }
   };
 
   return (
@@ -285,6 +331,7 @@ const AgentSearchDialog: Component = () => {
                    w-[95vw] max-w-2xl max-h-[85dvh]
                    left-1/2 top-[8%] -translate-x-1/2
                    flex flex-col overflow-hidden z-[40]`}
+          onKeyDown={handleKeyDown}
         >
           {/* Search input header */}
           <div class="flex items-center gap-2 px-4 py-3 border-b border-border flex-shrink-0">
@@ -348,11 +395,12 @@ const AgentSearchDialog: Component = () => {
             <Show when={groupedResults().length > 0}>
               <div class="divide-y divide-border">
                 <For each={groupedResults()}>
-                  {(group) => (
+                  {(group, index) => (
                     <SearchResultCard
                       group={group}
                       onAgentClick={(e) => handleAgentClick(group.agentId, e)}
                       agentHref={agentHref(group.agentId)}
+                      isActive={activeIndex() === index()}
                     />
                   )}
                 </For>
@@ -369,6 +417,7 @@ interface SearchResultCardProps {
   group: GroupedResult;
   onAgentClick: (e: MouseEvent) => void;
   agentHref: string | undefined;
+  isActive: boolean;
 }
 
 const SearchResultCard: Component<SearchResultCardProps> = (props) => {
@@ -377,13 +426,14 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
   const matchCount = () => props.group.matches.length;
 
   return (
-    <div class="px-4 py-4 space-y-2">
+    <div class="px-4 py-4 space-y-2" classList={{ "bg-accent/5": props.isActive }}>
       {/* Agent title + session date range */}
       <div class="flex flex-col gap-0.5">
         <a
           href={props.agentHref}
           onClick={(e) => props.onAgentClick(e)}
           class="text-sm font-medium text-accent hover:underline leading-snug"
+          aria-current={props.isActive ? "true" : undefined}
           data-agent-id={props.group.agentId}
         >
           {props.group.title ?? props.group.sessionId}

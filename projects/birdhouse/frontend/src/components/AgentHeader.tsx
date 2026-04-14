@@ -482,7 +482,6 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
       <EditAgentDialog
         agentId={props.agentId}
         currentTitle={currentTitle()}
-        messages={props.messages}
         open={isEditDialogOpen()}
         onOpenChange={setIsEditDialogOpen}
         onSuccess={handleEditSuccess}

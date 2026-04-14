@@ -1,20 +1,18 @@
 // ABOUTME: Dialog for editing agent properties (currently just title)
-// ABOUTME: Implements functional form pattern with change detection and validation
+// ABOUTME: Loads its own messages for title generation; implements change detection and validation
 
 import Dialog from "corvu/dialog";
 import { Sparkles } from "lucide-solid";
 import type { Component } from "solid-js";
-import { createEffect, createMemo, createSignal, Show } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, Show } from "solid-js";
 import { useWorkspace } from "../contexts/WorkspaceContext";
 import { useZIndex } from "../contexts/ZIndexContext";
-import { generateTitle, updateAgentTitle } from "../services/messages-api";
-import type { Message } from "../types/messages";
+import { fetchMessages, generateTitle, updateAgentTitle } from "../services/messages-api";
 import { Button } from "./ui";
 
 export interface EditAgentDialogProps {
   agentId: string;
   currentTitle: string;
-  messages: Message[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: (newTitle: string) => void;
@@ -25,7 +23,7 @@ export interface EditAgentDialogProps {
  * A turn is all messages from and including the last user message.
  * Messages are stored newest-first, so index 0 is the most recent.
  */
-function extractLastTurn(messages: Message[]): string {
+function extractLastTurn(messages: { role: string; content?: string }[]): string {
   // Find the most recent user message (first user message in newest-first array)
   let lastUserIndex = -1;
   for (let i = 0; i < messages.length; i++) {
@@ -65,6 +63,14 @@ const EditAgentDialog: Component<EditAgentDialogProps> = (props) => {
   const [isGenerating, setIsGenerating] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
+  // Fetch messages only while the dialog is open, keyed by agentId so it
+  // re-fetches automatically if the agentId changes (e.g. opened from the
+  // command palette for a different agent).
+  const [messages] = createResource(
+    () => (props.open ? props.agentId : null),
+    (agentId) => fetchMessages(workspaceId, agentId),
+  );
+
   // Reset form state when dialog opens or currentTitle changes
   createEffect(() => {
     if (props.open) {
@@ -79,7 +85,10 @@ const EditAgentDialog: Component<EditAgentDialogProps> = (props) => {
   const isFormDirty = createMemo(() => trimmedTitle() !== trimmedCurrentTitle());
   const isFormValid = createMemo(() => trimmedTitle().length > 0);
   const canSave = createMemo(() => isFormDirty() && isFormValid() && !isSaving() && !isGenerating());
-  const canGenerate = createMemo(() => !isGenerating() && !isSaving() && props.messages.length > 0);
+  // Generate is available only after messages have loaded and there is at least one
+  const canGenerate = createMemo(
+    () => !isGenerating() && !isSaving() && !messages.loading && (messages() ?? []).length > 0,
+  );
 
   const handleGenerate = async () => {
     if (!canGenerate()) return;
@@ -88,15 +97,13 @@ const EditAgentDialog: Component<EditAgentDialogProps> = (props) => {
     setError(null);
 
     try {
-      // Extract last turn from messages
-      const lastTurn = extractLastTurn(props.messages);
+      const lastTurn = extractLastTurn(messages() ?? []);
 
       if (!lastTurn || lastTurn.trim() === "") {
         setError("No messages found to generate title from");
         return;
       }
 
-      // Call API with the turn content
       const generatedTitle = await generateTitle(workspaceId, lastTurn);
       setTitle(generatedTitle);
     } catch (err) {
