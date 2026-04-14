@@ -15,6 +15,7 @@ import { cardSurfaceFlat } from "../styles/containerStyles";
 import AgentNotesDialog from "./AgentNotesDialog";
 import ArchiveAgentDialog from "./ArchiveAgentDialog";
 import EditAgentDialog from "./EditAgentDialog";
+import UnarchiveAgentDialog from "./UnarchiveAgentDialog";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -113,6 +114,7 @@ const CommandPalette: Component = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = createSignal(false);
   const [isNotesDialogOpen, setIsNotesDialogOpen] = createSignal(false);
   const [isArchiveDialogOpen, setIsArchiveDialogOpen] = createSignal(false);
+  const [isUnarchiveDialogOpen, setIsUnarchiveDialogOpen] = createSignal(false);
   const [exportError, setExportError] = createSignal<string | null>(null);
 
   // Query and active index state — reset when palette closes
@@ -221,7 +223,15 @@ const CommandPalette: Component = () => {
         run: () => setTimeout(() => setIsNotesDialogOpen(true), 50),
       },
       ...(isArchived
-        ? []
+        ? [
+            {
+              id: "unarchive-agent",
+              label: "Unarchive Agent",
+              group: "agent" as const,
+              icon: Archive,
+              run: () => setTimeout(() => setIsUnarchiveDialogOpen(true), 50),
+            },
+          ]
         : [
             {
               id: "archive-agent",
@@ -424,6 +434,11 @@ const CommandPalette: Component = () => {
               onOpenChange={setIsNotesDialogOpen}
             />
             <ArchiveAgentDialog agentId={agentId} open={isArchiveDialogOpen()} onOpenChange={setIsArchiveDialogOpen} />
+            <UnarchiveAgentDialog
+              agentId={agentId}
+              open={isUnarchiveDialogOpen()}
+              onOpenChange={setIsUnarchiveDialogOpen}
+            />
           </>
         )}
       </Show>

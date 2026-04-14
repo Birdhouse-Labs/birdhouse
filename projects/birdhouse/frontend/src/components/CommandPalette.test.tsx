@@ -25,6 +25,7 @@ describe("filterActions", () => {
     makeAction("Edit Title", "agent"),
     makeAction("Edit Notes", "agent"),
     makeAction("Archive Agent", "agent"),
+    makeAction("Unarchive Agent", "agent"),
     makeAction("Export Agent", "agent"),
   ];
 
@@ -42,6 +43,7 @@ describe("filterActions", () => {
     expect(labels).toContain("Open Agent Search");
     expect(labels).toContain("New Agent");
     expect(labels).toContain("Archive Agent");
+    expect(labels).toContain("Unarchive Agent");
     expect(labels).toContain("Export Agent");
     expect(labels).not.toContain("Edit Title");
     expect(labels).not.toContain("Edit Notes");
