@@ -6,6 +6,7 @@ import { Menu, Settings } from "lucide-solid";
 import { type Component, createSignal, type JSX, Show } from "solid-js";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { AgentIcon, SkillIcon } from "../design-system";
+import { setIsCommandPaletteOpen } from "../lib/command-palette-state";
 import {
   commandPaletteShortcut,
   DEFAULT_COMMAND_PALETTE_SHORTCUT,
@@ -261,18 +262,20 @@ const Header: Component<HeaderProps> = (props) => {
           </button>
         </Show>
 
-        {/* Desktop: Icon + Text */}
-        <div class="hidden sm:flex items-center gap-2 flex-shrink-0">
-          <BirdhouseIcon size={20} gradientId="header-birdhouse-gradient-desktop" />
-          <h1 class="text-sm sm:text-lg font-semibold bg-gradient-to-r from-gradient-from via-gradient-via to-gradient-to bg-clip-text text-transparent whitespace-nowrap">
+        {/* Logo — opens command palette on tap/click */}
+        <button
+          type="button"
+          onClick={() => setIsCommandPaletteOpen(true)}
+          class="flex items-center gap-2 flex-shrink-0 rounded-lg p-1 -m-1 transition-opacity hover:opacity-70 active:opacity-50"
+          aria-label="Open command palette"
+          title="Open command palette"
+          data-ph-capture-attribute-button-type="open-command-palette-logo"
+        >
+          <BirdhouseIcon size={20} gradientId="header-birdhouse-gradient" />
+          <h1 class="hidden sm:block text-sm sm:text-lg font-semibold bg-gradient-to-r from-gradient-from via-gradient-via to-gradient-to bg-clip-text text-transparent whitespace-nowrap">
             Birdhouse
           </h1>
-        </div>
-
-        {/* Mobile: Icon Only */}
-        <div class="sm:hidden flex items-center flex-shrink-0">
-          <BirdhouseIcon size={20} gradientId="header-birdhouse-gradient-mobile" />
-        </div>
+        </button>
       </div>
 
       {/* Center: New Agent Button */}
