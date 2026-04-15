@@ -665,13 +665,26 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
 
   const handleKeyUp = (e: KeyboardEvent) => {
     if (!props.interactive) return;
-    if (e.code !== "ShiftRight") return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
-    const item = visibleResults()[activeIndex()];
-    if (!item) return;
-    e.preventDefault();
-    peekSelection(item);
+    if (e.code === "ShiftRight") {
+      const item = visibleResults()[activeIndex()];
+      if (!item) return;
+      e.preventDefault();
+      peekSelection(item);
+      return;
+    }
+
+    // Right Command (Mac) / Right Control (Win/Linux) toggles the matches popover
+    // for the active search result, if it has matches.
+    if (e.code === "MetaRight" || e.code === "ControlRight") {
+      const idx = activeIndex();
+      if (idx < 0) return;
+      const item = visibleResults()[idx];
+      if (!item || item.kind !== "search") return;
+      e.preventDefault();
+      setOpenPopoverIndex((current) => (current === idx ? null : idx));
+    }
   };
 
   createEffect(() => {
@@ -783,6 +796,12 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
           <span class="font-medium text-text-secondary">peek</span>
           <kbd class="font-mono text-text-muted">right ⇧</kbd>
         </span>
+        <Show when={groupedResults().length > 0}>
+          <span class="flex items-center gap-1.5">
+            <span class="font-medium text-text-secondary">matches</span>
+            <kbd class="font-mono text-text-muted">right ⌘</kbd>
+          </span>
+        </Show>
         <span class="flex items-center gap-1.5">
           <span class="font-medium text-text-secondary">dismiss</span>
           <kbd class="font-mono text-text-muted">esc</kbd>
