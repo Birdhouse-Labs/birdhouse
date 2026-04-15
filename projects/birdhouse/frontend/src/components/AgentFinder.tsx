@@ -647,7 +647,12 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
       const next = (activeIndex() + 1) % items.length;
       setActiveIndex(next);
       if (openPopoverIndex() !== null) {
-        setOpenPopoverIndex(items[next]?.kind === "search" ? next : null);
+        // Close current popover immediately, then reopen on the new row after a
+        // short delay so Corvu can dismiss cleanly before mounting the next one.
+        setOpenPopoverIndex(null);
+        if (items[next]?.kind === "search") {
+          setTimeout(() => setOpenPopoverIndex(next), 50);
+        }
       }
       return;
     }
@@ -658,7 +663,10 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
       const next = activeIndex() <= 0 ? items.length - 1 : activeIndex() - 1;
       setActiveIndex(next);
       if (openPopoverIndex() !== null) {
-        setOpenPopoverIndex(items[next]?.kind === "search" ? next : null);
+        setOpenPopoverIndex(null);
+        if (items[next]?.kind === "search") {
+          setTimeout(() => setOpenPopoverIndex(next), 50);
+        }
       }
       return;
     }
