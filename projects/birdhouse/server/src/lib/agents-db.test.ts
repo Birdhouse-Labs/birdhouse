@@ -2076,4 +2076,68 @@ describe("AgentsDB", () => {
       });
     });
   });
+
+  // ============================================================================
+  // getRecentAgents
+  // ============================================================================
+
+  describe("getRecentAgents", () => {
+    function insertRecentAgent(db: AgentsDB, id: string, sessionId: string, title: string, updatedAtOffset = 0) {
+      const now = Date.now();
+      return db.insertAgent({
+        id,
+        session_id: sessionId,
+        parent_id: null,
+        tree_id: id,
+        level: 0,
+        title,
+        project_id: "test-project",
+        directory: "/test",
+        model: "anthropic/claude-sonnet-4",
+        cloned_from: null,
+        cloned_at: null,
+        archived_at: null,
+        created_at: now + updatedAtOffset,
+        updated_at: now + updatedAtOffset,
+      });
+    }
+
+    test("returns all recent agents when no limit is provided", () => {
+      insertRecentAgent(db, "agent_a", "ses_a", "Agent A", -1000);
+      insertRecentAgent(db, "agent_b", "ses_b", "Agent B", -2000);
+      insertRecentAgent(db, "agent_c", "ses_c", "Agent C", -3000);
+
+      const results = db.getRecentAgents();
+      expect(results.length).toBeGreaterThanOrEqual(3);
+    });
+
+    test("limits results to the given number when limit is provided", () => {
+      insertRecentAgent(db, "agent_l1", "ses_l1", "Limit Agent 1", -1000);
+      insertRecentAgent(db, "agent_l2", "ses_l2", "Limit Agent 2", -2000);
+      insertRecentAgent(db, "agent_l3", "ses_l3", "Limit Agent 3", -3000);
+
+      const results = db.getRecentAgents(undefined, 2);
+      expect(results).toHaveLength(2);
+    });
+
+    test("limit=1 returns only the most recently updated agent", () => {
+      insertRecentAgent(db, "agent_newest", "ses_newest", "Newest Agent", -500);
+      insertRecentAgent(db, "agent_older", "ses_older", "Older Agent", -5000);
+
+      const results = db.getRecentAgents(undefined, 1);
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe("agent_newest");
+    });
+
+    test("limit applies before fuzzy filtering", () => {
+      // Insert 3 agents that all match "Agent", limit to 2
+      insertRecentAgent(db, "agent_m1", "ses_m1", "Match Agent One", -1000);
+      insertRecentAgent(db, "agent_m2", "ses_m2", "Match Agent Two", -2000);
+      insertRecentAgent(db, "agent_m3", "ses_m3", "Match Agent Three", -3000);
+
+      // With limit=2, only the 2 most recent rows come out of SQL before fuzzy filter
+      const results = db.getRecentAgents("Agent", 2);
+      expect(results.length).toBeLessThanOrEqual(2);
+    });
+  });
 });

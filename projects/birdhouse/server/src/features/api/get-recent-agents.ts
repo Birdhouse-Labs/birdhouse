@@ -52,8 +52,19 @@ export async function getRecentAgents(c: Context, deps: Pick<Deps, "agentsDB" | 
     // Parse optional query parameter
     const query = c.req.query("q") || "";
 
-    // Get recent agents from database (filtered by query if provided)
-    const agents = agentsDB.getRecentAgents(query);
+    // Parse optional limit parameter — must be a positive integer when provided
+    let limit: number | undefined;
+    const limitParam = c.req.query("limit");
+    if (limitParam !== undefined) {
+      const parsed = Number(limitParam);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        return c.json({ error: "limit must be a positive integer" }, 400);
+      }
+      limit = parsed;
+    }
+
+    // Get recent agents from database (filtered by query and limited if provided)
+    const agents = agentsDB.getRecentAgents(query, limit);
 
     // Fetch message context for each agent
     const agentsWithContext: RecentAgentResponse[] = await Promise.all(
