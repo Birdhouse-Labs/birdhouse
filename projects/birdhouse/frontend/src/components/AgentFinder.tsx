@@ -684,6 +684,12 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
   return (
     <div class="flex flex-1 min-h-0 flex-col" onPointerMove={() => setPointerMoved(true)}>
       <div ref={setResultsScrollRoot} class="flex-1 overflow-y-auto">
+        <Show when={isSearching() || isLoadingRecent()}>
+          <div class="flex justify-center px-4 py-3">
+            <div class="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          </div>
+        </Show>
+
         <Show when={searchError()}>
           <div class="px-4 py-6 text-center">
             <p class="text-sm text-danger">{searchError()}</p>
