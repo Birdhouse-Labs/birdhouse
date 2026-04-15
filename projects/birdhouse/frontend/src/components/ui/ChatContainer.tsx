@@ -13,9 +13,9 @@ import type { QuestionRequest } from "../../types/question";
 import { extractSkillLinkNames } from "../../utils/skillLinks";
 import AutoGrowTextarea from "./AutoGrowTextarea";
 import Button from "./Button";
+import ChatMessageBubble from "./ChatMessageBubble";
 import ComposerAttachmentDropZone from "./ComposerAttachmentDropZone";
 import ComposerImageAttachments from "./ComposerImageAttachments";
-import MessageBubble from "./MessageBubble";
 import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
 
 export interface ChatContainerProps {
@@ -232,7 +232,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
       >
         <For each={props.messages}>
           {(message) => (
-            <MessageBubble
+            <ChatMessageBubble
               message={message}
               agentId={props.agentId}
               onOpenAgentModal={props.onOpenAgentModal}

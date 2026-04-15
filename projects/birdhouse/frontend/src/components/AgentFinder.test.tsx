@@ -203,6 +203,34 @@ describe("AgentFinder", () => {
     });
   });
 
+  it("renders recent snippets as separate message bubbles with agent-sent styling", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
+    mockFetchRecentAgentSnippet.mockResolvedValue(
+      makeRecentSnippet({
+        lastUserMessage: {
+          text: "Forwarded from another agent",
+          isAgentSent: true,
+          sentByAgentTitle: "Other Agent",
+        },
+        lastAgentMessage: "Latest assistant summary",
+      }),
+    );
+    renderFinder();
+
+    const recentLink = await screen.findByText("Recent Agent");
+    const card = recentLink.closest("div[class*='rounded-xl']");
+    expect(card).toBeInTheDocument();
+
+    MockIntersectionObserver.instances[0]?.trigger(card as Element, true);
+
+    expect(await screen.findByTitle("Latest assistant summary")).toHaveStyle({
+      background: "var(--theme-surface-raised)",
+    });
+    expect(screen.getByTitle("Forwarded from another agent").getAttribute("style")).toContain(
+      "linear-gradient(to right",
+    );
+  });
+
   it("does not load recent snippets while interaction is disabled", async () => {
     mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
     renderFinder({ interactive: false });
@@ -255,6 +283,22 @@ describe("AgentFinder", () => {
 
     expect(await screen.findByText("Current Search")).toBeInTheDocument();
     expect(screen.getByText("Current")).toBeInTheDocument();
+  });
+
+  it("renders search result text messages with shared message bubble styling", async () => {
+    mockSearchAgentMessages.mockResolvedValue(makeResponse([makeResult()]));
+    renderFinder({ query: "match" });
+
+    await waitFor(() => {
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50);
+    });
+
+    expect(await screen.findByTitle("This is the matched message")).toHaveStyle({
+      background: "var(--theme-surface-raised)",
+    });
+    expect(screen.getByTitle("Context message from user").getAttribute("style")).toContain(
+      "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",
+    );
   });
 
   it("ArrowDown highlights the first item and Enter confirms it", async () => {

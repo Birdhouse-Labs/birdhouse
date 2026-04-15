@@ -5,13 +5,9 @@ import Popover from "corvu/popover";
 import { type Component, createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from "solid-js";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { useModalRoute } from "../lib/routing";
-import type {
-  AgentMessageSearchResult,
-  MessagePart,
-  RecentAgentForTypeahead,
-  RecentAgentSnippet,
-} from "../services/agents-api";
+import type { AgentMessageSearchResult, MessagePart, RecentAgentForTypeahead } from "../services/agents-api";
 import { fetchRecentAgentSnippet, fetchRecentAgentsList, searchAgentMessages } from "../services/agents-api";
+import MessageBubble from "./ui/MessageBubble";
 
 export interface AgentFinderSelection {
   agentId: string;
@@ -35,6 +31,14 @@ interface MessagePartsProps {
 
 interface MatchPairProps {
   match: AgentMessageSearchResult;
+}
+
+interface BubbleLayout {
+  justify: "start" | "center" | "end";
+  background: string;
+  boxShadow: string;
+  maxWidth: string;
+  gradientBackground?: string;
 }
 
 interface GroupedResult {
@@ -128,8 +132,60 @@ function formatSessionRange(createdAt: number, updatedAt: number): string {
   return `${startStr} – ${endStr}`;
 }
 
-function getRecentAgentPreview(snippet: RecentAgentSnippet | null | undefined): string {
-  return snippet?.lastAgentMessage ?? snippet?.lastUserMessage?.text ?? "";
+function getAssistantBubbleProps(): BubbleLayout {
+  return {
+    justify: "start" as const,
+    background: "var(--theme-surface-raised)",
+    boxShadow: "0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)",
+    maxWidth: "max-w-[85%]",
+  };
+}
+
+function getUserBubbleProps(): BubbleLayout {
+  return {
+    justify: "end" as const,
+    background: "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",
+    boxShadow: `0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
+      0 2px 8px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent)`,
+    maxWidth: "max-w-[85%]",
+    gradientBackground: `linear-gradient(to bottom,
+      transparent,
+      color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))
+    )`,
+  };
+}
+
+function getAgentSentBubbleProps(): BubbleLayout {
+  return {
+    justify: "center" as const,
+    background: `linear-gradient(to right,
+      color-mix(in srgb, var(--theme-gradient-from) 20%, var(--theme-surface-raised)),
+      color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised)),
+      color-mix(in srgb, var(--theme-gradient-to) 20%, var(--theme-surface-raised))
+    )`,
+    boxShadow: `0 0 0 1px color-mix(in srgb, var(--theme-gradient-via) 40%, transparent),
+      0 2px 8px -2px color-mix(in srgb, var(--theme-gradient-via) 25%, transparent)`,
+    maxWidth: "max-w-[90%]",
+    gradientBackground: `linear-gradient(to bottom,
+      transparent,
+      color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised))
+    )`,
+  };
+}
+
+function getMessageLayout(role: string): BubbleLayout {
+  return role === "user" ? getUserBubbleProps() : getAssistantBubbleProps();
+}
+
+function getJustifyClass(justify: BubbleLayout["justify"]): string {
+  switch (justify) {
+    case "end":
+      return "justify-end";
+    case "center":
+      return "justify-center";
+    default:
+      return "justify-start";
+  }
 }
 
 const CurrentBadge: Component = () => (
@@ -143,48 +199,53 @@ const SectionHeader: Component<{ label: string }> = (props) => (
 );
 
 const MessageParts: Component<MessagePartsProps> = (props) => {
-  const isUser = () => props.role === "user";
+  const layout = () => getMessageLayout(props.role);
 
   return (
-    <div class={`flex ${isUser() ? "justify-end" : "justify-start"}`}>
-      <div
-        class="max-w-[90%] rounded-xl px-3 py-2 text-sm text-text-primary"
-        style={{
-          background: isUser()
-            ? "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))"
-            : "var(--theme-surface-raised)",
-          "box-shadow": isUser()
-            ? "0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent)"
-            : "0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)",
-        }}
-      >
-        <For each={props.parts}>
-          {(part) => (
-            <Show
-              when={part.type === "tool"}
-              fallback={
-                <p class="whitespace-pre-wrap break-words leading-relaxed">{part.type === "text" ? part.text : ""}</p>
-              }
-            >
-              <div class="space-y-1">
-                <div class="text-xs font-mono text-text-secondary">
-                  [{part.type === "tool" ? (part as Extract<MessagePart, { type: "tool" }>).toolName : ""}]
+    <div class="space-y-2">
+      <For each={props.parts}>
+        {(part) => (
+          <Show
+            when={part.type === "tool"}
+            fallback={
+              <MessageBubble
+                message={part.type === "text" ? part.text : ""}
+                justify={layout().justify}
+                background={layout().background}
+                boxShadow={layout().boxShadow}
+                maxWidth={layout().maxWidth}
+                gradientBackground={layout().gradientBackground}
+              />
+            }
+          >
+            <div class={`flex ${getJustifyClass(layout().justify)}`}>
+              <div
+                class="max-w-[90%] rounded-xl px-3 py-2 text-sm text-text-primary"
+                style={{
+                  background: layout().background,
+                  "box-shadow": layout().boxShadow,
+                }}
+              >
+                <div class="space-y-1">
+                  <div class="text-xs font-mono text-text-secondary">
+                    [{part.type === "tool" ? (part as Extract<MessagePart, { type: "tool" }>).toolName : ""}]
+                  </div>
+                  <Show when={part.type === "tool" && (part as Extract<MessagePart, { type: "tool" }>).command}>
+                    <pre class="overflow-x-auto whitespace-pre-wrap break-words rounded bg-surface-overlay px-2 py-1 font-mono text-xs text-text-primary">
+                      {part.type === "tool" ? (part as Extract<MessagePart, { type: "tool" }>).command : ""}
+                    </pre>
+                  </Show>
+                  <Show when={part.type === "tool" && (part as Extract<MessagePart, { type: "tool" }>).output}>
+                    <pre class="max-h-48 overflow-y-auto overflow-x-auto whitespace-pre-wrap break-words rounded bg-surface-overlay px-2 py-1 font-mono text-xs text-text-secondary">
+                      {part.type === "tool" ? (part as Extract<MessagePart, { type: "tool" }>).output : ""}
+                    </pre>
+                  </Show>
                 </div>
-                <Show when={part.type === "tool" && (part as Extract<MessagePart, { type: "tool" }>).command}>
-                  <pre class="overflow-x-auto whitespace-pre-wrap break-words rounded bg-surface-overlay px-2 py-1 font-mono text-xs text-text-primary">
-                    {part.type === "tool" ? (part as Extract<MessagePart, { type: "tool" }>).command : ""}
-                  </pre>
-                </Show>
-                <Show when={part.type === "tool" && (part as Extract<MessagePart, { type: "tool" }>).output}>
-                  <pre class="max-h-48 overflow-y-auto overflow-x-auto whitespace-pre-wrap break-words rounded bg-surface-overlay px-2 py-1 font-mono text-xs text-text-secondary">
-                    {part.type === "tool" ? (part as Extract<MessagePart, { type: "tool" }>).output : ""}
-                  </pre>
-                </Show>
               </div>
-            </Show>
-          )}
-        </For>
-      </div>
+            </div>
+          </Show>
+        )}
+      </For>
     </div>
   );
 };
@@ -238,8 +299,9 @@ const RecentAgentCard: Component<RecentAgentCardProps> = (props) => {
   };
 
   const isSnippetLoading = () => shouldLoadSnippet() && snippet.loading && !snippetData();
-  const preview = () => getRecentAgentPreview(snippetData());
-  const hasPreview = () => preview().trim().length > 0;
+  const lastAgentMessage = () => snippetData()?.lastAgentMessage ?? null;
+  const lastUserMessage = () => snippetData()?.lastUserMessage ?? null;
+  const hasPreview = () => Boolean(lastAgentMessage()?.trim() || lastUserMessage()?.text.trim());
 
   return (
     <div
@@ -291,7 +353,42 @@ const RecentAgentCard: Component<RecentAgentCardProps> = (props) => {
             </Show>
           }
         >
-          <p class="line-clamp-2 text-sm leading-relaxed text-text-secondary">{preview()}</p>
+          <div class="mt-1 flex flex-col gap-1.5">
+            <Show when={lastAgentMessage()}>
+              {(message) => (
+                <MessageBubble
+                  message={message()}
+                  justify="start"
+                  background="var(--theme-surface-raised)"
+                  boxShadow="0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)"
+                  maxWidth="max-w-[85%]"
+                />
+              )}
+            </Show>
+            <Show when={lastUserMessage()}>
+              {(message) => (
+                <Show
+                  when={message().isAgentSent}
+                  fallback={
+                    <MessageBubble
+                      message={message().text}
+                      justify="end"
+                      background="color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))"
+                      boxShadow={`0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
+                        0 2px 8px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent)`}
+                      maxWidth="max-w-[85%]"
+                      gradientBackground={`linear-gradient(to bottom,
+                        transparent,
+                        color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))
+                      )`}
+                    />
+                  }
+                >
+                  <MessageBubble message={message().text} {...getAgentSentBubbleProps()} />
+                </Show>
+              )}
+            </Show>
+          </div>
         </Show>
       </div>
     </div>
@@ -390,7 +487,7 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
   const [resultsScrollRoot, setResultsScrollRoot] = createSignal<HTMLDivElement>();
   let requestId = 0;
   let recentRequestId = 0;
-  let resultItemRefs: Array<HTMLDivElement | undefined> = [];
+  const resultItemRefs: Array<HTMLDivElement | undefined> = [];
 
   createEffect(() => {
     const query = props.query.trim();
