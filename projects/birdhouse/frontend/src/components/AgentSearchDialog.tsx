@@ -529,15 +529,15 @@ const AgentSearchDialog: Component = () => {
             </Show>
           </div>
 
-          <div class="px-4 py-2 border-t border-border flex-shrink-0 flex items-center gap-4 text-xs text-text-muted">
-            <span>
-              <kbd class="font-mono">↑↓</kbd> navigate
+          <div class="px-4 py-2 border-t border-border flex-shrink-0 flex items-center gap-3 text-xs text-text-muted">
+            <span class="flex items-center gap-1">
+              navigate <kbd class="font-mono">↑↓</kbd>
             </span>
-            <span>
-              <kbd class="font-mono">Right ⇧</kbd> peek
+            <span class="flex items-center gap-1">
+              peek <span class="text-text-secondary">right</span> <kbd class="font-mono">⇧</kbd>
             </span>
-            <span>
-              <kbd class="font-mono">↵</kbd> open
+            <span class="flex items-center gap-1">
+              open <kbd class="font-mono">↵</kbd>
             </span>
           </div>
         </Dialog.Content>
