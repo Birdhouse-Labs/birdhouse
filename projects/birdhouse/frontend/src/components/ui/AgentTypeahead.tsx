@@ -88,7 +88,7 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
       {(match) => (
         <div
           ref={setFloating}
-          class="overflow-y-auto rounded-xl border border-border bg-surface-overlay shadow-xl"
+          class="flex flex-col rounded-xl border border-border bg-surface-overlay shadow-xl overflow-hidden"
           style={{
             position: position.strategy,
             top: `${position.y ?? 0}px`,
