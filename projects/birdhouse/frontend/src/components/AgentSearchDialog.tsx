@@ -161,7 +161,7 @@ interface VisibleAgentResult {
 }
 
 const SEARCH_LIMIT = 50;
-const RECENT_LIMIT = 100;
+const RECENT_LIMIT = 50;
 const DEBOUNCE_MS = 300;
 
 const SectionHeader: Component<{ label: string }> = (props) => (
@@ -220,10 +220,10 @@ const AgentSearchDialog: Component = () => {
     const thisRequest = ++recentRequestId;
     setIsLoadingRecent(true);
 
-    void fetchRecentAgents(workspaceId)
+    void fetchRecentAgents(workspaceId, undefined, RECENT_LIMIT)
       .then((agents) => {
         if (thisRequest !== recentRequestId) return;
-        setRecentAgents(agents.slice(0, RECENT_LIMIT));
+        setRecentAgents(agents);
       })
       .catch(() => {
         if (thisRequest !== recentRequestId) return;

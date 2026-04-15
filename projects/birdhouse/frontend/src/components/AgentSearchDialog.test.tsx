@@ -126,11 +126,11 @@ describe("AgentSearchDialog", () => {
     expect(screen.getByLabelText("Search agent messages")).toBeInTheDocument();
   });
 
-  it("fetches and shows recent agents immediately on open", async () => {
+  it("fetches recent agents with limit=50 immediately on open", async () => {
     renderDialog();
 
     await waitFor(() => {
-      expect(mockFetchRecentAgents).toHaveBeenCalledWith("test-workspace");
+      expect(mockFetchRecentAgents).toHaveBeenCalledWith("test-workspace", undefined, 50);
     });
   });
 
@@ -142,9 +142,9 @@ describe("AgentSearchDialog", () => {
     expect(screen.getByText("Recent Agent")).toBeInTheDocument();
   });
 
-  it("caps recent agents at 100 items", async () => {
+  it("renders all agents returned by fetchRecentAgents (limit enforced server-side)", async () => {
     mockFetchRecentAgents.mockResolvedValue(
-      Array.from({ length: 101 }, (_, index) =>
+      Array.from({ length: 50 }, (_, index) =>
         makeRecentAgent({
           id: `agent-recent-${index + 1}`,
           session_id: `ses-recent-${index + 1}`,
@@ -155,8 +155,7 @@ describe("AgentSearchDialog", () => {
     );
     renderDialog();
 
-    expect(await screen.findByText("Recent Agent 100")).toBeInTheDocument();
-    expect(screen.queryByText("Recent Agent 101")).not.toBeInTheDocument();
+    expect(await screen.findByText("Recent Agent 50")).toBeInTheDocument();
   });
 
   it("shows the keyboard hint footer", () => {

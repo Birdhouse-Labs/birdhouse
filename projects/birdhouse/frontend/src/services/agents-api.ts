@@ -262,12 +262,20 @@ export async function fetchAgentsForTypeahead(workspaceId: string): Promise<Agen
  * Fetch recent agents with message context for typeahead
  * @param workspaceId The workspace ID
  * @param query Optional search query to filter agents
+ * @param limit Optional maximum number of agents to return (applied server-side before message fetches)
  * @returns Array of recent agents with last message context
  */
-export async function fetchRecentAgents(workspaceId: string, query?: string): Promise<RecentAgentForTypeahead[]> {
+export async function fetchRecentAgents(
+  workspaceId: string,
+  query?: string,
+  limit?: number,
+): Promise<RecentAgentForTypeahead[]> {
   const params = new URLSearchParams();
   if (query?.trim()) {
     params.set("q", query.trim());
+  }
+  if (limit !== undefined) {
+    params.set("limit", String(limit));
   }
 
   const url = `${buildWorkspaceUrl(workspaceId, "/agents/recent")}?${params}`;
