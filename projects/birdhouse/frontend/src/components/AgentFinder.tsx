@@ -63,6 +63,8 @@ interface SearchResultCardProps {
   isActive: boolean;
   allowHover: boolean;
   isCurrent: boolean;
+  isPopoverOpen: boolean;
+  onPopoverOpenChange: (open: boolean) => void;
   onPointerEnter: () => void;
   onConfirm: () => void;
   itemRef: (el: HTMLDivElement) => void;
@@ -397,7 +399,6 @@ const RecentAgentCard: Component<RecentAgentCardProps> = (props) => {
 
 const SearchResultCard: Component<SearchResultCardProps> = (props) => {
   const baseZIndex = useZIndex();
-  const [isPopoverOpen, setIsPopoverOpen] = createSignal(false);
   const matchCount = () => props.group.matches.length;
 
   return (
@@ -434,7 +435,7 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
         </span>
       </div>
 
-      <Popover open={isPopoverOpen()} onOpenChange={setIsPopoverOpen}>
+      <Popover open={props.isPopoverOpen} onOpenChange={props.onPopoverOpenChange}>
         <Popover.Trigger
           as="button"
           type="button"
@@ -485,6 +486,8 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
   const [activeIndex, setActiveIndex] = createSignal(-1);
   const [pointerMoved, setPointerMoved] = createSignal(false);
   const [resultsScrollRoot, setResultsScrollRoot] = createSignal<HTMLDivElement>();
+  // Tracks which search result card's matches popover is open (by index), or null if none.
+  const [openPopoverIndex, setOpenPopoverIndex] = createSignal<number | null>(null);
   let requestId = 0;
   let recentRequestId = 0;
   const resultItemRefs: Array<HTMLDivElement | undefined> = [];
@@ -597,12 +600,13 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     }));
   });
 
-  // Reset active index when results change. Do NOT clear resultItemRefs here —
-  // the For loop re-assigns refs as it re-renders, and clearing eagerly causes
-  // the scroll effect to fire against a wiped array before refs are restored.
+  // Reset active index and any open popover when results change. Do NOT clear
+  // resultItemRefs here — the For loop re-assigns refs as it re-renders, and
+  // clearing eagerly causes the scroll effect to fire against an empty array.
   createEffect(() => {
     visibleResults();
     setActiveIndex(-1);
+    setOpenPopoverIndex(null);
   });
 
   createEffect(() => {
@@ -682,7 +686,19 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
   const confirmHintLabel = () => props.confirmLabel ?? "confirm";
 
   return (
-    <div class="flex flex-1 min-h-0 flex-col" onPointerMove={() => setPointerMoved(true)}>
+    <div
+      class="flex flex-1 min-h-0 flex-col"
+      onPointerMove={() => setPointerMoved(true)}
+      onKeyDown={(e) => {
+        // If a matches popover is open, Escape should close it only — not dismiss
+        // the finder. Stop propagation here so neither Corvu nor the document
+        // listener escalates to onDismiss.
+        if (e.key === "Escape" && openPopoverIndex() !== null) {
+          e.stopPropagation();
+          setOpenPopoverIndex(null);
+        }
+      }}
+    >
       <div ref={setResultsScrollRoot} class="flex-1 overflow-y-auto">
         <Show when={isSearching() || isLoadingRecent()}>
           <div class="flex justify-center px-4 py-3">
@@ -746,6 +762,8 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
                   isActive={activeIndex() === index()}
                   allowHover={pointerMoved()}
                   isCurrent={props.currentAgentId === group.agentId}
+                  isPopoverOpen={openPopoverIndex() === index()}
+                  onPopoverOpenChange={(open) => setOpenPopoverIndex(open ? index() : null)}
                   onPointerEnter={() => {
                     if (pointerMoved()) setActiveIndex(index());
                   }}
