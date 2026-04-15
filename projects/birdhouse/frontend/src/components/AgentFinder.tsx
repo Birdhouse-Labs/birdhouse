@@ -500,10 +500,12 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     }));
   });
 
+  // Reset active index when results change. Do NOT clear resultItemRefs here —
+  // the For loop re-assigns refs as it re-renders, and clearing eagerly causes
+  // the scroll effect to fire against a wiped array before refs are restored.
   createEffect(() => {
     visibleResults();
     setActiveIndex(-1);
-    resultItemRefs = [];
   });
 
   createEffect(() => {
