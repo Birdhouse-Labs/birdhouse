@@ -208,8 +208,8 @@ const SectionHeader: Component<{ label: string }> = (props) => (
 interface SnippetWindowData {
   key: string;
   snippet: string;
-  highlightStart: number;
-  highlightEnd: number;
+  highlightStart?: number;
+  highlightEnd?: number;
 }
 
 function findMatchIndexes(text: string, query: string): number[] {
@@ -280,6 +280,16 @@ function createTextMatchWindows(text: string, query: string, keyPrefix: string):
   );
 }
 
+function createPreviewWindow(text: string, key: string): SnippetWindowData {
+  const maxLength = MATCH_CONTEXT_CHARS * 2;
+  const isTrimmed = text.length > maxLength;
+
+  return {
+    key,
+    snippet: isTrimmed ? `${text.slice(0, maxLength)}...` : text,
+  };
+}
+
 const HighlightedSnippet: Component<{ snippet: string; highlightStart: number; highlightEnd: number }> = (props) => (
   <>
     <span>{props.snippet.slice(0, props.highlightStart)}</span>
@@ -293,18 +303,27 @@ const HighlightedSnippet: Component<{ snippet: string; highlightStart: number; h
 const MatchWindow: Component<{
   window: SnippetWindowData;
   monospace?: boolean;
-}> = (props) => (
-  <div
-    class="rounded-md bg-surface-overlay/80 px-2.5 py-1.5 text-xs text-text-primary"
-    classList={{ "font-mono whitespace-pre-wrap break-words": props.monospace }}
-  >
-    <HighlightedSnippet
-      snippet={props.window.snippet}
-      highlightStart={props.window.highlightStart}
-      highlightEnd={props.window.highlightEnd}
-    />
-  </div>
-);
+}> = (props) => {
+  const hasHighlight = () =>
+    props.window.highlightStart !== undefined &&
+    props.window.highlightEnd !== undefined &&
+    props.window.highlightEnd > props.window.highlightStart;
+
+  return (
+    <div
+      class="rounded-md bg-surface-overlay/80 px-2.5 py-1.5 text-xs text-text-primary"
+      classList={{ "font-mono whitespace-pre-wrap break-words": props.monospace }}
+    >
+      <Show when={hasHighlight()} fallback={<span>{props.window.snippet}</span>}>
+        <HighlightedSnippet
+          snippet={props.window.snippet}
+          highlightStart={props.window.highlightStart ?? 0}
+          highlightEnd={props.window.highlightEnd ?? 0}
+        />
+      </Show>
+    </div>
+  );
+};
 
 const MatchMessage: Component<MatchMessageProps> = (props) => {
   const layout = () => getMessageLayout(props.role);
@@ -359,6 +378,10 @@ const MatchMessage: Component<MatchMessageProps> = (props) => {
           const outputWindows = part.output
             ? createTextMatchWindows(part.output, query(), `tool-output-${index()}`)
             : [];
+          const commandPreviewWindow =
+            part.command && commandWindows.length === 0 && outputWindows.length > 0
+              ? createPreviewWindow(part.command, `tool-command-preview-${index()}`)
+              : null;
           if (commandWindows.length === 0 && outputWindows.length === 0) {
             return null;
           }
@@ -374,12 +397,19 @@ const MatchMessage: Component<MatchMessageProps> = (props) => {
               >
                 <div class="space-y-2">
                   <div class="text-xs font-mono text-text-secondary">[{part.toolName}]</div>
-                  <Show when={commandWindows.length > 0}>
+                  <Show when={commandWindows.length > 0 || commandPreviewWindow}>
                     <div class="space-y-1">
                       <div class="px-0.5 text-[11px] font-medium uppercase tracking-wide text-text-secondary">
                         Command
                       </div>
-                      <For each={commandWindows}>{(window) => <MatchWindow window={window} monospace={true} />}</For>
+                      <Show
+                        when={commandWindows.length > 0}
+                        fallback={
+                          commandPreviewWindow ? <MatchWindow window={commandPreviewWindow} monospace={true} /> : null
+                        }
+                      >
+                        <For each={commandWindows}>{(window) => <MatchWindow window={window} monospace={true} />}</For>
+                      </Show>
                     </div>
                   </Show>
                   <Show when={outputWindows.length > 0}>
