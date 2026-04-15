@@ -45,9 +45,14 @@ vi.mock("corvu/dialog", () => {
   );
   Dialog.Portal = (props: { children: JSX.Element }) => <>{props.children}</>;
   Dialog.Overlay = () => null;
-  Dialog.Content = (props: { children: JSX.Element; class?: string; onKeyDown?: (e: KeyboardEvent) => void }) => (
+  Dialog.Content = (props: {
+    children: JSX.Element;
+    class?: string;
+    onKeyDown?: (e: KeyboardEvent) => void;
+    onKeyUp?: (e: KeyboardEvent) => void;
+  }) => (
     // biome-ignore lint/a11y/noStaticElementInteractions: test mock — not a real interactive element
-    <div role="presentation" class={props.class} onKeyDown={props.onKeyDown}>
+    <div role="presentation" class={props.class} onKeyDown={props.onKeyDown} onKeyUp={props.onKeyUp}>
       {props.children}
     </div>
   );
@@ -406,11 +411,19 @@ describe("AgentSearchDialog", () => {
       });
     });
 
-    it("Enter with an active result opens agent in modal", async () => {
+    it("Enter with an active result navigates directly to the agent", async () => {
       await renderWithResults();
       const input = screen.getByLabelText("Search agent messages");
       fireEvent.keyDown(input, { key: "ArrowDown" });
       fireEvent.keyDown(input, { key: "Enter" });
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/workspace/test-workspace/agent/agent-1"));
+    });
+
+    it("Right Shift with an active result peeks the agent in a modal", async () => {
+      await renderWithResults();
+      const content = screen.getByRole("presentation");
+      fireEvent.keyDown(content, { key: "ArrowDown" });
+      fireEvent.keyUp(content, { code: "ShiftRight", key: "Shift" });
       await waitFor(() => expect(mockOpenModal).toHaveBeenCalledWith("agent", "agent-1"));
     });
 
@@ -423,22 +436,6 @@ describe("AgentSearchDialog", () => {
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: "nearest" });
       });
-    });
-
-    it("Cmd+Enter with an active result navigates directly to the agent", async () => {
-      await renderWithResults();
-      const input = screen.getByLabelText("Search agent messages");
-      fireEvent.keyDown(input, { key: "ArrowDown" });
-      fireEvent.keyDown(input, { key: "Enter", metaKey: true });
-      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/workspace/test-workspace/agent/agent-1"));
-    });
-
-    it("Ctrl+Enter with an active result navigates directly to the agent", async () => {
-      await renderWithResults();
-      const input = screen.getByLabelText("Search agent messages");
-      fireEvent.keyDown(input, { key: "ArrowDown" });
-      fireEvent.keyDown(input, { key: "Enter", ctrlKey: true });
-      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/workspace/test-workspace/agent/agent-1"));
     });
 
     it("ArrowDown wraps from last result to first", async () => {
@@ -469,7 +466,7 @@ describe("AgentSearchDialog", () => {
       const input = screen.getByLabelText("Search agent messages");
       // No ArrowDown pressed — index stays at -1
       fireEvent.keyDown(input, { key: "Enter" });
-      expect(mockOpenModal).not.toHaveBeenCalled();
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
 
     it("active index resets to -1 when a new search is triggered", async () => {
@@ -503,11 +500,20 @@ describe("AgentSearchDialog", () => {
       });
     });
 
-    it("Enter with an active recent agent opens it in a modal", async () => {
+    it("Enter with an active recent agent navigates directly", async () => {
       await renderWithRecentAgents();
       const input = screen.getByLabelText("Search agent messages");
       fireEvent.keyDown(input, { key: "ArrowDown" });
       fireEvent.keyDown(input, { key: "Enter" });
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/workspace/test-workspace/agent/agent-recent-1"));
+    });
+
+    it("Right Shift with an active recent agent peeks it in a modal", async () => {
+      await renderWithRecentAgents();
+      const content = screen.getByRole("presentation");
+      fireEvent.keyDown(content, { key: "ArrowDown" });
+      fireEvent.keyUp(content, { code: "ShiftRight", key: "Shift" });
 
       await waitFor(() => expect(mockOpenModal).toHaveBeenCalledWith("agent", "agent-recent-1"));
     });
@@ -521,15 +527,6 @@ describe("AgentSearchDialog", () => {
       await waitFor(() => {
         expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: "nearest" });
       });
-    });
-
-    it("Cmd+Enter with an active recent agent navigates directly", async () => {
-      await renderWithRecentAgents();
-      const input = screen.getByLabelText("Search agent messages");
-      fireEvent.keyDown(input, { key: "ArrowDown" });
-      fireEvent.keyDown(input, { key: "Enter", metaKey: true });
-
-      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/workspace/test-workspace/agent/agent-recent-1"));
     });
   });
 });

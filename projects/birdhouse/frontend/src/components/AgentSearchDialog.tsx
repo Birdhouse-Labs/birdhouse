@@ -349,7 +349,7 @@ const AgentSearchDialog: Component = () => {
   };
 
   // Keyboard navigation: arrow up/down moves through grouped results;
-  // Enter opens the active result in a modal; Cmd/Ctrl+Enter navigates directly.
+  // Enter opens the active result directly; Right Shift peeks (opens in modal).
   const handleKeyDown = (e: KeyboardEvent) => {
     const items = visibleResults();
     if (items.length === 0) return;
@@ -366,14 +366,24 @@ const AgentSearchDialog: Component = () => {
       const item = items[idx];
       if (!item?.agentId) return;
       e.preventDefault();
-      if (e.metaKey || e.ctrlKey) {
-        // Direct navigation — close search and navigate to the agent's main view
-        closeSearch();
-        navigate(`/workspace/${routeWorkspaceId()}/agent/${item.agentId}`);
-      } else {
-        openModal("agent", item.agentId);
-      }
+      // Enter always opens directly
+      closeSearch();
+      navigate(`/workspace/${routeWorkspaceId()}/agent/${item.agentId}`);
     }
+  };
+
+  // Right Shift peeks the active result in a modal (keyup so held shift doesn't repeat)
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.code !== "ShiftRight") return;
+    // Ignore if any other modifier is held
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const items = visibleResults();
+    const idx = activeIndex();
+    if (idx < 0 || items.length === 0) return;
+    const item = items[idx];
+    if (!item?.agentId) return;
+    e.preventDefault();
+    openModal("agent", item.agentId);
   };
 
   return (
@@ -400,6 +410,7 @@ const AgentSearchDialog: Component = () => {
                    left-1/2 top-[8%] -translate-x-1/2
                    flex flex-col overflow-hidden z-[40]`}
           onKeyDown={handleKeyDown}
+          onKeyUp={handleKeyUp}
         >
           {/* Search input header */}
           <div class="flex items-center gap-2 px-4 py-3 border-b border-border flex-shrink-0">
@@ -511,10 +522,10 @@ const AgentSearchDialog: Component = () => {
               <kbd class="font-mono">↑↓</kbd> navigate
             </span>
             <span>
-              <kbd class="font-mono">↵</kbd> peek
+              <kbd class="font-mono">Right ⇧</kbd> peek
             </span>
             <span>
-              <kbd class="font-mono">⌘↵</kbd> open
+              <kbd class="font-mono">↵</kbd> open
             </span>
           </div>
         </Dialog.Content>
