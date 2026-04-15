@@ -48,7 +48,11 @@ vi.mock("./AgentTypeahead", () => ({
       onCleanup(() => document.removeEventListener("keydown", handleKeyDown));
     });
 
-    return <Show when={props.visible}><div data-testid="mock-agent-typeahead" /></Show>;
+    return (
+      <Show when={props.visible}>
+        <div data-testid="mock-agent-typeahead" />
+      </Show>
+    );
   },
 }));
 

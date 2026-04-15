@@ -16,7 +16,6 @@ interface MockAgentFinderProps {
 }
 
 let mockModalStack: Array<{ type: string; id: string }> = [];
-let lastFinderProps: MockAgentFinderProps | undefined;
 
 vi.mock("../../contexts/ZIndexContext", () => ({
   useZIndex: () => 100,
@@ -38,8 +37,6 @@ vi.mock("solid-floating-ui", () => ({
 
 vi.mock("../AgentFinder", () => ({
   default: (props: MockAgentFinderProps) => {
-    lastFinderProps = props;
-
     return (
       <div>
         <div data-testid="finder-query">{props.query}</div>
@@ -82,7 +79,6 @@ const renderTypeahead = (props?: Partial<Parameters<typeof AgentTypeahead>[0]>) 
 describe("AgentTypeahead", () => {
   beforeEach(() => {
     mockModalStack = [];
-    lastFinderProps = undefined;
   });
 
   afterEach(() => {

@@ -22,7 +22,6 @@ let mockModalStack = [{ type: "agent-search", id: "main" }];
 const mockNavigate = vi.fn();
 const mockRemoveModalByType = vi.fn();
 let dialogOnOpenChange: ((open: boolean) => void) | undefined;
-let lastFinderProps: MockAgentFinderProps | undefined;
 
 vi.mock("../lib/routing", () => ({
   useModalRoute: () => ({
@@ -38,8 +37,6 @@ vi.mock("@solidjs/router", () => ({
 
 vi.mock("./AgentFinder", () => ({
   default: (props: MockAgentFinderProps) => {
-    lastFinderProps = props;
-
     return (
       <div>
         <div data-testid="finder-query">{props.query}</div>
@@ -81,7 +78,6 @@ describe("AgentSearchDialog", () => {
     mockNavigate.mockReset();
     mockRemoveModalByType.mockReset();
     dialogOnOpenChange = undefined;
-    lastFinderProps = undefined;
   });
 
   afterEach(() => {

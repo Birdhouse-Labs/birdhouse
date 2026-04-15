@@ -28,13 +28,20 @@ vi.mock("../contexts/ZIndexContext", () => ({
 
 vi.mock("corvu/popover", () => {
   const Popover = (props: { children: JSX.Element }) => <>{props.children}</>;
-  Popover.Trigger = (props: { children: JSX.Element; as?: string; type?: "button" | "submit" | "reset" | "menu"; class?: string }) => (
+  Popover.Trigger = (props: {
+    children: JSX.Element;
+    as?: string;
+    type?: "button" | "submit" | "reset" | "menu";
+    class?: string;
+  }) => (
     <button type={props.type} class={props.class}>
       {props.children}
     </button>
   );
   Popover.Portal = (props: { children: JSX.Element }) => <>{props.children}</>;
-  Popover.Content = (props: { children: JSX.Element; class?: string }) => <div class={props.class}>{props.children}</div>;
+  Popover.Content = (props: { children: JSX.Element; class?: string }) => (
+    <div class={props.class}>{props.children}</div>
+  );
   return { default: Popover };
 });
 

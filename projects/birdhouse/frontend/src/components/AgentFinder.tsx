@@ -137,7 +137,9 @@ const CurrentBadge: Component = () => (
 );
 
 const SectionHeader: Component<{ label: string }> = (props) => (
-  <div class="px-4 py-2 text-[11px] font-semibold text-text-muted uppercase tracking-wider select-none">{props.label}</div>
+  <div class="px-4 py-2 text-[11px] font-semibold text-text-muted uppercase tracking-wider select-none">
+    {props.label}
+  </div>
 );
 
 const MessageParts: Component<MessagePartsProps> = (props) => {
@@ -160,7 +162,9 @@ const MessageParts: Component<MessagePartsProps> = (props) => {
           {(part) => (
             <Show
               when={part.type === "tool"}
-              fallback={<p class="whitespace-pre-wrap break-words leading-relaxed">{part.type === "text" ? part.text : ""}</p>}
+              fallback={
+                <p class="whitespace-pre-wrap break-words leading-relaxed">{part.type === "text" ? part.text : ""}</p>
+              }
             >
               <div class="space-y-1">
                 <div class="text-xs font-mono text-text-secondary">
