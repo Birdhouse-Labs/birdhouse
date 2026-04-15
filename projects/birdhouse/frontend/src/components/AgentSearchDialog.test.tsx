@@ -158,6 +158,8 @@ const formatEpochTimestamp = () =>
     minute: "2-digit",
   });
 
+// Resets mockModalStack as a side effect. If a test needs a different stack,
+// set mockModalStack after calling renderDialog(), not before.
 const renderDialog = (open = true) => {
   mockModalStack = open ? [{ type: "agent-search", id: "main" }] : [];
   render(() => <AgentSearchDialog />);
