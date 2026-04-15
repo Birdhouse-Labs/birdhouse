@@ -535,12 +535,12 @@ const AgentSearchDialog: Component = () => {
               <kbd class="font-mono text-text-muted">↑↓</kbd>
             </span>
             <span class="flex items-center gap-1.5">
-              <span class="font-medium text-text-secondary">peek</span>
-              <kbd class="font-mono text-text-muted">right ⇧</kbd>
-            </span>
-            <span class="flex items-center gap-1.5">
               <span class="font-medium text-text-secondary">open</span>
               <kbd class="font-mono text-text-muted">↵</kbd>
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="font-medium text-text-secondary">peek</span>
+              <kbd class="font-mono text-text-muted">right ⇧</kbd>
             </span>
           </div>
         </Dialog.Content>
