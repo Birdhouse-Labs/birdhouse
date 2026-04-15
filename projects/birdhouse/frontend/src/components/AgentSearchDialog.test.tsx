@@ -144,6 +144,15 @@ const makeRecentSnippet = (overrides?: Partial<RecentAgentSnippet>): RecentAgent
   ...overrides,
 });
 
+const formatEpochTimestamp = () =>
+  new Date(0).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
 const renderDialog = (open = true) => {
   mockModalStack = open ? [{ type: "agent-search", id: "main" }] : [];
   render(() => <AgentSearchDialog />);
@@ -242,6 +251,15 @@ describe("AgentSearchDialog", () => {
     await screen.findByText("Recent Agent");
 
     expect(mockFetchRecentAgentSnippet).not.toHaveBeenCalled();
+  });
+
+  it("does not render an epoch timestamp before a recent snippet has loaded", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
+    renderDialog();
+
+    await screen.findByText("Recent Agent");
+
+    expect(screen.queryByText(formatEpochTimestamp())).not.toBeInTheDocument();
   });
 
   it("fetches only the recent card that becomes visible", async () => {

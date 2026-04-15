@@ -614,7 +614,7 @@ const RecentAgentCard: Component<RecentAgentCardProps> = (props) => {
         >
           {props.agent.title || props.agent.id}
         </a>
-        <Show when={snippetData()?.lastMessageAt !== null}>
+        <Show when={snippetData()?.lastMessageAt != null}>
           <span class="text-[11px] text-text-secondary">{formatDateTime(snippetData()?.lastMessageAt ?? 0)}</span>
         </Show>
         <Show
