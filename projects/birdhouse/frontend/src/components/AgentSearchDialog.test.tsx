@@ -427,20 +427,6 @@ describe("AgentSearchDialog", () => {
       await waitFor(() => expect(mockOpenModal).toHaveBeenCalledWith("agent", "agent-1"));
     });
 
-    it("Right Shift dismisses the peek when an agent modal is already on top", async () => {
-      // Render with an agent modal already on top — set stack after renderDialog resets it
-      renderDialog();
-      mockModalStack = [
-        { type: "agent-search", id: "main" },
-        { type: "agent", id: "agent-1" },
-      ];
-      await screen.findByLabelText("Search agent messages");
-      const content = screen.getByRole("presentation");
-      fireEvent.keyUp(content, { code: "ShiftRight", key: "Shift" });
-      await waitFor(() => expect(mockCloseModal).toHaveBeenCalled());
-      expect(mockOpenModal).not.toHaveBeenCalled();
-    });
-
     it("scrolls the active search result into view during keyboard navigation", async () => {
       await renderWithResults();
       const input = screen.getByLabelText("Search agent messages");

@@ -183,7 +183,7 @@ const AgentSearchDialog: Component = () => {
   const { workspaceId } = useWorkspace();
   const routeWorkspaceId = useWorkspaceId();
   const navigate = useNavigate();
-  const { modalStack, removeModalByType, openModal, closeModal } = useModalRoute();
+  const { modalStack, removeModalByType, openModal } = useModalRoute();
 
   const isOpen = createMemo(() => modalStack().some((m) => m.type === MODAL_TYPE_AGENT_SEARCH));
   const isTopMostSearchDialog = createMemo(() => modalStack().at(-1)?.type === MODAL_TYPE_AGENT_SEARCH);
@@ -373,22 +373,16 @@ const AgentSearchDialog: Component = () => {
   };
 
   // Right Shift peeks the active result in a modal (keyup so held shift doesn't repeat)
-  // If an agent modal is already open on top, Right Shift dismisses it instead
   const handleKeyUp = (e: KeyboardEvent) => {
     if (e.code !== "ShiftRight") return;
     // Ignore if any other modifier is held
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    e.preventDefault();
-    // Dismiss the peek if one is already open on top
-    if (modalStack().at(-1)?.type === "agent") {
-      closeModal();
-      return;
-    }
     const items = visibleResults();
     const idx = activeIndex();
     if (idx < 0 || items.length === 0) return;
     const item = items[idx];
     if (!item?.agentId) return;
+    e.preventDefault();
     openModal("agent", item.agentId);
   };
 
