@@ -126,17 +126,22 @@ const WorkspaceLayout: Component = () => {
   // Re-registers whenever the user changes the configured shortcut.
   createEffect(() => {
     const shortcut = commandPaletteShortcut();
-    const unsubscribe = tinykeys(window, {
+    const unsubscribeCommandPalette = tinykeys(window, {
       [shortcut]: (e: KeyboardEvent) => {
         e.preventDefault();
         setIsCommandPaletteOpen(true);
       },
+    });
+    const unsubscribeAgentSearch = tinykeys(window, {
       "$mod+o": (e: KeyboardEvent) => {
         e.preventDefault();
         openModal("agent-search", "main");
       },
     });
-    onCleanup(unsubscribe);
+    onCleanup(() => {
+      unsubscribeCommandPalette();
+      unsubscribeAgentSearch();
+    });
   });
 
   // Called by WorkspaceRestartWatcher when a restart event arrives

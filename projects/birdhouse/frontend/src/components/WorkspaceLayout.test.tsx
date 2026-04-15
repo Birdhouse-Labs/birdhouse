@@ -5,10 +5,11 @@ import { render, waitFor } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { openModalMock, setIsCommandPaletteOpenMock, tinykeysMock } = vi.hoisted(() => ({
+const { openModalMock, setIsCommandPaletteOpenMock, tinykeysMock, commandPaletteShortcutMock } = vi.hoisted(() => ({
   openModalMock: vi.fn(),
   setIsCommandPaletteOpenMock: vi.fn(),
   tinykeysMock: vi.fn(),
+  commandPaletteShortcutMock: vi.fn(() => "$mod+k"),
 }));
 
 vi.mock("@solidjs/router", () => ({
@@ -44,7 +45,7 @@ vi.mock("../lib/command-palette-state", () => ({
 }));
 
 vi.mock("../lib/preferences", () => ({
-  commandPaletteShortcut: () => "$mod+k",
+  commandPaletteShortcut: commandPaletteShortcutMock,
 }));
 
 vi.mock("../lib/routing", () => ({
@@ -93,6 +94,31 @@ describe("WorkspaceLayout keyboard shortcuts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     tinykeysMock.mockReturnValue(() => {});
+    commandPaletteShortcutMock.mockReturnValue("$mod+k");
+  });
+
+  it("keeps command palette and agent search bindings independent when shortcuts collide", async () => {
+    commandPaletteShortcutMock.mockReturnValue("$mod+o");
+
+    render(() => <WorkspaceLayout />);
+
+    await waitFor(() => {
+      expect(tinykeysMock).toHaveBeenCalledTimes(2);
+    });
+
+    const handlers = tinykeysMock.mock.calls
+      .map(([, bindings]) => (bindings as Record<string, (event: KeyboardEvent) => void>)["$mod+o"])
+      .filter((handler): handler is (event: KeyboardEvent) => void => typeof handler === "function");
+
+    expect(handlers).toHaveLength(2);
+
+    const preventDefault = vi.fn();
+    handlers[0]?.({ preventDefault } as unknown as KeyboardEvent);
+    handlers[1]?.({ preventDefault } as unknown as KeyboardEvent);
+
+    expect(preventDefault).toHaveBeenCalledTimes(2);
+    expect(setIsCommandPaletteOpenMock).toHaveBeenCalledWith(true);
+    expect(openModalMock).toHaveBeenCalledWith("agent-search", "main");
   });
 
   it("opens agent search when $mod+o is pressed", async () => {
@@ -102,8 +128,9 @@ describe("WorkspaceLayout keyboard shortcuts", () => {
       expect(tinykeysMock).toHaveBeenCalled();
     });
 
-    const bindings = tinykeysMock.mock.calls[0]?.[1] as Record<string, (event: KeyboardEvent) => void>;
-    const handler = bindings?.["$mod+o"];
+    const handler = tinykeysMock.mock.calls
+      .map(([, bindings]) => (bindings as Record<string, (event: KeyboardEvent) => void>)["$mod+o"])
+      .find((candidate): candidate is (event: KeyboardEvent) => void => typeof candidate === "function");
 
     expect(handler).toBeTypeOf("function");
 
