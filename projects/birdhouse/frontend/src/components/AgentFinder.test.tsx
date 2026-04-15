@@ -368,7 +368,7 @@ describe("AgentFinder", () => {
     expect(screen.getByText(/before context/).textContent).toContain("...");
     expect(screen.queryByText(matchedText)).not.toBeInTheDocument();
     expect(screen.getByText("needle", { selector: "mark" }).closest("div[style]")?.getAttribute("style")).toContain(
-      "linear-gradient(to right",
+      "background: var(--theme-surface-raised)",
     );
     expect(screen.getByText(contextText).closest("div[style]")?.getAttribute("style")).toContain(
       "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",

@@ -180,7 +180,7 @@ function getAgentSentBubbleProps(): BubbleLayout {
 
 function getMessageLayout(role: string): BubbleLayout {
   if (role === "user") return getUserBubbleProps();
-  if (role === "assistant") return getAgentSentBubbleProps();
+  if (role === "assistant") return getAssistantBubbleProps();
   return getAssistantBubbleProps();
 }
 
