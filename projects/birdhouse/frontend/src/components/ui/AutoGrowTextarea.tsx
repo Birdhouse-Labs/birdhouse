@@ -5,7 +5,7 @@ import { type Component, createEffect, createMemo, createResource, createSignal 
 import { useSkillCache } from "../../contexts/SkillCacheContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useWorkspaceAgentId } from "../../lib/routing";
-import { fetchRecentAgents } from "../../services/agents-api";
+import { fetchRecentAgentsList } from "../../services/agents-api";
 import { fetchModels } from "../../services/messages-api";
 import { uiSize } from "../../theme";
 import { buildModelMarkdownLink } from "../../utils/modelLinks";
@@ -40,8 +40,8 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
   // Get skills from cache (always up-to-date via SSE)
   const { skills: skillsData } = useSkillCache();
 
-  // Load recent agents once on mount (server-side, with message context)
-  const [agentsData] = createResource(() => fetchRecentAgents(workspaceId));
+  // Load recent agents once on mount for the agent typeahead list
+  const [agentsData] = createResource(() => fetchRecentAgentsList(workspaceId));
 
   // Load models once on mount
   const [modelsData] = createResource(() => fetchModels(workspaceId));
@@ -368,6 +368,7 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
         inputValue={props.value}
         cursorPosition={cursorPosition()}
         visible={showAgentTypeahead()}
+        workspaceId={workspaceId}
         agents={typeaheadAgents()}
         currentAgentId={currentAgentId()}
         onSelect={handleAgentSelect}

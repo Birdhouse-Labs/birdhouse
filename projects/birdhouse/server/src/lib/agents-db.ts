@@ -152,9 +152,9 @@ export interface AgentsDB {
     sortDir?: SortDirection,
   ): { rows: AgentRow[]; matchedAgentIds: string[] };
 
-  /** Get recent agents from last 30 days, optionally filtered by query */
+  /** Get recent agents from last 30 days, optionally filtered by query and limited in count */
   // TODO(agent-search): Revisit this when we implement the new search feature
-  getRecentAgents(query?: string): AgentRow[];
+  getRecentAgents(query?: string, limit?: number): AgentRow[];
 
   /** Get all agents that belong to the same tree */
   getAgentsByTreeId(treeId: string): AgentRow[];
@@ -709,11 +709,13 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
       return { rows, matchedAgentIds };
     },
 
-    getRecentAgents(query?: string): AgentRow[] {
+    getRecentAgents(query?: string, limit?: number): AgentRow[] {
       // TODO(agent-search): Move search to db once we are setup for searching agents better
       // Get agents from last 30 days to provide relevant recent context
       // while keeping query bounded (avoids fetching entire db for search)
       const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+      const limitClause = limit !== undefined ? `LIMIT ${limit}` : "";
 
       const sql = `
         SELECT 
@@ -724,6 +726,7 @@ export function createAgentsDB(dbPath: string, existingDb?: Database): AgentsDB 
         WHERE archived_at IS NULL
           AND updated_at > ?
         ORDER BY updated_at DESC
+        ${limitClause}
       `;
 
       const rows = db.prepare(sql).all(thirtyDaysAgo) as AgentRow[];

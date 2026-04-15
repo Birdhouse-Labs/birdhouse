@@ -1,10 +1,10 @@
 // ABOUTME: Tests for AgentSearchDialog component
 // ABOUTME: Verifies open/close, idle state, debounce API call, result rendering, and keyboard nav
 
-import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
+import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessageSearchResponse } from "../services/agents-api";
+import type { AgentMessageSearchResponse, RecentAgentForTypeahead, RecentAgentSnippet } from "../services/agents-api";
 import * as agentsApi from "../services/agents-api";
 import AgentSearchDialog from "./AgentSearchDialog";
 
@@ -13,20 +13,23 @@ vi.mock("../contexts/WorkspaceContext", () => ({
 }));
 
 vi.mock("../services/agents-api", () => ({
+  fetchRecentAgentsList: vi.fn(),
+  fetchRecentAgentSnippet: vi.fn(),
   searchAgentMessages: vi.fn(),
 }));
 
-// Control open state via the modal route mock
-let mockIsOpen = true;
+// Control modal stack via the route mock
+let mockModalStack = [{ type: "agent-search", id: "main" }];
 const mockCloseModal = vi.fn();
 const mockOpenModal = vi.fn();
 const mockNavigate = vi.fn();
+const mockRemoveModalByType = vi.fn();
 
 vi.mock("../lib/routing", () => ({
   useModalRoute: () => ({
-    modalStack: () => (mockIsOpen ? [{ type: "agent-search", id: "main" }] : []),
+    modalStack: () => mockModalStack,
     closeModal: mockCloseModal,
-    removeModalByType: vi.fn(),
+    removeModalByType: mockRemoveModalByType,
     openModal: mockOpenModal,
   }),
   useWorkspaceId: () => () => "test-workspace",
@@ -42,9 +45,14 @@ vi.mock("corvu/dialog", () => {
   );
   Dialog.Portal = (props: { children: JSX.Element }) => <>{props.children}</>;
   Dialog.Overlay = () => null;
-  Dialog.Content = (props: { children: JSX.Element; class?: string; onKeyDown?: (e: KeyboardEvent) => void }) => (
+  Dialog.Content = (props: {
+    children: JSX.Element;
+    class?: string;
+    onKeyDown?: (e: KeyboardEvent) => void;
+    onKeyUp?: (e: KeyboardEvent) => void;
+  }) => (
     // biome-ignore lint/a11y/noStaticElementInteractions: test mock — not a real interactive element
-    <div role="presentation" class={props.class} onKeyDown={props.onKeyDown}>
+    <div role="presentation" class={props.class} onKeyDown={props.onKeyDown} onKeyUp={props.onKeyUp}>
       {props.children}
     </div>
   );
@@ -57,6 +65,46 @@ vi.mock("corvu/dialog", () => {
 });
 
 const mockSearchAgentMessages = agentsApi.searchAgentMessages as ReturnType<typeof vi.fn>;
+const mockFetchRecentAgentsList = agentsApi.fetchRecentAgentsList as ReturnType<typeof vi.fn>;
+const mockFetchRecentAgentSnippet = agentsApi.fetchRecentAgentSnippet as ReturnType<typeof vi.fn>;
+const scrollIntoViewMock = vi.fn();
+
+class MockIntersectionObserver {
+  static instances: MockIntersectionObserver[] = [];
+
+  readonly callback: IntersectionObserverCallback;
+  readonly options: IntersectionObserverInit | undefined;
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+
+  constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+    this.callback = callback;
+    this.options = options;
+    MockIntersectionObserver.instances.push(this);
+  }
+
+  trigger(target: Element, isIntersecting: boolean) {
+    this.callback(
+      [
+        {
+          target,
+          isIntersecting,
+          intersectionRatio: isIntersecting ? 1 : 0,
+          boundingClientRect: target.getBoundingClientRect(),
+          intersectionRect: isIntersecting ? target.getBoundingClientRect() : new DOMRectReadOnly(),
+          rootBounds: null,
+          time: Date.now(),
+        } as IntersectionObserverEntry,
+      ],
+      this as unknown as IntersectionObserver,
+    );
+  }
+
+  static reset() {
+    MockIntersectionObserver.instances = [];
+  }
+}
 
 const makeResponse = (results: AgentMessageSearchResponse["results"]): AgentMessageSearchResponse => ({
   results,
@@ -82,17 +130,58 @@ const makeResult = (overrides?: Partial<AgentMessageSearchResponse["results"][nu
   ...overrides,
 });
 
+const makeRecentAgent = (overrides?: Partial<RecentAgentForTypeahead>): RecentAgentForTypeahead => ({
+  id: "agent-recent-1",
+  title: "Recent Agent",
+  session_id: "ses-recent-1",
+  parent_id: null,
+  tree_id: "tree-recent-1",
+  ...overrides,
+});
+
+const makeRecentSnippet = (overrides?: Partial<RecentAgentSnippet>): RecentAgentSnippet => ({
+  lastMessageAt: Date.now() - 30000,
+  lastUserMessage: {
+    text: "Latest user prompt",
+    isAgentSent: false,
+  },
+  lastAgentMessage: "Latest agent response",
+  ...overrides,
+});
+
+const formatEpochTimestamp = () =>
+  new Date(0).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+// Resets mockModalStack as a side effect. If a test needs a different stack,
+// set mockModalStack after calling renderDialog(), not before.
 const renderDialog = (open = true) => {
-  mockIsOpen = open;
+  mockModalStack = open ? [{ type: "agent-search", id: "main" }] : [];
   render(() => <AgentSearchDialog />);
 };
 
 describe("AgentSearchDialog", () => {
   beforeEach(() => {
+    MockIntersectionObserver.reset();
+    globalThis.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver;
+    scrollIntoViewMock.mockReset();
+    Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoViewMock,
+    });
+    mockFetchRecentAgentsList.mockResolvedValue([]);
+    mockFetchRecentAgentSnippet.mockResolvedValue(makeRecentSnippet());
     mockSearchAgentMessages.mockResolvedValue(makeResponse([]));
   });
 
   afterEach(() => {
+    cleanup();
+    delete (window.HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
     vi.clearAllMocks();
   });
 
@@ -101,9 +190,161 @@ describe("AgentSearchDialog", () => {
     expect(screen.getByLabelText("Search agent messages")).toBeInTheDocument();
   });
 
-  it("shows idle prompt when no query is entered", () => {
+  it("fetches recent agents with limit=50 immediately on open", async () => {
     renderDialog();
-    expect(screen.getByText("Type to search agent messages")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mockFetchRecentAgentsList).toHaveBeenCalledWith("test-workspace", undefined, 50);
+    });
+  });
+
+  it("renders a Recent section with fetched agents when no query is entered", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
+    renderDialog();
+
+    expect(await screen.findByText("Recent")).toBeInTheDocument();
+    expect(screen.getByText("Recent Agent")).toBeInTheDocument();
+  });
+
+  it("renders all agents returned by fetchRecentAgentsList (limit enforced server-side)", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue(
+      Array.from({ length: 50 }, (_, index) =>
+        makeRecentAgent({
+          id: `agent-recent-${index + 1}`,
+          session_id: `ses-recent-${index + 1}`,
+          tree_id: `tree-recent-${index + 1}`,
+          title: `Recent Agent ${index + 1}`,
+        }),
+      ),
+    );
+    renderDialog();
+
+    expect(await screen.findByText("Recent Agent 50")).toBeInTheDocument();
+  });
+
+  it("shows a loading placeholder until a visible recent card snippet resolves", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
+    let resolveSnippet: ((value: RecentAgentSnippet) => void) | undefined;
+    mockFetchRecentAgentSnippet.mockReturnValue(
+      new Promise<RecentAgentSnippet>((resolve) => {
+        resolveSnippet = resolve;
+      }),
+    );
+
+    renderDialog();
+
+    const recentLink = await screen.findByText("Recent Agent");
+    const card = recentLink.closest("div[class*='rounded-xl']");
+    expect(card).toBeInTheDocument();
+    expect(screen.queryByText("Latest agent response")).not.toBeInTheDocument();
+
+    MockIntersectionObserver.instances[0]?.trigger(card as Element, true);
+
+    await waitFor(() => {
+      expect(mockFetchRecentAgentSnippet).toHaveBeenCalledWith("test-workspace", "agent-recent-1");
+    });
+
+    expect(card?.querySelector("[data-snippet-loading='true']")).toBeInTheDocument();
+
+    resolveSnippet?.(makeRecentSnippet());
+
+    expect(await screen.findByText("Latest agent response")).toBeInTheDocument();
+  });
+
+  it("does not fetch a snippet before a recent card becomes visible", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
+    renderDialog();
+
+    await screen.findByText("Recent Agent");
+
+    expect(mockFetchRecentAgentSnippet).not.toHaveBeenCalled();
+  });
+
+  it("does not render an epoch timestamp before a recent snippet has loaded", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
+    renderDialog();
+
+    await screen.findByText("Recent Agent");
+
+    expect(screen.queryByText(formatEpochTimestamp())).not.toBeInTheDocument();
+  });
+
+  it("fetches only the recent card that becomes visible", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([
+      makeRecentAgent({ id: "agent-recent-1", title: "Visible Recent" }),
+      makeRecentAgent({
+        id: "agent-recent-2",
+        session_id: "ses-recent-2",
+        tree_id: "tree-recent-2",
+        title: "Hidden Recent",
+      }),
+    ]);
+    renderDialog();
+
+    const visibleLink = await screen.findByText("Visible Recent");
+    await screen.findByText("Hidden Recent");
+
+    const visibleCard = visibleLink.closest("div[class*='rounded-xl']");
+    expect(visibleCard).toBeInTheDocument();
+
+    MockIntersectionObserver.instances[0]?.trigger(visibleCard as Element, true);
+
+    await waitFor(() => {
+      expect(mockFetchRecentAgentSnippet).toHaveBeenCalledTimes(1);
+      expect(mockFetchRecentAgentSnippet).toHaveBeenCalledWith("test-workspace", "agent-recent-1");
+    });
+  });
+
+  it("does not fetch snippets while the search dialog is obscured by a higher modal", async () => {
+    mockModalStack = [
+      { type: "agent-search", id: "main" },
+      { type: "agent", id: "agent-123" },
+    ];
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
+    render(() => <AgentSearchDialog />);
+
+    const recentLink = await screen.findByText("Recent Agent");
+    const card = recentLink.closest("div[class*='rounded-xl']");
+    expect(card).toBeInTheDocument();
+
+    MockIntersectionObserver.instances[0]?.trigger(card as Element, true);
+
+    await waitFor(() => {
+      expect(mockFetchRecentAgentsList).toHaveBeenCalledWith("test-workspace", undefined, 50);
+    });
+
+    expect(mockFetchRecentAgentSnippet).not.toHaveBeenCalled();
+  });
+
+  it("keeps the preview area blank when snippet loading fails", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
+    mockFetchRecentAgentSnippet.mockRejectedValue(new Error("snippet failed"));
+    renderDialog();
+
+    const recentLink = await screen.findByText("Recent Agent");
+    const card = recentLink.closest("div[class*='rounded-xl']");
+    expect(card).toBeInTheDocument();
+
+    MockIntersectionObserver.instances[0]?.trigger(card as Element, true);
+
+    await waitFor(() => {
+      expect(mockFetchRecentAgentSnippet).toHaveBeenCalledWith("test-workspace", "agent-recent-1");
+    });
+
+    await waitFor(() => {
+      expect(card?.querySelector("[data-snippet-loading='true']")).not.toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Latest agent response")).not.toBeInTheDocument();
+    expect(card?.querySelector("[data-snippet-empty='true']")).toBeInTheDocument();
+  });
+
+  it("shows the keyboard hint footer", () => {
+    renderDialog();
+
+    expect(screen.getByText("navigate")).toBeInTheDocument();
+    expect(screen.getByText("peek")).toBeInTheDocument();
+    expect(screen.getByText("open")).toBeInTheDocument();
   });
 
   it("does not render when closed", () => {
@@ -147,6 +388,20 @@ describe("AgentSearchDialog", () => {
       await waitFor(() => expect(screen.getByText("Alpha Agent")).toBeInTheDocument(), { timeout: 1000 });
     }
 
+    async function renderWithRecentAgents() {
+      mockFetchRecentAgentsList.mockResolvedValue([
+        makeRecentAgent({ id: "agent-recent-1", title: "Alpha Recent" }),
+        makeRecentAgent({
+          id: "agent-recent-2",
+          session_id: "ses-recent-2",
+          tree_id: "tree-recent-2",
+          title: "Beta Recent",
+        }),
+      ]);
+      renderDialog();
+      await waitFor(() => expect(screen.getByText("Alpha Recent")).toBeInTheDocument(), { timeout: 1000 });
+    }
+
     it("ArrowDown moves active index from -1 to 0, highlighting the first result", async () => {
       await renderWithResults();
       const input = screen.getByLabelText("Search agent messages");
@@ -158,28 +413,31 @@ describe("AgentSearchDialog", () => {
       });
     });
 
-    it("Enter with an active result opens agent in modal", async () => {
+    it("Enter with an active result navigates directly to the agent", async () => {
       await renderWithResults();
       const input = screen.getByLabelText("Search agent messages");
       fireEvent.keyDown(input, { key: "ArrowDown" });
       fireEvent.keyDown(input, { key: "Enter" });
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/workspace/test-workspace/agent/agent-1"));
+    });
+
+    it("Right Shift with an active result peeks the agent in a modal", async () => {
+      await renderWithResults();
+      const content = screen.getByRole("presentation");
+      fireEvent.keyDown(content, { key: "ArrowDown" });
+      fireEvent.keyUp(content, { code: "ShiftRight", key: "Shift" });
       await waitFor(() => expect(mockOpenModal).toHaveBeenCalledWith("agent", "agent-1"));
     });
 
-    it("Cmd+Enter with an active result navigates directly to the agent", async () => {
+    it("scrolls the active search result into view during keyboard navigation", async () => {
       await renderWithResults();
       const input = screen.getByLabelText("Search agent messages");
-      fireEvent.keyDown(input, { key: "ArrowDown" });
-      fireEvent.keyDown(input, { key: "Enter", metaKey: true });
-      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/workspace/test-workspace/agent/agent-1"));
-    });
 
-    it("Ctrl+Enter with an active result navigates directly to the agent", async () => {
-      await renderWithResults();
-      const input = screen.getByLabelText("Search agent messages");
       fireEvent.keyDown(input, { key: "ArrowDown" });
-      fireEvent.keyDown(input, { key: "Enter", ctrlKey: true });
-      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/workspace/test-workspace/agent/agent-1"));
+
+      await waitFor(() => {
+        expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: "nearest" });
+      });
     });
 
     it("ArrowDown wraps from last result to first", async () => {
@@ -210,7 +468,7 @@ describe("AgentSearchDialog", () => {
       const input = screen.getByLabelText("Search agent messages");
       // No ArrowDown pressed — index stays at -1
       fireEvent.keyDown(input, { key: "Enter" });
-      expect(mockOpenModal).not.toHaveBeenCalled();
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
 
     it("active index resets to -1 when a new search is triggered", async () => {
@@ -231,6 +489,46 @@ describe("AgentSearchDialog", () => {
       // No result should be highlighted (aria-current should be absent or false)
       const gammaLink = screen.getByText("Gamma Agent").closest("a");
       expect(gammaLink).not.toHaveAttribute("aria-current", "true");
+    });
+
+    it("ArrowDown highlights the first recent agent when query is empty", async () => {
+      await renderWithRecentAgents();
+      const input = screen.getByLabelText("Search agent messages");
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+
+      await waitFor(() => {
+        const firstLink = screen.getByText("Alpha Recent").closest("a");
+        expect(firstLink).toHaveAttribute("aria-current", "true");
+      });
+    });
+
+    it("Enter with an active recent agent navigates directly", async () => {
+      await renderWithRecentAgents();
+      const input = screen.getByLabelText("Search agent messages");
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/workspace/test-workspace/agent/agent-recent-1"));
+    });
+
+    it("Right Shift with an active recent agent peeks it in a modal", async () => {
+      await renderWithRecentAgents();
+      const content = screen.getByRole("presentation");
+      fireEvent.keyDown(content, { key: "ArrowDown" });
+      fireEvent.keyUp(content, { code: "ShiftRight", key: "Shift" });
+
+      await waitFor(() => expect(mockOpenModal).toHaveBeenCalledWith("agent", "agent-recent-1"));
+    });
+
+    it("scrolls the active recent agent into view during keyboard navigation", async () => {
+      await renderWithRecentAgents();
+      const input = screen.getByLabelText("Search agent messages");
+
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+
+      await waitFor(() => {
+        expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: "nearest" });
+      });
     });
   });
 });
