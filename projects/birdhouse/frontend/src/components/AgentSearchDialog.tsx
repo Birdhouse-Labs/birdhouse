@@ -5,12 +5,17 @@ import { useNavigate } from "@solidjs/router";
 import Dialog from "corvu/dialog";
 import Popover from "corvu/popover";
 import { Search, X } from "lucide-solid";
-import { type Component, createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
+import { type Component, createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from "solid-js";
 import { useWorkspace } from "../contexts/WorkspaceContext";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { useModalRoute, useWorkspaceId } from "../lib/routing";
-import type { AgentMessageSearchResult, MessagePart, RecentAgentForTypeahead } from "../services/agents-api";
-import { fetchRecentAgents, searchAgentMessages } from "../services/agents-api";
+import type {
+  AgentMessageSearchResult,
+  MessagePart,
+  RecentAgentForTypeahead,
+  RecentAgentSnippet,
+} from "../services/agents-api";
+import { fetchRecentAgentSnippet, fetchRecentAgentsList, searchAgentMessages } from "../services/agents-api";
 import { cardSurfaceFlat } from "../styles/containerStyles";
 
 export const MODAL_TYPE_AGENT_SEARCH = "agent-search";
@@ -170,8 +175,8 @@ const SectionHeader: Component<{ label: string }> = (props) => (
   </div>
 );
 
-function getRecentAgentPreview(agent: RecentAgentForTypeahead): string {
-  return agent.lastAgentMessage ?? agent.lastUserMessage?.text ?? "No messages yet";
+function getRecentAgentPreview(snippet: RecentAgentSnippet | null | undefined): string {
+  return snippet?.lastAgentMessage ?? snippet?.lastUserMessage?.text ?? "";
 }
 
 const AgentSearchDialog: Component = () => {
@@ -181,6 +186,7 @@ const AgentSearchDialog: Component = () => {
   const { modalStack, removeModalByType, openModal } = useModalRoute();
 
   const isOpen = createMemo(() => modalStack().some((m) => m.type === MODAL_TYPE_AGENT_SEARCH));
+  const isTopMostSearchDialog = createMemo(() => modalStack().at(-1)?.type === MODAL_TYPE_AGENT_SEARCH);
 
   const closeSearch = () => removeModalByType(MODAL_TYPE_AGENT_SEARCH);
 
@@ -198,6 +204,7 @@ const AgentSearchDialog: Component = () => {
 
   let inputRef: HTMLInputElement | undefined;
   let resultItemRefs: Array<HTMLDivElement | undefined> = [];
+  const [resultsScrollRoot, setResultsScrollRoot] = createSignal<HTMLDivElement>();
 
   // Clear state when dialog closes
   createEffect(() => {
@@ -220,7 +227,7 @@ const AgentSearchDialog: Component = () => {
     const thisRequest = ++recentRequestId;
     setIsLoadingRecent(true);
 
-    void fetchRecentAgents(workspaceId, undefined, RECENT_LIMIT)
+    void fetchRecentAgentsList(workspaceId, undefined, RECENT_LIMIT)
       .then((agents) => {
         if (thisRequest !== recentRequestId) return;
         setRecentAgents(agents);
@@ -429,7 +436,7 @@ const AgentSearchDialog: Component = () => {
           </div>
 
           {/* Results area */}
-          <div class="flex-1 overflow-y-auto">
+          <div ref={setResultsScrollRoot} class="flex-1 overflow-y-auto">
             {/* Error state */}
             <Show when={searchError()}>
               <div class="px-4 py-6 text-center">
@@ -461,6 +468,9 @@ const AgentSearchDialog: Component = () => {
                         }}
                         agentHref={agentHref(agent.id)}
                         isActive={activeIndex() === index()}
+                        workspaceId={workspaceId}
+                        getObserverRoot={resultsScrollRoot}
+                        isSnippetLoadingEnabled={isTopMostSearchDialog}
                       />
                     )}
                   </For>
@@ -529,14 +539,60 @@ interface RecentAgentCardProps {
   itemRef: (el: HTMLDivElement) => void;
   agentHref: string | undefined;
   isActive: boolean;
+  workspaceId: string;
+  getObserverRoot: () => HTMLDivElement | undefined;
+  isSnippetLoadingEnabled: () => boolean;
 }
 
 const RecentAgentCard: Component<RecentAgentCardProps> = (props) => {
-  const preview = () => getRecentAgentPreview(props.agent);
+  let itemEl: HTMLDivElement | undefined;
+  const [shouldLoadSnippet, setShouldLoadSnippet] = createSignal(false);
+  const [snippet] = createResource(
+    () => (shouldLoadSnippet() ? props.agent.id : undefined),
+    async (agentId) => fetchRecentAgentSnippet(props.workspaceId, agentId),
+  );
+
+  createEffect(() => {
+    if (shouldLoadSnippet() || !props.isSnippetLoadingEnabled()) return;
+
+    const root = props.getObserverRoot();
+    if (!root || !itemEl) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!props.isSnippetLoadingEnabled()) return;
+
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldLoadSnippet(true);
+          observer.disconnect();
+        }
+      },
+      {
+        root,
+        rootMargin: "120px 0px",
+      },
+    );
+
+    observer.observe(itemEl);
+
+    onCleanup(() => observer.disconnect());
+  });
+
+  const snippetData = () => {
+    if (snippet.error) return null;
+    return snippet();
+  };
+
+  const isSnippetLoading = () => shouldLoadSnippet() && snippet.loading && !snippetData();
+  const preview = () => getRecentAgentPreview(snippetData());
+  const hasPreview = () => preview().trim().length > 0;
 
   return (
     <div
-      ref={props.itemRef}
+      ref={(el) => {
+        itemEl = el;
+        props.itemRef(el);
+      }}
       class="rounded-xl border border-transparent px-3 py-3 transition-colors"
       classList={{
         "bg-accent/15 text-accent border-accent/30": props.isActive,
@@ -558,10 +614,23 @@ const RecentAgentCard: Component<RecentAgentCardProps> = (props) => {
         >
           {props.agent.title || props.agent.id}
         </a>
-        <Show when={props.agent.lastMessageAt !== null}>
-          <span class="text-[11px] text-text-secondary">{formatDateTime(props.agent.lastMessageAt ?? 0)}</span>
+        <Show when={snippetData()?.lastMessageAt !== null}>
+          <span class="text-[11px] text-text-secondary">{formatDateTime(snippetData()?.lastMessageAt ?? 0)}</span>
         </Show>
-        <p class="text-sm text-text-secondary leading-relaxed line-clamp-2">{preview()}</p>
+        <Show
+          when={hasPreview()}
+          fallback={
+            <Show when={isSnippetLoading()} fallback={<div class="h-[2.875rem]" data-snippet-empty="true" />}>
+              <div class="space-y-2 pt-0.5" data-snippet-loading="true" aria-hidden="true">
+                <div class="h-3 w-24 rounded-full bg-surface-overlay/80" />
+                <div class="h-3 w-full rounded-full bg-surface-overlay/80" />
+                <div class="h-3 w-2/3 rounded-full bg-surface-overlay/80" />
+              </div>
+            </Show>
+          }
+        >
+          <p class="text-sm text-text-secondary leading-relaxed line-clamp-2">{preview()}</p>
+        </Show>
       </div>
     </div>
   );

@@ -13,13 +13,13 @@ export interface Agent {
   session_id: string;
   parent_id: string | null;
   tree_id: string;
-  lastMessageAt: number | null;
-  lastUserMessage: {
+  lastMessageAt?: number | null;
+  lastUserMessage?: {
     text: string;
     isAgentSent: boolean;
     sentByAgentTitle?: string;
   } | null;
-  lastAgentMessage: string | null;
+  lastAgentMessage?: string | null;
 }
 
 export interface AgentTypeaheadProps {
@@ -295,7 +295,7 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
   };
 
   // Format timestamp for display
-  const formatTimestamp = (timestamp: number | null): string => {
+  const formatTimestamp = (timestamp: number | null | undefined): string => {
     if (!timestamp) return "No messages";
     const now = Date.now();
     const diff = now - timestamp;

@@ -38,7 +38,7 @@ vi.mock("../../lib/routing", () => ({
 }));
 
 vi.mock("../../services/agents-api", () => ({
-  fetchRecentAgents: async () => [],
+  fetchRecentAgentsList: async () => [],
 }));
 
 vi.mock("../../services/messages-api", () => ({

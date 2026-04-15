@@ -51,7 +51,7 @@ export interface AgentForTypeahead {
 }
 
 /**
- * Recent agent with message context for typeahead
+ * Recent agent row for typeahead
  */
 export interface RecentAgentForTypeahead {
   id: string;
@@ -59,6 +59,12 @@ export interface RecentAgentForTypeahead {
   session_id: string;
   parent_id: string | null;
   tree_id: string;
+}
+
+/**
+ * Recent agent snippet loaded on demand
+ */
+export interface RecentAgentSnippet {
   lastMessageAt: number | null;
   lastUserMessage: {
     text: string;
@@ -74,6 +80,19 @@ export interface RecentAgentForTypeahead {
 export interface RecentAgentsResponse {
   agents: RecentAgentForTypeahead[];
   total: number;
+}
+
+/**
+ * Response from recent agent snippet endpoint
+ */
+export interface RecentAgentSnippetResponse {
+  lastMessageAt: number | null;
+  lastUserMessage: {
+    text: string;
+    isAgentSent: boolean;
+    sentByAgentTitle?: string;
+  } | null;
+  lastAgentMessage: string | null;
 }
 
 /**
@@ -259,13 +278,13 @@ export async function fetchAgentsForTypeahead(workspaceId: string): Promise<Agen
 }
 
 /**
- * Fetch recent agents with message context for typeahead
+ * Fetch recent agents for typeahead
  * @param workspaceId The workspace ID
  * @param query Optional search query to filter agents
- * @param limit Optional maximum number of agents to return (applied server-side before message fetches)
- * @returns Array of recent agents with last message context
+ * @param limit Optional maximum number of agents to return
+ * @returns Array of recent agents
  */
-export async function fetchRecentAgents(
+export async function fetchRecentAgentsList(
   workspaceId: string,
   query?: string,
   limit?: number,
@@ -301,4 +320,34 @@ export async function fetchRecentAgents(
 
   const data = (await response.json()) as RecentAgentsResponse;
   return data.agents;
+}
+
+/**
+ * Fetch the latest message snippet for one recent agent
+ * @param workspaceId The workspace ID
+ * @param agentId The agent ID
+ * @returns The latest snippet metadata for the agent
+ */
+export async function fetchRecentAgentSnippet(workspaceId: string, agentId: string): Promise<RecentAgentSnippet> {
+  const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/messages/snippet`);
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    const responseBody = await response.text();
+    let errorMessage = `Failed to fetch recent agent snippet: ${response.statusText}`;
+
+    try {
+      const errorData = JSON.parse(responseBody);
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // Response wasn't JSON, use status text
+    }
+
+    throw new Error(errorMessage);
+  }
+
+  return (await response.json()) as RecentAgentSnippetResponse;
 }

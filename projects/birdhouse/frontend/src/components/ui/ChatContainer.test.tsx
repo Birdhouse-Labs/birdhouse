@@ -38,7 +38,7 @@ vi.mock("../../services/skill-attachments-api", () => ({
 }));
 
 vi.mock("../../services/agents-api", () => ({
-  fetchRecentAgents: vi.fn(async () => []),
+  fetchRecentAgentsList: vi.fn(async () => []),
 }));
 
 describe("ChatContainer", () => {
