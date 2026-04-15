@@ -291,13 +291,13 @@ function createPreviewWindow(text: string, key: string): SnippetWindowData {
 }
 
 const HighlightedSnippet: Component<{ snippet: string; highlightStart: number; highlightEnd: number }> = (props) => (
-  <>
+  <span class="whitespace-pre-wrap break-all">
     <span>{props.snippet.slice(0, props.highlightStart)}</span>
-    <mark class="rounded bg-accent/20 px-0.5 text-accent font-semibold">
+    <mark class="rounded bg-accent/20 px-0.5 text-accent font-semibold break-all">
       {props.snippet.slice(props.highlightStart, props.highlightEnd)}
     </mark>
     <span>{props.snippet.slice(props.highlightEnd)}</span>
-  </>
+  </span>
 );
 
 const MatchWindow: Component<{
@@ -314,7 +314,7 @@ const MatchWindow: Component<{
       class="rounded-md bg-surface-overlay/80 px-2.5 py-1.5 text-xs text-text-primary"
       classList={{ "font-mono whitespace-pre-wrap break-words": props.monospace }}
     >
-      <Show when={hasHighlight()} fallback={<span>{props.window.snippet}</span>}>
+      <Show when={hasHighlight()} fallback={<span class="whitespace-pre-wrap break-all">{props.window.snippet}</span>}>
         <HighlightedSnippet
           snippet={props.window.snippet}
           highlightStart={props.window.highlightStart ?? 0}

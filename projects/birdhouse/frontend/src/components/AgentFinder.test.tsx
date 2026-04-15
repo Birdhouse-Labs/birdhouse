@@ -483,6 +483,40 @@ describe("AgentFinder", () => {
     expect(screen.getByText("wpid_347228386893110642", { selector: "mark" })).toBeInTheDocument();
   });
 
+  it("applies wrap-safe classes to long highlighted output snippets", async () => {
+    mockSearchAgentMessages.mockResolvedValue(
+      makeResponse([
+        makeResult({
+          matchedMessage: {
+            id: "msg-2",
+            role: "assistant",
+            parts: [
+              {
+                type: "tool",
+                toolName: "bash",
+                command: "open workflow link",
+                output:
+                  "http://skyvern.phx.sh:3100/workflows/wpid_347228386893110642/wr_517667981057139886/login_output.task_id",
+              },
+            ],
+          },
+          contextMessage: null,
+        }),
+      ]),
+    );
+    renderFinder({ query: "wpid_347228386893110642" });
+
+    await waitFor(() => {
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "wpid_347228386893110642", 50);
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
+
+    const highlight = await screen.findByText("wpid_347228386893110642", { selector: "mark" });
+    expect(highlight).toHaveClass("break-all");
+    expect(highlight.parentElement).toHaveClass("whitespace-pre-wrap", "break-all");
+  });
+
   it("ArrowDown highlights the first item and Enter confirms it", async () => {
     mockFetchRecentAgentsList.mockResolvedValue([
       makeRecentAgent({ id: "agent-1", title: "Alpha Recent" }),
