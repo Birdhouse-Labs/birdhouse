@@ -644,14 +644,22 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setPointerMoved(false);
-      setActiveIndex((index) => (index + 1) % items.length);
+      const next = (activeIndex() + 1) % items.length;
+      setActiveIndex(next);
+      if (openPopoverIndex() !== null) {
+        setOpenPopoverIndex(items[next]?.kind === "search" ? next : null);
+      }
       return;
     }
 
     if (e.key === "ArrowUp") {
       e.preventDefault();
       setPointerMoved(false);
-      setActiveIndex((index) => (index <= 0 ? items.length - 1 : index - 1));
+      const next = activeIndex() <= 0 ? items.length - 1 : activeIndex() - 1;
+      setActiveIndex(next);
+      if (openPopoverIndex() !== null) {
+        setOpenPopoverIndex(items[next]?.kind === "search" ? next : null);
+      }
       return;
     }
 
