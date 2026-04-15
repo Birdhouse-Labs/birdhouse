@@ -487,6 +487,7 @@ const AgentSearchDialog: Component = () => {
                         }}
                         agentHref={agentHref(agent.id)}
                         isActive={activeIndex() === index()}
+                        allowHover={pointerMoved()}
                         workspaceId={workspaceId}
                         getObserverRoot={resultsScrollRoot}
                         isSnippetLoadingEnabled={isTopMostSearchDialog}
@@ -520,6 +521,7 @@ const AgentSearchDialog: Component = () => {
                       }}
                       agentHref={agentHref(group.agentId)}
                       isActive={activeIndex() === index()}
+                      allowHover={pointerMoved()}
                     />
                   )}
                 </For>
@@ -551,6 +553,7 @@ interface SearchResultCardProps {
   itemRef: (el: HTMLDivElement) => void;
   agentHref: string | undefined;
   isActive: boolean;
+  allowHover: boolean;
 }
 
 interface RecentAgentCardProps {
@@ -560,6 +563,7 @@ interface RecentAgentCardProps {
   itemRef: (el: HTMLDivElement) => void;
   agentHref: string | undefined;
   isActive: boolean;
+  allowHover: boolean;
   workspaceId: string;
   getObserverRoot: () => HTMLDivElement | undefined;
   isSnippetLoadingEnabled: () => boolean;
@@ -617,7 +621,8 @@ const RecentAgentCard: Component<RecentAgentCardProps> = (props) => {
       class="rounded-xl border border-transparent px-3 py-3 transition-colors"
       classList={{
         "bg-accent/15 text-accent border-accent/30": props.isActive,
-        "text-text-primary hover:bg-surface-overlay": !props.isActive,
+        "text-text-primary": !props.isActive,
+        "hover:bg-surface-overlay": !props.isActive && props.allowHover,
       }}
       onPointerEnter={props.onPointerEnter}
     >
@@ -668,7 +673,7 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
       class="px-4 py-4 space-y-2 transition-colors"
       classList={{
         "bg-accent/15": props.isActive,
-        "hover:bg-surface-overlay": !props.isActive,
+        "hover:bg-surface-overlay": !props.isActive && props.allowHover,
       }}
       onPointerEnter={props.onPointerEnter}
     >
