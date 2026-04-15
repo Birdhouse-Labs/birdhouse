@@ -1,62 +1,145 @@
-// ABOUTME: Tests @@ typeahead lazy snippet loading for recent agents.
-// ABOUTME: Verifies slim recent-agent rows fetch and render per-agent previews.
+// ABOUTME: Tests the AgentTypeahead wrapper around the shared AgentFinder component.
+// ABOUTME: Verifies @@ trigger parsing, floating container behavior, and confirm wiring.
 
-import { render, screen, waitFor } from "@solidjs/testing-library";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@solidjs/testing-library";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentTypeahead } from "./AgentTypeahead";
 
-const fetchRecentAgentSnippetMock = vi.fn();
+interface MockAgentFinderProps {
+  query: string;
+  workspaceId: string;
+  interactive: boolean;
+  currentAgentId?: string;
+  confirmLabel?: string;
+  onConfirm: (selection: { agentId: string; title: string }) => void;
+  onDismiss: () => void;
+}
+
+let mockModalStack: Array<{ type: string; id: string }> = [];
+let lastFinderProps: MockAgentFinderProps | undefined;
 
 vi.mock("../../contexts/ZIndexContext", () => ({
   useZIndex: () => 100,
 }));
 
-vi.mock("../../services/agents-api", () => ({
-  fetchRecentAgentSnippet: (workspaceId: string, agentId: string) => fetchRecentAgentSnippetMock(workspaceId, agentId),
+vi.mock("../../lib/routing", () => ({
+  useModalRoute: () => ({
+    modalStack: () => mockModalStack,
+  }),
 }));
 
+vi.mock("solid-floating-ui", () => ({
+  useFloating: () => ({
+    strategy: "absolute",
+    x: 12,
+    y: 34,
+  }),
+}));
+
+vi.mock("../AgentFinder", () => ({
+  default: (props: MockAgentFinderProps) => {
+    lastFinderProps = props;
+
+    return (
+      <div>
+        <div data-testid="finder-query">{props.query}</div>
+        <div data-testid="finder-workspace">{props.workspaceId}</div>
+        <div data-testid="finder-interactive">{String(props.interactive)}</div>
+        <div data-testid="finder-current-agent">{props.currentAgentId ?? ""}</div>
+        <div data-testid="finder-label">{props.confirmLabel ?? ""}</div>
+        <button type="button" onClick={() => props.onConfirm({ agentId: "agent-123", title: "Alpha Agent" })}>
+          Confirm finder result
+        </button>
+        <button type="button" onClick={props.onDismiss}>
+          Dismiss finder
+        </button>
+      </div>
+    );
+  },
+}));
+
+const renderTypeahead = (props?: Partial<Parameters<typeof AgentTypeahead>[0]>) => {
+  const onSelect = vi.fn();
+  const onClose = vi.fn();
+
+  render(() => (
+    <AgentTypeahead
+      referenceElement={undefined}
+      inputValue="@@alpha"
+      cursorPosition={7}
+      visible={true}
+      workspaceId="ws_test"
+      currentAgentId="agent-current"
+      onSelect={onSelect}
+      onClose={onClose}
+      {...props}
+    />
+  ));
+
+  return { onSelect, onClose };
+};
+
 describe("AgentTypeahead", () => {
-  it("fetches and renders snippet previews for slim recent-agent rows", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(1_700_000_060_000);
-    fetchRecentAgentSnippetMock.mockResolvedValue({
-      lastMessageAt: 1_700_000_000_000,
-      lastUserMessage: {
-        text: "User follow-up",
-        isAgentSent: false,
-      },
-      lastAgentMessage: "Agent summary",
-    });
+  beforeEach(() => {
+    mockModalStack = [];
+    lastFinderProps = undefined;
+  });
 
-    render(() => (
-      <AgentTypeahead
-        referenceElement={undefined}
-        inputValue="@@"
-        cursorPosition={2}
-        visible={true}
-        workspaceId="ws_test"
-        agents={[
-          {
-            id: "agent_1",
-            title: "Recent Agent",
-            session_id: "session_1",
-            parent_id: null,
-            tree_id: "tree_1",
-          },
-        ]}
-        currentAgentId={undefined}
-        onSelect={() => {}}
-        onClose={() => {}}
-      />
-    ));
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
 
-    await waitFor(() => {
-      expect(fetchRecentAgentSnippetMock).toHaveBeenCalledWith("ws_test", "agent_1");
-    });
+  it("renders a floating AgentFinder for a valid @@ trigger", () => {
+    renderTypeahead();
 
-    await waitFor(() => {
-      expect(screen.getByText("Agent summary")).toBeInTheDocument();
-      expect(screen.getByText("User follow-up")).toBeInTheDocument();
-      expect(screen.getByText("1m ago")).toBeInTheDocument();
-    });
+    expect(screen.getByTestId("finder-query")).toHaveTextContent("alpha");
+    expect(screen.getByTestId("finder-workspace")).toHaveTextContent("ws_test");
+    expect(screen.getByTestId("finder-current-agent")).toHaveTextContent("agent-current");
+    expect(screen.getByTestId("finder-label")).toHaveTextContent("insert");
+
+    const container = screen.getByTestId("finder-query").parentElement?.parentElement;
+    expect(container).toHaveStyle({ position: "absolute", top: "34px", left: "12px", "z-index": "100" });
+  });
+
+  it("confirm maps the selected agent back to @@ replacement metadata", () => {
+    const { onSelect } = renderTypeahead();
+
+    fireEvent.click(screen.getByText("Confirm finder result"));
+
+    expect(onSelect).toHaveBeenCalledWith({ id: "agent-123", title: "Alpha Agent" }, "alpha", 0);
+  });
+
+  it("dismiss delegates to onClose", () => {
+    const { onClose } = renderTypeahead();
+
+    fireEvent.click(screen.getByText("Dismiss finder"));
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("does not render when not visible", () => {
+    renderTypeahead({ visible: false });
+
+    expect(screen.queryByTestId("finder-query")).not.toBeInTheDocument();
+  });
+
+  it("does not render for the @@@ model trigger", () => {
+    renderTypeahead({ inputValue: "@@@claude", cursorPosition: 9 });
+
+    expect(screen.queryByTestId("finder-query")).not.toBeInTheDocument();
+  });
+
+  it("uses the nearest active @@ trigger before the cursor", () => {
+    renderTypeahead({ inputValue: "first @@alpha and @@beta", cursorPosition: 24 });
+
+    expect(screen.getByTestId("finder-query")).toHaveTextContent("beta");
+  });
+
+  it("disables AgentFinder interaction while a modal sits on top", () => {
+    mockModalStack = [{ type: "agent", id: "agent-123" }];
+    renderTypeahead();
+
+    expect(screen.getByTestId("finder-interactive")).toHaveTextContent("false");
   });
 });
