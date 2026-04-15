@@ -331,22 +331,119 @@ describe("AgentFinder", () => {
     expect(screen.getByText("Current")).toBeInTheDocument();
   });
 
-  it("renders search result text messages with shared message bubble styling", async () => {
-    mockSearchAgentMessages.mockResolvedValue(makeResponse([makeResult()]));
-    renderFinder({ query: "match" });
+  it("renders matched text as highlighted snippets with assistant and user bubble styling", async () => {
+    const longPrefix = "before context ".repeat(8);
+    const longSuffix = " after context".repeat(8);
+    const matchedText = `${longPrefix}needle${longSuffix}`;
+    const contextText = "User context message that still renders in a user bubble";
+
+    mockSearchAgentMessages.mockResolvedValue(
+      makeResponse([
+        makeResult({
+          matchedMessage: {
+            id: "msg-2",
+            role: "assistant",
+            parts: [{ type: "text", text: matchedText }],
+          },
+          contextMessage: {
+            id: "msg-1",
+            role: "user",
+            parts: [{ type: "text", text: contextText }],
+          },
+        }),
+      ]),
+    );
+    renderFinder({ query: "needle" });
 
     await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50);
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "needle", 50);
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
 
-    expect(await screen.findByTitle("This is the matched message")).toHaveStyle({
-      background: "var(--theme-surface-raised)",
+    await waitFor(() => {
+      expect(screen.getByText("needle", { selector: "mark" })).toBeInTheDocument();
     });
-    expect(screen.getByTitle("Context message from user").getAttribute("style")).toContain(
+
+    expect(screen.getByText(/before context/).textContent).toContain("...");
+    expect(screen.queryByText(matchedText)).not.toBeInTheDocument();
+    expect(screen.getByText("needle", { selector: "mark" }).closest("div[style]")?.getAttribute("style")).toContain(
+      "linear-gradient(to right",
+    );
+    expect(screen.getByText(contextText).closest("div[style]")?.getAttribute("style")).toContain(
       "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",
     );
+  });
+
+  it("renders separate match windows for multiple matches in one message", async () => {
+    mockSearchAgentMessages.mockResolvedValue(
+      makeResponse([
+        makeResult({
+          matchedMessage: {
+            id: "msg-2",
+            role: "assistant",
+            parts: [{ type: "text", text: "alpha one middle spacer alpha two" }],
+          },
+          contextMessage: null,
+        }),
+      ]),
+    );
+    renderFinder({ query: "alpha" });
+
+    await waitFor(() => {
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "alpha", 50);
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText("alpha", { selector: "mark" })).toHaveLength(2);
+    });
+  });
+
+  it("renders tool command and output matches as trimmed snippets with the tool header", async () => {
+    mockSearchAgentMessages.mockResolvedValue(
+      makeResponse([
+        makeResult({
+          matchedMessage: {
+            id: "msg-2",
+            role: "assistant",
+            parts: [
+              {
+                type: "tool",
+                toolName: "bash",
+                command: `${"prefix words ".repeat(8)}grep birds src/components${" suffix words".repeat(8)}`,
+                output: `${"line ".repeat(10)}birds matched in output${" tail".repeat(10)}`,
+              },
+            ],
+          },
+          contextMessage: null,
+        }),
+      ]),
+    );
+    renderFinder({ query: "birds" });
+
+    await waitFor(() => {
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "birds", 50);
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("[bash]")).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByText("birds", { selector: "mark" })).toHaveLength(2);
+    expect(
+      screen.queryByText(
+        /prefix words prefix words prefix words prefix words prefix words prefix words prefix words prefix words grep birds src\/components suffix words suffix words suffix words suffix words suffix words suffix words suffix words suffix words/,
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        /line line line line line line line line line line birds matched in output tail tail tail tail tail tail tail tail tail tail/,
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("ArrowDown highlights the first item and Enter confirms it", async () => {

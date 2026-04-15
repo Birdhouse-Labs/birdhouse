@@ -24,9 +24,10 @@ export interface AgentFinderProps {
   onDismiss: () => void;
 }
 
-interface MessagePartsProps {
+interface MatchMessageProps {
   parts: MessagePart[];
   role: string;
+  query?: string;
 }
 
 interface MatchPairProps {
@@ -60,6 +61,7 @@ interface VisibleAgentResult {
 
 interface SearchResultCardProps {
   group: GroupedResult;
+  query: string;
   isActive: boolean;
   allowHover: boolean;
   isCurrent: boolean;
@@ -86,6 +88,7 @@ interface RecentAgentCardProps {
 const SEARCH_LIMIT = 50;
 const RECENT_LIMIT = 50;
 const DEBOUNCE_MS = 300;
+const MATCH_CONTEXT_CHARS = 64;
 
 function formatDateTime(timestamp: number): string {
   const date = new Date(timestamp);
@@ -176,7 +179,9 @@ function getAgentSentBubbleProps(): BubbleLayout {
 }
 
 function getMessageLayout(role: string): BubbleLayout {
-  return role === "user" ? getUserBubbleProps() : getAssistantBubbleProps();
+  if (role === "user") return getUserBubbleProps();
+  if (role === "assistant") return getAgentSentBubbleProps();
+  return getAssistantBubbleProps();
 }
 
 function getJustifyClass(justify: BubbleLayout["justify"]): string {
@@ -200,64 +205,211 @@ const SectionHeader: Component<{ label: string }> = (props) => (
   </div>
 );
 
-const MessageParts: Component<MessagePartsProps> = (props) => {
+interface SnippetWindowData {
+  key: string;
+  snippet: string;
+  highlightStart: number;
+  highlightEnd: number;
+}
+
+function findMatchIndexes(text: string, query: string): number[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return [];
+
+  const normalizedText = text.toLowerCase();
+  const indexes: number[] = [];
+  let fromIndex = 0;
+
+  while (fromIndex < normalizedText.length) {
+    const matchIndex = normalizedText.indexOf(normalizedQuery, fromIndex);
+    if (matchIndex === -1) break;
+    indexes.push(matchIndex);
+    fromIndex = matchIndex + normalizedQuery.length;
+  }
+
+  return indexes;
+}
+
+function trimSnippetStart(text: string, start: number, matchStart: number): number {
+  if (start === 0) return 0;
+
+  const whitespaceOffset = text.slice(start, matchStart).search(/\s/);
+  return whitespaceOffset === -1 ? start : start + whitespaceOffset + 1;
+}
+
+function trimSnippetEnd(text: string, end: number, matchEnd: number): number {
+  if (end === text.length) return end;
+
+  const suffix = text.slice(matchEnd, end);
+  for (let i = suffix.length - 1; i >= 0; i -= 1) {
+    if (/\s/.test(suffix[i] ?? "")) {
+      return matchEnd + i;
+    }
+  }
+
+  return end;
+}
+
+function createSnippetWindow(text: string, matchStart: number, matchLength: number, key: string): SnippetWindowData {
+  const rawStart = Math.max(0, matchStart - MATCH_CONTEXT_CHARS);
+  const rawEnd = Math.min(text.length, matchStart + matchLength + MATCH_CONTEXT_CHARS);
+
+  const start = trimSnippetStart(text, rawStart, matchStart);
+  const end = trimSnippetEnd(text, rawEnd, matchStart + matchLength);
+  const trimmedStart = start > 0;
+  const trimmedEnd = end < text.length;
+  const prefix = trimmedStart ? "..." : "";
+  const suffix = trimmedEnd ? "..." : "";
+  const snippetBody = text.slice(start, end);
+
+  return {
+    key,
+    snippet: `${prefix}${snippetBody}${suffix}`,
+    highlightStart: prefix.length + (matchStart - start),
+    highlightEnd: prefix.length + (matchStart - start) + matchLength,
+  };
+}
+
+function createTextMatchWindows(text: string, query: string, keyPrefix: string): SnippetWindowData[] {
+  const matchIndexes = findMatchIndexes(text, query);
+  const matchLength = query.trim().length;
+  if (matchLength === 0) return [];
+
+  return matchIndexes.map((matchIndex, index) =>
+    createSnippetWindow(text, matchIndex, matchLength, `${keyPrefix}-${index}`),
+  );
+}
+
+const HighlightedSnippet: Component<{ snippet: string; highlightStart: number; highlightEnd: number }> = (props) => (
+  <>
+    <span>{props.snippet.slice(0, props.highlightStart)}</span>
+    <mark class="rounded bg-accent/20 px-0.5 text-accent font-semibold">
+      {props.snippet.slice(props.highlightStart, props.highlightEnd)}
+    </mark>
+    <span>{props.snippet.slice(props.highlightEnd)}</span>
+  </>
+);
+
+const MatchWindow: Component<{
+  window: SnippetWindowData;
+  monospace?: boolean;
+}> = (props) => (
+  <div
+    class="rounded-md bg-surface-overlay/80 px-2.5 py-1.5 text-xs text-text-primary"
+    classList={{ "font-mono whitespace-pre-wrap break-words": props.monospace }}
+  >
+    <HighlightedSnippet
+      snippet={props.window.snippet}
+      highlightStart={props.window.highlightStart}
+      highlightEnd={props.window.highlightEnd}
+    />
+  </div>
+);
+
+const MatchMessage: Component<MatchMessageProps> = (props) => {
   const layout = () => getMessageLayout(props.role);
+  const query = () => props.query?.trim() ?? "";
 
   return (
     <div class="space-y-2">
       <For each={props.parts}>
-        {(part) => (
-          <Show
-            when={part.type === "tool"}
-            fallback={
-              <MessageBubble
-                message={part.type === "text" ? part.text : ""}
-                justify={layout().justify}
-                background={layout().background}
-                boxShadow={layout().boxShadow}
-                maxWidth={layout().maxWidth}
-                gradientBackground={layout().gradientBackground}
-              />
+        {(part, index) => {
+          if (part.type === "text") {
+            const text = part.text;
+            if (!query()) {
+              return (
+                <MessageBubble
+                  message={text}
+                  justify={layout().justify}
+                  background={layout().background}
+                  boxShadow={layout().boxShadow}
+                  maxWidth={layout().maxWidth}
+                  gradientBackground={layout().gradientBackground}
+                />
+              );
             }
-          >
+
+            const windows = createTextMatchWindows(text, query(), `text-${index()}`);
+            return (
+              <For each={windows}>
+                {(window) => (
+                  <div class={`flex ${getJustifyClass(layout().justify)}`}>
+                    <div
+                      class={`${layout().maxWidth} rounded-xl px-3 py-2 text-sm text-text-primary`}
+                      style={{
+                        background: layout().background,
+                        "box-shadow": layout().boxShadow,
+                      }}
+                    >
+                      <MatchWindow window={window} />
+                    </div>
+                  </div>
+                )}
+              </For>
+            );
+          }
+
+          if (!query()) {
+            return null;
+          }
+
+          const commandWindows = part.command
+            ? createTextMatchWindows(part.command, query(), `tool-command-${index()}`)
+            : [];
+          const outputWindows = part.output
+            ? createTextMatchWindows(part.output, query(), `tool-output-${index()}`)
+            : [];
+          if (commandWindows.length === 0 && outputWindows.length === 0) {
+            return null;
+          }
+
+          return (
             <div class={`flex ${getJustifyClass(layout().justify)}`}>
               <div
-                class="max-w-[90%] rounded-xl px-3 py-2 text-sm text-text-primary"
+                class={`${layout().maxWidth} rounded-xl px-3 py-2 text-sm text-text-primary`}
                 style={{
                   background: layout().background,
                   "box-shadow": layout().boxShadow,
                 }}
               >
-                <div class="space-y-1">
-                  <div class="text-xs font-mono text-text-secondary">
-                    [{part.type === "tool" ? (part as Extract<MessagePart, { type: "tool" }>).toolName : ""}]
-                  </div>
-                  <Show when={part.type === "tool" && (part as Extract<MessagePart, { type: "tool" }>).command}>
-                    <pre class="overflow-x-auto whitespace-pre-wrap break-words rounded bg-surface-overlay px-2 py-1 font-mono text-xs text-text-primary">
-                      {part.type === "tool" ? (part as Extract<MessagePart, { type: "tool" }>).command : ""}
-                    </pre>
+                <div class="space-y-2">
+                  <div class="text-xs font-mono text-text-secondary">[{part.toolName}]</div>
+                  <Show when={commandWindows.length > 0}>
+                    <div class="space-y-1">
+                      <div class="px-0.5 text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+                        Command
+                      </div>
+                      <For each={commandWindows}>{(window) => <MatchWindow window={window} monospace={true} />}</For>
+                    </div>
                   </Show>
-                  <Show when={part.type === "tool" && (part as Extract<MessagePart, { type: "tool" }>).output}>
-                    <pre class="max-h-48 overflow-y-auto overflow-x-auto whitespace-pre-wrap break-words rounded bg-surface-overlay px-2 py-1 font-mono text-xs text-text-secondary">
-                      {part.type === "tool" ? (part as Extract<MessagePart, { type: "tool" }>).output : ""}
-                    </pre>
+                  <Show when={outputWindows.length > 0}>
+                    <div class="space-y-1">
+                      <div class="px-0.5 text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+                        Output
+                      </div>
+                      <For each={outputWindows}>{(window) => <MatchWindow window={window} monospace={true} />}</For>
+                    </div>
                   </Show>
                 </div>
               </div>
             </div>
-          </Show>
-        )}
+          );
+        }}
       </For>
     </div>
   );
 };
 
-const MatchPair: Component<MatchPairProps> = (props) => (
+const MatchPair: Component<MatchPairProps & { query: string }> = (props) => (
   <div class="space-y-1.5">
     <div class="px-0.5 text-[11px] text-text-secondary">{formatDateTime(props.match.matchedAt)}</div>
     <div class="flex flex-col-reverse gap-2">
-      <Show when={props.match.contextMessage}>{(ctx) => <MessageParts parts={ctx().parts} role={ctx().role} />}</Show>
-      <MessageParts parts={props.match.matchedMessage.parts} role={props.match.matchedMessage.role} />
+      <Show when={props.match.contextMessage}>{(ctx) => <MatchMessage parts={ctx().parts} role={ctx().role} />}</Show>
+      <MatchMessage
+        parts={props.match.matchedMessage.parts}
+        role={props.match.matchedMessage.role}
+        query={props.query}
+      />
     </div>
   </div>
 );
@@ -463,7 +615,7 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
                     <Show when={index() > 0}>
                       <div class="border-t border-border" />
                     </Show>
-                    <MatchPair match={match} />
+                    <MatchPair match={match} query={props.query} />
                   </>
                 )}
               </For>
@@ -625,6 +777,23 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     openModal("agent", item.agentId);
   };
 
+  const syncPopoverToActiveResult = (items: VisibleAgentResult[], nextIndex: number) => {
+    if (openPopoverIndex() === null) return;
+
+    // Close current popover immediately, then reopen on the new row after a
+    // short delay so Corvu can dismiss cleanly before mounting the next one.
+    setOpenPopoverIndex(null);
+    if (items[nextIndex]?.kind === "search") {
+      setTimeout(() => setOpenPopoverIndex(nextIndex), 50);
+    }
+  };
+
+  const moveActiveResult = (items: VisibleAgentResult[], nextIndex: number) => {
+    setPointerMoved(false);
+    setActiveIndex(nextIndex);
+    syncPopoverToActiveResult(items, nextIndex);
+  };
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!props.interactive) return;
 
@@ -643,31 +812,15 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setPointerMoved(false);
       const next = (activeIndex() + 1) % items.length;
-      setActiveIndex(next);
-      if (openPopoverIndex() !== null) {
-        // Close current popover immediately, then reopen on the new row after a
-        // short delay so Corvu can dismiss cleanly before mounting the next one.
-        setOpenPopoverIndex(null);
-        if (items[next]?.kind === "search") {
-          setTimeout(() => setOpenPopoverIndex(next), 50);
-        }
-      }
+      moveActiveResult(items, next);
       return;
     }
 
     if (e.key === "ArrowUp") {
       e.preventDefault();
-      setPointerMoved(false);
       const next = activeIndex() <= 0 ? items.length - 1 : activeIndex() - 1;
-      setActiveIndex(next);
-      if (openPopoverIndex() !== null) {
-        setOpenPopoverIndex(null);
-        if (items[next]?.kind === "search") {
-          setTimeout(() => setOpenPopoverIndex(next), 50);
-        }
-      }
+      moveActiveResult(items, next);
       return;
     }
 
@@ -778,6 +931,7 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
               {(group, index) => (
                 <SearchResultCard
                   group={group}
+                  query={props.query}
                   isActive={activeIndex() === index()}
                   allowHover={pointerMoved()}
                   isCurrent={props.currentAgentId === group.agentId}
