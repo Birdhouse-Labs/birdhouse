@@ -63,6 +63,8 @@ interface SearchResultCardProps {
   isActive: boolean;
   allowHover: boolean;
   isCurrent: boolean;
+  isPopoverOpen: boolean;
+  onPopoverOpenChange: (open: boolean) => void;
   onPointerEnter: () => void;
   onConfirm: () => void;
   itemRef: (el: HTMLDivElement) => void;
@@ -397,7 +399,6 @@ const RecentAgentCard: Component<RecentAgentCardProps> = (props) => {
 
 const SearchResultCard: Component<SearchResultCardProps> = (props) => {
   const baseZIndex = useZIndex();
-  const [isPopoverOpen, setIsPopoverOpen] = createSignal(false);
   const matchCount = () => props.group.matches.length;
 
   return (
@@ -434,7 +435,7 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
         </span>
       </div>
 
-      <Popover open={isPopoverOpen()} onOpenChange={setIsPopoverOpen}>
+      <Popover open={props.isPopoverOpen} onOpenChange={props.onPopoverOpenChange}>
         <Popover.Trigger
           as="button"
           type="button"
@@ -484,6 +485,7 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
   const [hasSearched, setHasSearched] = createSignal(false);
   const [activeIndex, setActiveIndex] = createSignal(-1);
   const [pointerMoved, setPointerMoved] = createSignal(false);
+  const [openPopoverIndex, setOpenPopoverIndex] = createSignal<number | null>(null);
   const [resultsScrollRoot, setResultsScrollRoot] = createSignal<HTMLDivElement>();
   let requestId = 0;
   let recentRequestId = 0;
@@ -603,6 +605,7 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
   createEffect(() => {
     visibleResults();
     setActiveIndex(-1);
+    setOpenPopoverIndex(null);
   });
 
   createEffect(() => {
@@ -628,6 +631,9 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     const items = visibleResults();
 
     if (e.key === "Escape") {
+      if (openPopoverIndex() !== null) {
+        return;
+      }
       e.preventDefault();
       props.onDismiss();
       return;
@@ -746,6 +752,10 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
                   isActive={activeIndex() === index()}
                   allowHover={pointerMoved()}
                   isCurrent={props.currentAgentId === group.agentId}
+                  isPopoverOpen={openPopoverIndex() === index()}
+                  onPopoverOpenChange={(open) => {
+                    setOpenPopoverIndex(open ? index() : openPopoverIndex() === index() ? null : openPopoverIndex());
+                  }}
                   onPointerEnter={() => {
                     if (pointerMoved()) setActiveIndex(index());
                   }}

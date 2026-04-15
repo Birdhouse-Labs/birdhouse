@@ -2,7 +2,7 @@
 // ABOUTME: Verifies recent loading, search behavior, keyboard actions, and shared result rendering.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
-import type { JSX } from "solid-js";
+import { createContext, createEffect, type JSX, onCleanup, Show, useContext } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessageSearchResponse, RecentAgentForTypeahead, RecentAgentSnippet } from "../services/agents-api";
 import * as agentsApi from "../services/agents-api";
@@ -27,21 +27,67 @@ vi.mock("../contexts/ZIndexContext", () => ({
 }));
 
 vi.mock("corvu/popover", () => {
-  const Popover = (props: { children: JSX.Element }) => <>{props.children}</>;
+  const PopoverContext = createContext<{
+    open: () => boolean;
+    onOpenChange: (open: boolean) => void;
+  }>();
+
+  const Popover = (props: { children: JSX.Element; open?: boolean; onOpenChange?: (open: boolean) => void }) => {
+    createEffect(() => {
+      if (!props.open) return;
+
+      const handleEscape = (event: KeyboardEvent) => {
+        if (event.key === "Escape") {
+          props.onOpenChange?.(false);
+        }
+      };
+
+      document.addEventListener("keydown", handleEscape);
+      onCleanup(() => document.removeEventListener("keydown", handleEscape));
+    });
+
+    return (
+      <PopoverContext.Provider
+        value={{
+          open: () => props.open ?? false,
+          onOpenChange: (open) => props.onOpenChange?.(open),
+        }}
+      >
+        {props.children}
+      </PopoverContext.Provider>
+    );
+  };
+
   Popover.Trigger = (props: {
     children: JSX.Element;
     as?: string;
     type?: "button" | "submit" | "reset" | "menu";
     class?: string;
-  }) => (
-    <button type={props.type} class={props.class}>
-      {props.children}
-    </button>
-  );
+    "aria-label"?: string;
+  }) => {
+    const context = useContext(PopoverContext);
+
+    return (
+      <button
+        type={props.type}
+        class={props.class}
+        aria-label={props["aria-label"]}
+        onClick={() => context?.onOpenChange(!context.open())}
+      >
+        {props.children}
+      </button>
+    );
+  };
   Popover.Portal = (props: { children: JSX.Element }) => <>{props.children}</>;
-  Popover.Content = (props: { children: JSX.Element; class?: string }) => (
-    <div class={props.class}>{props.children}</div>
-  );
+  Popover.Content = (props: { children: JSX.Element; class?: string }) => {
+    const context = useContext(PopoverContext);
+
+    return (
+      <Show when={context?.open()}>
+        <div class={props.class}>{props.children}</div>
+      </Show>
+    );
+  };
   return { default: Popover };
 });
 
@@ -293,6 +339,8 @@ describe("AgentFinder", () => {
       expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50);
     });
 
+    fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
+
     expect(await screen.findByTitle("This is the matched message")).toHaveStyle({
       background: "var(--theme-surface-raised)",
     });
@@ -346,6 +394,27 @@ describe("AgentFinder", () => {
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(onDismiss).toHaveBeenCalled();
+  });
+
+  it("Escape closes an open match popover without dismissing the finder", async () => {
+    mockSearchAgentMessages.mockResolvedValue(makeResponse([makeResult()]));
+    const { onDismiss } = renderFinder({ query: "match" });
+
+    await waitFor(() => {
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50);
+    });
+
+    const trigger = await screen.findByRole("button", { name: "Show 1 match" });
+    fireEvent.click(trigger);
+
+    expect(screen.getAllByText("1 match")).toHaveLength(2);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.getAllByText("1 match")).toHaveLength(1);
+    });
+    expect(onDismiss).not.toHaveBeenCalled();
   });
 
   it("clicking a result confirms it", async () => {
