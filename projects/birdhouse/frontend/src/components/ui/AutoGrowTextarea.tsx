@@ -368,6 +368,7 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
         inputValue={props.value}
         cursorPosition={cursorPosition()}
         visible={showAgentTypeahead()}
+        workspaceId={workspaceId}
         agents={typeaheadAgents()}
         currentAgentId={currentAgentId()}
         onSelect={handleAgentSelect}

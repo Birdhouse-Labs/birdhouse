@@ -3,8 +3,9 @@
 
 import { autoUpdate, flip, offset, shift, size } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
-import { type Component, createEffect, createSignal, For, onCleanup, Show } from "solid-js";
+import { type Component, createEffect, createResource, createSignal, For, onCleanup, Show } from "solid-js";
 import { useZIndex } from "../../contexts/ZIndexContext";
+import { fetchRecentAgentSnippet } from "../../services/agents-api";
 import { uiSize } from "../../theme";
 
 export interface Agent {
@@ -31,6 +32,8 @@ export interface AgentTypeaheadProps {
   cursorPosition: number;
   /** Whether the dropdown should be visible */
   visible: boolean;
+  /** Workspace ID used to load recent agent snippets */
+  workspaceId: string;
   /** Array of agents to match against */
   agents: Agent[];
   /** ID of the current agent to filter out */
@@ -105,6 +108,150 @@ const MessageBubble: Component<MessageBubbleProps> = (props) => {
       </div>
     </div>
   );
+};
+
+interface AgentOptionProps {
+  agent: Agent;
+  highlighted: boolean;
+  sizeClasses: { option: string; meta: string; message: string };
+  workspaceId: string;
+  onSelect: () => void;
+  onMouseEnter: () => void;
+}
+
+const AgentOption: Component<AgentOptionProps> = (props) => {
+  const [snippet] = createResource(
+    () => props.agent.id,
+    (agentId) => fetchRecentAgentSnippet(props.workspaceId, agentId),
+  );
+
+  const snippetData = () => {
+    if (snippet.error) return null;
+    return snippet();
+  };
+
+  const lastMessageAt = () => snippetData()?.lastMessageAt ?? props.agent.lastMessageAt;
+  const lastAgentMessage = () => snippetData()?.lastAgentMessage ?? props.agent.lastAgentMessage;
+  const lastUserMessage = () => snippetData()?.lastUserMessage ?? props.agent.lastUserMessage;
+  const isSnippetLoading = () => snippet.loading && !snippetData();
+
+  return (
+    <div
+      role="option"
+      tabIndex={-1}
+      aria-selected={props.highlighted}
+      class="px-3 py-2 cursor-pointer transition-colors"
+      classList={{
+        [props.sizeClasses.option]: true,
+        "bg-gradient-from/30 text-text-primary": props.highlighted,
+        "hover:bg-surface-raised": !props.highlighted,
+      }}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={props.onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          props.onSelect();
+        }
+      }}
+      onMouseEnter={props.onMouseEnter}
+    >
+      <div class="flex flex-col gap-1 py-1">
+        <div class="flex items-baseline justify-between gap-2">
+          <div class="font-medium text-text-primary truncate flex-1">{props.agent.title}</div>
+          <div class={`${props.sizeClasses.meta} text-text-secondary shrink-0`}>{formatTimestamp(lastMessageAt())}</div>
+        </div>
+
+        <div class="flex flex-col gap-1.5 mt-1">
+          <Show
+            when={lastAgentMessage()}
+            fallback={
+              <Show when={isSnippetLoading()} fallback={null}>
+                <div class="space-y-2 pt-0.5" data-snippet-loading="true" aria-hidden="true">
+                  <div class="h-3 w-24 rounded-full bg-surface-overlay/80" />
+                  <div class="h-3 w-full rounded-full bg-surface-overlay/80" />
+                  <div class="h-3 w-2/3 rounded-full bg-surface-overlay/80" />
+                </div>
+              </Show>
+            }
+          >
+            {(message) => (
+              <MessageBubble
+                message={message()}
+                justify="start"
+                background="var(--theme-surface-raised)"
+                boxShadow="0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)"
+                maxWidth="max-w-[85%]"
+                sizeClasses={props.sizeClasses}
+              />
+            )}
+          </Show>
+          <Show when={lastUserMessage()}>
+            {(message) => (
+              <>
+                <Show
+                  when={message().isAgentSent}
+                  fallback={
+                    <MessageBubble
+                      message={message().text}
+                      justify="end"
+                      background="color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))"
+                      boxShadow={`0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
+                            0 2px 8px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent)`}
+                      maxWidth="max-w-[85%]"
+                      gradientBackground={`linear-gradient(to bottom,
+                            transparent,
+                            color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))
+                          )`}
+                      sizeClasses={props.sizeClasses}
+                    />
+                  }
+                >
+                  <MessageBubble
+                    message={message().text}
+                    justify="center"
+                    background={`linear-gradient(to right,
+                            color-mix(in srgb, var(--theme-gradient-from) 20%, var(--theme-surface-raised)),
+                            color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised)),
+                            color-mix(in srgb, var(--theme-gradient-to) 20%, var(--theme-surface-raised))
+                          )`}
+                    boxShadow={`0 0 0 1px color-mix(in srgb, var(--theme-gradient-via) 40%, transparent),
+                            0 2px 8px -2px color-mix(in srgb, var(--theme-gradient-via) 25%, transparent)`}
+                    maxWidth="max-w-[90%]"
+                    gradientBackground={`linear-gradient(to bottom,
+                            transparent,
+                            color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised))
+                          )`}
+                    sizeClasses={props.sizeClasses}
+                  />
+                </Show>
+              </>
+            )}
+          </Show>
+          <Show when={!isSnippetLoading() && !lastAgentMessage() && !lastUserMessage()}>
+            <div class="h-[2.875rem]" data-snippet-empty="true" />
+          </Show>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const formatTimestamp = (timestamp: number | null | undefined): string => {
+  if (!timestamp) return "No messages";
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
 };
 
 export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
@@ -294,21 +441,6 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
     };
   };
 
-  // Format timestamp for display
-  const formatTimestamp = (timestamp: number | null | undefined): string => {
-    if (!timestamp) return "No messages";
-    const now = Date.now();
-    const diff = now - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return "Just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
-  };
-
   const shouldShow = () => {
     const displayed = displayAgents();
     return props.visible && displayed.length > 0;
@@ -334,102 +466,21 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
       >
         <For each={displayAgents()}>
           {(agent, index) => (
-            <div
-              role="option"
-              tabIndex={-1}
-              aria-selected={highlightedIndex() === index()}
-              class="px-3 py-2 cursor-pointer transition-colors"
-              classList={{
-                [sizeClasses().option]: true,
-                "bg-gradient-from/30 text-text-primary": highlightedIndex() === index(),
-                "hover:bg-surface-raised": highlightedIndex() !== index(),
-              }}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onClick={() => {
+            <AgentOption
+              agent={agent}
+              highlighted={highlightedIndex() === index()}
+              sizeClasses={sizeClasses()}
+              workspaceId={props.workspaceId}
+              onSelect={() => {
                 const match = getBestMatch(agent);
                 if (match) {
                   props.onSelect(agent, match.matchedText, match.startIndex);
                 }
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  const match = getBestMatch(agent);
-                  if (match) {
-                    props.onSelect(agent, match.matchedText, match.startIndex);
-                  }
-                }
-              }}
               onMouseEnter={() => {
                 setHighlightedIndex(index());
               }}
-            >
-              <div class="flex flex-col gap-1 py-1">
-                <div class="flex items-baseline justify-between gap-2">
-                  <div class="font-medium text-text-primary truncate flex-1">{agent.title}</div>
-                  <div class={`${sizeClasses().meta} text-text-secondary shrink-0`}>
-                    {formatTimestamp(agent.lastMessageAt)}
-                  </div>
-                </div>
-
-                <div class="flex flex-col gap-1.5 mt-1">
-                  {/* Agent message first (older, higher up) - mini bubble left */}
-                  {agent.lastAgentMessage && (
-                    <MessageBubble
-                      message={agent.lastAgentMessage}
-                      justify="start"
-                      background="var(--theme-surface-raised)"
-                      boxShadow="0 0 0 1px color-mix(in srgb, var(--theme-border) 50%, transparent)"
-                      maxWidth="max-w-[85%]"
-                      sizeClasses={sizeClasses()}
-                    />
-                  )}
-                  {/* User message second (newer, lower down) */}
-                  {agent.lastUserMessage && (
-                    <>
-                      {/* Agent-sent: centered with gradient (like main chat) */}
-                      {agent.lastUserMessage.isAgentSent ? (
-                        <MessageBubble
-                          message={agent.lastUserMessage.text}
-                          justify="center"
-                          background={`linear-gradient(to right,
-                            color-mix(in srgb, var(--theme-gradient-from) 20%, var(--theme-surface-raised)),
-                            color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised)),
-                            color-mix(in srgb, var(--theme-gradient-to) 20%, var(--theme-surface-raised))
-                          )`}
-                          boxShadow={`0 0 0 1px color-mix(in srgb, var(--theme-gradient-via) 40%, transparent),
-                            0 2px 8px -2px color-mix(in srgb, var(--theme-gradient-via) 25%, transparent)`}
-                          maxWidth="max-w-[90%]"
-                          gradientBackground={`linear-gradient(to bottom,
-                            transparent,
-                            color-mix(in srgb, var(--theme-gradient-via) 20%, var(--theme-surface-raised))
-                          )`}
-                          sizeClasses={sizeClasses()}
-                        />
-                      ) : (
-                        /* Human user message: right-aligned with accent tint */
-                        <MessageBubble
-                          message={agent.lastUserMessage.text}
-                          justify="end"
-                          background="color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))"
-                          boxShadow={`0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
-                            0 2px 8px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent)`}
-                          maxWidth="max-w-[85%]"
-                          gradientBackground={`linear-gradient(to bottom,
-                            transparent,
-                            color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))
-                          )`}
-                          sizeClasses={sizeClasses()}
-                        />
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
+            />
           )}
         </For>
       </div>
