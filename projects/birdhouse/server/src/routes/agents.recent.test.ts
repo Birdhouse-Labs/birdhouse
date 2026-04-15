@@ -1,9 +1,8 @@
 // ABOUTME: Unit tests for GET /api/agents/recent endpoint
-// ABOUTME: Tests recent agent listing with message context and search filtering
+// ABOUTME: Tests recent agent listing and search filtering — DB rows only, no message fields
 
 import { describe, expect, test } from "bun:test";
 import { createTestDeps, withDeps } from "../dependencies";
-import type { BirdhouseMessage as Message } from "../harness";
 import { initAgentsDB } from "../lib/agents-db";
 import { withWorkspaceContext } from "../test-utils";
 import { createChildAgent, createRootAgent } from "../test-utils/agent-factories";
@@ -16,100 +15,8 @@ interface RecentAgentResponse {
     session_id: string;
     parent_id: string | null;
     tree_id: string;
-    lastMessageAt: number | null;
-    lastUserMessage: {
-      text: string;
-      isAgentSent: boolean;
-      sentByAgentTitle?: string;
-    } | null;
-    lastAgentMessage: string | null;
   }>;
   total: number;
-}
-
-function makeUserMessage(
-  id: string,
-  sessionID: string,
-  created: number,
-  text: string,
-  metadata?: Record<string, unknown>,
-): Message {
-  return {
-    info: {
-      id,
-      sessionID,
-      role: "user",
-      time: { created },
-    },
-    parts: [
-      {
-        id: `${id}_part_text`,
-        sessionID,
-        messageID: id,
-        type: "text",
-        text,
-        ...(metadata ? { metadata } : {}),
-      },
-    ],
-  };
-}
-
-function makeAssistantMessage(id: string, sessionID: string, created: number, text: string): Message {
-  return {
-    info: {
-      id,
-      sessionID,
-      role: "assistant",
-      time: { created },
-      parentID: `${id}_parent`,
-      modelID: "claude-sonnet-4",
-      providerID: "anthropic",
-    },
-    parts: [
-      {
-        id: `${id}_part_text`,
-        sessionID,
-        messageID: id,
-        type: "text",
-        text,
-      },
-    ],
-  };
-}
-
-function makeToolPartMessage(id: string, sessionID: string, created: number): Message {
-  return {
-    info: {
-      id,
-      sessionID,
-      role: "user",
-      time: { created },
-    },
-    parts: [
-      {
-        id: `${id}_part_text_1`,
-        sessionID,
-        messageID: id,
-        type: "text",
-        text: "First part ",
-      },
-      {
-        id: `${id}_part_tool`,
-        sessionID,
-        messageID: id,
-        type: "tool",
-        tool: "read",
-        state: { file: "test.txt" },
-      },
-      {
-        id: `${id}_part_text_2`,
-        sessionID,
-        messageID: id,
-        type: "text",
-        text: "second part",
-      },
-    ],
-  };
 }
 
 describe("GET /api/agents/recent - Basic behavior", () => {
@@ -382,200 +289,8 @@ describe("GET /api/agents/recent - Search filtering", () => {
   });
 });
 
-describe("GET /api/agents/recent - Message context", () => {
-  test("returns agent with message context from OpenCode", async () => {
-    const agentsDB = await initAgentsDB(":memory:");
-    const now = Date.now();
-
-    createRootAgent(agentsDB, {
-      id: "agent_with_messages",
-      session_id: "ses_messages",
-      title: "Agent With Messages",
-      created_at: now,
-      updated_at: now,
-    });
-
-    const deps = await createTestDeps({
-      getMessages: async () => [
-        makeUserMessage("msg_user_1", "ses_messages", now - 2000, "First user message here"),
-        makeAssistantMessage("msg_assistant_1", "ses_messages", now - 1000, "Agent response here"),
-        makeUserMessage("msg_user_2", "ses_messages", now, "Latest user message content"),
-      ],
-    });
-    deps.agentsDB = agentsDB;
-
-    await withDeps(deps, async () => {
-      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
-      const res = await app.request("/recent");
-
-      expect(res.status).toBe(200);
-      const data = (await res.json()) as RecentAgentResponse;
-      expect(data.total).toBe(1);
-
-      const result = data.agents[0];
-      expect(result.lastMessageAt).toBe(now);
-      expect(result.lastUserMessage).toEqual({ text: "Latest user message content", isAgentSent: false });
-      expect(result.lastAgentMessage).toBe("Agent response here");
-    });
-  });
-
-  test("truncates long messages to 200 chars with ellipsis", async () => {
-    const agentsDB = await initAgentsDB(":memory:");
-    const now = Date.now();
-
-    createRootAgent(agentsDB, {
-      id: "agent_long_message",
-      session_id: "ses_long",
-      title: "Agent With Long Message",
-      created_at: now,
-      updated_at: now,
-    });
-
-    const longMessage = "a".repeat(250);
-
-    const deps = await createTestDeps({
-      getMessages: async () => [makeUserMessage("msg_long", "ses_long", now, longMessage)],
-    });
-    deps.agentsDB = agentsDB;
-
-    await withDeps(deps, async () => {
-      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
-      const res = await app.request("/recent");
-
-      expect(res.status).toBe(200);
-      const data = (await res.json()) as RecentAgentResponse;
-      expect(data.agents[0].lastUserMessage).toEqual({ text: `${"a".repeat(197)}...`, isAgentSent: false });
-    });
-  });
-
-  test("returns null message fields when agent has no messages", async () => {
-    const agentsDB = await initAgentsDB(":memory:");
-    const now = Date.now();
-
-    createRootAgent(agentsDB, {
-      id: "agent_no_messages",
-      session_id: "ses_no_messages",
-      title: "Agent With No Messages",
-      created_at: now,
-      updated_at: now,
-    });
-
-    const deps = await createTestDeps({
-      getMessages: async () => [],
-    });
-    deps.agentsDB = agentsDB;
-
-    await withDeps(deps, async () => {
-      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
-      const res = await app.request("/recent");
-
-      expect(res.status).toBe(200);
-      const data = (await res.json()) as RecentAgentResponse;
-      expect(data.agents[0].lastMessageAt).toBeNull();
-      expect(data.agents[0].lastUserMessage).toBeNull();
-      expect(data.agents[0].lastAgentMessage).toBeNull();
-    });
-  });
-
-  test("returns null message fields when getMessages throws", async () => {
-    const agentsDB = await initAgentsDB(":memory:");
-    const now = Date.now();
-
-    createRootAgent(agentsDB, {
-      id: "agent_error",
-      session_id: "ses_error",
-      title: "Agent With Error",
-      created_at: now,
-      updated_at: now,
-    });
-
-    const deps = await createTestDeps({
-      getMessages: async () => {
-        throw new Error("Failed to fetch messages");
-      },
-    });
-    deps.agentsDB = agentsDB;
-
-    await withDeps(deps, async () => {
-      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
-      const res = await app.request("/recent");
-
-      expect(res.status).toBe(200);
-      const data = (await res.json()) as RecentAgentResponse;
-      // Agent should still be included with null message fields
-      expect(data.total).toBe(1);
-      expect(data.agents[0].id).toBe("agent_error");
-      expect(data.agents[0].lastMessageAt).toBeNull();
-      expect(data.agents[0].lastUserMessage).toBeNull();
-      expect(data.agents[0].lastAgentMessage).toBeNull();
-    });
-  });
-
-  test("combines multiple text parts into single snippet", async () => {
-    const agentsDB = await initAgentsDB(":memory:");
-    const now = Date.now();
-
-    createRootAgent(agentsDB, {
-      id: "agent_multi_part",
-      session_id: "ses_multi",
-      title: "Agent With Multi Part Message",
-      created_at: now,
-      updated_at: now,
-    });
-
-    const deps = await createTestDeps({
-      getMessages: async () => [makeToolPartMessage("msg_multi", "ses_multi", now)],
-    });
-    deps.agentsDB = agentsDB;
-
-    await withDeps(deps, async () => {
-      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
-      const res = await app.request("/recent");
-
-      expect(res.status).toBe(200);
-      const data = (await res.json()) as RecentAgentResponse;
-      // Should join text parts with space separator and skip tool parts
-      expect(data.agents[0].lastUserMessage).toEqual({ text: "First part  second part", isAgentSent: false });
-    });
-  });
-
-  test("finds last user and agent messages independently", async () => {
-    const agentsDB = await initAgentsDB(":memory:");
-    const now = Date.now();
-
-    createRootAgent(agentsDB, {
-      id: "agent_mixed",
-      session_id: "ses_mixed",
-      title: "Agent With Mixed Messages",
-      created_at: now,
-      updated_at: now,
-    });
-
-    const deps = await createTestDeps({
-      getMessages: async () => [
-        makeUserMessage("msg_user_old", "ses_mixed", now - 3000, "Oldest user"),
-        makeAssistantMessage("msg_assistant_old", "ses_mixed", now - 2000, "First agent reply"),
-        makeUserMessage("msg_user_mid", "ses_mixed", now - 1000, "Middle user"),
-        makeAssistantMessage("msg_assistant_new", "ses_mixed", now, "Latest agent reply"),
-      ],
-    });
-    deps.agentsDB = agentsDB;
-
-    await withDeps(deps, async () => {
-      const app = await withWorkspaceContext(createAgentRoutes, { agentsDb: agentsDB });
-      const res = await app.request("/recent");
-
-      expect(res.status).toBe(200);
-      const data = (await res.json()) as RecentAgentResponse;
-      expect(data.agents[0].lastMessageAt).toBe(now);
-      expect(data.agents[0].lastUserMessage).toEqual({ text: "Middle user", isAgentSent: false });
-      expect(data.agents[0].lastAgentMessage).toBe("Latest agent reply");
-    });
-  });
-});
-
 describe("GET /api/agents/recent - Response fields", () => {
-  test("includes all required response fields", async () => {
+  test("includes all required response fields — no message fields", async () => {
     const agentsDB = await initAgentsDB(":memory:");
     const now = Date.now();
 
@@ -603,9 +318,10 @@ describe("GET /api/agents/recent - Response fields", () => {
       expect(agent.session_id).toBe("ses_parent");
       expect(agent.parent_id).toBeNull();
       expect(agent.tree_id).toBe(parent.tree_id);
-      expect(agent).toHaveProperty("lastMessageAt");
-      expect(agent).toHaveProperty("lastUserMessage");
-      expect(agent).toHaveProperty("lastAgentMessage");
+      // Message fields are no longer in this response — fetched separately via /snippet
+      expect(agent).not.toHaveProperty("lastMessageAt");
+      expect(agent).not.toHaveProperty("lastUserMessage");
+      expect(agent).not.toHaveProperty("lastAgentMessage");
     });
   });
 

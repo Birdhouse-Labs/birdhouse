@@ -1,12 +1,8 @@
-// ABOUTME: Get recent agents with message context for @@ typeahead
-// ABOUTME: Returns agents from last 30 days with last message snippets
+// ABOUTME: Get recent agents for @@ typeahead — fast DB-only list
+// ABOUTME: Returns agents from last 30 days with no message loading; snippets are fetched per-agent separately
 
 import type { Context } from "hono";
-import { type Deps, getHarnessForAgent } from "../../dependencies";
-import type { BirdhouseMessage as Message } from "../../harness";
-
-// TODO(agent-search): Move search to db once we are setup for searching agents better
-const MAX_SNIPPET_LENGTH = 200;
+import type { Deps } from "../../dependencies";
 
 interface RecentAgentResponse {
   id: string;
@@ -14,38 +10,14 @@ interface RecentAgentResponse {
   session_id: string;
   parent_id: string | null;
   tree_id: string;
-  lastMessageAt: number | null;
-  lastUserMessage: {
-    text: string;
-    isAgentSent: boolean;
-    sentByAgentTitle?: string;
-  } | null;
-  lastAgentMessage: string | null;
 }
 
 /**
- * Extract text content from message parts
- * Joins all text parts and truncates to max length
+ * GET /api/agents/recent - Get recent agents for typeahead
+ * Returns agents sorted by updated_at desc. No message loading — callers fetch
+ * snippets per-agent via GET /api/agents/:id/messages/snippet.
  */
-function extractMessageText(message: Message, maxLength: number): string {
-  const textParts = message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => (part as { type: "text"; text: string }).text);
-
-  const fullText = textParts.join(" ").trim();
-
-  if (fullText.length <= maxLength) {
-    return fullText;
-  }
-
-  return `${fullText.slice(0, maxLength - 3)}...`;
-}
-
-/**
- * GET /api/agents/recent - Get recent agents with message context
- * Returns agents sorted by updated_at desc, with last message snippets
- */
-export async function getRecentAgents(c: Context, deps: Pick<Deps, "agentsDB" | "harnesses">) {
+export async function getRecentAgents(c: Context, deps: Pick<Deps, "agentsDB">) {
   const { agentsDB } = deps;
 
   try {
@@ -66,91 +38,17 @@ export async function getRecentAgents(c: Context, deps: Pick<Deps, "agentsDB" | 
     // Get recent agents from database (filtered by query and limited if provided)
     const agents = agentsDB.getRecentAgents(query, limit);
 
-    // Fetch message context for each agent
-    const agentsWithContext: RecentAgentResponse[] = await Promise.all(
-      agents.map(async (agent) => {
-        try {
-          const harness = getHarnessForAgent(deps, agent);
-          const getMessagesFromHarness = harness.getMessages.bind(harness);
-          const messages = await getMessagesFromHarness(agent.session_id, 100);
-
-          if (messages.length === 0) {
-            return {
-              id: agent.id,
-              title: agent.title,
-              session_id: agent.session_id,
-              parent_id: agent.parent_id,
-              tree_id: agent.tree_id,
-              lastMessageAt: null,
-              lastUserMessage: null,
-              lastAgentMessage: null,
-            };
-          }
-
-          // Find the most recent message timestamp
-          const lastMessage = messages[messages.length - 1];
-          const lastMessageAt = lastMessage.info.time.created;
-
-          // Find last user message (search from end)
-          let lastUserMessage: RecentAgentResponse["lastUserMessage"] = null;
-          for (let i = messages.length - 1; i >= 0; i--) {
-            const msg = messages[i];
-            if (msg.info.role === "user") {
-              const text = extractMessageText(msg, MAX_SNIPPET_LENGTH);
-              // Check if this message was sent by an agent (not human)
-              // Look for sent_by_agent_id or sent_by_agent_title in first text part metadata
-              const firstTextPart = msg.parts.find((p) => p.type === "text") as
-                | { type: "text"; text: string; metadata?: Record<string, unknown> }
-                | undefined;
-              const metadata = firstTextPart?.metadata;
-              const isAgentSent = !!(metadata?.sent_by_agent_id || metadata?.sent_by_agent_title);
-              lastUserMessage = {
-                text,
-                isAgentSent,
-                sentByAgentTitle: metadata?.sent_by_agent_title as string | undefined,
-              };
-              break;
-            }
-          }
-
-          // Find last agent message (search from end)
-          let lastAgentMessage: string | null = null;
-          for (let i = messages.length - 1; i >= 0; i--) {
-            if (messages[i].info.role === "assistant") {
-              lastAgentMessage = extractMessageText(messages[i], MAX_SNIPPET_LENGTH);
-              break;
-            }
-          }
-
-          return {
-            id: agent.id,
-            title: agent.title,
-            session_id: agent.session_id,
-            parent_id: agent.parent_id,
-            tree_id: agent.tree_id,
-            lastMessageAt,
-            lastUserMessage,
-            lastAgentMessage,
-          };
-        } catch (_error) {
-          // If message fetch fails, return agent with null message fields
-          return {
-            id: agent.id,
-            title: agent.title,
-            session_id: agent.session_id,
-            parent_id: agent.parent_id,
-            tree_id: agent.tree_id,
-            lastMessageAt: null,
-            lastUserMessage: null,
-            lastAgentMessage: null,
-          };
-        }
-      }),
-    );
+    const response: RecentAgentResponse[] = agents.map((agent) => ({
+      id: agent.id,
+      title: agent.title,
+      session_id: agent.session_id,
+      parent_id: agent.parent_id,
+      tree_id: agent.tree_id,
+    }));
 
     return c.json({
-      agents: agentsWithContext,
-      total: agentsWithContext.length,
+      agents: response,
+      total: response.length,
     });
   } catch (error) {
     return c.json({ error: error instanceof Error ? error.message : "Unknown error" }, 500);

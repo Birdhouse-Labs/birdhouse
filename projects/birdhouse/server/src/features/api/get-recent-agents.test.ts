@@ -2,7 +2,6 @@
 // ABOUTME: Verifies limit param parsing, validation, and that it constrains DB rows before message fetches
 
 import { describe, expect, test } from "bun:test";
-import { createTestDeps } from "../../dependencies";
 import { initAgentsDB } from "../../lib/agents-db";
 import { createTestApp } from "../../test-utils";
 import { createRootAgent } from "../../test-utils/agent-factories";
@@ -10,11 +9,10 @@ import { getRecentAgents } from "./get-recent-agents";
 
 async function buildApp() {
   const agentsDB = await initAgentsDB(":memory:");
-  const deps = await createTestDeps();
-  deps.agentsDB = agentsDB;
 
   const app = await createTestApp({ agentsDb: agentsDB });
-  app.get("/agents/recent", (c) => getRecentAgents(c, deps));
+  // Handler only needs agentsDB — pass a minimal deps object
+  app.get("/agents/recent", (c) => getRecentAgents(c, { agentsDB }));
 
   return { app, agentsDB };
 }
@@ -62,6 +60,31 @@ describe("getRecentAgents - GET /agents/recent", () => {
       const body = (await res.json()) as { error: string };
       expect(body.error).toContain("limit");
     }
+  });
+
+  test("response contains only DB fields — no message fields", async () => {
+    const { app, agentsDB } = await buildApp();
+
+    createRootAgent(agentsDB, {
+      id: "agent_shape1",
+      session_id: "ses_shape1",
+      title: "Shape Test Agent",
+    });
+
+    const res = await app.request("/agents/recent");
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { agents: Record<string, unknown>[] };
+    const agent = body.agents[0];
+    expect(agent).toBeDefined();
+    expect(agent).toHaveProperty("id");
+    expect(agent).toHaveProperty("title");
+    expect(agent).toHaveProperty("session_id");
+    expect(agent).toHaveProperty("parent_id");
+    expect(agent).toHaveProperty("tree_id");
+    expect(agent).not.toHaveProperty("lastMessageAt");
+    expect(agent).not.toHaveProperty("lastUserMessage");
+    expect(agent).not.toHaveProperty("lastAgentMessage");
   });
 
   test("omitting limit returns all recent agents without restriction", async () => {

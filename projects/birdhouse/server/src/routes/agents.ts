@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { getHarnessForAgent } from "../dependencies";
 import * as handlers from "../features/api";
 import { archive } from "../features/api/archive";
+import { getAgentSnippet } from "../features/api/get-agent-snippet";
 import { getAgentQuestions, replyToAgentQuestion } from "../features/api/question";
 import { unarchive } from "../features/api/unarchive";
 import { getDepsFromContext } from "../lib/context-deps";
@@ -110,6 +111,9 @@ export function createAgentRoutes() {
 
   // GET /api/agents/:id/export - Export agent timeline as markdown
   app.get("/:id/export", (c) => handlers.exportMarkdown(c, getDepsFromContext(c)));
+
+  // GET /api/agents/:id/messages/snippet - Get last message snippet for typeahead preview
+  app.get("/:id/messages/snippet", (c) => getAgentSnippet(c, getDepsFromContext(c)));
 
   // GET /api/agents/:id/messages - Get messages for agent
   app.get("/:id/messages", (c) => handlers.getMessages(c, getDepsFromContext(c)));
