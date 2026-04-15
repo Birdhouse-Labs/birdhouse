@@ -199,6 +199,9 @@ const AgentSearchDialog: Component = () => {
   const [hasSearched, setHasSearched] = createSignal(false);
   // -1 means no result is keyboard-selected
   const [activeIndex, setActiveIndex] = createSignal(-1);
+  // Tracks whether the pointer has physically moved since the last keyboard navigation.
+  // Prevents pointer-enter from overwriting keyboard selection during arrow key navigation.
+  const [pointerMoved, setPointerMoved] = createSignal(false);
   let requestId = 0;
   let recentRequestId = 0;
 
@@ -356,9 +359,11 @@ const AgentSearchDialog: Component = () => {
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
+      setPointerMoved(false);
       setActiveIndex((i) => (i + 1) % items.length);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
+      setPointerMoved(false);
       setActiveIndex((i) => (i <= 0 ? items.length - 1 : i - 1));
     } else if (e.key === "Enter") {
       const idx = activeIndex();
@@ -411,6 +416,7 @@ const AgentSearchDialog: Component = () => {
                    flex flex-col overflow-hidden z-[40]`}
           onKeyDown={handleKeyDown}
           onKeyUp={handleKeyUp}
+          onPointerMove={() => setPointerMoved(true)}
         >
           {/* Search input header */}
           <div class="flex items-center gap-2 px-4 py-3 border-b border-border flex-shrink-0">
@@ -473,7 +479,9 @@ const AgentSearchDialog: Component = () => {
                       <RecentAgentCard
                         agent={agent}
                         onAgentClick={(e) => handleAgentClick(agent.id, e)}
-                        onPointerEnter={() => setActiveIndex(index())}
+                        onPointerEnter={() => {
+                          if (pointerMoved()) setActiveIndex(index());
+                        }}
                         itemRef={(el) => {
                           resultItemRefs[index()] = el;
                         }}
@@ -504,7 +512,9 @@ const AgentSearchDialog: Component = () => {
                     <SearchResultCard
                       group={group}
                       onAgentClick={(e) => handleAgentClick(group.agentId, e)}
-                      onPointerEnter={() => setActiveIndex(index())}
+                      onPointerEnter={() => {
+                        if (pointerMoved()) setActiveIndex(index());
+                      }}
                       itemRef={(el) => {
                         resultItemRefs[index()] = el;
                       }}
