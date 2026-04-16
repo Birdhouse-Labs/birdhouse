@@ -1,7 +1,9 @@
 // ABOUTME: Shared finder for recent agents and full-text agent search results.
 // ABOUTME: Handles keyboard actions, lazy snippets, peek, confirm, and dismissal for both wrappers.
 
+import Popover from "corvu/popover";
 import { type Component, createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from "solid-js";
+import { useZIndex } from "../contexts/ZIndexContext";
 import { useModalRoute } from "../lib/routing";
 import type { AgentMessageSearchResult, MessagePart, RecentAgentForTypeahead } from "../services/agents-api";
 import { fetchRecentAgentSnippet, fetchRecentAgentsList, searchAgentMessages } from "../services/agents-api";
@@ -87,6 +89,13 @@ const SEARCH_LIMIT = 50;
 const RECENT_LIMIT = 50;
 const DEBOUNCE_MS = 300;
 const MATCH_CONTEXT_CHARS = 64;
+const MATCHES_POPOVER_FLOATING_OPTIONS = {
+  offset: 8,
+  flip: true,
+  shift: { padding: 16 },
+  size: { fitViewPort: true, padding: 16 },
+} as const;
+
 function formatDateTime(timestamp: number): string {
   const date = new Date(timestamp);
   return date.toLocaleString(undefined, {
@@ -577,8 +586,8 @@ const RecentAgentCard: Component<RecentAgentCardProps> = (props) => {
 };
 
 const SearchResultCard: Component<SearchResultCardProps> = (props) => {
+  const baseZIndex = useZIndex();
   const matchCount = () => props.group.matches.length;
-  const panelId = () => `agent-finder-matches-${props.group.agentId}`;
 
   return (
     <div
@@ -614,20 +623,26 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
         </span>
       </div>
 
-      <button
-        type="button"
-        class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent transition-colors hover:border-accent/40 hover:bg-accent/20"
-        aria-label={`Show ${matchCount()} ${matchCount() === 1 ? "match" : "matches"}`}
-        aria-expanded={props.isPopoverOpen}
-        aria-controls={props.isPopoverOpen ? panelId() : undefined}
-        onClick={() => props.onPopoverOpenChange(!props.isPopoverOpen)}
+      <Popover
+        open={props.isPopoverOpen}
+        onOpenChange={props.onPopoverOpenChange}
+        strategy="fixed"
+        floatingOptions={MATCHES_POPOVER_FLOATING_OPTIONS}
       >
-        {matchCount()} {matchCount() === 1 ? "match" : "matches"}
-      </button>
+        <Popover.Trigger
+          as="button"
+          type="button"
+          class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent transition-colors hover:border-accent/40 hover:bg-accent/20"
+          aria-label={`Show ${matchCount()} ${matchCount() === 1 ? "match" : "matches"}`}
+        >
+          {matchCount()} {matchCount() === 1 ? "match" : "matches"}
+        </Popover.Trigger>
 
-      <Show when={props.isPopoverOpen}>
-        <div id={panelId()} class="w-full rounded-xl border border-border bg-surface-raised shadow-xl">
-          <div class="max-h-[min(60dvh,32rem)] overflow-y-auto overscroll-contain">
+        <Popover.Portal>
+          <Popover.Content
+            class="w-[min(calc(100vw-2rem),42rem)] overflow-y-auto overscroll-contain rounded-xl border border-border bg-surface-raised shadow-2xl"
+            style={{ "z-index": baseZIndex }}
+          >
             <div class="sticky top-0 border-b border-border bg-surface-raised px-4 py-2.5">
               <span class="text-xs font-medium text-text-secondary">
                 {matchCount()} {matchCount() === 1 ? "match" : "matches"}
@@ -646,9 +661,9 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
                 )}
               </For>
             </div>
-          </div>
-        </div>
-      </Show>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover>
     </div>
   );
 };
@@ -827,8 +842,6 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
 
     if (e.key === "Escape") {
       if (openPopoverIndex() !== null) {
-        e.preventDefault();
-        setOpenPopoverIndex(null);
         return;
       }
       e.preventDefault();
