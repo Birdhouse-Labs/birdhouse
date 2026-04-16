@@ -2,15 +2,10 @@
 // ABOUTME: Verifies recent loading, search behavior, keyboard actions, and shared result rendering.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
-import { createContext, createEffect, type JSX, onCleanup, Show, useContext } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessageSearchResponse, RecentAgentForTypeahead, RecentAgentSnippet } from "../services/agents-api";
 import * as agentsApi from "../services/agents-api";
 import AgentFinder from "./AgentFinder";
-
-const popoverMockState = vi.hoisted(() => ({
-  rootProps: [] as Array<{ strategy?: string; floatingOptions?: unknown }>,
-}));
 
 vi.mock("../services/agents-api", () => ({
   fetchRecentAgentsList: vi.fn(),
@@ -29,82 +24,6 @@ vi.mock("../lib/routing", () => ({
 vi.mock("../contexts/ZIndexContext", () => ({
   useZIndex: () => 100,
 }));
-
-vi.mock("corvu/popover", () => {
-  const PopoverContext = createContext<{
-    open: () => boolean;
-    onOpenChange: (open: boolean) => void;
-  }>();
-
-  const Popover = (props: {
-    children: JSX.Element;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-    strategy?: string;
-    floatingOptions?: unknown;
-  }) => {
-    popoverMockState.rootProps.push({
-      ...(props.strategy !== undefined ? { strategy: props.strategy } : {}),
-      ...(props.floatingOptions !== undefined ? { floatingOptions: props.floatingOptions } : {}),
-    });
-
-    createEffect(() => {
-      if (!props.open) return;
-
-      const handleEscape = (event: KeyboardEvent) => {
-        if (event.key === "Escape") {
-          props.onOpenChange?.(false);
-        }
-      };
-
-      document.addEventListener("keydown", handleEscape);
-      onCleanup(() => document.removeEventListener("keydown", handleEscape));
-    });
-
-    return (
-      <PopoverContext.Provider
-        value={{
-          open: () => props.open ?? false,
-          onOpenChange: (open) => props.onOpenChange?.(open),
-        }}
-      >
-        {props.children}
-      </PopoverContext.Provider>
-    );
-  };
-
-  Popover.Trigger = (props: {
-    children: JSX.Element;
-    as?: string;
-    type?: "button" | "submit" | "reset" | "menu";
-    class?: string;
-    "aria-label"?: string;
-  }) => {
-    const context = useContext(PopoverContext);
-
-    return (
-      <button
-        type={props.type}
-        class={props.class}
-        aria-label={props["aria-label"]}
-        onClick={() => context?.onOpenChange(!context.open())}
-      >
-        {props.children}
-      </button>
-    );
-  };
-  Popover.Portal = (props: { children: JSX.Element }) => <>{props.children}</>;
-  Popover.Content = (props: { children: JSX.Element; class?: string }) => {
-    const context = useContext(PopoverContext);
-
-    return (
-      <Show when={context?.open()}>
-        <div class={props.class}>{props.children}</div>
-      </Show>
-    );
-  };
-  return { default: Popover };
-});
 
 const mockSearchAgentMessages = agentsApi.searchAgentMessages as ReturnType<typeof vi.fn>;
 const mockFetchRecentAgentsList = agentsApi.fetchRecentAgentsList as ReturnType<typeof vi.fn>;
@@ -212,7 +131,6 @@ function renderFinder(props?: Partial<Parameters<typeof AgentFinder>[0]>) {
 
 describe("AgentFinder", () => {
   beforeEach(() => {
-    popoverMockState.rootProps = [];
     MockIntersectionObserver.reset();
     globalThis.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver;
     scrollIntoViewMock.mockReset();
@@ -391,7 +309,7 @@ describe("AgentFinder", () => {
     );
   });
 
-  it("configures the matches popover to fit the viewport with fixed positioning", async () => {
+  it("expands matches inline inside the search results list", async () => {
     mockSearchAgentMessages.mockResolvedValue(makeResponse([makeResult()]));
     renderFinder({ query: "match" });
 
@@ -399,16 +317,10 @@ describe("AgentFinder", () => {
       expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50);
     });
 
-    const configuredPopover = popoverMockState.rootProps.find((props) => props.strategy === "fixed");
-    expect(configuredPopover).toEqual({
-      strategy: "fixed",
-      floatingOptions: {
-        offset: 8,
-        flip: true,
-        shift: { padding: 16 },
-        size: { fitViewPort: true, padding: 16 },
-      },
-    });
+    fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
+
+    expect(await screen.findByText("match", { selector: "mark" })).toBeInTheDocument();
+    expect(screen.getAllByText("1 match")).toHaveLength(2);
   });
 
   it("renders separate match windows for multiple matches in one message", async () => {
@@ -600,7 +512,7 @@ describe("AgentFinder", () => {
     expect(onDismiss).toHaveBeenCalled();
   });
 
-  it("Escape closes an open match popover without dismissing the finder", async () => {
+  it("Escape closes an open match panel without dismissing the finder", async () => {
     mockSearchAgentMessages.mockResolvedValue(makeResponse([makeResult()]));
     const { onDismiss } = renderFinder({ query: "match" });
 
@@ -611,12 +523,12 @@ describe("AgentFinder", () => {
     const trigger = await screen.findByRole("button", { name: "Show 1 match" });
     fireEvent.click(trigger);
 
-    expect(screen.getAllByText("1 match")).toHaveLength(2);
+    expect(screen.getByText("match", { selector: "mark" })).toBeInTheDocument();
 
     fireEvent.keyDown(document, { key: "Escape" });
 
     await waitFor(() => {
-      expect(screen.getAllByText("1 match")).toHaveLength(1);
+      expect(screen.queryByText("match", { selector: "mark" })).not.toBeInTheDocument();
     });
     expect(onDismiss).not.toHaveBeenCalled();
   });
