@@ -391,6 +391,24 @@ describe("AgentFinder", () => {
     );
   });
 
+  it("keeps the sticky matches header on its own stacking layer", async () => {
+    mockSearchAgentMessages.mockResolvedValue(makeResponse([makeResult()]));
+    renderFinder({ query: "match" });
+
+    await waitFor(() => {
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50);
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
+
+    const headerLabel = (await screen.findAllByText("1 match"))[1];
+    expect(headerLabel).toBeTruthy();
+    if (!headerLabel) {
+      throw new Error("Expected sticky matches header label");
+    }
+    expect(headerLabel.parentElement?.className).toContain("z-10");
+  });
+
   it("configures the matches popover to fit the viewport with fixed positioning", async () => {
     mockSearchAgentMessages.mockResolvedValue(makeResponse([makeResult()]));
     renderFinder({ query: "match" });
