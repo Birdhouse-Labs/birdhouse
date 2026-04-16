@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-li
 import { createSignal } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 import type { ComposerAttachment } from "../../types/composer-attachments";
+import type { Message } from "../../types/messages";
 import ChatContainer from "./ChatContainer";
 
 const previewSkillAttachments = vi.fn(async (workspaceId: string, text: string) => {
@@ -42,6 +43,39 @@ vi.mock("../../services/agents-api", () => ({
 }));
 
 describe("ChatContainer", () => {
+  it("focuses the messages scroller when a rendered message is clicked", async () => {
+    const messages: Message[] = [
+      {
+        id: "msg_1",
+        role: "assistant",
+        content: "Hello from the agent",
+        blocks: [{ id: "text_1", type: "text", content: "Hello from the agent" }],
+        model: "gpt-5.4",
+        provider: "openai",
+        timestamp: new Date(),
+      },
+    ];
+
+    render(() => (
+      <ChatContainer
+        messages={messages}
+        agentId="agent_test"
+        inputValue=""
+        isStreaming={false}
+        onInputChange={() => {}}
+        onSend={() => {}}
+        onStop={() => {}}
+      />
+    ));
+
+    const messagesRegion = screen.getByTestId("chat-messages-scroll");
+    fireEvent.click(await screen.findByText("Hello from the agent"));
+
+    await waitFor(() => {
+      expect(messagesRegion).toHaveFocus();
+    });
+  });
+
   it("clears attached skill preview when linked skill text is deleted", async () => {
     const Wrapper = () => {
       const [value, setValue] = createSignal("[Find a skill](birdhouse:skill/find-skills)");

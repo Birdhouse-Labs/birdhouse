@@ -2,7 +2,17 @@
 // ABOUTME: Orchestrates message rendering and input handling
 
 import { LibraryBig, Network, Split, X } from "lucide-solid";
-import { type Accessor, type Component, createMemo, createResource, createSignal, For, Show } from "solid-js";
+import {
+  type Accessor,
+  type Component,
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  For,
+  onCleanup,
+  Show,
+} from "solid-js";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { findPendingAssistant, isMessageQueued } from "../../domain/message-queue";
 import { previewSkillAttachments } from "../../services/skill-attachments-api";
@@ -45,6 +55,7 @@ export interface ChatContainerProps {
 
 export const ChatContainer: Component<ChatContainerProps> = (props) => {
   const { workspaceId } = useWorkspace();
+  let messagesRef: HTMLDivElement | undefined;
   const sizeClasses = createMemo(() => {
     const size = uiSize();
     return {
@@ -82,6 +93,25 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
   const StopTreeModeIcon: Component = () => <Network size={18} />;
 
   const pendingAssistant = createMemo(() => findPendingAssistant(props.messages));
+
+  createEffect(() => {
+    const messagesEl = messagesRef;
+    if (!messagesEl) return;
+
+    messagesEl.tabIndex = -1;
+
+    const focusMessagesFromClick = (event: MouseEvent) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.closest("button, a, input, textarea, select, [contenteditable='true']")) {
+        return;
+      }
+
+      queueMicrotask(() => messagesEl.focus());
+    };
+
+    messagesEl.addEventListener("click", focusMessagesFromClick);
+    onCleanup(() => messagesEl.removeEventListener("click", focusMessagesFromClick));
+  });
 
   return (
     <div class="flex flex-col flex-1 bg-surface overflow-hidden">
@@ -225,6 +255,8 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
 
       {/* Messages area - newest at top (scrollable) */}
       <div
+        ref={messagesRef}
+        data-testid="chat-messages-scroll"
         class="flex-1 p-4 space-y-4 overflow-y-auto"
         classList={{
           [sizeClasses().gap]: true,
