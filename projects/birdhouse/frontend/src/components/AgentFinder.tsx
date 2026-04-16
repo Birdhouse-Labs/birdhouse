@@ -499,6 +499,7 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
 
   const peekSelection = (item: VisibleAgentResult | undefined) => {
     if (!item) return;
+    setOpenPopoverIndex(null);
     openModal("agent", item.agentId);
   };
 

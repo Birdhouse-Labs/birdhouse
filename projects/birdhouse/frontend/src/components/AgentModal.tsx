@@ -33,6 +33,7 @@ const AgentModal: Component<AgentModalProps> = (props) => {
           props.onClose();
         }
       }}
+      closeOnEscapeKeyDown={props.isTop}
       closeOnOutsidePointer={false}
       closeOnOutsideFocus={false}
     >

@@ -607,6 +607,28 @@ describe("AgentFinder", () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
+  it("Right Shift closes an open matches popover before peeking", async () => {
+    mockSearchAgentMessages.mockResolvedValue(makeResponse([makeResult({ title: "Peekable Search" })]));
+    renderFinder({ query: "match" });
+
+    await waitFor(() => {
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50);
+    });
+
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    const trigger = await screen.findByRole("button", { name: "Show 1 match" });
+    fireEvent.click(trigger);
+
+    expect(screen.getAllByText("1 match")).toHaveLength(2);
+
+    fireEvent.keyUp(document, { code: "ShiftRight", key: "Shift" });
+
+    await waitFor(() => {
+      expect(mockOpenModal).toHaveBeenCalledWith("agent", "agent-1");
+      expect(screen.getAllByText("1 match")).toHaveLength(1);
+    });
+  });
+
   it("Escape dismisses the finder", async () => {
     mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
     const { onDismiss } = renderFinder();

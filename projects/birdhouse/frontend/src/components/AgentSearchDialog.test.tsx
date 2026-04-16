@@ -22,6 +22,7 @@ let mockModalStack = [{ type: "agent-search", id: "main" }];
 const mockNavigate = vi.fn();
 const mockRemoveModalByType = vi.fn();
 let dialogOnOpenChange: ((open: boolean) => void) | undefined;
+let dialogCloseOnEscapeKeyDown: boolean | undefined;
 
 vi.mock("../lib/routing", () => ({
   useModalRoute: () => ({
@@ -54,8 +55,14 @@ vi.mock("./AgentFinder", () => ({
 }));
 
 vi.mock("corvu/dialog", () => {
-  const Dialog = (props: { children: JSX.Element; open?: boolean; onOpenChange?: (open: boolean) => void }) => {
+  const Dialog = (props: {
+    children: JSX.Element;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    closeOnEscapeKeyDown?: boolean;
+  }) => {
     dialogOnOpenChange = props.onOpenChange;
+    dialogCloseOnEscapeKeyDown = props.closeOnEscapeKeyDown;
     return <>{props.open ? props.children : null}</>;
   };
   Dialog.Portal = (props: { children: JSX.Element }) => <>{props.children}</>;
@@ -78,6 +85,7 @@ describe("AgentSearchDialog", () => {
     mockNavigate.mockReset();
     mockRemoveModalByType.mockReset();
     dialogOnOpenChange = undefined;
+    dialogCloseOnEscapeKeyDown = undefined;
   });
 
   afterEach(() => {
@@ -169,5 +177,20 @@ describe("AgentSearchDialog", () => {
     dialogOnOpenChange?.(false);
 
     expect(mockRemoveModalByType).not.toHaveBeenCalled();
+  });
+
+  it("only enables Escape dismissal when the search dialog is top-most", () => {
+    renderDialog();
+    expect(dialogCloseOnEscapeKeyDown).toBe(true);
+
+    cleanup();
+
+    mockModalStack = [
+      { type: "agent-search", id: "main" },
+      { type: "agent", id: "agent-123" },
+    ];
+    render(() => <AgentSearchDialog />);
+
+    expect(dialogCloseOnEscapeKeyDown).toBe(false);
   });
 });

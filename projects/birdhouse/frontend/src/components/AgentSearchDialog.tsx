@@ -44,6 +44,7 @@ const AgentSearchDialog: Component = () => {
           closeSearch();
         }
       }}
+      closeOnEscapeKeyDown={isTopMostSearchDialog()}
       closeOnOutsidePointer={false}
       closeOnOutsideFocus={false}
       preventScroll={false}
