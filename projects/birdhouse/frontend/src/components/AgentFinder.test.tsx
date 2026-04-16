@@ -391,7 +391,7 @@ describe("AgentFinder", () => {
     );
   });
 
-  it("keeps the sticky matches header on its own stacking layer", async () => {
+  it("renders the matches header in normal scroll flow", async () => {
     mockSearchAgentMessages.mockResolvedValue(makeResponse([makeResult()]));
     renderFinder({ query: "match" });
 
@@ -406,7 +406,7 @@ describe("AgentFinder", () => {
     if (!headerLabel) {
       throw new Error("Expected sticky matches header label");
     }
-    expect(headerLabel.parentElement?.className).toContain("z-10");
+    expect(headerLabel.parentElement?.className).not.toContain("sticky");
   });
 
   it("configures the matches popover to fit the viewport with fixed positioning", async () => {

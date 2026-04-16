@@ -327,7 +327,7 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
             class="w-[min(calc(100vw-2rem),42rem)] overflow-y-auto overscroll-contain rounded-xl border border-border bg-surface-raised shadow-2xl"
             style={{ "z-index": baseZIndex }}
           >
-            <div class="sticky top-0 z-10 border-b border-border bg-surface-raised px-4 py-2.5">
+            <div class="border-b border-border bg-surface-raised px-4 py-2.5">
               <span class="text-xs font-medium text-text-secondary">
                 {matchCount()} {matchCount() === 1 ? "match" : "matches"}
               </span>
