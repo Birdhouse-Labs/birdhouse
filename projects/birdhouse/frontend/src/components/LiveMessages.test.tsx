@@ -168,4 +168,15 @@ describe("LiveMessages reset restoration", () => {
       expect(screen.getByTestId("mock-messages-viewport")).toHaveFocus();
     });
   });
+
+  it("shows a modal close button while messages are still loading", async () => {
+    const onClose = vi.fn();
+    fetchMessagesMock.mockImplementation(() => new Promise(() => {}));
+
+    render(() => <LiveMessages agentId="agent_test" showCloseButton={true} onClose={onClose} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Close modal" }));
+
+    expect(onClose).toHaveBeenCalled();
+  });
 });

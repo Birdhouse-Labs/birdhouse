@@ -1,8 +1,17 @@
 // ABOUTME: Live chat messages for real agents with streaming
 // ABOUTME: Resource + Store hybrid for initial fetch + real-time updates
 
-import { AlertCircle } from "lucide-solid";
-import { type Component, createEffect, createMemo, createResource, createSignal, onCleanup, Show } from "solid-js";
+import { AlertCircle, X } from "lucide-solid";
+import {
+  type Component,
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  type JSX,
+  onCleanup,
+  Show,
+} from "solid-js";
 import { createStore, produce, reconcile } from "solid-js/store";
 import type { EventType } from "../../../server/src/types/agent-events";
 import { API_ENDPOINT_BASE } from "../config/api";
@@ -62,6 +71,23 @@ const ErrorState: Component<{ error: Error; onRetry: () => void }> = (props) => 
         Retry
       </Button>
     </div>
+  </div>
+);
+
+const ModalFallbackShell: Component<{ onClose: () => void; children: JSX.Element }> = (props) => (
+  <div class="flex h-full flex-col bg-surface">
+    <div class="flex flex-shrink-0 items-center justify-end border-b border-border bg-surface-raised px-4 py-3">
+      <button
+        type="button"
+        onClick={props.onClose}
+        class="relative z-10 flex h-7 w-7 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-overlay hover:text-text-primary"
+        aria-label="Close modal"
+        title="Close modal"
+      >
+        <X size={16} />
+      </button>
+    </div>
+    <div class="flex-1">{props.children}</div>
   </div>
 );
 
@@ -667,18 +693,23 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     }
   };
 
+  const renderFallback = () => {
+    const fallbackContent = messagesResource.error ? (
+      <ErrorState error={messagesResource.error as Error} onRetry={refetch} />
+    ) : (
+      <LoadingState />
+    );
+
+    if (props.showCloseButton && props.onClose) {
+      return <ModalFallbackShell onClose={props.onClose}>{fallbackContent}</ModalFallbackShell>;
+    }
+
+    return fallbackContent;
+  };
+
   return (
     <div class="flex flex-col h-full bg-surface">
-      <Show
-        when={messagesStore.length > 0 && !messagesResource.error}
-        fallback={
-          messagesResource.error ? (
-            <ErrorState error={messagesResource.error as Error} onRetry={refetch} />
-          ) : (
-            <LoadingState />
-          )
-        }
-      >
+      <Show when={messagesStore.length > 0 && !messagesResource.error} fallback={renderFallback()}>
         <div class="flex flex-col h-full">
           {/* Agent Header - only show when metadata is loaded */}
           <Show when={agentMetadata()}>
