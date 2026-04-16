@@ -2,7 +2,18 @@
 // ABOUTME: Handles keyboard actions, lazy snippets, peek, confirm, and dismissal for both wrappers.
 
 import Popover from "corvu/popover";
-import { type Component, createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from "solid-js";
+import {
+  type Accessor,
+  type Component,
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  For,
+  onCleanup,
+  type Setter,
+  Show,
+} from "solid-js";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { useModalRoute } from "../lib/routing";
 import type { AgentMessageSearchResult, RecentAgentForTypeahead } from "../services/agents-api";
@@ -23,6 +34,30 @@ export interface AgentFinderProps {
   confirmLabel?: string;
   onConfirm: (selection: AgentFinderSelection) => void;
   onDismiss: () => void;
+  sessionState?: AgentFinderSessionState;
+}
+
+export interface AgentFinderSessionState {
+  results: Accessor<AgentMessageSearchResult[]>;
+  setResults: Setter<AgentMessageSearchResult[]>;
+  recentAgents: Accessor<RecentAgentForTypeahead[]>;
+  setRecentAgents: Setter<RecentAgentForTypeahead[]>;
+  isSearching: Accessor<boolean>;
+  setIsSearching: Setter<boolean>;
+  isLoadingRecent: Accessor<boolean>;
+  setIsLoadingRecent: Setter<boolean>;
+  searchError: Accessor<string | null>;
+  setSearchError: Setter<string | null>;
+  hasSearched: Accessor<boolean>;
+  setHasSearched: Setter<boolean>;
+  activeIndex: Accessor<number>;
+  setActiveIndex: Setter<number>;
+  pointerMoved: Accessor<boolean>;
+  setPointerMoved: Setter<boolean>;
+  openPopoverIndex: Accessor<number | null>;
+  setOpenPopoverIndex: Setter<number | null>;
+  resultsScrollTop: Accessor<number>;
+  setResultsScrollTop: Setter<number>;
 }
 
 interface GroupedResult {
@@ -354,19 +389,41 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
 
 const AgentFinder: Component<AgentFinderProps> = (props) => {
   const { openModal } = useModalRoute();
-  const [results, setResults] = createSignal<AgentMessageSearchResult[]>([]);
-  const [recentAgents, setRecentAgents] = createSignal<RecentAgentForTypeahead[]>([]);
-  const [isSearching, setIsSearching] = createSignal(false);
-  const [isLoadingRecent, setIsLoadingRecent] = createSignal(false);
-  const [searchError, setSearchError] = createSignal<string | null>(null);
-  const [hasSearched, setHasSearched] = createSignal(false);
-  const [activeIndex, setActiveIndex] = createSignal(-1);
-  const [pointerMoved, setPointerMoved] = createSignal(false);
-  const [openPopoverIndex, setOpenPopoverIndex] = createSignal<number | null>(null);
+  const [internalResults, setInternalResults] = createSignal<AgentMessageSearchResult[]>([]);
+  const [internalRecentAgents, setInternalRecentAgents] = createSignal<RecentAgentForTypeahead[]>([]);
+  const [internalIsSearching, setInternalIsSearching] = createSignal(false);
+  const [internalIsLoadingRecent, setInternalIsLoadingRecent] = createSignal(false);
+  const [internalSearchError, setInternalSearchError] = createSignal<string | null>(null);
+  const [internalHasSearched, setInternalHasSearched] = createSignal(false);
+  const [internalActiveIndex, setInternalActiveIndex] = createSignal(-1);
+  const [internalPointerMoved, setInternalPointerMoved] = createSignal(false);
+  const [internalOpenPopoverIndex, setInternalOpenPopoverIndex] = createSignal<number | null>(null);
+  const [internalResultsScrollTop, setInternalResultsScrollTop] = createSignal(0);
   const [resultsScrollRoot, setResultsScrollRoot] = createSignal<HTMLDivElement>();
+  const results = () => props.sessionState?.results() ?? internalResults();
+  const setResults = props.sessionState?.setResults ?? setInternalResults;
+  const recentAgents = () => props.sessionState?.recentAgents() ?? internalRecentAgents();
+  const setRecentAgents = props.sessionState?.setRecentAgents ?? setInternalRecentAgents;
+  const isSearching = () => props.sessionState?.isSearching() ?? internalIsSearching();
+  const setIsSearching = props.sessionState?.setIsSearching ?? setInternalIsSearching;
+  const isLoadingRecent = () => props.sessionState?.isLoadingRecent() ?? internalIsLoadingRecent;
+  const setIsLoadingRecent = props.sessionState?.setIsLoadingRecent ?? setInternalIsLoadingRecent;
+  const searchError = () => props.sessionState?.searchError() ?? internalSearchError();
+  const setSearchError = props.sessionState?.setSearchError ?? setInternalSearchError;
+  const hasSearched = () => props.sessionState?.hasSearched() ?? internalHasSearched();
+  const setHasSearched = props.sessionState?.setHasSearched ?? setInternalHasSearched;
+  const activeIndex = () => props.sessionState?.activeIndex() ?? internalActiveIndex();
+  const setActiveIndex = props.sessionState?.setActiveIndex ?? setInternalActiveIndex;
+  const pointerMoved = () => props.sessionState?.pointerMoved() ?? internalPointerMoved();
+  const setPointerMoved = props.sessionState?.setPointerMoved ?? setInternalPointerMoved;
+  const openPopoverIndex = () => props.sessionState?.openPopoverIndex() ?? internalOpenPopoverIndex();
+  const setOpenPopoverIndex = props.sessionState?.setOpenPopoverIndex ?? setInternalOpenPopoverIndex;
+  const resultsScrollTop = () => props.sessionState?.resultsScrollTop() ?? internalResultsScrollTop();
+  const setResultsScrollTop = props.sessionState?.setResultsScrollTop ?? setInternalResultsScrollTop;
   let requestId = 0;
   let recentRequestId = 0;
   const resultItemRefs: Array<HTMLDivElement | undefined> = [];
+  let previousVisibleResultKeys: string[] | undefined;
 
   createEffect(() => {
     const query = props.query.trim();
@@ -476,13 +533,38 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     }));
   });
 
-  // Reset active index when results change. Do NOT clear resultItemRefs here —
-  // the For loop re-assigns refs as it re-renders, and clearing eagerly causes
-  // the scroll effect to fire against a wiped array before refs are restored.
   createEffect(() => {
-    visibleResults();
+    const keys = visibleResults().map((item) => `${item.kind}:${item.agentId}`);
+    if (!previousVisibleResultKeys) {
+      previousVisibleResultKeys = keys;
+      return;
+    }
+
+    if (
+      keys.length === previousVisibleResultKeys.length &&
+      keys.every((key, index) => key === previousVisibleResultKeys?.[index])
+    ) {
+      return;
+    }
+
+    previousVisibleResultKeys = keys;
     setActiveIndex(-1);
     setOpenPopoverIndex(null);
+  });
+
+  createEffect(() => {
+    const root = resultsScrollRoot();
+    if (!root) return;
+
+    root.scrollTop = resultsScrollTop();
+
+    const handleScroll = () => setResultsScrollTop(root.scrollTop);
+    root.addEventListener("scroll", handleScroll, { passive: true });
+
+    onCleanup(() => {
+      setResultsScrollTop(root.scrollTop);
+      root.removeEventListener("scroll", handleScroll);
+    });
   });
 
   createEffect(() => {
@@ -566,6 +648,7 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
       const item = visibleResults()[activeIndex()];
       if (!item) return;
       e.preventDefault();
+      setOpenPopoverIndex(null);
       peekSelection(item);
       return;
     }

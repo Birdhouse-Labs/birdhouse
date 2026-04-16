@@ -2,7 +2,7 @@
 // ABOUTME: Verifies modal shell behavior, query wiring, and confirm-driven navigation.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
-import type { JSX } from "solid-js";
+import { createSignal, type JSX } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AgentSearchDialog from "./AgentSearchDialog";
 
@@ -18,7 +18,17 @@ vi.mock("../contexts/WorkspaceContext", () => ({
   useWorkspace: () => ({ workspaceId: "test-workspace" }),
 }));
 
-let mockModalStack = [{ type: "agent-search", id: "main" }];
+const modalRouteState = vi.hoisted(() => {
+  return {
+    modalStack: undefined as unknown as () => Array<{ type: string; id: string }>,
+    setModalStack: undefined as unknown as (value: Array<{ type: string; id: string }>) => void,
+  };
+});
+
+const [mockModalStack, setMockModalStack] = createSignal([{ type: "agent-search", id: "main" }]);
+modalRouteState.modalStack = mockModalStack;
+modalRouteState.setModalStack = setMockModalStack;
+
 const mockNavigate = vi.fn();
 const mockRemoveModalByType = vi.fn();
 let dialogOnOpenChange: ((open: boolean) => void) | undefined;
@@ -26,7 +36,7 @@ let dialogCloseOnEscapeKeyDown: boolean | undefined;
 
 vi.mock("../lib/routing", () => ({
   useModalRoute: () => ({
-    modalStack: () => mockModalStack,
+    modalStack: modalRouteState.modalStack,
     removeModalByType: mockRemoveModalByType,
   }),
   useWorkspaceId: () => () => "test-workspace",
@@ -76,12 +86,13 @@ vi.mock("corvu/dialog", () => {
 });
 
 const renderDialog = (open = true) => {
-  mockModalStack = open ? [{ type: "agent-search", id: "main" }] : [];
-  render(() => <AgentSearchDialog />);
+  modalRouteState.setModalStack(open ? [{ type: "agent-search", id: "main" }] : []);
+  return render(() => <AgentSearchDialog />);
 };
 
 describe("AgentSearchDialog", () => {
   beforeEach(() => {
+    modalRouteState.setModalStack([{ type: "agent-search", id: "main" }]);
     mockNavigate.mockReset();
     mockRemoveModalByType.mockReset();
     dialogOnOpenChange = undefined;
@@ -112,6 +123,29 @@ describe("AgentSearchDialog", () => {
     expect(screen.getByTestId("finder-query")).toHaveTextContent("alpha");
   });
 
+  it("preserves and reselects the query when the dialog is reopened", async () => {
+    renderDialog();
+
+    const input = screen.getByLabelText("Search agent messages") as HTMLInputElement;
+    fireEvent.input(input, { target: { value: "alpha" } });
+
+    modalRouteState.setModalStack([]);
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Search agent messages")).not.toBeInTheDocument();
+    });
+
+    modalRouteState.setModalStack([{ type: "agent-search", id: "main" }]);
+
+    await waitFor(() => {
+      const reopenedInput = screen.getByLabelText("Search agent messages") as HTMLInputElement;
+      expect(reopenedInput.value).toBe("alpha");
+      expect(document.activeElement).toBe(reopenedInput);
+      expect(reopenedInput.selectionStart).toBe(0);
+      expect(reopenedInput.selectionEnd).toBe(5);
+    });
+  });
+
   it("configures AgentFinder with the dialog confirm label", () => {
     renderDialog();
 
@@ -124,10 +158,10 @@ describe("AgentSearchDialog", () => {
 
     cleanup();
 
-    mockModalStack = [
+    modalRouteState.setModalStack([
       { type: "agent-search", id: "main" },
       { type: "agent", id: "agent-123" },
-    ];
+    ]);
     render(() => <AgentSearchDialog />);
 
     expect(screen.getByTestId("finder-interactive")).toHaveTextContent("false");
@@ -169,10 +203,10 @@ describe("AgentSearchDialog", () => {
     cleanup();
     mockRemoveModalByType.mockReset();
 
-    mockModalStack = [
+    modalRouteState.setModalStack([
       { type: "agent-search", id: "main" },
       { type: "agent", id: "agent-123" },
-    ];
+    ]);
     render(() => <AgentSearchDialog />);
     dialogOnOpenChange?.(false);
 
@@ -185,10 +219,10 @@ describe("AgentSearchDialog", () => {
 
     cleanup();
 
-    mockModalStack = [
+    modalRouteState.setModalStack([
       { type: "agent-search", id: "main" },
       { type: "agent", id: "agent-123" },
-    ];
+    ]);
     render(() => <AgentSearchDialog />);
 
     expect(dialogCloseOnEscapeKeyDown).toBe(false);

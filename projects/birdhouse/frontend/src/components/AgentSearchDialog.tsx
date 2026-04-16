@@ -7,6 +7,7 @@ import { Search, X } from "lucide-solid";
 import { type Component, createEffect, createMemo, createSignal } from "solid-js";
 import { useWorkspace } from "../contexts/WorkspaceContext";
 import { useModalRoute, useWorkspaceId } from "../lib/routing";
+import type { AgentMessageSearchResult, RecentAgentForTypeahead } from "../services/agents-api";
 import { cardSurfaceFlat } from "../styles/containerStyles";
 import AgentFinder, { type AgentFinderSelection } from "./AgentFinder";
 
@@ -22,13 +23,40 @@ const AgentSearchDialog: Component = () => {
   const isTopMostSearchDialog = createMemo(() => modalStack().at(-1)?.type === MODAL_TYPE_AGENT_SEARCH);
 
   const [query, setQuery] = createSignal("");
+  const [results, setResults] = createSignal<AgentMessageSearchResult[]>([]);
+  const [recentAgents, setRecentAgents] = createSignal<RecentAgentForTypeahead[]>([]);
+  const [isSearching, setIsSearching] = createSignal(false);
+  const [isLoadingRecent, setIsLoadingRecent] = createSignal(false);
+  const [searchError, setSearchError] = createSignal<string | null>(null);
+  const [hasSearched, setHasSearched] = createSignal(false);
+  const [activeIndex, setActiveIndex] = createSignal(-1);
+  const [pointerMoved, setPointerMoved] = createSignal(false);
+  const [openPopoverIndex, setOpenPopoverIndex] = createSignal<number | null>(null);
+  const [resultsScrollTop, setResultsScrollTop] = createSignal(0);
+  const [inputRef, setInputRef] = createSignal<HTMLInputElement>();
+  let wasTopMostOpen = false;
 
   const closeSearch = () => removeModalByType(MODAL_TYPE_AGENT_SEARCH);
 
   createEffect(() => {
-    if (!isOpen()) {
-      setQuery("");
+    const topMostOpen = isOpen() && isTopMostSearchDialog();
+    const input = inputRef();
+
+    if (!topMostOpen || !input) {
+      wasTopMostOpen = topMostOpen;
+      return;
     }
+
+    if (wasTopMostOpen) return;
+
+    queueMicrotask(() => {
+      input.focus();
+      if (query()) {
+        input.select();
+      }
+    });
+
+    wasTopMostOpen = topMostOpen;
   });
 
   const handleConfirm = (selection: AgentFinderSelection) => {
@@ -61,8 +89,7 @@ const AgentSearchDialog: Component = () => {
             <div class="flex flex-1 items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent">
               <Search size={16} class="text-text-muted flex-shrink-0" />
               <input
-                // eslint-disable-next-line jsx-a11y/no-autofocus
-                autofocus
+                ref={setInputRef}
                 type="text"
                 value={query()}
                 onInput={(e) => setQuery(e.currentTarget.value)}
@@ -90,6 +117,28 @@ const AgentSearchDialog: Component = () => {
             confirmLabel="open"
             onConfirm={handleConfirm}
             onDismiss={closeSearch}
+            sessionState={{
+              results,
+              setResults,
+              recentAgents,
+              setRecentAgents,
+              isSearching,
+              setIsSearching,
+              isLoadingRecent,
+              setIsLoadingRecent,
+              searchError,
+              setSearchError,
+              hasSearched,
+              setHasSearched,
+              activeIndex,
+              setActiveIndex,
+              pointerMoved,
+              setPointerMoved,
+              openPopoverIndex,
+              setOpenPopoverIndex,
+              resultsScrollTop,
+              setResultsScrollTop,
+            }}
           />
         </Dialog.Content>
       </Dialog.Portal>
