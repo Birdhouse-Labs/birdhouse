@@ -18,6 +18,7 @@ const AgentSearchDialog: Component = () => {
   const routeWorkspaceId = useWorkspaceId();
   const navigate = useNavigate();
   const { modalStack, removeModalByType } = useModalRoute();
+  const activeWorkspaceId = createMemo(() => routeWorkspaceId() ?? workspaceId);
 
   const isOpen = createMemo(() => modalStack().some((modal) => modal.type === MODAL_TYPE_AGENT_SEARCH));
   const isTopMostSearchDialog = createMemo(() => modalStack().at(-1)?.type === MODAL_TYPE_AGENT_SEARCH);
@@ -37,6 +38,21 @@ const AgentSearchDialog: Component = () => {
   let wasTopMostOpen = false;
 
   const closeSearch = () => removeModalByType(MODAL_TYPE_AGENT_SEARCH);
+
+  createEffect(() => {
+    activeWorkspaceId();
+    setQuery("");
+    setResults([]);
+    setRecentAgents([]);
+    setIsSearching(false);
+    setIsLoadingRecent(false);
+    setSearchError(null);
+    setHasSearched(false);
+    setActiveIndex(-1);
+    setPointerMoved(false);
+    setOpenPopoverIndex(null);
+    setResultsScrollTop(0);
+  });
 
   createEffect(() => {
     const topMostOpen = isOpen() && isTopMostSearchDialog();
@@ -84,7 +100,7 @@ const AgentSearchDialog: Component = () => {
 
   const handleConfirm = (selection: AgentFinderSelection) => {
     closeSearch();
-    navigate(`/workspace/${routeWorkspaceId()}/agent/${selection.agentId}`);
+    navigate(`/workspace/${activeWorkspaceId()}/agent/${selection.agentId}`);
   };
 
   return (
@@ -134,7 +150,7 @@ const AgentSearchDialog: Component = () => {
           </div>
 
           <AgentFinder
-            workspaceId={workspaceId}
+            workspaceId={activeWorkspaceId()}
             query={query()}
             interactive={isTopMostSearchDialog()}
             confirmLabel="open"

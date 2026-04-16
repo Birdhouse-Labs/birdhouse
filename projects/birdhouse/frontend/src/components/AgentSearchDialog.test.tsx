@@ -14,10 +14,6 @@ interface MockAgentFinderProps {
   onDismiss: () => void;
 }
 
-vi.mock("../contexts/WorkspaceContext", () => ({
-  useWorkspace: () => ({ workspaceId: "test-workspace" }),
-}));
-
 const modalRouteState = vi.hoisted(() => {
   return {
     modalStack: undefined as unknown as () => Array<{ type: string; id: string }>,
@@ -29,6 +25,12 @@ const [mockModalStack, setMockModalStack] = createSignal([{ type: "agent-search"
 modalRouteState.modalStack = mockModalStack;
 modalRouteState.setModalStack = setMockModalStack;
 
+const [mockRouteWorkspaceId, setMockRouteWorkspaceId] = createSignal("test-workspace");
+
+vi.mock("../contexts/WorkspaceContext", () => ({
+  useWorkspace: () => ({ workspaceId: "test-workspace" }),
+}));
+
 const mockNavigate = vi.fn();
 const mockRemoveModalByType = vi.fn();
 let dialogOnOpenChange: ((open: boolean) => void) | undefined;
@@ -39,7 +41,7 @@ vi.mock("../lib/routing", () => ({
     modalStack: modalRouteState.modalStack,
     removeModalByType: mockRemoveModalByType,
   }),
-  useWorkspaceId: () => () => "test-workspace",
+  useWorkspaceId: () => mockRouteWorkspaceId,
 }));
 
 vi.mock("@solidjs/router", () => ({
@@ -93,6 +95,7 @@ const renderDialog = (open = true) => {
 describe("AgentSearchDialog", () => {
   beforeEach(() => {
     modalRouteState.setModalStack([{ type: "agent-search", id: "main" }]);
+    setMockRouteWorkspaceId("test-workspace");
     mockNavigate.mockReset();
     mockRemoveModalByType.mockReset();
     dialogOnOpenChange = undefined;
@@ -143,6 +146,22 @@ describe("AgentSearchDialog", () => {
       expect(document.activeElement).toBe(reopenedInput);
       expect(reopenedInput.selectionStart).toBe(0);
       expect(reopenedInput.selectionEnd).toBe(5);
+    });
+  });
+
+  it("clears the preserved search session when the workspace changes", async () => {
+    renderDialog();
+
+    const input = screen.getByLabelText("Search agent messages") as HTMLInputElement;
+    fireEvent.input(input, { target: { value: "alpha" } });
+    expect(screen.getByTestId("finder-query")).toHaveTextContent("alpha");
+
+    setMockRouteWorkspaceId("other-workspace");
+
+    await waitFor(() => {
+      const resetInput = screen.getByLabelText("Search agent messages") as HTMLInputElement;
+      expect(resetInput.value).toBe("");
+      expect(screen.getByTestId("finder-query")).toHaveTextContent("");
     });
   });
 
