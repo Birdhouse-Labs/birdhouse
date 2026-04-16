@@ -9,7 +9,7 @@ import { useWorkspace } from "../contexts/WorkspaceContext";
 import { useModalRoute, useWorkspaceId } from "../lib/routing";
 import type { AgentMessageSearchResult, RecentAgentForTypeahead } from "../services/agents-api";
 import { cardSurfaceFlat } from "../styles/containerStyles";
-import AgentFinder, { type AgentFinderSelection } from "./AgentFinder";
+import AgentFinder, { type AgentFinderSelection, type AgentFinderSessionState } from "./AgentFinder";
 
 export const MODAL_TYPE_AGENT_SEARCH = "agent-search";
 
@@ -58,6 +58,29 @@ const AgentSearchDialog: Component = () => {
 
     wasTopMostOpen = topMostOpen;
   });
+
+  const finderSessionState: AgentFinderSessionState = {
+    results,
+    setResults,
+    recentAgents,
+    setRecentAgents,
+    isSearching,
+    setIsSearching,
+    isLoadingRecent,
+    setIsLoadingRecent,
+    searchError,
+    setSearchError,
+    hasSearched,
+    setHasSearched,
+    activeIndex,
+    setActiveIndex,
+    pointerMoved,
+    setPointerMoved,
+    openPopoverIndex,
+    setOpenPopoverIndex,
+    resultsScrollTop,
+    setResultsScrollTop,
+  };
 
   const handleConfirm = (selection: AgentFinderSelection) => {
     closeSearch();
@@ -117,28 +140,7 @@ const AgentSearchDialog: Component = () => {
             confirmLabel="open"
             onConfirm={handleConfirm}
             onDismiss={closeSearch}
-            sessionState={{
-              results,
-              setResults,
-              recentAgents,
-              setRecentAgents,
-              isSearching,
-              setIsSearching,
-              isLoadingRecent,
-              setIsLoadingRecent,
-              searchError,
-              setSearchError,
-              hasSearched,
-              setHasSearched,
-              activeIndex,
-              setActiveIndex,
-              pointerMoved,
-              setPointerMoved,
-              openPopoverIndex,
-              setOpenPopoverIndex,
-              resultsScrollTop,
-              setResultsScrollTop,
-            }}
+            sessionState={finderSessionState}
           />
         </Dialog.Content>
       </Dialog.Portal>
