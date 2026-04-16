@@ -44,6 +44,7 @@ interface LiveMessagesProps {
   onOpenAgentModal?: (agentId: string) => void;
   showCloseButton?: boolean;
   onClose?: () => void;
+  initialFocusTarget?: "messages" | "composer";
 }
 
 const LoadingState = () => (
@@ -261,6 +262,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
 
   // Input ref for focusing (reactive signal so effects can track it)
   const [inputRef, setInputRef] = createSignal<HTMLTextAreaElement | undefined>();
+  const [messagesViewportRef, setMessagesViewportRef] = createSignal<HTMLDivElement | undefined>();
 
   // isLoaded gates the save effect — plain boolean, invisible to SolidJS tracking
   let isLoaded = false;
@@ -295,15 +297,32 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
       });
   });
 
-  // Focus input when both draft and inputRef exist
-  createEffect(() => {
-    const currentValue = inputValue();
-    const currentRef = inputRef();
+  const initialFocusTarget = () => props.initialFocusTarget ?? "composer";
+  let lastInitialFocusKey: string | null = null;
 
-    if (currentValue && currentRef) {
-      // Focus input when draft exists (e.g., after cloning or returning to work)
-      currentRef.focus();
-    }
+  // Apply the requested initial focus once the loaded UI is ready.
+  createEffect(() => {
+    const target = initialFocusTarget();
+    const currentInputRef = inputRef();
+    const currentMessagesViewportRef = messagesViewportRef();
+    const messagesLoaded = messagesStore.length > 0 && !messagesResource.loading && !messagesResource.error;
+    const targetReady =
+      target === "messages" ? Boolean(currentMessagesViewportRef && messagesLoaded) : Boolean(currentInputRef);
+
+    if (!targetReady) return;
+
+    const focusKey = `${props.agentId}:${target}`;
+    if (lastInitialFocusKey === focusKey) return;
+
+    queueMicrotask(() => {
+      if (target === "messages") {
+        currentMessagesViewportRef?.focus();
+      } else {
+        currentInputRef?.focus();
+      }
+    });
+
+    lastInitialFocusKey = focusKey;
   });
 
   // Track changes; gate on isLoaded to avoid saving during initial load
@@ -776,6 +795,9 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
             onQuestionAnswered={removePendingQuestion}
             inputRef={(el) => {
               setInputRef(el);
+            }}
+            messagesViewportRef={(el) => {
+              setMessagesViewportRef(el);
             }}
           />
         </div>

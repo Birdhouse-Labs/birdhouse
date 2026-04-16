@@ -8,10 +8,14 @@ import AgentModal from "./AgentModal";
 
 const dialogMockState = vi.hoisted(() => ({
   closeOnEscapeKeyDown: undefined as boolean | undefined,
+  initialFocusTarget: undefined as string | undefined,
 }));
 
 vi.mock("./LiveMessages", () => ({
-  default: () => <div>Live messages</div>,
+  default: (props: { initialFocusTarget?: string }) => {
+    dialogMockState.initialFocusTarget = props.initialFocusTarget;
+    return <div>Live messages</div>;
+  },
 }));
 
 vi.mock("../contexts/ZIndexContext", () => ({
@@ -36,6 +40,7 @@ describe("AgentModal", () => {
   afterEach(() => {
     cleanup();
     dialogMockState.closeOnEscapeKeyDown = undefined;
+    dialogMockState.initialFocusTarget = undefined;
     vi.clearAllMocks();
   });
 
@@ -45,6 +50,7 @@ describe("AgentModal", () => {
     ));
 
     expect(dialogMockState.closeOnEscapeKeyDown).toBe(true);
+    expect(dialogMockState.initialFocusTarget).toBe("messages");
 
     cleanup();
 

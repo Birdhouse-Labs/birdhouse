@@ -51,6 +51,7 @@ export interface ChatContainerProps {
   pendingQuestions?: Accessor<QuestionRequest[]>;
   onQuestionAnswered?: (questionId: string) => void;
   inputRef?: (el: HTMLTextAreaElement) => void;
+  messagesViewportRef?: (el: HTMLDivElement) => void;
 }
 
 export const ChatContainer: Component<ChatContainerProps> = (props) => {
@@ -255,7 +256,10 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
 
       {/* Messages area - newest at top (scrollable) */}
       <div
-        ref={messagesRef}
+        ref={(el) => {
+          messagesRef = el;
+          props.messagesViewportRef?.(el);
+        }}
         data-testid="chat-messages-scroll"
         class="flex-1 p-4 space-y-4 overflow-y-auto"
         classList={{
