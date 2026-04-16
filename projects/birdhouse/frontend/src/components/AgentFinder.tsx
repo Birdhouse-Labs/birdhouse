@@ -89,6 +89,12 @@ const SEARCH_LIMIT = 50;
 const RECENT_LIMIT = 50;
 const DEBOUNCE_MS = 300;
 const MATCH_CONTEXT_CHARS = 64;
+const MATCHES_POPOVER_FLOATING_OPTIONS = {
+  offset: 8,
+  flip: true,
+  shift: { padding: 16 },
+  size: { fitViewPort: true, padding: 16 },
+} as const;
 
 function formatDateTime(timestamp: number): string {
   const date = new Date(timestamp);
@@ -617,7 +623,12 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
         </span>
       </div>
 
-      <Popover open={props.isPopoverOpen} onOpenChange={props.onPopoverOpenChange}>
+      <Popover
+        open={props.isPopoverOpen}
+        onOpenChange={props.onPopoverOpenChange}
+        strategy="fixed"
+        floatingOptions={MATCHES_POPOVER_FLOATING_OPTIONS}
+      >
         <Popover.Trigger
           as="button"
           type="button"
@@ -629,7 +640,7 @@ const SearchResultCard: Component<SearchResultCardProps> = (props) => {
 
         <Popover.Portal>
           <Popover.Content
-            class="max-h-[60vh] w-[min(calc(100vw-2rem),42rem)] overflow-y-auto rounded-xl border border-border bg-surface-raised shadow-2xl"
+            class="w-[min(calc(100vw-2rem),42rem)] overflow-y-auto overscroll-contain rounded-xl border border-border bg-surface-raised shadow-2xl"
             style={{ "z-index": baseZIndex }}
           >
             <div class="sticky top-0 border-b border-border bg-surface-raised px-4 py-2.5">

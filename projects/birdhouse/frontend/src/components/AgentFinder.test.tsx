@@ -8,6 +8,10 @@ import type { AgentMessageSearchResponse, RecentAgentForTypeahead, RecentAgentSn
 import * as agentsApi from "../services/agents-api";
 import AgentFinder from "./AgentFinder";
 
+const popoverMockState = vi.hoisted(() => ({
+  rootProps: [] as Array<{ strategy?: string; floatingOptions?: unknown }>,
+}));
+
 vi.mock("../services/agents-api", () => ({
   fetchRecentAgentsList: vi.fn(),
   fetchRecentAgentSnippet: vi.fn(),
@@ -32,7 +36,18 @@ vi.mock("corvu/popover", () => {
     onOpenChange: (open: boolean) => void;
   }>();
 
-  const Popover = (props: { children: JSX.Element; open?: boolean; onOpenChange?: (open: boolean) => void }) => {
+  const Popover = (props: {
+    children: JSX.Element;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    strategy?: string;
+    floatingOptions?: unknown;
+  }) => {
+    popoverMockState.rootProps.push({
+      ...(props.strategy !== undefined ? { strategy: props.strategy } : {}),
+      ...(props.floatingOptions !== undefined ? { floatingOptions: props.floatingOptions } : {}),
+    });
+
     createEffect(() => {
       if (!props.open) return;
 
@@ -197,6 +212,7 @@ function renderFinder(props?: Partial<Parameters<typeof AgentFinder>[0]>) {
 
 describe("AgentFinder", () => {
   beforeEach(() => {
+    popoverMockState.rootProps = [];
     MockIntersectionObserver.reset();
     globalThis.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver;
     scrollIntoViewMock.mockReset();
@@ -373,6 +389,26 @@ describe("AgentFinder", () => {
     expect(screen.getByText(contextText).closest("div[style]")?.getAttribute("style")).toContain(
       "color-mix(in srgb, var(--theme-accent) 15%, var(--theme-surface-raised))",
     );
+  });
+
+  it("configures the matches popover to fit the viewport with fixed positioning", async () => {
+    mockSearchAgentMessages.mockResolvedValue(makeResponse([makeResult()]));
+    renderFinder({ query: "match" });
+
+    await waitFor(() => {
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50);
+    });
+
+    const configuredPopover = popoverMockState.rootProps.find((props) => props.strategy === "fixed");
+    expect(configuredPopover).toEqual({
+      strategy: "fixed",
+      floatingOptions: {
+        offset: 8,
+        flip: true,
+        shift: { padding: 16 },
+        size: { fitViewPort: true, padding: 16 },
+      },
+    });
   });
 
   it("renders separate match windows for multiple matches in one message", async () => {
