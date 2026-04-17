@@ -531,14 +531,6 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     }));
   });
 
-  const shouldShowLoadingSpinner = createMemo(() => {
-    if (!isSearching() && !isLoadingRecent()) {
-      return false;
-    }
-
-    return visibleResults().length === 0;
-  });
-
   createEffect(() => {
     const keys = visibleResults().map((item) => `${item.kind}:${item.agentId}`);
     if (!previousVisibleResultKeys) {
@@ -687,7 +679,7 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
   return (
     <div class="flex flex-1 min-h-0 flex-col" onPointerMove={() => setPointerMoved(true)}>
       <div ref={setResultsScrollRoot} class="flex-1 overflow-y-auto">
-        <Show when={shouldShowLoadingSpinner()}>
+        <Show when={isSearching() || isLoadingRecent()}>
           <div class="flex justify-center px-4 py-3">
             <div class="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
           </div>
