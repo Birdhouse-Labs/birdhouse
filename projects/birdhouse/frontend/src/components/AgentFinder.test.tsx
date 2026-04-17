@@ -293,7 +293,7 @@ describe("AgentFinder", () => {
     );
   });
 
-  it("does not load recent snippets while interaction is disabled", async () => {
+  it("still loads recent snippets while interaction is disabled", async () => {
     mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
     renderFinder({ interactive: false });
 
@@ -307,7 +307,9 @@ describe("AgentFinder", () => {
       expect(mockFetchRecentAgentsList).toHaveBeenCalledWith("test-workspace", undefined, 50);
     });
 
-    expect(mockFetchRecentAgentSnippet).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockFetchRecentAgentSnippet).toHaveBeenCalledWith("test-workspace", "agent-recent-1");
+    });
   });
 
   it("searches when query is present and filters out null-agent results", async () => {

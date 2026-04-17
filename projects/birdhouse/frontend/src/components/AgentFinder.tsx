@@ -178,15 +178,13 @@ const RecentAgentCard: Component<RecentAgentCardProps> = (props) => {
   );
 
   createEffect(() => {
-    if (shouldLoadSnippet() || !props.interactive) return;
+    if (shouldLoadSnippet()) return;
 
     const root = props.getObserverRoot();
     if (!root || !itemEl) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (!props.interactive) return;
-
         if (entries.some((entry) => entry.isIntersecting)) {
           setShouldLoadSnippet(true);
           observer.disconnect();
