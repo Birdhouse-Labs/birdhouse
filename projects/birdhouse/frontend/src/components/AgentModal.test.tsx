@@ -9,6 +9,7 @@ import AgentModal from "./AgentModal";
 const dialogMockState = vi.hoisted(() => ({
   closeOnEscapeKeyDown: undefined as boolean | undefined,
   initialFocusTarget: undefined as string | undefined,
+  contentOnKeyUp: undefined as ((event: KeyboardEvent) => void) | undefined,
 }));
 
 vi.mock("./LiveMessages", () => ({
@@ -30,9 +31,10 @@ vi.mock("corvu/dialog", () => {
 
   Dialog.Portal = (props: { children: JSX.Element }) => <>{props.children}</>;
   Dialog.Overlay = () => null;
-  Dialog.Content = (props: { children: JSX.Element; class?: string }) => (
-    <div class={props.class}>{props.children}</div>
-  );
+  Dialog.Content = (props: { children: JSX.Element; class?: string; onKeyUp?: (event: KeyboardEvent) => void }) => {
+    dialogMockState.contentOnKeyUp = props.onKeyUp;
+    return <div class={props.class}>{props.children}</div>;
+  };
   return { default: Dialog };
 });
 
@@ -59,5 +61,23 @@ describe("AgentModal", () => {
     ));
 
     expect(dialogMockState.closeOnEscapeKeyDown).toBe(false);
+  });
+
+  it("does not close the modal on Right Shift", () => {
+    const onClose = vi.fn();
+
+    render(() => (
+      <AgentModal agentId="agent-1" navigationDepth={0} isTop={true} onClose={onClose} onOpenAgentModal={() => {}} />
+    ));
+
+    dialogMockState.contentOnKeyUp?.({
+      code: "ShiftRight",
+      key: "Shift",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+    } as KeyboardEvent);
+
+    expect(onClose).not.toHaveBeenCalled();
   });
 });
