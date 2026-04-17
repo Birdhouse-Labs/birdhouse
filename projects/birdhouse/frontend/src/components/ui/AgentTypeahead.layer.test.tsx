@@ -3,7 +3,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import Dialog from "corvu/dialog";
-import { createMemo, createSignal, Show } from "solid-js";
+import { createMemo, createSignal, onCleanup, Show } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentTypeahead } from "./AgentTypeahead";
 
@@ -97,6 +97,69 @@ const NestedTypeaheadHarness = () => {
   );
 };
 
+const StaleEscapeListenerHarness = () => {
+  const [typeaheadClosed, setTypeaheadClosed] = createSignal(false);
+  const childOpen = createMemo(() => modalRouteState.modalStack().length > 1);
+
+  const simulateRouterLagWindow = (event: KeyboardEvent) => {
+    if (event.key !== "Escape") return;
+    modalRouteState.setModalStack([
+      { type: "agent", id: "agent-1" },
+      { type: "agent", id: "agent-2" },
+    ]);
+    document.removeEventListener("keydown", simulateRouterLagWindow, true);
+  };
+
+  onCleanup(() => {
+    document.removeEventListener("keydown", simulateRouterLagWindow, true);
+  });
+
+  return (
+    <Dialog closeOnEscapeKeyDown={modalRouteState.modalStack().length === 1} closeOnOutsidePointer={false} open={true}>
+      <Dialog.Portal mount={document.body}>
+        <Dialog.Content>
+          <button type="button" onClick={() => document.addEventListener("keydown", simulateRouterLagWindow, true)}>
+            Start handoff race
+          </button>
+
+          <Show when={!typeaheadClosed()}>
+            <AgentTypeahead
+              referenceElement={undefined}
+              inputValue="@@"
+              cursorPosition={2}
+              visible={true}
+              workspaceId="ws_test"
+              currentAgentId="agent-1"
+              insideAgentModal={true}
+              onSelect={() => {}}
+              onClose={() => setTypeaheadClosed(true)}
+            />
+          </Show>
+
+          <Show when={childOpen()}>
+            <Dialog
+              closeOnEscapeKeyDown={true}
+              closeOnOutsidePointer={false}
+              open={true}
+              onOpenChange={(open) => {
+                if (!open) {
+                  modalRouteState.setModalStack([{ type: "agent", id: "agent-1" }]);
+                }
+              }}
+            >
+              <Dialog.Portal mount={document.body}>
+                <Dialog.Content>
+                  <div data-testid="stale-race-peek">Peek dialog</div>
+                </Dialog.Content>
+              </Dialog.Portal>
+            </Dialog>
+          </Show>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog>
+  );
+};
+
 describe("AgentTypeahead layered Escape handling", () => {
   beforeEach(() => {
     modalRouteState.setModalStack([{ type: "agent", id: "agent-1" }]);
@@ -125,5 +188,18 @@ describe("AgentTypeahead layered Escape handling", () => {
       expect(screen.queryByTestId("peek-dialog")).not.toBeInTheDocument();
       expect(screen.getByTestId("finder-interactive")).toHaveTextContent("true");
     });
+  });
+
+  it("does not let a stale Escape listener swallow the first Escape during the peek handoff", async () => {
+    render(() => <StaleEscapeListenerHarness />);
+
+    fireEvent.click(screen.getByText("Start handoff race"));
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("stale-race-peek")).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("finder-interactive")).toBeInTheDocument();
   });
 });

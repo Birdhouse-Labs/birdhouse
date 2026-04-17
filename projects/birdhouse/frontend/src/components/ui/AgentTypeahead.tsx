@@ -112,10 +112,11 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
   });
 
   createEffect(() => {
-    if (!shouldShow() || !isInteractive()) return;
+    if (!shouldShow()) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (!isInteractive()) return;
       if (openPopoverIndex() !== null) return;
       e.preventDefault();
       props.onClose();

@@ -188,4 +188,36 @@ describe("AgentTypeahead", () => {
 
     expect(screen.getByTestId("finder-interactive")).toHaveTextContent("false");
   });
+
+  it("re-checks interactivity inside a stale Escape listener after the modal stack grows", () => {
+    modalRouteState.setModalStack([{ type: "agent", id: "agent-123" }]);
+
+    let capturedKeydownHandler: ((event: KeyboardEvent) => void) | undefined;
+    const addEventListenerSpy = vi.spyOn(document, "addEventListener");
+    addEventListenerSpy.mockImplementation((type, listener, options) => {
+      if (type === "keydown" && typeof listener === "function") {
+        capturedKeydownHandler = listener as (event: KeyboardEvent) => void;
+      }
+
+      return EventTarget.prototype.addEventListener.call(document, type, listener, options);
+    });
+
+    const { onClose } = renderTypeahead({ insideAgentModal: true });
+
+    expect(screen.getByTestId("finder-interactive")).toHaveTextContent("true");
+    expect(capturedKeydownHandler).toBeDefined();
+
+    modalRouteState.setModalStack([
+      { type: "agent", id: "agent-123" },
+      { type: "agent", id: "agent-456" },
+    ]);
+
+    expect(screen.getByTestId("finder-interactive")).toHaveTextContent("false");
+
+    const event = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
+    capturedKeydownHandler?.(event);
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
 });
