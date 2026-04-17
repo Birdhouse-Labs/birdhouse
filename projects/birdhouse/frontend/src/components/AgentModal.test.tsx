@@ -1,7 +1,7 @@
 // ABOUTME: Tests agent modal dialog behavior for stacked modal keyboard dismissal.
 // ABOUTME: Verifies only the top agent modal handles Escape-based dismissal.
 
-import { cleanup, render, waitFor } from "@solidjs/testing-library";
+import { cleanup, render } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import AgentModal from "./AgentModal";
@@ -9,7 +9,6 @@ import AgentModal from "./AgentModal";
 const dialogMockState = vi.hoisted(() => ({
   closeOnEscapeKeyDown: undefined as boolean | undefined,
   initialFocusTarget: undefined as string | undefined,
-  contentEl: undefined as HTMLElement | undefined,
 }));
 
 vi.mock("./LiveMessages", () => ({
@@ -31,22 +30,8 @@ vi.mock("corvu/dialog", () => {
 
   Dialog.Portal = (props: { children: JSX.Element }) => <>{props.children}</>;
   Dialog.Overlay = () => null;
-  Dialog.Content = (props: {
-    children: JSX.Element;
-    class?: string;
-    ref?: ((el: HTMLDivElement) => void) | HTMLDivElement;
-    tabIndex?: number;
-  }) => (
-    <div
-      class={props.class}
-      tabIndex={props.tabIndex}
-      ref={(el) => {
-        dialogMockState.contentEl = el;
-        if (typeof props.ref === "function") props.ref(el);
-      }}
-    >
-      {props.children}
-    </div>
+  Dialog.Content = (props: { children: JSX.Element; class?: string }) => (
+    <div class={props.class}>{props.children}</div>
   );
   return { default: Dialog };
 });
@@ -56,7 +41,6 @@ describe("AgentModal", () => {
     cleanup();
     dialogMockState.closeOnEscapeKeyDown = undefined;
     dialogMockState.initialFocusTarget = undefined;
-    dialogMockState.contentEl = undefined;
     vi.clearAllMocks();
   });
 
@@ -75,33 +59,5 @@ describe("AgentModal", () => {
     ));
 
     expect(dialogMockState.closeOnEscapeKeyDown).toBe(false);
-  });
-
-  it("focuses its content on mount when it is the top modal", async () => {
-    render(() => (
-      <AgentModal agentId="agent-1" navigationDepth={0} isTop={true} onClose={() => {}} onOpenAgentModal={() => {}} />
-    ));
-
-    await waitFor(() => {
-      expect(dialogMockState.contentEl).toBeDefined();
-      expect(dialogMockState.contentEl).toBe(document.activeElement);
-    });
-  });
-
-  it("does not steal focus when it is not the top modal", async () => {
-    const outside = document.createElement("button");
-    outside.textContent = "outside";
-    document.body.appendChild(outside);
-    outside.focus();
-    expect(document.activeElement).toBe(outside);
-
-    render(() => (
-      <AgentModal agentId="agent-1" navigationDepth={1} isTop={false} onClose={() => {}} onOpenAgentModal={() => {}} />
-    ));
-
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(document.activeElement).toBe(outside);
-
-    outside.remove();
   });
 });

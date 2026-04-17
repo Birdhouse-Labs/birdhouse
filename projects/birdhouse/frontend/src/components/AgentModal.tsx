@@ -3,7 +3,7 @@
 // ABOUTME: Renders a single agent modal in a stack
 
 import Dialog from "corvu/dialog";
-import { type Component, createEffect, Show } from "solid-js";
+import { type Component, Show } from "solid-js";
 import { ZIndexProvider } from "../contexts/ZIndexContext";
 import LiveMessages from "./LiveMessages";
 
@@ -25,19 +25,6 @@ const AgentModal: Component<AgentModalProps> = (props) => {
   // Base is 50, increases by 10 for each depth level
   const baseZIndex = 50 + depth * 10;
 
-  let contentEl: HTMLDivElement | undefined;
-
-  // When this modal becomes the top modal, pull focus into its content so
-  // keyboard events (Escape, Right Shift) bubble through Dialog.Content and
-  // Corvu's escape handler. This matters before LiveMessages' own focus logic
-  // runs, e.g. during the initial loading fallback.
-  createEffect(() => {
-    if (!props.isTop) return;
-    if (!contentEl) return;
-    if (contentEl.contains(document.activeElement)) return;
-    contentEl.focus();
-  });
-
   return (
     <Dialog
       open={true}
@@ -55,13 +42,9 @@ const AgentModal: Component<AgentModalProps> = (props) => {
 
         {/* Active modal content - size decreases with depth */}
         <Dialog.Content
-          ref={(el: HTMLDivElement) => {
-            contentEl = el;
-          }}
-          tabIndex={-1}
           class={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 
                    rounded-2xl bg-surface shadow-2xl
-                   flex flex-col overflow-hidden outline-none`}
+                   flex flex-col overflow-hidden`}
           style={{
             width: `calc(95vw - ${sizeReduction}px)`,
             height: `calc(95dvh - ${sizeReduction}px)`,
