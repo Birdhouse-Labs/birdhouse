@@ -684,4 +684,97 @@ describe("AgentFinder", () => {
 
     expect(onConfirm).toHaveBeenCalledWith({ agentId: "agent-1", title: "Clickable Agent" });
   });
+
+  it("stops Right Shift from reaching ancestor listeners when interactive", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent({ id: "agent-1", title: "Alpha Recent" })]);
+    renderFinder();
+
+    expect(await screen.findByText("Alpha Recent")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+
+    const ancestorListener = vi.fn();
+    document.body.addEventListener("keyup", ancestorListener);
+
+    const event = new KeyboardEvent("keyup", {
+      code: "ShiftRight",
+      key: "Shift",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.body.dispatchEvent(event);
+
+    await waitFor(() => {
+      expect(mockOpenModal).toHaveBeenCalledWith("agent", "agent-1");
+    });
+    expect(ancestorListener).not.toHaveBeenCalled();
+
+    document.body.removeEventListener("keyup", ancestorListener);
+  });
+
+  it("stops Escape from reaching ancestor listeners when dismissing", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
+    const { onDismiss } = renderFinder();
+
+    expect(await screen.findByText("Recent Agent")).toBeInTheDocument();
+
+    const ancestorListener = vi.fn();
+    document.body.addEventListener("keydown", ancestorListener);
+
+    const event = new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.body.dispatchEvent(event);
+
+    expect(onDismiss).toHaveBeenCalled();
+    expect(ancestorListener).not.toHaveBeenCalled();
+
+    document.body.removeEventListener("keydown", ancestorListener);
+  });
+
+  it("does not swallow keys it does not own", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
+    renderFinder();
+
+    expect(await screen.findByText("Recent Agent")).toBeInTheDocument();
+
+    const ancestorListener = vi.fn();
+    document.body.addEventListener("keydown", ancestorListener);
+
+    const event = new KeyboardEvent("keydown", {
+      key: "a",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.body.dispatchEvent(event);
+
+    expect(ancestorListener).toHaveBeenCalled();
+
+    document.body.removeEventListener("keydown", ancestorListener);
+  });
+
+  it("does not swallow shortcuts when not interactive", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent({ id: "agent-1", title: "Alpha Recent" })]);
+    renderFinder({ interactive: false });
+
+    expect(await screen.findByText("Alpha Recent")).toBeInTheDocument();
+
+    const ancestorListener = vi.fn();
+    document.body.addEventListener("keyup", ancestorListener);
+
+    const event = new KeyboardEvent("keyup", {
+      code: "ShiftRight",
+      key: "Shift",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.body.dispatchEvent(event);
+
+    expect(ancestorListener).toHaveBeenCalled();
+    expect(mockOpenModal).not.toHaveBeenCalled();
+
+    document.body.removeEventListener("keyup", ancestorListener);
+  });
 });
