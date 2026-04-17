@@ -3,7 +3,16 @@
 // ABOUTME: Hosts modal stack handling for agent dialogs
 
 import Resizable from "corvu/resizable";
-import { type Component, createEffect, createMemo, createSignal, type JSX, onCleanup, onMount, Show } from "solid-js";
+import {
+  type Accessor,
+  type Component,
+  createEffect,
+  createMemo,
+  createSignal,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import type { BackendAgentNode } from "./adapters/agent-tree-adapter";
 import { mapAgentNode } from "./adapters/agent-tree-adapter";
@@ -25,7 +34,7 @@ import { loadCollapseState, saveCollapseState } from "./lib/collapse-state";
 import { log } from "./lib/logger";
 import { usePageTitle } from "./lib/page-title";
 import { keepAgentInView } from "./lib/preferences";
-import { useModalRoute, useNavigateToWorkspaceAgent, useWorkspaceAgentId } from "./lib/routing";
+import { type ModalState, useModalRoute, useNavigateToWorkspaceAgent, useWorkspaceAgentId } from "./lib/routing";
 import { fetchAgentTrees } from "./services/messages-api";
 import SkillLibraryDialog from "./skills/components/SkillLibraryDialog";
 import { createMediaQuery } from "./theme/createMediaQuery";
@@ -51,6 +60,38 @@ interface LiveAppProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 }
+
+interface AgentModalStackNodeProps {
+  stack: Accessor<ModalState[]>;
+  index: number;
+  onClose: () => void;
+  onOpenAgentModal: (agentId: string) => void;
+}
+
+const AgentModalStackNode: Component<AgentModalStackNodeProps> = (props) => {
+  const modal = createMemo(() => props.stack()[props.index]);
+
+  return (
+    <Show when={modal()} keyed>
+      {(currentModal) => (
+        <AgentModal
+          agentId={currentModal.id}
+          navigationDepth={props.index + 1}
+          isTop={props.index === props.stack().length - 1}
+          onClose={props.onClose}
+          onOpenAgentModal={props.onOpenAgentModal}
+        >
+          <AgentModalStackNode
+            stack={props.stack}
+            index={props.index + 1}
+            onClose={props.onClose}
+            onOpenAgentModal={props.onOpenAgentModal}
+          />
+        </AgentModal>
+      )}
+    </Show>
+  );
+};
 
 /**
  * Helper function to find a node by ID in the tree
@@ -488,26 +529,6 @@ const LiveApp: Component<LiveAppProps> = (props) => {
     </div>
   );
 
-  const renderAgentModalStack = (index = 0): JSX.Element => {
-    const stack = agentModalStack();
-    const modal = stack[index];
-    if (!modal) {
-      return null;
-    }
-
-    return (
-      <AgentModal
-        agentId={modal.id}
-        navigationDepth={index + 1}
-        isTop={index === stack.length - 1}
-        onClose={closeModal}
-        onOpenAgentModal={openAgentModal}
-      >
-        {renderAgentModalStack(index + 1)}
-      </AgentModal>
-    );
-  };
-
   return (
     <div class="h-full overflow-hidden p-2 relative">
       {/* Connection status banner (fixed at top, only shown when not connected) */}
@@ -608,7 +629,7 @@ const LiveApp: Component<LiveAppProps> = (props) => {
       </Show>
 
       {/* Agent modal stack - option-click agent links to open */}
-      {renderAgentModalStack()}
+      <AgentModalStackNode stack={agentModalStack} index={0} onClose={closeModal} onOpenAgentModal={openAgentModal} />
 
       {/* Skills Library Dialog */}
       <SkillLibraryDialog workspaceId={workspaceId} />
