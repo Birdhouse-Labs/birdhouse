@@ -6,7 +6,7 @@ import { createContext, createEffect, type JSX, onCleanup, Show, useContext } fr
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessageSearchResponse, RecentAgentForTypeahead, RecentAgentSnippet } from "../services/agents-api";
 import * as agentsApi from "../services/agents-api";
-import AgentFinder from "./AgentFinder";
+import AgentFinder, { type AgentFinderSessionState } from "./AgentFinder";
 
 const popoverMockState = vi.hoisted(() => ({
   rootProps: [] as Array<{ strategy?: string; floatingOptions?: unknown }>,
@@ -210,6 +210,32 @@ function renderFinder(props?: Partial<Parameters<typeof AgentFinder>[0]>) {
   return { onConfirm, onDismiss };
 }
 
+function makeSessionState(overrides?: Partial<AgentFinderSessionState>): AgentFinderSessionState {
+  return {
+    results: () => [],
+    setResults: vi.fn(),
+    recentAgents: () => [],
+    setRecentAgents: vi.fn(),
+    isSearching: () => false,
+    setIsSearching: vi.fn(),
+    isLoadingRecent: () => false,
+    setIsLoadingRecent: vi.fn(),
+    searchError: () => null,
+    setSearchError: vi.fn(),
+    hasSearched: () => false,
+    setHasSearched: vi.fn(),
+    activeIndex: () => -1,
+    setActiveIndex: vi.fn(),
+    pointerMoved: () => false,
+    setPointerMoved: vi.fn(),
+    openPopoverIndex: () => null,
+    setOpenPopoverIndex: vi.fn(),
+    resultsScrollTop: () => 0,
+    setResultsScrollTop: vi.fn(),
+    ...overrides,
+  };
+}
+
 describe("AgentFinder", () => {
   beforeEach(() => {
     popoverMockState.rootProps = [];
@@ -247,6 +273,32 @@ describe("AgentFinder", () => {
     expect(await screen.findByText("open")).toBeInTheDocument();
     expect(screen.getByText("peek")).toBeInTheDocument();
     expect(screen.getByText("dismiss")).toBeInTheDocument();
+  });
+
+  it("hides the loading spinner while recent rows are already visible", async () => {
+    renderFinder({
+      sessionState: makeSessionState({
+        recentAgents: () => [makeRecentAgent()],
+        isLoadingRecent: () => true,
+      }),
+    });
+
+    expect(await screen.findByText("Recent Agent")).toBeInTheDocument();
+    expect(document.querySelector(".animate-spin")).toBeNull();
+  });
+
+  it("hides the loading spinner while search results are already visible", async () => {
+    renderFinder({
+      query: "match",
+      sessionState: makeSessionState({
+        results: () => [makeResult({ title: "Visible Match" })],
+        isSearching: () => true,
+        hasSearched: () => true,
+      }),
+    });
+
+    expect(await screen.findByText("Visible Match")).toBeInTheDocument();
+    expect(document.querySelector(".animate-spin")).toBeNull();
   });
 
   it("lazy-loads a recent snippet only after its card becomes visible", async () => {
