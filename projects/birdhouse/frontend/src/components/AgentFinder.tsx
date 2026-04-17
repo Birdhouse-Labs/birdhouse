@@ -600,13 +600,6 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     syncPopoverToActiveResult(items, nextIndex);
   };
 
-  // Claim an event so no other handler (ancestor or document-level) can also
-  // react to it. Used for shortcuts the finder owns while interactive.
-  const claim = (e: KeyboardEvent) => {
-    e.preventDefault();
-    e.stopImmediatePropagation();
-  };
-
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!props.interactive) return;
 
@@ -616,7 +609,7 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
       if (openPopoverIndex() !== null) {
         return;
       }
-      claim(e);
+      e.preventDefault();
       props.onDismiss();
       return;
     }
@@ -624,14 +617,14 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     if (items.length === 0) return;
 
     if (e.key === "ArrowDown") {
-      claim(e);
+      e.preventDefault();
       const next = (activeIndex() + 1) % items.length;
       moveActiveResult(items, next);
       return;
     }
 
     if (e.key === "ArrowUp") {
-      claim(e);
+      e.preventDefault();
       const next = activeIndex() <= 0 ? items.length - 1 : activeIndex() - 1;
       moveActiveResult(items, next);
       return;
@@ -640,7 +633,7 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     if (e.key === "Enter" && !e.shiftKey && !e.altKey) {
       const item = items[activeIndex()];
       if (!item) return;
-      claim(e);
+      e.preventDefault();
       confirmSelection(item);
     }
   };
@@ -652,7 +645,7 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     if (e.code === "ShiftRight") {
       const item = visibleResults()[activeIndex()];
       if (!item) return;
-      claim(e);
+      e.preventDefault();
       setOpenPopoverIndex(null);
       peekSelection(item);
       return;
@@ -665,7 +658,7 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
       if (idx < 0) return;
       const item = visibleResults()[idx];
       if (!item || item.kind !== "search") return;
-      claim(e);
+      e.preventDefault();
       setOpenPopoverIndex((current) => (current === idx ? null : idx));
     }
   };
@@ -673,13 +666,11 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
   createEffect(() => {
     if (!props.interactive) return;
 
-    // Capture phase ensures the finder wins against ancestor keyboard handlers
-    // (e.g. a surrounding AgentModal) when it claims a shortcut.
-    document.addEventListener("keydown", handleKeyDown, { capture: true });
-    document.addEventListener("keyup", handleKeyUp, { capture: true });
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
     onCleanup(() => {
-      document.removeEventListener("keydown", handleKeyDown, { capture: true });
-      document.removeEventListener("keyup", handleKeyUp, { capture: true });
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keyup", handleKeyUp);
     });
   });
 
