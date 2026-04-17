@@ -34,14 +34,6 @@ vi.mock("../../lib/routing", () => ({
   }),
 }));
 
-vi.mock("solid-floating-ui", () => ({
-  useFloating: () => ({
-    strategy: "absolute",
-    x: 12,
-    y: 34,
-  }),
-}));
-
 class MockIntersectionObserver {
   observe = vi.fn();
   unobserve = vi.fn();
@@ -74,7 +66,6 @@ const LayeredShiftHarness = (props: { closeParentOnShift: boolean }) => {
         }}
       >
         <AgentTypeahead
-          referenceElement={undefined}
           inputValue="@@"
           cursorPosition={2}
           visible={true}
@@ -83,7 +74,9 @@ const LayeredShiftHarness = (props: { closeParentOnShift: boolean }) => {
           insideAgentModal={true}
           onSelect={() => {}}
           onClose={() => setParentOpen(false)}
-        />
+        >
+          <textarea aria-label="Composer" />
+        </AgentTypeahead>
 
         <Show when={childOpen()}>
           <div data-testid="peek-dialog">Peek dialog</div>

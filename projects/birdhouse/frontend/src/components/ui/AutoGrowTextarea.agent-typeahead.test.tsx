@@ -33,6 +33,7 @@ vi.mock("./AgentTypeahead", () => ({
   default: (props: {
     visible: boolean;
     onSelect: (agent: { id: string; title: string }, matchedText: string, matchStartIndex: number) => void;
+    children: import("solid-js").JSX.Element;
   }) => {
     createEffect(() => {
       if (!props.visible) return;
@@ -49,9 +50,12 @@ vi.mock("./AgentTypeahead", () => ({
     });
 
     return (
-      <Show when={props.visible}>
-        <div data-testid="mock-agent-typeahead" />
-      </Show>
+      <>
+        {props.children}
+        <Show when={props.visible}>
+          <div data-testid="mock-agent-typeahead" />
+        </Show>
+      </>
     );
   },
 }));

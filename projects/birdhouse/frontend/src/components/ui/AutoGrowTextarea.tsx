@@ -331,36 +331,7 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
 
   return (
     <div class="flex-1 relative flex items-end">
-      <textarea
-        ref={(el) => {
-          textareaRef = el;
-          props.ref?.(el);
-        }}
-        value={props.value}
-        onInput={handleInput}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        onClick={updateCursorPosition}
-        disabled={props.disabled}
-        placeholder={props.placeholder || "Type a message..."}
-        rows={1}
-        class="w-full rounded-lg border bg-surface border-border text-text-primary placeholder-text-muted px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
-        classList={{
-          [sizeClasses().text]: true,
-        }}
-        style={textareaStyles()}
-      />
-      <SkillTypeahead
-        referenceElement={textareaRef}
-        inputValue={props.value}
-        cursorPosition={cursorPosition()}
-        visible={showSkillTypeahead()}
-        skills={typeaheadSkills()}
-        onSelect={handleSkillSelect}
-        onClose={() => setShowSkillTypeahead(false)}
-      />
       <AgentTypeahead
-        referenceElement={textareaRef}
         inputValue={props.value}
         cursorPosition={cursorPosition()}
         visible={showAgentTypeahead()}
@@ -369,6 +340,35 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
         insideAgentModal={props.insideAgentModal}
         onSelect={handleAgentSelect}
         onClose={() => setShowAgentTypeahead(false)}
+      >
+        <textarea
+          ref={(el) => {
+            textareaRef = el;
+            props.ref?.(el);
+          }}
+          value={props.value}
+          onInput={handleInput}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          onClick={updateCursorPosition}
+          disabled={props.disabled}
+          placeholder={props.placeholder || "Type a message..."}
+          rows={1}
+          class="w-full rounded-lg border bg-surface border-border text-text-primary placeholder-text-muted px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
+          classList={{
+            [sizeClasses().text]: true,
+          }}
+          style={textareaStyles()}
+        />
+      </AgentTypeahead>
+      <SkillTypeahead
+        referenceElement={textareaRef}
+        inputValue={props.value}
+        cursorPosition={cursorPosition()}
+        visible={showSkillTypeahead()}
+        skills={typeaheadSkills()}
+        onSelect={handleSkillSelect}
+        onClose={() => setShowSkillTypeahead(false)}
       />
       <FileTypeahead
         referenceElement={textareaRef}

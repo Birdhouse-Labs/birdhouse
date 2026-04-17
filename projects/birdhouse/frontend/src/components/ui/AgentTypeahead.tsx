@@ -1,9 +1,8 @@
-// ABOUTME: Floating @@ typeahead wrapper around the shared AgentFinder component.
+// ABOUTME: Corvu popover wrapper for the @@ agent finder overlay anchored to the composer.
 // ABOUTME: Parses the active trigger near the cursor and maps confirmation back to text replacement.
 
-import { autoUpdate, flip, offset, shift, size } from "@floating-ui/dom";
-import { useFloating } from "solid-floating-ui";
-import { type Component, createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js";
+import Popover from "corvu/popover";
+import { type Component, createEffect, createMemo, createSignal, type JSX, Show } from "solid-js";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { useModalRoute } from "../../lib/routing";
 import AgentFinder from "../AgentFinder";
@@ -14,7 +13,6 @@ export interface AgentTypeaheadSelection {
 }
 
 export interface AgentTypeaheadProps {
-  referenceElement: HTMLElement | undefined;
   inputValue: string;
   cursorPosition: number;
   visible: boolean;
@@ -23,12 +21,20 @@ export interface AgentTypeaheadProps {
   insideAgentModal?: boolean | undefined;
   onSelect: (agent: AgentTypeaheadSelection, matchedText: string, matchStartIndex: number) => void;
   onClose: () => void;
+  children: JSX.Element;
 }
 
 interface TriggerMatch {
   query: string;
   startIndex: number;
 }
+
+const TYPEAHEAD_POPOVER_FLOATING_OPTIONS = {
+  offset: 4,
+  flip: true,
+  shift: { padding: 8 },
+  size: { fitViewPort: true, padding: 16 },
+} as const;
 
 function findAgentTrigger(inputValue: string, cursorPosition: number): TriggerMatch | null {
   const textBeforeCursor = inputValue.substring(0, cursorPosition);
@@ -60,29 +66,11 @@ function findAgentTrigger(inputValue: string, cursorPosition: number): TriggerMa
 export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
   const baseZIndex = useZIndex();
   const { modalStack } = useModalRoute();
-  const [floating, setFloating] = createSignal<HTMLElement>();
-  const [maxWidth, setMaxWidth] = createSignal<number | undefined>();
   const [ownerModalDepth, setOwnerModalDepth] = createSignal<number | null>(null);
   const [openPopoverIndex, setOpenPopoverIndex] = createSignal<number | null>(null);
 
   const triggerMatch = createMemo(() => findAgentTrigger(props.inputValue, props.cursorPosition));
   const shouldShow = createMemo(() => props.visible && triggerMatch() !== null);
-
-  const position = useFloating(() => props.referenceElement, floating, {
-    placement: "top-start",
-    middleware: [
-      offset(4),
-      flip(),
-      shift({ padding: 8 }),
-      size({
-        padding: 16,
-        apply({ availableWidth }) {
-          setMaxWidth(availableWidth);
-        },
-      }),
-    ],
-    whileElementsMounted: autoUpdate,
-  });
 
   createEffect(() => {
     if (!shouldShow()) {
@@ -111,53 +99,51 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
     return ownerDepth !== null && modalStack().length === ownerDepth;
   });
 
-  createEffect(() => {
-    if (!shouldShow()) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (!isInteractive()) return;
-      if (openPopoverIndex() !== null) return;
-      e.preventDefault();
-      props.onClose();
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    onCleanup(() => document.removeEventListener("keydown", handleKeyDown));
-  });
-
   return (
-    <Show when={shouldShow() && triggerMatch()}>
-      {(match) => (
-        <div
-          ref={setFloating}
+    <Popover
+      open={shouldShow()}
+      onOpenChange={(open) => {
+        if (!open) props.onClose();
+      }}
+      modal={false}
+      trapFocus={false}
+      closeOnOutsidePointer={false}
+      strategy="fixed"
+      placement="top-start"
+      floatingOptions={TYPEAHEAD_POPOVER_FLOATING_OPTIONS}
+    >
+      <Popover.Anchor class="w-full">{props.children}</Popover.Anchor>
+
+      <Popover.Portal>
+        <Popover.Content
           class="flex flex-col rounded-xl border border-border bg-surface-overlay shadow-xl overflow-hidden"
           style={{
-            position: position.strategy,
-            top: `${position.y ?? 0}px`,
-            left: `${position.x ?? 0}px`,
             "max-height": "min(80vh, 36rem)",
             "min-width": "min(20rem, 85vw)",
-            "max-width": maxWidth() !== undefined ? `min(${maxWidth()}px, 42rem)` : "min(calc(100vw - 2rem), 42rem)",
+            "max-width": "min(calc(100vw - 2rem), 42rem)",
             "z-index": baseZIndex,
           }}
         >
-          <AgentFinder
-            workspaceId={props.workspaceId}
-            query={match().query}
-            interactive={isInteractive()}
-            confirmLabel="insert"
-            openPopoverIndex={openPopoverIndex}
-            setOpenPopoverIndex={setOpenPopoverIndex}
-            {...(props.currentAgentId ? { currentAgentId: props.currentAgentId } : {})}
-            onConfirm={(selection) => {
-              props.onSelect({ id: selection.agentId, title: selection.title }, match().query, match().startIndex);
-            }}
-            onDismiss={props.onClose}
-          />
-        </div>
-      )}
-    </Show>
+          <Show when={triggerMatch()}>
+            {(match) => (
+              <AgentFinder
+                workspaceId={props.workspaceId}
+                query={match().query}
+                interactive={isInteractive()}
+                confirmLabel="insert"
+                openPopoverIndex={openPopoverIndex}
+                setOpenPopoverIndex={setOpenPopoverIndex}
+                {...(props.currentAgentId ? { currentAgentId: props.currentAgentId } : {})}
+                onConfirm={(selection) => {
+                  props.onSelect({ id: selection.agentId, title: selection.title }, match().query, match().startIndex);
+                }}
+                onDismiss={props.onClose}
+              />
+            )}
+          </Show>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover>
   );
 };
 

@@ -1,8 +1,8 @@
 // ABOUTME: Tests the AgentTypeahead wrapper around the shared AgentFinder component.
-// ABOUTME: Verifies @@ trigger parsing, floating container behavior, and confirm wiring.
+// ABOUTME: Verifies @@ trigger parsing, Corvu popover wiring, and confirm behavior.
 
 import { cleanup, fireEvent, render, screen } from "@solidjs/testing-library";
-import { createSignal } from "solid-js";
+import { createSignal, type JSX, Show } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentTypeahead } from "./AgentTypeahead";
 
@@ -22,6 +22,16 @@ const modalRouteState = vi.hoisted(() => ({
   setModalStack: undefined as unknown as (value: Array<{ type: string; id: string }>) => void,
 }));
 
+const popoverMockState = vi.hoisted(() => ({
+  open: undefined as boolean | undefined,
+  modal: undefined as boolean | undefined,
+  trapFocus: undefined as boolean | undefined,
+  closeOnOutsidePointer: undefined as boolean | undefined,
+  strategy: undefined as string | undefined,
+  floatingOptions: undefined as unknown,
+  onOpenChange: undefined as ((open: boolean) => void) | undefined,
+}));
+
 const [mockModalStack, setMockModalStack] = createSignal<Array<{ type: string; id: string }>>([]);
 modalRouteState.modalStack = mockModalStack;
 modalRouteState.setModalStack = setMockModalStack;
@@ -36,13 +46,43 @@ vi.mock("../../lib/routing", () => ({
   }),
 }));
 
-vi.mock("solid-floating-ui", () => ({
-  useFloating: () => ({
-    strategy: "absolute",
-    x: 12,
-    y: 34,
-  }),
-}));
+vi.mock("corvu/popover", () => {
+  const Popover = (props: {
+    children: JSX.Element;
+    open?: boolean;
+    modal?: boolean;
+    trapFocus?: boolean;
+    closeOnOutsidePointer?: boolean;
+    strategy?: string;
+    floatingOptions?: unknown;
+    onOpenChange?: (open: boolean) => void;
+  }) => {
+    popoverMockState.open = props.open;
+    popoverMockState.modal = props.modal;
+    popoverMockState.trapFocus = props.trapFocus;
+    popoverMockState.closeOnOutsidePointer = props.closeOnOutsidePointer;
+    popoverMockState.strategy = props.strategy;
+    popoverMockState.floatingOptions = props.floatingOptions;
+    popoverMockState.onOpenChange = props.onOpenChange;
+    return <>{props.children}</>;
+  };
+
+  Popover.Anchor = (props: { children: JSX.Element; class?: string }) => (
+    <div data-testid="popover-anchor" class={props.class}>
+      {props.children}
+    </div>
+  );
+  Popover.Portal = (props: { children: JSX.Element }) => <>{props.children}</>;
+  Popover.Content = (props: { children: JSX.Element; class?: string; style?: JSX.CSSProperties }) => (
+    <Show when={popoverMockState.open}>
+      <div data-testid="popover-content" class={props.class} style={props.style}>
+        {props.children}
+      </div>
+    </Show>
+  );
+
+  return { default: Popover };
+});
 
 vi.mock("../AgentFinder", () => ({
   default: (props: MockAgentFinderProps) => {
@@ -73,7 +113,6 @@ const renderTypeahead = (props?: Partial<Parameters<typeof AgentTypeahead>[0]>) 
 
   render(() => (
     <AgentTypeahead
-      referenceElement={undefined}
       inputValue="@@alpha"
       cursorPosition={7}
       visible={true}
@@ -82,7 +121,9 @@ const renderTypeahead = (props?: Partial<Parameters<typeof AgentTypeahead>[0]>) 
       onSelect={onSelect}
       onClose={onClose}
       {...props}
-    />
+    >
+      <textarea aria-label="Composer" />
+    </AgentTypeahead>
   ));
 
   return { onSelect, onClose };
@@ -95,19 +136,29 @@ describe("AgentTypeahead", () => {
 
   afterEach(() => {
     cleanup();
+    popoverMockState.open = undefined;
+    popoverMockState.modal = undefined;
+    popoverMockState.trapFocus = undefined;
+    popoverMockState.closeOnOutsidePointer = undefined;
+    popoverMockState.strategy = undefined;
+    popoverMockState.floatingOptions = undefined;
+    popoverMockState.onOpenChange = undefined;
     vi.clearAllMocks();
   });
 
-  it("renders a floating AgentFinder for a valid @@ trigger", () => {
+  it("renders a controlled popover for a valid @@ trigger", () => {
     renderTypeahead();
 
     expect(screen.getByTestId("finder-query")).toHaveTextContent("alpha");
     expect(screen.getByTestId("finder-workspace")).toHaveTextContent("ws_test");
     expect(screen.getByTestId("finder-current-agent")).toHaveTextContent("agent-current");
     expect(screen.getByTestId("finder-label")).toHaveTextContent("insert");
-
-    const container = screen.getByTestId("finder-query").parentElement?.parentElement;
-    expect(container).toHaveStyle({ position: "absolute", top: "34px", left: "12px", "z-index": "100" });
+    expect(screen.getByLabelText("Composer")).toBeInTheDocument();
+    expect(popoverMockState.open).toBe(true);
+    expect(popoverMockState.modal).toBe(false);
+    expect(popoverMockState.trapFocus).toBe(false);
+    expect(popoverMockState.closeOnOutsidePointer).toBe(false);
+    expect(popoverMockState.strategy).toBe("fixed");
   });
 
   it("confirm maps the selected agent back to @@ replacement metadata", () => {
@@ -118,10 +169,10 @@ describe("AgentTypeahead", () => {
     expect(onSelect).toHaveBeenCalledWith({ id: "agent-123", title: "Alpha Agent" }, "alpha", 0);
   });
 
-  it("dismiss delegates to onClose", () => {
+  it("popover dismissal delegates to onClose", () => {
     const { onClose } = renderTypeahead();
 
-    fireEvent.click(screen.getByText("Dismiss finder"));
+    popoverMockState.onOpenChange?.(false);
 
     expect(onClose).toHaveBeenCalled();
   });
@@ -130,12 +181,14 @@ describe("AgentTypeahead", () => {
     renderTypeahead({ visible: false });
 
     expect(screen.queryByTestId("finder-query")).not.toBeInTheDocument();
+    expect(popoverMockState.open).toBe(false);
   });
 
   it("does not render for the @@@ model trigger", () => {
     renderTypeahead({ inputValue: "@@@claude", cursorPosition: 9 });
 
     expect(screen.queryByTestId("finder-query")).not.toBeInTheDocument();
+    expect(popoverMockState.open).toBe(false);
   });
 
   it("uses the nearest active @@ trigger before the cursor", () => {
@@ -158,23 +211,6 @@ describe("AgentTypeahead", () => {
     expect(screen.getByTestId("finder-interactive")).toHaveTextContent("true");
   });
 
-  it("closes the typeahead host on Escape when it owns the active layer", () => {
-    const { onClose } = renderTypeahead();
-
-    fireEvent.keyDown(document, { key: "Escape" });
-
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not close the typeahead host while a matches popover is open", () => {
-    const { onClose } = renderTypeahead();
-
-    fireEvent.click(screen.getByText("Open matches popover"));
-    fireEvent.keyDown(document, { key: "Escape" });
-
-    expect(onClose).not.toHaveBeenCalled();
-  });
-
   it("disables AgentFinder interaction when a peeked agent modal opens above its owning modal", () => {
     modalRouteState.setModalStack([{ type: "agent", id: "agent-123" }]);
     renderTypeahead({ insideAgentModal: true });
@@ -187,37 +223,5 @@ describe("AgentTypeahead", () => {
     ]);
 
     expect(screen.getByTestId("finder-interactive")).toHaveTextContent("false");
-  });
-
-  it("re-checks interactivity inside a stale Escape listener after the modal stack grows", () => {
-    modalRouteState.setModalStack([{ type: "agent", id: "agent-123" }]);
-
-    let capturedKeydownHandler: ((event: KeyboardEvent) => void) | undefined;
-    const addEventListenerSpy = vi.spyOn(document, "addEventListener");
-    addEventListenerSpy.mockImplementation((type, listener, options) => {
-      if (type === "keydown" && typeof listener === "function") {
-        capturedKeydownHandler = listener as (event: KeyboardEvent) => void;
-      }
-
-      return EventTarget.prototype.addEventListener.call(document, type, listener, options);
-    });
-
-    const { onClose } = renderTypeahead({ insideAgentModal: true });
-
-    expect(screen.getByTestId("finder-interactive")).toHaveTextContent("true");
-    expect(capturedKeydownHandler).toBeDefined();
-
-    modalRouteState.setModalStack([
-      { type: "agent", id: "agent-123" },
-      { type: "agent", id: "agent-456" },
-    ]);
-
-    expect(screen.getByTestId("finder-interactive")).toHaveTextContent("false");
-
-    const event = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
-    capturedKeydownHandler?.(event);
-
-    expect(onClose).not.toHaveBeenCalled();
-    expect(event.defaultPrevented).toBe(false);
   });
 });

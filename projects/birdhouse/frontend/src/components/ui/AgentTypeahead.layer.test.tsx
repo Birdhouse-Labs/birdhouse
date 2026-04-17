@@ -27,14 +27,6 @@ vi.mock("../../lib/routing", () => ({
   }),
 }));
 
-vi.mock("solid-floating-ui", () => ({
-  useFloating: () => ({
-    strategy: "absolute",
-    x: 12,
-    y: 34,
-  }),
-}));
-
 vi.mock("../AgentFinder", () => ({
   default: (props: { interactive: boolean }) => <div data-testid="finder-interactive">{String(props.interactive)}</div>,
 }));
@@ -61,7 +53,6 @@ const NestedTypeaheadHarness = () => {
 
           <Show when={typeaheadOpen()}>
             <AgentTypeahead
-              referenceElement={undefined}
               inputValue="@@"
               cursorPosition={2}
               visible={true}
@@ -70,7 +61,9 @@ const NestedTypeaheadHarness = () => {
               insideAgentModal={true}
               onSelect={() => {}}
               onClose={() => setTypeaheadOpen(false)}
-            />
+            >
+              <textarea aria-label="Composer" />
+            </AgentTypeahead>
           </Show>
 
           <Show when={childOpen()}>
@@ -124,7 +117,6 @@ const StaleEscapeListenerHarness = () => {
 
           <Show when={!typeaheadClosed()}>
             <AgentTypeahead
-              referenceElement={undefined}
               inputValue="@@"
               cursorPosition={2}
               visible={true}
@@ -133,7 +125,9 @@ const StaleEscapeListenerHarness = () => {
               insideAgentModal={true}
               onSelect={() => {}}
               onClose={() => setTypeaheadClosed(true)}
-            />
+            >
+              <textarea aria-label="Composer" />
+            </AgentTypeahead>
           </Show>
 
           <Show when={childOpen()}>
@@ -174,6 +168,10 @@ describe("AgentTypeahead layered Escape handling", () => {
     render(() => <NestedTypeaheadHarness />);
 
     expect(screen.getByTestId("finder-interactive")).toHaveTextContent("true");
+    const textarea = screen.getByLabelText("Composer");
+    textarea.focus();
+
+    expect(textarea).toHaveFocus();
 
     fireEvent.click(screen.getByText("Open peek"));
 
@@ -201,5 +199,14 @@ describe("AgentTypeahead layered Escape handling", () => {
     });
 
     expect(screen.getByTestId("finder-interactive")).toBeInTheDocument();
+  });
+
+  it("keeps focus on the textarea while the typeahead popover is open", () => {
+    render(() => <NestedTypeaheadHarness />);
+
+    const textarea = screen.getByLabelText("Composer");
+    textarea.focus();
+
+    expect(textarea).toHaveFocus();
   });
 });
