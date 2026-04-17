@@ -404,7 +404,7 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
   const setRecentAgents = props.sessionState?.setRecentAgents ?? setInternalRecentAgents;
   const isSearching = () => props.sessionState?.isSearching() ?? internalIsSearching();
   const setIsSearching = props.sessionState?.setIsSearching ?? setInternalIsSearching;
-  const isLoadingRecent = () => props.sessionState?.isLoadingRecent() ?? internalIsLoadingRecent;
+  const isLoadingRecent = () => props.sessionState?.isLoadingRecent() ?? internalIsLoadingRecent();
   const setIsLoadingRecent = props.sessionState?.setIsLoadingRecent ?? setInternalIsLoadingRecent;
   const searchError = () => props.sessionState?.searchError() ?? internalSearchError();
   const setSearchError = props.sessionState?.setSearchError ?? setInternalSearchError;

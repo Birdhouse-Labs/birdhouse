@@ -240,6 +240,18 @@ describe("AgentFinder", () => {
     });
   });
 
+  it("clears the loading spinner after recent agents load without session state", async () => {
+    mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
+    renderFinder();
+
+    expect(document.querySelector(".animate-spin")).not.toBeNull();
+    expect(await screen.findByText("Recent Agent")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(document.querySelector(".animate-spin")).toBeNull();
+    });
+  });
+
   it("shows the configurable confirm label in the keyboard hint row", async () => {
     mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
     renderFinder({ confirmLabel: "open" });
