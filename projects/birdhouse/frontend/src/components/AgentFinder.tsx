@@ -32,6 +32,8 @@ export interface AgentFinderProps {
   interactive: boolean;
   currentAgentId?: string;
   confirmLabel?: string;
+  openPopoverIndex?: Accessor<number | null>;
+  setOpenPopoverIndex?: Setter<number | null>;
   onConfirm: (selection: AgentFinderSelection) => void;
   onDismiss: () => void;
   sessionState?: AgentFinderSessionState;
@@ -414,8 +416,10 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
   const setActiveIndex = props.sessionState?.setActiveIndex ?? setInternalActiveIndex;
   const pointerMoved = () => props.sessionState?.pointerMoved() ?? internalPointerMoved();
   const setPointerMoved = props.sessionState?.setPointerMoved ?? setInternalPointerMoved;
-  const openPopoverIndex = () => props.sessionState?.openPopoverIndex() ?? internalOpenPopoverIndex();
-  const setOpenPopoverIndex = props.sessionState?.setOpenPopoverIndex ?? setInternalOpenPopoverIndex;
+  const openPopoverIndex = () =>
+    props.openPopoverIndex?.() ?? props.sessionState?.openPopoverIndex() ?? internalOpenPopoverIndex();
+  const setOpenPopoverIndex =
+    props.setOpenPopoverIndex ?? props.sessionState?.setOpenPopoverIndex ?? setInternalOpenPopoverIndex;
   const resultsScrollTop = () => props.sessionState?.resultsScrollTop() ?? internalResultsScrollTop();
   const setResultsScrollTop = props.sessionState?.setResultsScrollTop ?? setInternalResultsScrollTop;
   let requestId = 0;
@@ -604,15 +608,6 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     if (!props.interactive) return;
 
     const items = visibleResults();
-
-    if (e.key === "Escape") {
-      if (openPopoverIndex() !== null) {
-        return;
-      }
-      e.preventDefault();
-      props.onDismiss();
-      return;
-    }
 
     if (items.length === 0) return;
 

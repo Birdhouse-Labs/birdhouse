@@ -2,6 +2,7 @@
 // ABOUTME: Verifies @@ trigger parsing, floating container behavior, and confirm wiring.
 
 import { cleanup, fireEvent, render, screen } from "@solidjs/testing-library";
+import { createSignal } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentTypeahead } from "./AgentTypeahead";
 
@@ -11,11 +12,19 @@ interface MockAgentFinderProps {
   interactive: boolean;
   currentAgentId?: string;
   confirmLabel?: string;
+  setOpenPopoverIndex?: ((value: number | null | ((current: number | null) => number | null)) => void) | undefined;
   onConfirm: (selection: { agentId: string; title: string }) => void;
   onDismiss: () => void;
 }
 
-let mockModalStack: Array<{ type: string; id: string }> = [];
+const modalRouteState = vi.hoisted(() => ({
+  modalStack: undefined as unknown as () => Array<{ type: string; id: string }>,
+  setModalStack: undefined as unknown as (value: Array<{ type: string; id: string }>) => void,
+}));
+
+const [mockModalStack, setMockModalStack] = createSignal<Array<{ type: string; id: string }>>([]);
+modalRouteState.modalStack = mockModalStack;
+modalRouteState.setModalStack = setMockModalStack;
 
 vi.mock("../../contexts/ZIndexContext", () => ({
   useZIndex: () => 100,
@@ -23,7 +32,7 @@ vi.mock("../../contexts/ZIndexContext", () => ({
 
 vi.mock("../../lib/routing", () => ({
   useModalRoute: () => ({
-    modalStack: () => mockModalStack,
+    modalStack: modalRouteState.modalStack,
   }),
 }));
 
@@ -49,6 +58,9 @@ vi.mock("../AgentFinder", () => ({
         </button>
         <button type="button" onClick={props.onDismiss}>
           Dismiss finder
+        </button>
+        <button type="button" onClick={() => props.setOpenPopoverIndex?.(0)}>
+          Open matches popover
         </button>
       </div>
     );
@@ -78,7 +90,7 @@ const renderTypeahead = (props?: Partial<Parameters<typeof AgentTypeahead>[0]>) 
 
 describe("AgentTypeahead", () => {
   beforeEach(() => {
-    mockModalStack = [];
+    modalRouteState.setModalStack([]);
   });
 
   afterEach(() => {
@@ -133,16 +145,47 @@ describe("AgentTypeahead", () => {
   });
 
   it("disables AgentFinder interaction while a modal sits on top", () => {
-    mockModalStack = [{ type: "agent", id: "agent-123" }];
+    modalRouteState.setModalStack([{ type: "agent", id: "agent-123" }]);
     renderTypeahead();
 
     expect(screen.getByTestId("finder-interactive")).toHaveTextContent("false");
   });
 
   it("keeps AgentFinder interactive for the top-most agent modal composer", () => {
-    mockModalStack = [{ type: "agent", id: "agent-123" }];
+    modalRouteState.setModalStack([{ type: "agent", id: "agent-123" }]);
     renderTypeahead({ insideAgentModal: true });
 
     expect(screen.getByTestId("finder-interactive")).toHaveTextContent("true");
+  });
+
+  it("closes the typeahead host on Escape when it owns the active layer", () => {
+    const { onClose } = renderTypeahead();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not close the typeahead host while a matches popover is open", () => {
+    const { onClose } = renderTypeahead();
+
+    fireEvent.click(screen.getByText("Open matches popover"));
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("disables AgentFinder interaction when a peeked agent modal opens above its owning modal", () => {
+    modalRouteState.setModalStack([{ type: "agent", id: "agent-123" }]);
+    renderTypeahead({ insideAgentModal: true });
+
+    expect(screen.getByTestId("finder-interactive")).toHaveTextContent("true");
+
+    modalRouteState.setModalStack([
+      { type: "agent", id: "agent-123" },
+      { type: "agent", id: "agent-456" },
+    ]);
+
+    expect(screen.getByTestId("finder-interactive")).toHaveTextContent("false");
   });
 });

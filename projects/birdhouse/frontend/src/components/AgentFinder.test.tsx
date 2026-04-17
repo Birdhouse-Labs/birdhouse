@@ -643,35 +643,14 @@ describe("AgentFinder", () => {
     });
   });
 
-  it("Escape dismisses the finder", async () => {
+  it("does not dismiss the finder on Escape when it is non-interactive", async () => {
     mockFetchRecentAgentsList.mockResolvedValue([makeRecentAgent()]);
-    const { onDismiss } = renderFinder();
+    const { onDismiss } = renderFinder({ interactive: false });
 
     expect(await screen.findByText("Recent Agent")).toBeInTheDocument();
 
     fireEvent.keyDown(document, { key: "Escape" });
 
-    expect(onDismiss).toHaveBeenCalled();
-  });
-
-  it("Escape closes an open match popover without dismissing the finder", async () => {
-    mockSearchAgentMessages.mockResolvedValue(makeResponse([makeResult()]));
-    const { onDismiss } = renderFinder({ query: "match" });
-
-    await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50);
-    });
-
-    const trigger = await screen.findByRole("button", { name: "Show 1 match" });
-    fireEvent.click(trigger);
-
-    expect(screen.getAllByText("1 match")).toHaveLength(2);
-
-    fireEvent.keyDown(document, { key: "Escape" });
-
-    await waitFor(() => {
-      expect(screen.getAllByText("1 match")).toHaveLength(1);
-    });
     expect(onDismiss).not.toHaveBeenCalled();
   });
 

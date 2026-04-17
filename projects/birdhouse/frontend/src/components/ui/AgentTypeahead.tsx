@@ -3,7 +3,7 @@
 
 import { autoUpdate, flip, offset, shift, size } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
-import { type Component, createMemo, createSignal, Show } from "solid-js";
+import { type Component, createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { useModalRoute } from "../../lib/routing";
 import AgentFinder from "../AgentFinder";
@@ -62,8 +62,11 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
   const { modalStack } = useModalRoute();
   const [floating, setFloating] = createSignal<HTMLElement>();
   const [maxWidth, setMaxWidth] = createSignal<number | undefined>();
+  const [ownerModalDepth, setOwnerModalDepth] = createSignal<number | null>(null);
+  const [openPopoverIndex, setOpenPopoverIndex] = createSignal<number | null>(null);
 
   const triggerMatch = createMemo(() => findAgentTrigger(props.inputValue, props.cursorPosition));
+  const shouldShow = createMemo(() => props.visible && triggerMatch() !== null);
 
   const position = useFloating(() => props.referenceElement, floating, {
     placement: "top-start",
@@ -81,16 +84,46 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
     whileElementsMounted: autoUpdate,
   });
 
-  const isInteractive = createMemo(() => {
-    const topModalType = modalStack().at(-1)?.type;
-
-    if (props.insideAgentModal) {
-      return topModalType === "agent";
+  createEffect(() => {
+    if (!shouldShow()) {
+      setOwnerModalDepth(null);
+      setOpenPopoverIndex(null);
+      return;
     }
 
-    return topModalType === undefined;
+    if (!props.insideAgentModal) {
+      setOwnerModalDepth(null);
+      return;
+    }
+
+    // Tracks which modal-stack depth owns this typeahead while nested peeks come and go above it.
+    if (ownerModalDepth() === null) {
+      setOwnerModalDepth(modalStack().length);
+    }
   });
-  const shouldShow = createMemo(() => props.visible && triggerMatch() !== null);
+
+  const isInteractive = createMemo(() => {
+    if (!props.insideAgentModal) {
+      return modalStack().length === 0;
+    }
+
+    const ownerDepth = ownerModalDepth();
+    return ownerDepth !== null && modalStack().length === ownerDepth;
+  });
+
+  createEffect(() => {
+    if (!shouldShow() || !isInteractive()) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (openPopoverIndex() !== null) return;
+      e.preventDefault();
+      props.onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    onCleanup(() => document.removeEventListener("keydown", handleKeyDown));
+  });
 
   return (
     <Show when={shouldShow() && triggerMatch()}>
@@ -113,6 +146,8 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
             query={match().query}
             interactive={isInteractive()}
             confirmLabel="insert"
+            openPopoverIndex={openPopoverIndex}
+            setOpenPopoverIndex={setOpenPopoverIndex}
             {...(props.currentAgentId ? { currentAgentId: props.currentAgentId } : {})}
             onConfirm={(selection) => {
               props.onSelect({ id: selection.agentId, title: selection.title }, match().query, match().startIndex);
