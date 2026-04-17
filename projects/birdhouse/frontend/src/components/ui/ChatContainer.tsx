@@ -52,7 +52,7 @@ export interface ChatContainerProps {
   onQuestionAnswered?: (questionId: string) => void;
   inputRef?: (el: HTMLTextAreaElement) => void;
   messagesViewportRef?: (el: HTMLDivElement) => void;
-  insideAgentModal?: boolean;
+  insideAgentModal?: boolean | undefined;
 }
 
 export const ChatContainer: Component<ChatContainerProps> = (props) => {

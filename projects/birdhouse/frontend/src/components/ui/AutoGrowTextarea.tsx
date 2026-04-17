@@ -22,7 +22,7 @@ export interface AutoGrowTextareaProps {
   disabled?: boolean;
   placeholder?: string;
   ref?: ((el: HTMLTextAreaElement) => void) | undefined;
-  insideAgentModal?: boolean;
+  insideAgentModal?: boolean | undefined;
 }
 
 export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {

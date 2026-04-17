@@ -20,7 +20,7 @@ export interface AgentTypeaheadProps {
   visible: boolean;
   workspaceId: string;
   currentAgentId: string | undefined;
-  insideAgentModal?: boolean;
+  insideAgentModal?: boolean | undefined;
   onSelect: (agent: AgentTypeaheadSelection, matchedText: string, matchStartIndex: number) => void;
   onClose: () => void;
 }

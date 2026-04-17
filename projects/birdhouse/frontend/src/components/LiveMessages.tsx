@@ -54,7 +54,7 @@ interface LiveMessagesProps {
   showCloseButton?: boolean;
   onClose?: () => void;
   initialFocusTarget?: "messages" | "composer";
-  insideAgentModal?: boolean;
+  insideAgentModal?: boolean | undefined;
 }
 
 const LoadingState = () => (
