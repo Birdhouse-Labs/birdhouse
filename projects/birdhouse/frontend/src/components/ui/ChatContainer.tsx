@@ -52,6 +52,7 @@ export interface ChatContainerProps {
   onQuestionAnswered?: (questionId: string) => void;
   inputRef?: (el: HTMLTextAreaElement) => void;
   messagesViewportRef?: (el: HTMLDivElement) => void;
+  insideAgentModal?: boolean;
 }
 
 export const ChatContainer: Component<ChatContainerProps> = (props) => {
@@ -134,6 +135,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
                   disabled={props.isSendDisabled ?? false}
                   placeholder="Type a message..."
                   ref={props.inputRef}
+                  insideAgentModal={props.insideAgentModal}
                 />
                 <Show when={(props.attachments?.length ?? 0) > 0 && props.onRemoveAttachment}>
                   <ComposerImageAttachments

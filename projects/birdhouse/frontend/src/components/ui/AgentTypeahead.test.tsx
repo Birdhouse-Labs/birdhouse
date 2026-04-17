@@ -138,4 +138,11 @@ describe("AgentTypeahead", () => {
 
     expect(screen.getByTestId("finder-interactive")).toHaveTextContent("false");
   });
+
+  it("keeps AgentFinder interactive for the top-most agent modal composer", () => {
+    mockModalStack = [{ type: "agent", id: "agent-123" }];
+    renderTypeahead({ insideAgentModal: true });
+
+    expect(screen.getByTestId("finder-interactive")).toHaveTextContent("true");
+  });
 });

@@ -20,6 +20,7 @@ export interface AgentTypeaheadProps {
   visible: boolean;
   workspaceId: string;
   currentAgentId: string | undefined;
+  insideAgentModal?: boolean;
   onSelect: (agent: AgentTypeaheadSelection, matchedText: string, matchStartIndex: number) => void;
   onClose: () => void;
 }
@@ -80,7 +81,15 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
     whileElementsMounted: autoUpdate,
   });
 
-  const isInteractive = createMemo(() => modalStack().length === 0);
+  const isInteractive = createMemo(() => {
+    const topModalType = modalStack().at(-1)?.type;
+
+    if (props.insideAgentModal) {
+      return topModalType === "agent";
+    }
+
+    return topModalType === undefined;
+  });
   const shouldShow = createMemo(() => props.visible && triggerMatch() !== null);
 
   return (

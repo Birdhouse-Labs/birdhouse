@@ -64,6 +64,7 @@ const AgentModal: Component<AgentModalProps> = (props) => {
                 <LiveMessages
                   agentId={agentId}
                   initialFocusTarget="messages"
+                  insideAgentModal={true}
                   onOpenAgentModal={props.onOpenAgentModal}
                   showCloseButton={props.navigationDepth >= 1 && props.isTop}
                   onClose={props.onClose}

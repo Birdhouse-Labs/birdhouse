@@ -22,6 +22,7 @@ export interface AutoGrowTextareaProps {
   disabled?: boolean;
   placeholder?: string;
   ref?: ((el: HTMLTextAreaElement) => void) | undefined;
+  insideAgentModal?: boolean;
 }
 
 export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
@@ -365,6 +366,7 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
         visible={showAgentTypeahead()}
         workspaceId={workspaceId}
         currentAgentId={currentAgentId()}
+        insideAgentModal={props.insideAgentModal}
         onSelect={handleAgentSelect}
         onClose={() => setShowAgentTypeahead(false)}
       />

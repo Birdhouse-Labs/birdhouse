@@ -54,6 +54,7 @@ interface LiveMessagesProps {
   showCloseButton?: boolean;
   onClose?: () => void;
   initialFocusTarget?: "messages" | "composer";
+  insideAgentModal?: boolean;
 }
 
 const LoadingState = () => (
@@ -830,6 +831,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
             messagesViewportRef={(el) => {
               setMessagesViewportRef(el);
             }}
+            insideAgentModal={props.insideAgentModal}
           />
         </div>
       </Show>
