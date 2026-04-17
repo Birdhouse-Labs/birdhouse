@@ -3,7 +3,7 @@
 // ABOUTME: Renders a single agent modal in a stack
 
 import Dialog from "corvu/dialog";
-import { type Component, Show } from "solid-js";
+import { type Component, type JSX, Show } from "solid-js";
 import { ZIndexProvider } from "../contexts/ZIndexContext";
 import LiveMessages from "./LiveMessages";
 
@@ -13,6 +13,7 @@ interface AgentModalProps {
   isTop: boolean;
   onClose: () => void;
   onOpenAgentModal: (agentId: string) => void;
+  children?: JSX.Element;
 }
 
 const AgentModal: Component<AgentModalProps> = (props) => {
@@ -72,6 +73,7 @@ const AgentModal: Component<AgentModalProps> = (props) => {
               )}
             </Show>
           </ZIndexProvider>
+          {props.children}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog>

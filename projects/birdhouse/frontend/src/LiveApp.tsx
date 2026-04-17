@@ -3,7 +3,7 @@
 // ABOUTME: Hosts modal stack handling for agent dialogs
 
 import Resizable from "corvu/resizable";
-import { type Component, createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { type Component, createEffect, createMemo, createSignal, type JSX, onCleanup, onMount, Show } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import type { BackendAgentNode } from "./adapters/agent-tree-adapter";
 import { mapAgentNode } from "./adapters/agent-tree-adapter";
@@ -488,6 +488,26 @@ const LiveApp: Component<LiveAppProps> = (props) => {
     </div>
   );
 
+  const renderAgentModalStack = (index = 0): JSX.Element => {
+    const stack = agentModalStack();
+    const modal = stack[index];
+    if (!modal) {
+      return null;
+    }
+
+    return (
+      <AgentModal
+        agentId={modal.id}
+        navigationDepth={index + 1}
+        isTop={index === stack.length - 1}
+        onClose={closeModal}
+        onOpenAgentModal={openAgentModal}
+      >
+        {renderAgentModalStack(index + 1)}
+      </AgentModal>
+    );
+  };
+
   return (
     <div class="h-full overflow-hidden p-2 relative">
       {/* Connection status banner (fixed at top, only shown when not connected) */}
@@ -588,17 +608,7 @@ const LiveApp: Component<LiveAppProps> = (props) => {
       </Show>
 
       {/* Agent modal stack - option-click agent links to open */}
-      <For each={agentModalStack()}>
-        {(modal, index) => (
-          <AgentModal
-            agentId={modal.id}
-            navigationDepth={index() + 1}
-            isTop={index() === agentModalStack().length - 1}
-            onClose={closeModal}
-            onOpenAgentModal={openAgentModal}
-          />
-        )}
-      </For>
+      {renderAgentModalStack()}
 
       {/* Skills Library Dialog */}
       <SkillLibraryDialog workspaceId={workspaceId} />
