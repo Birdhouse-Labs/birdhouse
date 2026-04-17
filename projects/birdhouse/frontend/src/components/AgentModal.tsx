@@ -52,11 +52,6 @@ const AgentModal: Component<AgentModalProps> = (props) => {
             "max-width": `calc(1792px - ${sizeReduction}px)`,
             "z-index": baseZIndex + 2,
           }}
-          onKeyUp={(e: KeyboardEvent) => {
-            if (e.code === "ShiftRight" && !e.metaKey && !e.ctrlKey && !e.altKey && props.isTop) {
-              props.onClose();
-            }
-          }}
         >
           {/* Provide increased z-index context to children (dialogs, popovers) */}
           <ZIndexProvider baseZIndex={baseZIndex + 10}>

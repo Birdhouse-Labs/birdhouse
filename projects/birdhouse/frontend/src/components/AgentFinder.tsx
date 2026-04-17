@@ -604,6 +604,20 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     syncPopoverToActiveResult(items, nextIndex);
   };
 
+  const getPeekableItem = () => {
+    if (!props.interactive) return undefined;
+    return visibleResults()[activeIndex()];
+  };
+
+  const getPopoverToggleIndex = () => {
+    if (!props.interactive) return null;
+    const idx = activeIndex();
+    if (idx < 0) return null;
+    const item = visibleResults()[idx];
+    if (!item || item.kind !== "search") return null;
+    return idx;
+  };
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!props.interactive) return;
 
@@ -633,14 +647,13 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     }
   };
 
-  const handleKeyUp = (e: KeyboardEvent) => {
-    if (!props.interactive) return;
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-
+  const handleActionKeyUpCapture = (e: KeyboardEvent) => {
     if (e.code === "ShiftRight") {
-      const item = visibleResults()[activeIndex()];
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const item = getPeekableItem();
       if (!item) return;
       e.preventDefault();
+      e.stopImmediatePropagation();
       setOpenPopoverIndex(null);
       peekSelection(item);
       return;
@@ -649,11 +662,10 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     // Right Command (Mac) / Right Control (Win/Linux) toggles the matches popover
     // for the active search result, if it has matches.
     if (e.code === "MetaRight" || e.code === "ControlRight") {
-      const idx = activeIndex();
-      if (idx < 0) return;
-      const item = visibleResults()[idx];
-      if (!item || item.kind !== "search") return;
+      const idx = getPopoverToggleIndex();
+      if (idx === null) return;
       e.preventDefault();
+      e.stopImmediatePropagation();
       setOpenPopoverIndex((current) => (current === idx ? null : idx));
     }
   };
@@ -662,10 +674,10 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     if (!props.interactive) return;
 
     document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("keyup", handleKeyUp);
+    document.addEventListener("keyup", handleActionKeyUpCapture, true);
     onCleanup(() => {
       document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("keyup", handleKeyUp);
+      document.removeEventListener("keyup", handleActionKeyUpCapture, true);
     });
   });
 
