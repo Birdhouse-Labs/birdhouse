@@ -321,7 +321,13 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
 
           {/* Right zone: buttons — flex-shrink-0 so they're never pushed off screen */}
           <div class="flex items-center gap-3 flex-shrink-0">
-            <Tooltip openDelay={150} closeDelay={0} openOnFocus={false} placement="bottom">
+            <Tooltip
+              openDelay={150}
+              closeDelay={0}
+              openOnFocus={false}
+              placement="bottom"
+              floatingOptions={{ offset: 8, flip: true, shift: true }}
+            >
               <Tooltip.Trigger
                 as="button"
                 type="button"
