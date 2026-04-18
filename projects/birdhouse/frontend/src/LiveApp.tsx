@@ -33,6 +33,7 @@ import { useStreaming } from "./contexts/StreamingContext";
 import { useWorkspace } from "./contexts/WorkspaceContext";
 import { loadCollapseState, saveCollapseState } from "./lib/collapse-state";
 import { log } from "./lib/logger";
+import { getPaletteDialogRequestForLayer } from "./lib/palette-dialog-request";
 import { usePageTitle } from "./lib/page-title";
 import { keepAgentInView } from "./lib/preferences";
 import { type ModalState, useModalRoute, useNavigateToWorkspaceAgent, useWorkspaceAgentId } from "./lib/routing";
@@ -75,14 +76,7 @@ interface AgentModalStackNodeProps {
 const AgentModalStackNode: Component<AgentModalStackNodeProps> = (props) => {
   const modal = createMemo(() => props.stack()[props.index]);
   const paletteDialogRequestForModal = createMemo(() => {
-    const currentModal = modal();
-    const request = props.paletteAgentDialogRequest();
-
-    if (!currentModal || !request) {
-      return null;
-    }
-
-    return request.agentId === currentModal.id ? request : null;
+    return getPaletteDialogRequestForLayer(props.stack(), props.index, props.paletteAgentDialogRequest());
   });
 
   return (

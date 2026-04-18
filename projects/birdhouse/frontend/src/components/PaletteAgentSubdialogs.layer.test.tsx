@@ -4,6 +4,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { type Accessor, type Component, createMemo, createSignal, Show } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getPaletteDialogRequestForLayer } from "../lib/palette-dialog-request";
 import AgentModal from "./AgentModal";
 import PaletteAgentSubdialogs, { type PaletteAgentDialogRequest } from "./PaletteAgentSubdialogs";
 
@@ -45,12 +46,7 @@ interface NestedModalNodeProps {
 
 const NestedModalNode: Component<NestedModalNodeProps> = (props) => {
   const modal = createMemo(() => props.stack()[props.index]);
-  const requestForModal = createMemo(() => {
-    const currentModal = modal();
-    const request = props.request();
-    if (!currentModal || !request) return null;
-    return request.agentId === currentModal.id ? request : null;
-  });
+  const requestForModal = createMemo(() => getPaletteDialogRequestForLayer(props.stack(), props.index, props.request()));
 
   return (
     <Show when={modal()} keyed>
@@ -87,6 +83,24 @@ const NotesDialogInModalHarness: Component = () => {
     <>
       <button type="button" onClick={() => setRequest({ kind: "notes", agentId: "agent-1" })}>
         Open notes
+      </button>
+      <NestedModalNode stack={stack} index={0} request={request} onRequestChange={setRequest} />
+    </>
+  );
+};
+
+const RepeatedAgentModalHarness: Component = () => {
+  const [stack] = createSignal<TestModalState[]>([
+    { type: "agent", id: "agent-1" },
+    { type: "agent", id: "agent-2" },
+    { type: "agent", id: "agent-1" },
+  ]);
+  const [request, setRequest] = createSignal<PaletteAgentDialogRequest | null>(null);
+
+  return (
+    <>
+      <button type="button" onClick={() => setRequest({ kind: "notes", agentId: "agent-1" })}>
+        Open repeated notes
       </button>
       <NestedModalNode stack={stack} index={0} request={request} onRequestChange={setRequest} />
     </>
@@ -138,5 +152,18 @@ describe("PaletteAgentSubdialogs nested layer behavior", () => {
 
     expect(parentModalContent.style.zIndex).toBe("62");
     expect(notesDialogContent.style.zIndex).toBe("70");
+  });
+
+  it("renders only one notes dialog when the same agent appears twice in the modal stack", async () => {
+    render(() => <RepeatedAgentModalHarness />);
+
+    fireEvent.click(screen.getByText("Open repeated notes"));
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Agent Notes")).toHaveLength(1);
+    });
+
+    const dialogContents = Array.from(document.querySelectorAll("[data-corvu-dialog-content]"));
+    expect(dialogContents).toHaveLength(4);
   });
 });
