@@ -131,7 +131,7 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
       closeOnOutsidePointer={false}
       closeOnOutsideFocus={false}
       strategy="fixed"
-      placement="top-start"
+      placement="bottom-start"
       floatingOptions={TYPEAHEAD_POPOVER_FLOATING_OPTIONS}
     >
       <Popover.Anchor class="w-full">{props.children}</Popover.Anchor>
@@ -140,7 +140,6 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
         <Popover.Content
           class="flex flex-col rounded-xl border border-border bg-surface-overlay shadow-xl overflow-hidden"
           style={{
-            "max-height": "min(80vh, 36rem)",
             "min-width": "min(20rem, 85vw)",
             "max-width": "min(calc(100vw - 2rem), 42rem)",
             "z-index": baseZIndex,

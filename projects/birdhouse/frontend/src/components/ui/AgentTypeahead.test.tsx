@@ -27,7 +27,10 @@ const popoverMockState = vi.hoisted(() => ({
   modal: undefined as boolean | undefined,
   trapFocus: undefined as boolean | undefined,
   closeOnOutsidePointer: undefined as boolean | undefined,
+  closeOnOutsideFocus: undefined as boolean | undefined,
+  closeOnEscapeKeyDown: undefined as boolean | undefined,
   strategy: undefined as string | undefined,
+  placement: undefined as string | undefined,
   floatingOptions: undefined as unknown,
   onOpenChange: undefined as ((open: boolean) => void) | undefined,
 }));
@@ -52,16 +55,22 @@ vi.mock("corvu/popover", () => {
     open?: boolean;
     modal?: boolean;
     trapFocus?: boolean;
+    closeOnEscapeKeyDown?: boolean;
     closeOnOutsidePointer?: boolean;
+    closeOnOutsideFocus?: boolean;
     strategy?: string;
+    placement?: string;
     floatingOptions?: unknown;
     onOpenChange?: (open: boolean) => void;
   }) => {
     popoverMockState.open = props.open;
     popoverMockState.modal = props.modal;
     popoverMockState.trapFocus = props.trapFocus;
+    popoverMockState.closeOnEscapeKeyDown = props.closeOnEscapeKeyDown;
     popoverMockState.closeOnOutsidePointer = props.closeOnOutsidePointer;
+    popoverMockState.closeOnOutsideFocus = props.closeOnOutsideFocus;
     popoverMockState.strategy = props.strategy;
+    popoverMockState.placement = props.placement;
     popoverMockState.floatingOptions = props.floatingOptions;
     popoverMockState.onOpenChange = props.onOpenChange;
     return <>{props.children}</>;
@@ -139,8 +148,11 @@ describe("AgentTypeahead", () => {
     popoverMockState.open = undefined;
     popoverMockState.modal = undefined;
     popoverMockState.trapFocus = undefined;
+    popoverMockState.closeOnEscapeKeyDown = undefined;
     popoverMockState.closeOnOutsidePointer = undefined;
+    popoverMockState.closeOnOutsideFocus = undefined;
     popoverMockState.strategy = undefined;
+    popoverMockState.placement = undefined;
     popoverMockState.floatingOptions = undefined;
     popoverMockState.onOpenChange = undefined;
     vi.clearAllMocks();
@@ -157,8 +169,12 @@ describe("AgentTypeahead", () => {
     expect(popoverMockState.open).toBe(true);
     expect(popoverMockState.modal).toBe(false);
     expect(popoverMockState.trapFocus).toBe(false);
+    expect(popoverMockState.closeOnEscapeKeyDown).toBe(false);
     expect(popoverMockState.closeOnOutsidePointer).toBe(false);
+    expect(popoverMockState.closeOnOutsideFocus).toBe(false);
     expect(popoverMockState.strategy).toBe("fixed");
+    expect(popoverMockState.placement).toBe("bottom-start");
+    expect(screen.getByTestId("popover-content").style.maxHeight).toBe("");
   });
 
   it("confirm maps the selected agent back to @@ replacement metadata", () => {
