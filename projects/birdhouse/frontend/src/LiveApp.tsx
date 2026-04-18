@@ -25,6 +25,7 @@ import ConnectionStatusBanner from "./components/ConnectionStatusBanner";
 import LiveMessages from "./components/LiveMessages";
 import MobileNavDrawer from "./components/MobileNavDrawer";
 import NewAgent from "./components/NewAgent";
+import PaletteAgentSubdialogs, { type PaletteAgentDialogRequest } from "./components/PaletteAgentSubdialogs";
 import TreeView, { type TreeNode } from "./components/TreeView";
 import Button from "./components/ui/Button";
 import { AgentTreeProvider } from "./contexts/AgentTreeContext";
@@ -64,12 +65,25 @@ interface LiveAppProps {
 interface AgentModalStackNodeProps {
   stack: Accessor<ModalState[]>;
   index: number;
+  workspaceId: string;
   onClose: () => void;
   onOpenAgentModal: (agentId: string) => void;
+  paletteAgentDialogRequest: Accessor<PaletteAgentDialogRequest | null>;
+  onPaletteAgentDialogRequestChange: (request: PaletteAgentDialogRequest | null) => void;
 }
 
 const AgentModalStackNode: Component<AgentModalStackNodeProps> = (props) => {
   const modal = createMemo(() => props.stack()[props.index]);
+  const paletteDialogRequestForModal = createMemo(() => {
+    const currentModal = modal();
+    const request = props.paletteAgentDialogRequest();
+
+    if (!currentModal || !request) {
+      return null;
+    }
+
+    return request.agentId === currentModal.id ? request : null;
+  });
 
   return (
     <Show when={modal()} keyed>
@@ -81,11 +95,19 @@ const AgentModalStackNode: Component<AgentModalStackNodeProps> = (props) => {
           onClose={props.onClose}
           onOpenAgentModal={props.onOpenAgentModal}
         >
+          <PaletteAgentSubdialogs
+            request={paletteDialogRequestForModal()}
+            workspaceId={props.workspaceId}
+            onRequestChange={props.onPaletteAgentDialogRequestChange}
+          />
           <AgentModalStackNode
             stack={props.stack}
             index={props.index + 1}
+            workspaceId={props.workspaceId}
             onClose={props.onClose}
             onOpenAgentModal={props.onOpenAgentModal}
+            paletteAgentDialogRequest={props.paletteAgentDialogRequest}
+            onPaletteAgentDialogRequestChange={props.onPaletteAgentDialogRequestChange}
           />
         </AgentModal>
       )}
@@ -193,10 +215,33 @@ const LiveApp: Component<LiveAppProps> = (props) => {
 
   // Get agent ID from route params (workspace-aware)
   const routeAgentId = useWorkspaceAgentId();
+  const [paletteAgentDialogRequest, setPaletteAgentDialogRequest] = createSignal<PaletteAgentDialogRequest | null>(
+    null,
+  );
 
   const [selectedAgentId, setSelectedAgentIdInternal] = createSignal<string | undefined>(routeAgentId());
 
   const isDesktop = createMediaQuery("(min-width: 768px)");
+
+  createEffect(() => {
+    const request = paletteAgentDialogRequest();
+    if (!request) return;
+
+    const targetInModalStack = agentModalStack().some((modal) => modal.id === request.agentId);
+    const targetIsRouteAgent = routeAgentId() === request.agentId;
+
+    if (!targetInModalStack && !targetIsRouteAgent) {
+      setPaletteAgentDialogRequest(null);
+    }
+  });
+
+  const routePaletteAgentDialogRequest = createMemo(() => {
+    const request = paletteAgentDialogRequest();
+    if (!request) return null;
+    if (agentModalStack().some((modal) => modal.id === request.agentId)) return null;
+    if (request.agentId !== routeAgentId()) return null;
+    return request;
+  });
 
   // Streaming context for session.created events
   const streaming = useStreaming();
@@ -629,7 +674,21 @@ const LiveApp: Component<LiveAppProps> = (props) => {
       </Show>
 
       {/* Agent modal stack - option-click agent links to open */}
-      <AgentModalStackNode stack={agentModalStack} index={0} onClose={closeModal} onOpenAgentModal={openAgentModal} />
+      <AgentModalStackNode
+        stack={agentModalStack}
+        index={0}
+        workspaceId={workspaceId}
+        onClose={closeModal}
+        onOpenAgentModal={openAgentModal}
+        paletteAgentDialogRequest={paletteAgentDialogRequest}
+        onPaletteAgentDialogRequestChange={setPaletteAgentDialogRequest}
+      />
+
+      <PaletteAgentSubdialogs
+        request={routePaletteAgentDialogRequest()}
+        workspaceId={workspaceId}
+        onRequestChange={setPaletteAgentDialogRequest}
+      />
 
       {/* Skills Library Dialog */}
       <SkillLibraryDialog workspaceId={workspaceId} />
@@ -638,7 +697,20 @@ const LiveApp: Component<LiveAppProps> = (props) => {
       <AgentSearchDialog />
 
       {/* Command Palette */}
-      <CommandPalette />
+      <CommandPalette
+        onOpenEditTitle={(agentId, currentTitle) => {
+          setPaletteAgentDialogRequest({ kind: "edit-title", agentId, currentTitle });
+        }}
+        onOpenAgentNotes={(agentId) => {
+          setPaletteAgentDialogRequest({ kind: "notes", agentId });
+        }}
+        onOpenArchiveAgent={(agentId) => {
+          setPaletteAgentDialogRequest({ kind: "archive", agentId });
+        }}
+        onOpenUnarchiveAgent={(agentId) => {
+          setPaletteAgentDialogRequest({ kind: "unarchive", agentId });
+        }}
+      />
     </div>
   );
 };
