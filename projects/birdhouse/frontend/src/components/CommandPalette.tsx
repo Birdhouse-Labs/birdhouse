@@ -8,6 +8,7 @@ import { type Component, createEffect, createMemo, createResource, createSignal,
 import { Dynamic } from "solid-js/web";
 import { buildWorkspaceUrl } from "../config/api";
 import { useWorkspace } from "../contexts/WorkspaceContext";
+import { ZIndexProvider } from "../contexts/ZIndexContext";
 import { isCommandPaletteOpen, setIsCommandPaletteOpen } from "../lib/command-palette-state";
 import { useModalRoute, useWorkspaceAgentId } from "../lib/routing";
 import { fetchAgent } from "../services/messages-api";
@@ -106,6 +107,8 @@ const CommandPalette: Component = () => {
     const agentModals = modalStack().filter((m) => m.type === "agent");
     return agentModals.at(-1)?.id ?? routeAgentId();
   });
+  const topAgentModalDepth = createMemo(() => modalStack().filter((m) => m.type === "agent").length);
+  const agentDialogBaseZIndex = createMemo(() => 50 + topAgentModalDepth() * 10 + 10);
 
   // Lazily fetch agent metadata when the palette opens and an agent is in context
   const [agentData] = createResource(
@@ -434,7 +437,7 @@ const CommandPalette: Component = () => {
       {/* Agent sub-dialogs — rendered outside the palette Dialog to avoid nesting */}
       <Show when={topAgentId()} keyed>
         {(agentId) => (
-          <>
+          <ZIndexProvider baseZIndex={agentDialogBaseZIndex()}>
             <EditAgentDialog
               agentId={agentId}
               currentTitle={agentData()?.title ?? ""}
@@ -453,7 +456,7 @@ const CommandPalette: Component = () => {
               open={isUnarchiveDialogOpen()}
               onOpenChange={setIsUnarchiveDialogOpen}
             />
-          </>
+          </ZIndexProvider>
         )}
       </Show>
 
