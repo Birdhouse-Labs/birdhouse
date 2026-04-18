@@ -92,6 +92,7 @@ const ActionRow: Component<ActionRowProps> = (props) => (
 // Main component
 // ---------------------------------------------------------------------------
 
+// Agent-scoped dialogs are rendered by LiveApp so they can nest in the target modal layer.
 interface CommandPaletteProps {
   onOpenEditTitle?: (agentId: string, currentTitle: string) => void;
   onOpenAgentNotes?: (agentId: string) => void;
