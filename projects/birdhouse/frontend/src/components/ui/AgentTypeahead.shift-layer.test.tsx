@@ -2,6 +2,7 @@
 // ABOUTME: Verifies Right Shift opens a peek without bubbling into the parent dialog layer.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
+import Dialog from "corvu/dialog";
 import { createMemo, createSignal, Show } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as agentsApi from "../../services/agents-api";
@@ -86,6 +87,49 @@ const LayeredShiftHarness = (props: { closeParentOnShift: boolean }) => {
   );
 };
 
+const RootShiftHarness = () => {
+  const [typeaheadOpen, setTypeaheadOpen] = createSignal(true);
+  const childOpen = createMemo(() => modalRouteState.modalStack().length > 0);
+
+  return (
+    <div data-testid="root-layer">
+      <Show when={typeaheadOpen()}>
+        <AgentTypeahead
+          inputValue="@@"
+          cursorPosition={2}
+          visible={true}
+          workspaceId="ws_test"
+          currentAgentId="agent-1"
+          onSelect={() => {}}
+          onClose={() => setTypeaheadOpen(false)}
+        >
+          <textarea aria-label="Root Composer" />
+        </AgentTypeahead>
+      </Show>
+
+      <Show when={childOpen()}>
+        <Dialog
+          open={true}
+          closeOnEscapeKeyDown={true}
+          closeOnOutsidePointer={false}
+          closeOnOutsideFocus={false}
+          onOpenChange={(open) => {
+            if (!open) {
+              modalRouteState.setModalStack([]);
+            }
+          }}
+        >
+          <Dialog.Portal mount={document.body}>
+            <Dialog.Content>
+              <div data-testid="root-peek-dialog">Peek dialog</div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog>
+      </Show>
+    </div>
+  );
+};
+
 describe("AgentTypeahead layered Right Shift", () => {
   beforeEach(() => {
     modalRouteState.setModalStack([{ type: "agent", id: "agent-1" }]);
@@ -141,6 +185,35 @@ describe("AgentTypeahead layered Right Shift", () => {
     await waitFor(() => {
       expect(modalRouteState.openModal).toHaveBeenCalledTimes(1);
       expect(screen.getByTestId("peek-dialog")).toBeInTheDocument();
+    });
+  });
+
+  it("keeps the root-agent finder open after Escape closes a peeked modal", async () => {
+    modalRouteState.setModalStack([]);
+    modalRouteState.openModal.mockImplementation((type: string, id: string) => {
+      modalRouteState.setModalStack([{ type, id }]);
+    });
+
+    render(() => <RootShiftHarness />);
+
+    expect(await screen.findByText("Peek Target")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Peek Target" })).toHaveAttribute("aria-current", "true");
+    });
+
+    fireEvent.keyUp(screen.getByRole("button", { name: "Peek Target" }), { code: "ShiftRight", key: "Shift" });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("root-peek-dialog")).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("root-peek-dialog")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Peek Target" })).toBeInTheDocument();
     });
   });
 });

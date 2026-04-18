@@ -127,7 +127,9 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
       }}
       modal={false}
       trapFocus={false}
+      closeOnEscapeKeyDown={false}
       closeOnOutsidePointer={false}
+      closeOnOutsideFocus={false}
       strategy="fixed"
       placement="top-start"
       floatingOptions={TYPEAHEAD_POPOVER_FLOATING_OPTIONS}

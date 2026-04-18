@@ -624,6 +624,13 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!props.interactive) return;
 
+    if (e.key === "Escape") {
+      if (openPopoverIndex() !== null) return;
+      e.preventDefault();
+      props.onDismiss();
+      return;
+    }
+
     const items = visibleResults();
 
     if (items.length === 0) return;
