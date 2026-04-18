@@ -3,6 +3,7 @@
 
 import { AlertCircle, X } from "lucide-solid";
 import {
+  type Accessor,
   type Component,
   createEffect,
   createMemo,
@@ -115,6 +116,66 @@ function updateAgentTitlesInEvents(messages: Message[], updatedAgentId: string, 
   }
 }
 
+type AbortableResource<T> = Accessor<T | undefined> & {
+  loading: boolean;
+  error: Error | undefined;
+};
+
+function createAbortableResource<T>(
+  source: Accessor<string | undefined>,
+  fetcher: (value: string, signal: AbortSignal) => Promise<T>,
+): [AbortableResource<T>, { refetch: () => void }] {
+  const [value, setValue] = createSignal<T | undefined>();
+  const [loading, setLoading] = createSignal(false);
+  const [error, setError] = createSignal<Error | undefined>();
+  const [version, setVersion] = createSignal(0);
+
+  createEffect(() => {
+    version();
+    const current = source();
+
+    if (!current) {
+      setLoading(false);
+      setError(undefined);
+      setValue(undefined);
+      return;
+    }
+
+    const controller = new AbortController();
+    setLoading(true);
+    setError(undefined);
+
+    void fetcher(current, controller.signal)
+      .then((next) => {
+        if (controller.signal.aborted) return;
+        setValue(() => next);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError")) {
+          return;
+        }
+
+        setError(err instanceof Error ? err : new Error(String(err)));
+        setLoading(false);
+      });
+
+    onCleanup(() => controller.abort());
+  });
+
+  const resource = (() => value()) as AbortableResource<T>;
+  Object.defineProperties(resource, {
+    loading: {
+      get: () => loading(),
+    },
+    error: {
+      get: () => error(),
+    },
+  });
+
+  return [resource, { refetch: () => setVersion((current) => current + 1) }];
+}
+
 const LiveMessages: Component<LiveMessagesProps> = (props) => {
   // Get workspace context
   const { workspaceId } = useWorkspace();
@@ -126,15 +187,15 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
   const [stopTreeMode, setStopTreeMode] = createSignal(false);
 
   // Resource handles fetch lifecycle (with workspace ID)
-  const [messagesResource, { refetch }] = createResource(
+  const [messagesResource, { refetch }] = createAbortableResource(
     () => props.agentId,
-    (agentId) => fetchMessages(workspaceId, agentId),
+    (agentId, signal) => fetchMessages(workspaceId, agentId, signal),
   );
 
   // Fetch agent metadata for header (with workspace ID)
-  const [agentMetadata, { refetch: refetchMetadata }] = createResource(
+  const [agentMetadata, { refetch: refetchMetadata }] = createAbortableResource(
     () => props.agentId,
-    (agentId) => fetchAgent(workspaceId, agentId),
+    (agentId, signal) => fetchAgent(workspaceId, agentId, signal),
   );
 
   // Filter messages based on revert state

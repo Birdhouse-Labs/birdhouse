@@ -179,4 +179,30 @@ describe("LiveMessages reset restoration", () => {
 
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("passes abort signals to message and metadata fetches and aborts them on unmount", async () => {
+    let messagesSignal: AbortSignal | undefined;
+    let metadataSignal: AbortSignal | undefined;
+
+    fetchMessagesMock.mockImplementation((_workspaceId, _agentId, signal?: AbortSignal) => {
+      messagesSignal = signal;
+      return new Promise(() => {});
+    });
+    fetchAgentMock.mockImplementation((_workspaceId, _agentId, signal?: AbortSignal) => {
+      metadataSignal = signal;
+      return new Promise(() => {});
+    });
+
+    const view = render(() => <LiveMessages agentId="agent_test" />);
+
+    await waitFor(() => {
+      expect(messagesSignal).toBeInstanceOf(AbortSignal);
+      expect(metadataSignal).toBeInstanceOf(AbortSignal);
+    });
+
+    view.unmount();
+
+    expect(messagesSignal?.aborted).toBe(true);
+    expect(metadataSignal?.aborted).toBe(true);
+  });
 });
