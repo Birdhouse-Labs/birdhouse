@@ -12,6 +12,11 @@ const modalRouteState = vi.hoisted(() => ({
   setModalStack: undefined as unknown as (value: Array<{ type: string; id: string }>) => void,
 }));
 
+const agentFinderLifecycle = vi.hoisted(() => ({
+  mounts: 0,
+  unmounts: 0,
+}));
+
 const [mockModalStack, setMockModalStack] = createSignal<Array<{ type: string; id: string }>>([]);
 modalRouteState.modalStack = mockModalStack;
 modalRouteState.setModalStack = setMockModalStack;
@@ -28,7 +33,14 @@ vi.mock("../../lib/routing", () => ({
 }));
 
 vi.mock("../AgentFinder", () => ({
-  default: (props: { interactive: boolean }) => <div data-testid="finder-interactive">{String(props.interactive)}</div>,
+  default: (props: { interactive: boolean }) => {
+    agentFinderLifecycle.mounts += 1;
+    onCleanup(() => {
+      agentFinderLifecycle.unmounts += 1;
+    });
+
+    return <div data-testid="finder-interactive">{String(props.interactive)}</div>;
+  },
 }));
 
 const NestedTypeaheadHarness = () => {
@@ -161,6 +173,8 @@ describe("AgentTypeahead layered Escape handling", () => {
 
   afterEach(() => {
     cleanup();
+    agentFinderLifecycle.mounts = 0;
+    agentFinderLifecycle.unmounts = 0;
     vi.clearAllMocks();
   });
 
@@ -208,5 +222,30 @@ describe("AgentTypeahead layered Escape handling", () => {
     textarea.focus();
 
     expect(textarea).toHaveFocus();
+  });
+
+  it("keeps the same AgentFinder instance mounted through a peek open and close round-trip", async () => {
+    render(() => <NestedTypeaheadHarness />);
+
+    expect(agentFinderLifecycle.mounts).toBe(1);
+    expect(agentFinderLifecycle.unmounts).toBe(0);
+
+    fireEvent.click(screen.getByText("Open peek"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("peek-dialog")).toBeInTheDocument();
+    });
+
+    expect(agentFinderLifecycle.mounts).toBe(1);
+    expect(agentFinderLifecycle.unmounts).toBe(0);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("peek-dialog")).not.toBeInTheDocument();
+    });
+
+    expect(agentFinderLifecycle.mounts).toBe(1);
+    expect(agentFinderLifecycle.unmounts).toBe(0);
   });
 });
