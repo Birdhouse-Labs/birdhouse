@@ -51,6 +51,7 @@ const AgentModal: Component<AgentModalProps> = (props) => {
             height: `calc(95dvh - ${sizeReduction}px)`,
             "max-width": `calc(1792px - ${sizeReduction}px)`,
             "z-index": baseZIndex + 2,
+            "pointer-events": "auto",
           }}
         >
           {/* Provide increased z-index context to children (dialogs, popovers) */}

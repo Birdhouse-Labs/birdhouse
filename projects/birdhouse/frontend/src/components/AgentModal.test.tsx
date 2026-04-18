@@ -9,6 +9,7 @@ import AgentModal from "./AgentModal";
 const dialogMockState = vi.hoisted(() => ({
   closeOnEscapeKeyDown: undefined as boolean | undefined,
   initialFocusTarget: undefined as string | undefined,
+  contentStyle: undefined as JSX.CSSProperties | undefined,
 }));
 
 vi.mock("./LiveMessages", () => ({
@@ -30,9 +31,10 @@ vi.mock("corvu/dialog", () => {
 
   Dialog.Portal = (props: { children: JSX.Element }) => <>{props.children}</>;
   Dialog.Overlay = () => null;
-  Dialog.Content = (props: { children: JSX.Element; class?: string }) => (
-    <div class={props.class}>{props.children}</div>
-  );
+  Dialog.Content = (props: { children: JSX.Element; class?: string; style?: JSX.CSSProperties }) => {
+    dialogMockState.contentStyle = props.style;
+    return <div class={props.class}>{props.children}</div>;
+  };
   return { default: Dialog };
 });
 
@@ -41,6 +43,7 @@ describe("AgentModal", () => {
     cleanup();
     dialogMockState.closeOnEscapeKeyDown = undefined;
     dialogMockState.initialFocusTarget = undefined;
+    dialogMockState.contentStyle = undefined;
     vi.clearAllMocks();
   });
 
@@ -51,6 +54,7 @@ describe("AgentModal", () => {
 
     expect(dialogMockState.closeOnEscapeKeyDown).toBe(true);
     expect(dialogMockState.initialFocusTarget).toBe("messages");
+    expect(dialogMockState.contentStyle?.["pointer-events"]).toBe("auto");
 
     cleanup();
 
