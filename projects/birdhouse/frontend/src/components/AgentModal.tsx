@@ -67,8 +67,8 @@ const AgentModal: Component<AgentModalProps> = (props) => {
                 />
               )}
             </Show>
+            {props.children}
           </ZIndexProvider>
-          {props.children}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog>

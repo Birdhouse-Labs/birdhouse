@@ -121,4 +121,22 @@ describe("PaletteAgentSubdialogs nested layer behavior", () => {
       expect(screen.getByTestId("agent-modal-agent-1")).toBeInTheDocument();
     });
   });
+
+  it("renders the notes dialog above the parent agent modal content", async () => {
+    render(() => <NotesDialogInModalHarness />);
+
+    fireEvent.click(screen.getByText("Open notes"));
+
+    const dialogContents = await waitFor(() => {
+      const contents = Array.from(document.querySelectorAll("[data-corvu-dialog-content]"));
+      expect(contents).toHaveLength(2);
+      return contents;
+    });
+
+    const parentModalContent = dialogContents[0] as HTMLElement;
+    const notesDialogContent = dialogContents[1] as HTMLElement;
+
+    expect(parentModalContent.style.zIndex).toBe("62");
+    expect(notesDialogContent.style.zIndex).toBe("70");
+  });
 });
