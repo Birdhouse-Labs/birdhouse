@@ -166,6 +166,58 @@ const StaleEscapeListenerHarness = () => {
   );
 };
 
+const DirectClosePeekHarness = () => {
+  const childOpen = createMemo(() => modalRouteState.modalStack().length > 1);
+
+  return (
+    <Dialog closeOnEscapeKeyDown={modalRouteState.modalStack().length === 1} closeOnOutsidePointer={false} open={true}>
+      <Dialog.Portal mount={document.body}>
+        <Dialog.Content>
+          <button
+            type="button"
+            onClick={() =>
+              modalRouteState.setModalStack([
+                { type: "agent", id: "agent-1" },
+                { type: "agent", id: "agent-2" },
+              ])
+            }
+          >
+            Open peek
+          </button>
+
+          <AgentTypeahead
+            inputValue="@@"
+            cursorPosition={2}
+            visible={true}
+            workspaceId="ws_test"
+            currentAgentId="agent-1"
+            insideAgentModal={true}
+            onSelect={() => {}}
+            onClose={() => {}}
+          >
+            <textarea aria-label="Composer" />
+          </AgentTypeahead>
+
+          <Show when={childOpen()}>
+            <Dialog open={true} closeOnEscapeKeyDown={true} closeOnOutsidePointer={false}>
+              <Dialog.Portal mount={document.body}>
+                <Dialog.Content>
+                  <button
+                    type="button"
+                    onClick={() => modalRouteState.setModalStack([{ type: "agent", id: "agent-1" }])}
+                  >
+                    Direct close peek
+                  </button>
+                </Dialog.Content>
+              </Dialog.Portal>
+            </Dialog>
+          </Show>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog>
+  );
+};
+
 describe("AgentTypeahead layered Escape handling", () => {
   beforeEach(() => {
     modalRouteState.setModalStack([{ type: "agent", id: "agent-1" }]);
@@ -247,5 +299,45 @@ describe("AgentTypeahead layered Escape handling", () => {
 
     expect(agentFinderLifecycle.mounts).toBe(1);
     expect(agentFinderLifecycle.unmounts).toBe(0);
+  });
+
+  it("refocuses the textarea after the peek closes", async () => {
+    render(() => <NestedTypeaheadHarness />);
+
+    const textarea = screen.getByLabelText("Composer");
+    textarea.focus();
+
+    fireEvent.click(screen.getByText("Open peek"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("peek-dialog")).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("peek-dialog")).not.toBeInTheDocument();
+      expect(textarea).toHaveFocus();
+    });
+  });
+
+  it("refocuses the textarea after a peek closes through the direct onClose path", async () => {
+    render(() => <DirectClosePeekHarness />);
+
+    const textarea = screen.getByLabelText("Composer");
+    textarea.focus();
+
+    fireEvent.click(screen.getByText("Open peek"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Direct close peek")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Direct close peek"));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Direct close peek")).not.toBeInTheDocument();
+      expect(textarea).toHaveFocus();
+    });
   });
 });

@@ -21,6 +21,7 @@ export interface AgentTypeaheadProps {
   insideAgentModal?: boolean | undefined;
   onSelect: (agent: AgentTypeaheadSelection, matchedText: string, matchStartIndex: number) => void;
   onClose: () => void;
+  onRegainInteractivity?: () => void;
   children: JSX.Element;
 }
 
@@ -68,6 +69,7 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
   const { modalStack } = useModalRoute();
   const [ownerModalDepth, setOwnerModalDepth] = createSignal<number | null>(null);
   const [openPopoverIndex, setOpenPopoverIndex] = createSignal<number | null>(null);
+  const [wasBlockedByPeek, setWasBlockedByPeek] = createSignal(false);
 
   const triggerMatch = createMemo(() => findAgentTrigger(props.inputValue, props.cursorPosition));
   const shouldShow = createMemo(() => props.visible && triggerMatch() !== null);
@@ -76,6 +78,7 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
     if (!shouldShow()) {
       setOwnerModalDepth(null);
       setOpenPopoverIndex(null);
+      setWasBlockedByPeek(false);
       return;
     }
 
@@ -97,6 +100,23 @@ export const AgentTypeahead: Component<AgentTypeaheadProps> = (props) => {
 
     const ownerDepth = ownerModalDepth();
     return ownerDepth !== null && modalStack().length === ownerDepth;
+  });
+
+  createEffect(() => {
+    if (!shouldShow() || !props.insideAgentModal) {
+      setWasBlockedByPeek(false);
+      return;
+    }
+
+    if (!isInteractive()) {
+      setWasBlockedByPeek(true);
+      return;
+    }
+
+    if (wasBlockedByPeek()) {
+      queueMicrotask(() => props.onRegainInteractivity?.());
+      setWasBlockedByPeek(false);
+    }
   });
 
   return (

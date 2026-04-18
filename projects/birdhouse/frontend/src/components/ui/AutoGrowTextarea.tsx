@@ -340,6 +340,15 @@ export const AutoGrowTextarea: Component<AutoGrowTextareaProps> = (props) => {
         insideAgentModal={props.insideAgentModal}
         onSelect={handleAgentSelect}
         onClose={() => setShowAgentTypeahead(false)}
+        onRegainInteractivity={() => {
+          const activeElement = document.activeElement;
+          if (
+            textareaRef &&
+            (activeElement === null || activeElement === document.body || activeElement === textareaRef)
+          ) {
+            textareaRef.focus();
+          }
+        }}
       >
         <textarea
           ref={(el) => {

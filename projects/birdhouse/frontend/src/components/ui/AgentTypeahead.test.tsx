@@ -1,7 +1,7 @@
 // ABOUTME: Tests the AgentTypeahead wrapper around the shared AgentFinder component.
 // ABOUTME: Verifies @@ trigger parsing, Corvu popover wiring, and confirm behavior.
 
-import { cleanup, fireEvent, render, screen } from "@solidjs/testing-library";
+import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { createSignal, type JSX, Show } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentTypeahead } from "./AgentTypeahead";
@@ -223,5 +223,27 @@ describe("AgentTypeahead", () => {
     ]);
 
     expect(screen.getByTestId("finder-interactive")).toHaveTextContent("false");
+  });
+
+  it("notifies when the typeahead regains interactivity after a peek closes", async () => {
+    modalRouteState.setModalStack([{ type: "agent", id: "agent-123" }]);
+    const onRegainInteractivity = vi.fn();
+
+    renderTypeahead({ insideAgentModal: true, onRegainInteractivity });
+
+    expect(onRegainInteractivity).not.toHaveBeenCalled();
+
+    modalRouteState.setModalStack([
+      { type: "agent", id: "agent-123" },
+      { type: "agent", id: "agent-456" },
+    ]);
+
+    expect(onRegainInteractivity).not.toHaveBeenCalled();
+
+    modalRouteState.setModalStack([{ type: "agent", id: "agent-123" }]);
+
+    await waitFor(() => {
+      expect(onRegainInteractivity).toHaveBeenCalledTimes(1);
+    });
   });
 });
