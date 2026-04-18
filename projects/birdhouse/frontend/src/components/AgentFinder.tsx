@@ -422,8 +422,6 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
     props.setOpenPopoverIndex ?? props.sessionState?.setOpenPopoverIndex ?? setInternalOpenPopoverIndex;
   const resultsScrollTop = () => props.sessionState?.resultsScrollTop() ?? internalResultsScrollTop();
   const setResultsScrollTop = props.sessionState?.setResultsScrollTop ?? setInternalResultsScrollTop;
-  let requestId = 0;
-  let recentRequestId = 0;
   const resultItemRefs: Array<HTMLDivElement | undefined> = [];
   let previousVisibleResultKeys: string[] | undefined;
 
@@ -435,23 +433,24 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
       return;
     }
 
-    const thisRequest = ++recentRequestId;
+    const controller = new AbortController();
     setIsLoadingRecent(true);
 
-    void fetchRecentAgentsList(props.workspaceId, undefined, RECENT_LIMIT)
+    void fetchRecentAgentsList(props.workspaceId, undefined, RECENT_LIMIT, controller.signal)
       .then((agents) => {
-        if (thisRequest !== recentRequestId) return;
+        if (controller.signal.aborted) return;
         setRecentAgents(agents);
       })
-      .catch(() => {
-        if (thisRequest !== recentRequestId) return;
+      .catch((error) => {
+        if (controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError")) return;
         setRecentAgents([]);
       })
       .finally(() => {
-        if (thisRequest === recentRequestId) {
-          setIsLoadingRecent(false);
-        }
+        if (controller.signal.aborted) return;
+        setIsLoadingRecent(false);
       });
+
+    onCleanup(() => controller.abort());
   });
 
   createEffect(() => {
@@ -461,31 +460,35 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
       setResults([]);
       setSearchError(null);
       setHasSearched(false);
+      setIsSearching(false);
       return;
     }
 
+    let controller: AbortController | undefined;
     const timerId = setTimeout(async () => {
-      const thisRequest = ++requestId;
+      controller = new AbortController();
       setIsSearching(true);
       setSearchError(null);
 
       try {
-        const response = await searchAgentMessages(props.workspaceId, query, SEARCH_LIMIT);
-        if (thisRequest !== requestId) return;
+        const response = await searchAgentMessages(props.workspaceId, query, SEARCH_LIMIT, controller.signal);
+        if (controller.signal.aborted) return;
         setResults(response.results);
         setHasSearched(true);
       } catch (err) {
-        if (thisRequest !== requestId) return;
+        if (controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError")) return;
         setSearchError(err instanceof Error ? err.message : "Search failed");
         setResults([]);
       } finally {
-        if (thisRequest === requestId) {
-          setIsSearching(false);
-        }
+        if (controller.signal.aborted) return;
+        setIsSearching(false);
       }
     }, DEBOUNCE_MS);
 
-    onCleanup(() => clearTimeout(timerId));
+    onCleanup(() => {
+      clearTimeout(timerId);
+      controller?.abort();
+    });
   });
 
   const groupedResults = createMemo((): GroupedResult[] => {

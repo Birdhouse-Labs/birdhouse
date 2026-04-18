@@ -2,11 +2,11 @@
 // ABOUTME: Verifies recent loading, search behavior, keyboard actions, and shared result rendering.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
-import { createContext, createEffect, type JSX, onCleanup, Show, useContext } from "solid-js";
+import { createContext, createEffect, createSignal, type JSX, onCleanup, Show, useContext } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessageSearchResponse, RecentAgentForTypeahead, RecentAgentSnippet } from "../services/agents-api";
 import * as agentsApi from "../services/agents-api";
-import AgentFinder from "./AgentFinder";
+import AgentFinder, { type AgentFinderSessionState } from "./AgentFinder";
 
 const popoverMockState = vi.hoisted(() => ({
   rootProps: [] as Array<{ strategy?: string; floatingOptions?: unknown }>,
@@ -191,6 +191,54 @@ const makeRecentSnippet = (overrides?: Partial<RecentAgentSnippet>): RecentAgent
   ...overrides,
 });
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error?: unknown) => void;
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+}
+
+function createSessionState(): AgentFinderSessionState {
+  const [results, setResults] = createSignal<AgentMessageSearchResponse["results"]>([]);
+  const [recentAgents, setRecentAgents] = createSignal<RecentAgentForTypeahead[]>([]);
+  const [isSearching, setIsSearching] = createSignal(false);
+  const [isLoadingRecent, setIsLoadingRecent] = createSignal(false);
+  const [searchError, setSearchError] = createSignal<string | null>(null);
+  const [hasSearched, setHasSearched] = createSignal(false);
+  const [activeIndex, setActiveIndex] = createSignal(-1);
+  const [pointerMoved, setPointerMoved] = createSignal(false);
+  const [openPopoverIndex, setOpenPopoverIndex] = createSignal<number | null>(null);
+  const [resultsScrollTop, setResultsScrollTop] = createSignal(0);
+
+  return {
+    results,
+    setResults,
+    recentAgents,
+    setRecentAgents,
+    isSearching,
+    setIsSearching,
+    isLoadingRecent,
+    setIsLoadingRecent,
+    searchError,
+    setSearchError,
+    hasSearched,
+    setHasSearched,
+    activeIndex,
+    setActiveIndex,
+    pointerMoved,
+    setPointerMoved,
+    openPopoverIndex,
+    setOpenPopoverIndex,
+    resultsScrollTop,
+    setResultsScrollTop,
+  };
+}
+
 function renderFinder(props?: Partial<Parameters<typeof AgentFinder>[0]>) {
   const onConfirm = vi.fn();
   const onDismiss = vi.fn();
@@ -236,7 +284,12 @@ describe("AgentFinder", () => {
     renderFinder();
 
     await waitFor(() => {
-      expect(mockFetchRecentAgentsList).toHaveBeenCalledWith("test-workspace", undefined, 50);
+      expect(mockFetchRecentAgentsList).toHaveBeenCalledWith(
+        "test-workspace",
+        undefined,
+        50,
+        expect.any(AbortSignal),
+      );
     });
   });
 
@@ -250,6 +303,40 @@ describe("AgentFinder", () => {
     await waitFor(() => {
       expect(document.querySelector(".animate-spin")).toBeNull();
     });
+  });
+
+  it("does not write stale recent agents into preserved session state after unmount", async () => {
+    const deferred = createDeferred<RecentAgentForTypeahead[]>();
+    const sessionState = createSessionState();
+    mockFetchRecentAgentsList.mockReturnValue(deferred.promise);
+
+    const view = render(() => (
+      <AgentFinder
+        workspaceId="workspace-a"
+        query=""
+        interactive={true}
+        confirmLabel="insert"
+        onConfirm={() => {}}
+        onDismiss={() => {}}
+        sessionState={sessionState}
+      />
+    ));
+
+    await waitFor(() => {
+      expect(mockFetchRecentAgentsList).toHaveBeenCalledWith("workspace-a", undefined, 50, expect.any(AbortSignal));
+      expect(sessionState.isLoadingRecent()).toBe(true);
+    });
+
+    view.unmount();
+    sessionState.setRecentAgents([]);
+    sessionState.setIsLoadingRecent(false);
+
+    deferred.resolve([makeRecentAgent({ id: "agent-stale", title: "Stale Agent" })]);
+    await deferred.promise;
+    await Promise.resolve();
+
+    expect(sessionState.recentAgents()).toEqual([]);
+    expect(sessionState.isLoadingRecent()).toBe(false);
   });
 
   it("shows the configurable confirm label in the keyboard hint row", async () => {
@@ -316,7 +403,12 @@ describe("AgentFinder", () => {
     MockIntersectionObserver.instances[0]?.trigger(card as Element, true);
 
     await waitFor(() => {
-      expect(mockFetchRecentAgentsList).toHaveBeenCalledWith("test-workspace", undefined, 50);
+      expect(mockFetchRecentAgentsList).toHaveBeenCalledWith(
+        "test-workspace",
+        undefined,
+        50,
+        expect.any(AbortSignal),
+      );
     });
 
     await waitFor(() => {
@@ -335,7 +427,12 @@ describe("AgentFinder", () => {
     renderFinder({ query: "visible" });
 
     await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "visible", 50);
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith(
+        "test-workspace",
+        "visible",
+        50,
+        expect.any(AbortSignal),
+      );
     });
 
     expect(await screen.findByText("Visible Agent")).toBeInTheDocument();
@@ -386,7 +483,12 @@ describe("AgentFinder", () => {
     renderFinder({ query: "needle" });
 
     await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "needle", 50);
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith(
+        "test-workspace",
+        "needle",
+        50,
+        expect.any(AbortSignal),
+      );
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
@@ -410,7 +512,7 @@ describe("AgentFinder", () => {
     renderFinder({ query: "match" });
 
     await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50);
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50, expect.any(AbortSignal));
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
@@ -428,7 +530,7 @@ describe("AgentFinder", () => {
     renderFinder({ query: "match" });
 
     await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50);
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50, expect.any(AbortSignal));
     });
 
     const configuredPopover = popoverMockState.rootProps.find((props) => props.strategy === "fixed");
@@ -459,7 +561,7 @@ describe("AgentFinder", () => {
     renderFinder({ query: "alpha" });
 
     await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "alpha", 50);
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "alpha", 50, expect.any(AbortSignal));
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
@@ -492,7 +594,7 @@ describe("AgentFinder", () => {
     renderFinder({ query: "birds" });
 
     await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "birds", 50);
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "birds", 50, expect.any(AbortSignal));
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
@@ -537,7 +639,12 @@ describe("AgentFinder", () => {
     renderFinder({ query: "wpid_347228386893110642" });
 
     await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "wpid_347228386893110642", 50);
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith(
+        "test-workspace",
+        "wpid_347228386893110642",
+        50,
+        expect.any(AbortSignal),
+      );
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
@@ -575,7 +682,12 @@ describe("AgentFinder", () => {
     renderFinder({ query: "wpid_347228386893110642" });
 
     await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "wpid_347228386893110642", 50);
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith(
+        "test-workspace",
+        "wpid_347228386893110642",
+        50,
+        expect.any(AbortSignal),
+      );
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));
@@ -626,7 +738,7 @@ describe("AgentFinder", () => {
     renderFinder({ query: "match" });
 
     await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50);
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "match", 50, expect.any(AbortSignal));
     });
 
     fireEvent.keyDown(document, { key: "ArrowDown" });
