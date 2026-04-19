@@ -284,12 +284,7 @@ describe("AgentFinder", () => {
     renderFinder();
 
     await waitFor(() => {
-      expect(mockFetchRecentAgentsList).toHaveBeenCalledWith(
-        "test-workspace",
-        undefined,
-        50,
-        expect.any(AbortSignal),
-      );
+      expect(mockFetchRecentAgentsList).toHaveBeenCalledWith("test-workspace", undefined, 50, expect.any(AbortSignal));
     });
   });
 
@@ -403,12 +398,7 @@ describe("AgentFinder", () => {
     MockIntersectionObserver.instances[0]?.trigger(card as Element, true);
 
     await waitFor(() => {
-      expect(mockFetchRecentAgentsList).toHaveBeenCalledWith(
-        "test-workspace",
-        undefined,
-        50,
-        expect.any(AbortSignal),
-      );
+      expect(mockFetchRecentAgentsList).toHaveBeenCalledWith("test-workspace", undefined, 50, expect.any(AbortSignal));
     });
 
     await waitFor(() => {
@@ -427,12 +417,7 @@ describe("AgentFinder", () => {
     renderFinder({ query: "visible" });
 
     await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith(
-        "test-workspace",
-        "visible",
-        50,
-        expect.any(AbortSignal),
-      );
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "visible", 50, expect.any(AbortSignal));
     });
 
     expect(await screen.findByText("Visible Agent")).toBeInTheDocument();
@@ -483,12 +468,7 @@ describe("AgentFinder", () => {
     renderFinder({ query: "needle" });
 
     await waitFor(() => {
-      expect(mockSearchAgentMessages).toHaveBeenCalledWith(
-        "test-workspace",
-        "needle",
-        50,
-        expect.any(AbortSignal),
-      );
+      expect(mockSearchAgentMessages).toHaveBeenCalledWith("test-workspace", "needle", 50, expect.any(AbortSignal));
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "Show 1 match" }));

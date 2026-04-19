@@ -480,8 +480,9 @@ const AgentFinder: Component<AgentFinderProps> = (props) => {
         setSearchError(err instanceof Error ? err.message : "Search failed");
         setResults([]);
       } finally {
-        if (controller.signal.aborted) return;
-        setIsSearching(false);
+        if (!controller.signal.aborted) {
+          setIsSearching(false);
+        }
       }
     }, DEBOUNCE_MS);
 

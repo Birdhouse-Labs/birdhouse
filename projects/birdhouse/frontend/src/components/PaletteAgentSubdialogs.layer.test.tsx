@@ -46,7 +46,9 @@ interface NestedModalNodeProps {
 
 const NestedModalNode: Component<NestedModalNodeProps> = (props) => {
   const modal = createMemo(() => props.stack()[props.index]);
-  const requestForModal = createMemo(() => getPaletteDialogRequestForLayer(props.stack(), props.index, props.request()));
+  const requestForModal = createMemo(() =>
+    getPaletteDialogRequestForLayer(props.stack(), props.index, props.request()),
+  );
 
   return (
     <Show when={modal()} keyed>
