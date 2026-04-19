@@ -70,7 +70,7 @@ const startAnimation = (id: string) => {
 
 ```ts
 const animationDelay = createMemo(() => {
-  if (!props.animationStart) return undefined
+  if (props.animationStart == null) return undefined
   const elapsed = Date.now() - props.animationStart
   if (elapsed >= 5000) return undefined // animation complete
   return `-${elapsed}ms` // negative delay skips ahead
