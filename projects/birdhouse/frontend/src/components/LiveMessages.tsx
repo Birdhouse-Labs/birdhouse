@@ -1,8 +1,18 @@
 // ABOUTME: Live chat messages for real agents with streaming
 // ABOUTME: Resource + Store hybrid for initial fetch + real-time updates
 
-import { AlertCircle } from "lucide-solid";
-import { type Component, createEffect, createMemo, createResource, createSignal, onCleanup, Show } from "solid-js";
+import { AlertCircle, X } from "lucide-solid";
+import {
+  type Accessor,
+  type Component,
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  type JSX,
+  onCleanup,
+  Show,
+} from "solid-js";
 import { createStore, produce, reconcile } from "solid-js/store";
 import type { EventType } from "../../../server/src/types/agent-events";
 import { API_ENDPOINT_BASE } from "../config/api";
@@ -44,6 +54,8 @@ interface LiveMessagesProps {
   onOpenAgentModal?: (agentId: string) => void;
   showCloseButton?: boolean;
   onClose?: () => void;
+  initialFocusTarget?: "messages" | "composer";
+  insideAgentModal?: boolean | undefined;
 }
 
 const LoadingState = () => (
@@ -61,6 +73,23 @@ const ErrorState: Component<{ error: Error; onRetry: () => void }> = (props) => 
         Retry
       </Button>
     </div>
+  </div>
+);
+
+const ModalFallbackShell: Component<{ onClose: () => void; children: JSX.Element }> = (props) => (
+  <div class="flex h-full flex-col bg-surface">
+    <div class="flex flex-shrink-0 items-center justify-end border-b border-border bg-surface-raised px-4 py-3">
+      <button
+        type="button"
+        onClick={props.onClose}
+        class="relative z-10 flex h-7 w-7 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-overlay hover:text-text-primary"
+        aria-label="Close modal"
+        title="Close modal"
+      >
+        <X size={16} />
+      </button>
+    </div>
+    <div class="flex-1">{props.children}</div>
   </div>
 );
 
@@ -87,6 +116,66 @@ function updateAgentTitlesInEvents(messages: Message[], updatedAgentId: string, 
   }
 }
 
+type AbortableResource<T> = Accessor<T | undefined> & {
+  loading: boolean;
+  error: Error | undefined;
+};
+
+function createAbortableResource<T>(
+  source: Accessor<string | undefined>,
+  fetcher: (value: string, signal: AbortSignal) => Promise<T>,
+): [AbortableResource<T>, { refetch: () => void }] {
+  const [value, setValue] = createSignal<T | undefined>();
+  const [loading, setLoading] = createSignal(false);
+  const [error, setError] = createSignal<Error | undefined>();
+  const [version, setVersion] = createSignal(0);
+
+  createEffect(() => {
+    version();
+    const current = source();
+
+    if (!current) {
+      setLoading(false);
+      setError(undefined);
+      setValue(undefined);
+      return;
+    }
+
+    const controller = new AbortController();
+    setLoading(true);
+    setError(undefined);
+
+    void fetcher(current, controller.signal)
+      .then((next) => {
+        if (controller.signal.aborted) return;
+        setValue(() => next);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError")) {
+          return;
+        }
+
+        setError(err instanceof Error ? err : new Error(String(err)));
+        setLoading(false);
+      });
+
+    onCleanup(() => controller.abort());
+  });
+
+  const resource = (() => value()) as AbortableResource<T>;
+  Object.defineProperties(resource, {
+    loading: {
+      get: () => loading(),
+    },
+    error: {
+      get: () => error(),
+    },
+  });
+
+  return [resource, { refetch: () => setVersion((current) => current + 1) }];
+}
+
 const LiveMessages: Component<LiveMessagesProps> = (props) => {
   // Get workspace context
   const { workspaceId } = useWorkspace();
@@ -98,15 +187,15 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
   const [stopTreeMode, setStopTreeMode] = createSignal(false);
 
   // Resource handles fetch lifecycle (with workspace ID)
-  const [messagesResource, { refetch }] = createResource(
+  const [messagesResource, { refetch }] = createAbortableResource(
     () => props.agentId,
-    (agentId) => fetchMessages(workspaceId, agentId),
+    (agentId, signal) => fetchMessages(workspaceId, agentId, signal),
   );
 
   // Fetch agent metadata for header (with workspace ID)
-  const [agentMetadata, { refetch: refetchMetadata }] = createResource(
+  const [agentMetadata, { refetch: refetchMetadata }] = createAbortableResource(
     () => props.agentId,
-    (agentId) => fetchAgent(workspaceId, agentId),
+    (agentId, signal) => fetchAgent(workspaceId, agentId, signal),
   );
 
   // Filter messages based on revert state
@@ -261,6 +350,7 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
 
   // Input ref for focusing (reactive signal so effects can track it)
   const [inputRef, setInputRef] = createSignal<HTMLTextAreaElement | undefined>();
+  const [messagesViewportRef, setMessagesViewportRef] = createSignal<HTMLDivElement | undefined>();
 
   // isLoaded gates the save effect — plain boolean, invisible to SolidJS tracking
   let isLoaded = false;
@@ -295,15 +385,32 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
       });
   });
 
-  // Focus input when both draft and inputRef exist
-  createEffect(() => {
-    const currentValue = inputValue();
-    const currentRef = inputRef();
+  const initialFocusTarget = () => props.initialFocusTarget ?? "composer";
+  let lastInitialFocusKey: string | null = null;
 
-    if (currentValue && currentRef) {
-      // Focus input when draft exists (e.g., after cloning or returning to work)
-      currentRef.focus();
-    }
+  // Apply the requested initial focus once the loaded UI is ready.
+  createEffect(() => {
+    const target = initialFocusTarget();
+    const currentInputRef = inputRef();
+    const currentMessagesViewportRef = messagesViewportRef();
+    const messagesLoaded = messagesStore.length > 0 && !messagesResource.loading && !messagesResource.error;
+    const targetReady =
+      target === "messages" ? Boolean(currentMessagesViewportRef && messagesLoaded) : Boolean(currentInputRef);
+
+    if (!targetReady) return;
+
+    const focusKey = `${props.agentId}:${target}`;
+    if (lastInitialFocusKey === focusKey) return;
+
+    queueMicrotask(() => {
+      if (target === "messages") {
+        currentMessagesViewportRef?.focus();
+      } else {
+        currentInputRef?.focus();
+      }
+    });
+
+    lastInitialFocusKey = focusKey;
   });
 
   // Track changes; gate on isLoaded to avoid saving during initial load
@@ -648,18 +755,23 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     }
   };
 
+  const renderFallback = () => {
+    const fallbackContent = messagesResource.error ? (
+      <ErrorState error={messagesResource.error as Error} onRetry={refetch} />
+    ) : (
+      <LoadingState />
+    );
+
+    if (props.showCloseButton && props.onClose) {
+      return <ModalFallbackShell onClose={props.onClose}>{fallbackContent}</ModalFallbackShell>;
+    }
+
+    return fallbackContent;
+  };
+
   return (
     <div class="flex flex-col h-full bg-surface">
-      <Show
-        when={messagesStore.length > 0 && !messagesResource.error}
-        fallback={
-          messagesResource.error ? (
-            <ErrorState error={messagesResource.error as Error} onRetry={refetch} />
-          ) : (
-            <LoadingState />
-          )
-        }
-      >
+      <Show when={messagesStore.length > 0 && !messagesResource.error} fallback={renderFallback()}>
         <div class="flex flex-col h-full">
           {/* Agent Header - only show when metadata is loaded */}
           <Show when={agentMetadata()}>
@@ -777,6 +889,10 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
             inputRef={(el) => {
               setInputRef(el);
             }}
+            messagesViewportRef={(el) => {
+              setMessagesViewportRef(el);
+            }}
+            insideAgentModal={props.insideAgentModal}
           />
         </div>
       </Show>

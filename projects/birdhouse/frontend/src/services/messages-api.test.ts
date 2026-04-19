@@ -40,15 +40,16 @@ describe("fetchMessages", () => {
 
   it("should fetch messages for an agent", async () => {
     const mockMessages = [{ id: "msg1", role: "user", content: "Hello" }];
+    const signal = new AbortController().signal;
 
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => mockMessages,
     } as Response);
 
-    const result = await fetchMessages(mockWorkspaceId, mockAgentId);
+    const result = await fetchMessages(mockWorkspaceId, mockAgentId, signal);
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/agents/${mockAgentId}/messages`));
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/agents/${mockAgentId}/messages`), { signal });
     expect(result).toEqual(mockMessages);
   });
 
@@ -68,15 +69,16 @@ describe("fetchAgent", () => {
 
   it("should fetch agent metadata", async () => {
     const mockAgent = { id: mockAgentId, title: "Test Agent" };
+    const signal = new AbortController().signal;
 
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => mockAgent,
     } as Response);
 
-    const result = await fetchAgent(mockWorkspaceId, mockAgentId);
+    const result = await fetchAgent(mockWorkspaceId, mockAgentId, signal);
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/agents/${mockAgentId}`));
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/agents/${mockAgentId}`), { signal });
     expect(result).toEqual(mockAgent);
   });
 

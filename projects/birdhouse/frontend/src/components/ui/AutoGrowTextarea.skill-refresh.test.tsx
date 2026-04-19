@@ -18,10 +18,7 @@ vi.mock("../../contexts/WorkspaceContext", () => ({
 
 vi.mock("../../lib/routing", () => ({
   useWorkspaceAgentId: () => () => undefined,
-}));
-
-vi.mock("../../services/agents-api", () => ({
-  fetchRecentAgentsList: async () => [],
+  useModalRoute: () => ({ modalStack: () => [] }),
 }));
 
 vi.mock("../../skills/services/skill-library-api", () => ({

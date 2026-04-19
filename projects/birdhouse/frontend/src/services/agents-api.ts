@@ -188,6 +188,7 @@ export async function searchAgentMessages(
   workspaceId: string,
   query: string,
   limit?: number,
+  signal?: AbortSignal,
 ): Promise<AgentMessageSearchResponse> {
   const params = new URLSearchParams({ q: query });
   if (limit !== undefined) {
@@ -196,7 +197,7 @@ export async function searchAgentMessages(
 
   const url = `${buildWorkspaceUrl(workspaceId, "/agents/search")}?${params}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, signal ? { signal } : undefined);
 
   if (!response.ok) {
     const responseBody = await response.text();
@@ -288,6 +289,7 @@ export async function fetchRecentAgentsList(
   workspaceId: string,
   query?: string,
   limit?: number,
+  signal?: AbortSignal,
 ): Promise<RecentAgentForTypeahead[]> {
   const params = new URLSearchParams();
   if (query?.trim()) {
@@ -299,7 +301,7 @@ export async function fetchRecentAgentsList(
 
   const url = `${buildWorkspaceUrl(workspaceId, "/agents/recent")}?${params}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, signal ? { signal } : undefined);
 
   if (!response.ok) {
     const responseBody = await response.text();

@@ -26,9 +26,9 @@ const _API_BASE = API_ENDPOINT_BASE;
  * @param agentId The agent ID
  * @returns Array of UI-ready messages (newest-at-top)
  */
-export async function fetchMessages(workspaceId: string, agentId: string): Promise<Message[]> {
+export async function fetchMessages(workspaceId: string, agentId: string, signal?: AbortSignal): Promise<Message[]> {
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/messages`);
-  const response = await fetch(url);
+  const response = await fetch(url, signal ? { signal } : undefined);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch messages: ${response.statusText}`);
@@ -44,9 +44,9 @@ export async function fetchMessages(workspaceId: string, agentId: string): Promi
  * @param agentId The agent ID
  * @returns Agent metadata
  */
-export async function fetchAgent(workspaceId: string, agentId: string) {
+export async function fetchAgent(workspaceId: string, agentId: string, signal?: AbortSignal) {
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}`);
-  const response = await fetch(url);
+  const response = await fetch(url, signal ? { signal } : undefined);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch agent: ${response.statusText}`);

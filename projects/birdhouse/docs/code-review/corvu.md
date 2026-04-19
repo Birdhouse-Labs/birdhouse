@@ -233,6 +233,64 @@ Corvu provides three props to control when dialogs can be dismissed:
 >
 ```
 
+### ❌ Don't Use DOM Propagation to Scope Escape Away from a Portaled Popover
+
+**The scenario:** A Corvu `Popover` is open inside a component that also has its own `document.addEventListener('keydown')` listener (e.g. a custom keyboard-driven UI). Pressing Escape should close the popover but leave the host component open. The instinct is to intercept Escape on the host's root element with `onKeyDown` + `e.stopPropagation()`.
+
+**❌ Wrong — `stopPropagation` on the host root:**
+```typescript
+<div onKeyDown={(e) => {
+  if (e.key === "Escape") e.stopPropagation(); // ❌ Won't help
+}}>
+  <Popover open={isOpen()} onOpenChange={setIsOpen}>
+    <Popover.Portal>
+      {/* This content is OUTSIDE the div's DOM subtree */}
+      <Popover.Content>...</Popover.Content>
+    </Popover.Portal>
+  </Popover>
+</div>
+```
+
+**Why this fails:**
+- `Popover.Portal` renders its content into `document.body`, outside the host `div`'s DOM subtree entirely.
+- Key events from portaled content don't bubble through the host element — they bubble through `document.body`.
+- Your `onKeyDown` on the host root never sees those events, so `stopPropagation` does nothing.
+- Corvu registers its own Escape listener directly on `document` (bubble phase, no capture). Your app-level `document` listener sits beside it and fires independently regardless of what Corvu does.
+
+**✅ Right — gate your own listener on popover state:**
+
+Track whether any of your popovers are open in the host component. When Escape fires on your listener, return early if a popover is open. Corvu already handles closing the topmost dismissible layer correctly — you just need to not double-act.
+
+```typescript
+// Lift popover state into the host
+const [openPopoverIndex, setOpenPopoverIndex] = createSignal<number | null>(null);
+
+// Pass it down as controlled props
+<SearchResultCard
+  isPopoverOpen={openPopoverIndex() === index()}
+  onPopoverOpenChange={(open) => setOpenPopoverIndex(open ? index() : null)}
+/>
+
+// Gate your own Escape handler
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === "Escape") {
+    if (openPopoverIndex() !== null) return; // ✅ Let Corvu close the popover
+    props.onDismiss();
+    return;
+  }
+  // ...
+};
+```
+
+**Why this works:**
+- Corvu closes the popover (it's the top-most dismissible layer).
+- Your host listener sees the same Escape event but finds `openPopoverIndex() !== null` and returns early.
+- Registration order is safe: your listener was registered before any popover opened, so it runs first — but `openPopoverIndex()` is still non-null at that point because it hasn't been cleared yet.
+
+**Real-world example:** `src/components/AgentFinder.tsx`
+
+---
+
 ### ❌ Don't Try to Coordinate Sibling Dialogs Manually
 
 **❌ Wrong:**

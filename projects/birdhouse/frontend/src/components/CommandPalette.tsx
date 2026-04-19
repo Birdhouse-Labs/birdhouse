@@ -12,10 +12,6 @@ import { isCommandPaletteOpen, setIsCommandPaletteOpen } from "../lib/command-pa
 import { useModalRoute, useWorkspaceAgentId } from "../lib/routing";
 import { fetchAgent } from "../services/messages-api";
 import { cardSurfaceFlat } from "../styles/containerStyles";
-import AgentNotesDialog from "./AgentNotesDialog";
-import ArchiveAgentDialog from "./ArchiveAgentDialog";
-import EditAgentDialog from "./EditAgentDialog";
-import UnarchiveAgentDialog from "./UnarchiveAgentDialog";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -96,7 +92,15 @@ const ActionRow: Component<ActionRowProps> = (props) => (
 // Main component
 // ---------------------------------------------------------------------------
 
-const CommandPalette: Component = () => {
+// Agent-scoped dialogs are rendered by LiveApp so they can nest in the target modal layer.
+interface CommandPaletteProps {
+  onOpenEditTitle?: (agentId: string, currentTitle: string) => void;
+  onOpenAgentNotes?: (agentId: string) => void;
+  onOpenArchiveAgent?: (agentId: string) => void;
+  onOpenUnarchiveAgent?: (agentId: string) => void;
+}
+
+const CommandPalette: Component<CommandPaletteProps> = (props) => {
   const { workspaceId } = useWorkspace();
   const { modalStack, openModal } = useModalRoute();
   const routeAgentId = useWorkspaceAgentId();
@@ -113,11 +117,6 @@ const CommandPalette: Component = () => {
     (agentId) => fetchAgent(workspaceId, agentId),
   );
 
-  // Sub-dialog open signals
-  const [isEditDialogOpen, setIsEditDialogOpen] = createSignal(false);
-  const [isNotesDialogOpen, setIsNotesDialogOpen] = createSignal(false);
-  const [isArchiveDialogOpen, setIsArchiveDialogOpen] = createSignal(false);
-  const [isUnarchiveDialogOpen, setIsUnarchiveDialogOpen] = createSignal(false);
   const [exportError, setExportError] = createSignal<string | null>(null);
 
   // Query and active index state — reset when palette closes
@@ -216,14 +215,14 @@ const CommandPalette: Component = () => {
         label: "Edit Title",
         group: "agent",
         icon: Edit,
-        run: () => setTimeout(() => setIsEditDialogOpen(true), 50),
+        run: () => setTimeout(() => props.onOpenEditTitle?.(agentId, agentData()?.title ?? ""), 50),
       },
       {
         id: "edit-notes",
         label: "Edit Notes",
         group: "agent",
         icon: Notebook,
-        run: () => setTimeout(() => setIsNotesDialogOpen(true), 50),
+        run: () => setTimeout(() => props.onOpenAgentNotes?.(agentId), 50),
       },
       ...(agent === undefined
         ? [
@@ -243,7 +242,7 @@ const CommandPalette: Component = () => {
                 label: "Unarchive Agent",
                 group: "agent" as const,
                 icon: Archive,
-                run: () => setTimeout(() => setIsUnarchiveDialogOpen(true), 50),
+                run: () => setTimeout(() => props.onOpenUnarchiveAgent?.(agentId), 50),
               },
             ]
           : [
@@ -252,7 +251,7 @@ const CommandPalette: Component = () => {
                 label: "Archive Agent",
                 group: "agent" as const,
                 icon: Archive,
-                run: () => setTimeout(() => setIsArchiveDialogOpen(true), 50),
+                run: () => setTimeout(() => props.onOpenArchiveAgent?.(agentId), 50),
               },
             ]),
       {
@@ -430,32 +429,6 @@ const CommandPalette: Component = () => {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog>
-
-      {/* Agent sub-dialogs — rendered outside the palette Dialog to avoid nesting */}
-      <Show when={topAgentId()} keyed>
-        {(agentId) => (
-          <>
-            <EditAgentDialog
-              agentId={agentId}
-              currentTitle={agentData()?.title ?? ""}
-              open={isEditDialogOpen()}
-              onOpenChange={setIsEditDialogOpen}
-            />
-            <AgentNotesDialog
-              agentId={agentId}
-              workspaceId={workspaceId}
-              open={isNotesDialogOpen()}
-              onOpenChange={setIsNotesDialogOpen}
-            />
-            <ArchiveAgentDialog agentId={agentId} open={isArchiveDialogOpen()} onOpenChange={setIsArchiveDialogOpen} />
-            <UnarchiveAgentDialog
-              agentId={agentId}
-              open={isUnarchiveDialogOpen()}
-              onOpenChange={setIsUnarchiveDialogOpen}
-            />
-          </>
-        )}
-      </Show>
 
       {/* Export error toast */}
       <Show when={exportError()}>
