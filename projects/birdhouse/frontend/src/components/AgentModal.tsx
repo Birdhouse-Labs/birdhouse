@@ -3,7 +3,7 @@
 // ABOUTME: Renders a single agent modal in a stack
 
 import Dialog from "corvu/dialog";
-import { type Component, Show } from "solid-js";
+import { type Component, type JSX, Show } from "solid-js";
 import { ZIndexProvider } from "../contexts/ZIndexContext";
 import LiveMessages from "./LiveMessages";
 
@@ -13,6 +13,7 @@ interface AgentModalProps {
   isTop: boolean;
   onClose: () => void;
   onOpenAgentModal: (agentId: string) => void;
+  children?: JSX.Element;
 }
 
 const AgentModal: Component<AgentModalProps> = (props) => {
@@ -33,6 +34,7 @@ const AgentModal: Component<AgentModalProps> = (props) => {
           props.onClose();
         }
       }}
+      closeOnEscapeKeyDown={props.isTop}
       closeOnOutsidePointer={false}
       closeOnOutsideFocus={false}
     >
@@ -49,11 +51,7 @@ const AgentModal: Component<AgentModalProps> = (props) => {
             height: `calc(95dvh - ${sizeReduction}px)`,
             "max-width": `calc(1792px - ${sizeReduction}px)`,
             "z-index": baseZIndex + 2,
-          }}
-          onKeyUp={(e: KeyboardEvent) => {
-            if (e.code === "ShiftRight" && !e.metaKey && !e.ctrlKey && !e.altKey && props.isTop) {
-              props.onClose();
-            }
+            "pointer-events": "auto",
           }}
         >
           {/* Provide increased z-index context to children (dialogs, popovers) */}
@@ -62,12 +60,15 @@ const AgentModal: Component<AgentModalProps> = (props) => {
               {(agentId) => (
                 <LiveMessages
                   agentId={agentId}
+                  initialFocusTarget="messages"
+                  insideAgentModal={true}
                   onOpenAgentModal={props.onOpenAgentModal}
                   showCloseButton={props.navigationDepth >= 1 && props.isTop}
                   onClose={props.onClose}
                 />
               )}
             </Show>
+            {props.children}
           </ZIndexProvider>
         </Dialog.Content>
       </Dialog.Portal>

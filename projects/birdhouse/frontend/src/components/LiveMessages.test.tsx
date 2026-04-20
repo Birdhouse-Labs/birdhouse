@@ -1,5 +1,5 @@
-// ABOUTME: Tests reset-to-here restoration for composer text and image attachments.
-// ABOUTME: Verifies reverted user messages repopulate the LiveMessages draft state.
+// ABOUTME: Tests focus targeting and reset-to-here restoration in LiveMessages.
+// ABOUTME: Verifies modal/non-modal focus intent plus reverted composer state restoration.
 
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -77,8 +77,12 @@ vi.mock("./ui/ChatContainer", () => ({
     inputValue: string;
     attachments?: Array<{ id: string }>;
     onResetToMessage?: (messageId: string) => void;
+    inputRef?: (el: HTMLTextAreaElement) => void;
+    messagesViewportRef?: (el: HTMLDivElement) => void;
   }) => (
     <div>
+      <textarea aria-label="Mock chat composer" ref={props.inputRef} />
+      <div data-testid="mock-messages-viewport" tabIndex={-1} ref={props.messagesViewportRef} />
       <div data-testid="chat-input-value">{props.inputValue}</div>
       <div data-testid="chat-attachments-count">{props.attachments?.length ?? 0}</div>
       <button type="button" onClick={() => props.onResetToMessage?.("msg_reset")}>
@@ -147,5 +151,58 @@ describe("LiveMessages reset restoration", () => {
       expect(screen.getByTestId("chat-input-value")).toHaveTextContent("Restored prompt");
       expect(screen.getByTestId("chat-attachments-count")).toHaveTextContent("1");
     });
+  });
+
+  it("focuses the composer after load in non-modal views", async () => {
+    render(() => <LiveMessages agentId="agent_test" />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Mock chat composer")).toHaveFocus();
+    });
+  });
+
+  it("focuses the messages viewport after load when requested", async () => {
+    render(() => <LiveMessages agentId="agent_test" initialFocusTarget="messages" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("mock-messages-viewport")).toHaveFocus();
+    });
+  });
+
+  it("shows a modal close button while messages are still loading", async () => {
+    const onClose = vi.fn();
+    fetchMessagesMock.mockImplementation(() => new Promise(() => {}));
+
+    render(() => <LiveMessages agentId="agent_test" showCloseButton={true} onClose={onClose} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Close modal" }));
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("passes abort signals to message and metadata fetches and aborts them on unmount", async () => {
+    let messagesSignal: AbortSignal | undefined;
+    let metadataSignal: AbortSignal | undefined;
+
+    fetchMessagesMock.mockImplementation((_workspaceId, _agentId, signal?: AbortSignal) => {
+      messagesSignal = signal;
+      return new Promise(() => {});
+    });
+    fetchAgentMock.mockImplementation((_workspaceId, _agentId, signal?: AbortSignal) => {
+      metadataSignal = signal;
+      return new Promise(() => {});
+    });
+
+    const view = render(() => <LiveMessages agentId="agent_test" />);
+
+    await waitFor(() => {
+      expect(messagesSignal).toBeInstanceOf(AbortSignal);
+      expect(metadataSignal).toBeInstanceOf(AbortSignal);
+    });
+
+    view.unmount();
+
+    expect(messagesSignal?.aborted).toBe(true);
+    expect(metadataSignal?.aborted).toBe(true);
   });
 });

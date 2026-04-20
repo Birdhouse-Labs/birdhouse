@@ -2,7 +2,17 @@
 // ABOUTME: Orchestrates message rendering and input handling
 
 import { LibraryBig, Network, Split, X } from "lucide-solid";
-import { type Accessor, type Component, createMemo, createResource, createSignal, For, Show } from "solid-js";
+import {
+  type Accessor,
+  type Component,
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  For,
+  onCleanup,
+  Show,
+} from "solid-js";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { findPendingAssistant, isMessageQueued } from "../../domain/message-queue";
 import { previewSkillAttachments } from "../../services/skill-attachments-api";
@@ -13,9 +23,9 @@ import type { QuestionRequest } from "../../types/question";
 import { extractSkillLinkNames } from "../../utils/skillLinks";
 import AutoGrowTextarea from "./AutoGrowTextarea";
 import Button from "./Button";
+import ChatMessageBubble from "./ChatMessageBubble";
 import ComposerAttachmentDropZone from "./ComposerAttachmentDropZone";
 import ComposerImageAttachments from "./ComposerImageAttachments";
-import MessageBubble from "./MessageBubble";
 import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
 
 export interface ChatContainerProps {
@@ -41,10 +51,13 @@ export interface ChatContainerProps {
   pendingQuestions?: Accessor<QuestionRequest[]>;
   onQuestionAnswered?: (questionId: string) => void;
   inputRef?: (el: HTMLTextAreaElement) => void;
+  messagesViewportRef?: (el: HTMLDivElement) => void;
+  insideAgentModal?: boolean | undefined;
 }
 
 export const ChatContainer: Component<ChatContainerProps> = (props) => {
   const { workspaceId } = useWorkspace();
+  let messagesRef: HTMLDivElement | undefined;
   const sizeClasses = createMemo(() => {
     const size = uiSize();
     return {
@@ -83,6 +96,25 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
 
   const pendingAssistant = createMemo(() => findPendingAssistant(props.messages));
 
+  createEffect(() => {
+    const messagesEl = messagesRef;
+    if (!messagesEl) return;
+
+    messagesEl.tabIndex = -1;
+
+    const focusMessagesFromClick = (event: MouseEvent) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.closest("button, a, input, textarea, select, [contenteditable='true']")) {
+        return;
+      }
+
+      queueMicrotask(() => messagesEl.focus());
+    };
+
+    messagesEl.addEventListener("click", focusMessagesFromClick);
+    onCleanup(() => messagesEl.removeEventListener("click", focusMessagesFromClick));
+  });
+
   return (
     <div class="flex flex-col flex-1 bg-surface overflow-hidden">
       {/* Input area - at TOP for newest-at-top architecture */}
@@ -103,6 +135,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
                   disabled={props.isSendDisabled ?? false}
                   placeholder="Type a message..."
                   ref={props.inputRef}
+                  insideAgentModal={props.insideAgentModal}
                 />
                 <Show when={(props.attachments?.length ?? 0) > 0 && props.onRemoveAttachment}>
                   <ComposerImageAttachments
@@ -225,6 +258,11 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
 
       {/* Messages area - newest at top (scrollable) */}
       <div
+        ref={(el) => {
+          messagesRef = el;
+          props.messagesViewportRef?.(el);
+        }}
+        data-testid="chat-messages-scroll"
         class="flex-1 p-4 space-y-4 overflow-y-auto"
         classList={{
           [sizeClasses().gap]: true,
@@ -232,7 +270,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
       >
         <For each={props.messages}>
           {(message) => (
-            <MessageBubble
+            <ChatMessageBubble
               message={message}
               agentId={props.agentId}
               onOpenAgentModal={props.onOpenAgentModal}
