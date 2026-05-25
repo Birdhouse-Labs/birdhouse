@@ -59,7 +59,7 @@ describe("agent-messaging token recording", () => {
   });
 
   describe("sendFirstMessage — token recording (blocking mode)", () => {
-    it("attaches only explicitly linked skills before sending the first message", async () => {
+    it("keeps explicitly linked skills as references before sending the first message", async () => {
       let capturedPrompt = "";
       const visibleSkills: Skill[] = [
         {
@@ -95,11 +95,7 @@ describe("agent-messaging token recording", () => {
         }),
       );
 
-      expect(capturedPrompt).toBe(`Use [docs helper](birdhouse:skill/find-docs) before you start
-
-<skill name="find-docs">
-# Find Docs
-</skill>`);
+      expect(capturedPrompt).toBe("Use [docs helper](birdhouse:skill/find-docs) before you start");
     });
 
     it("does not attach raw trigger phrase text without an explicit skill link", async () => {

@@ -2,19 +2,19 @@
 // ABOUTME: Supports user and assistant messages with markdown content and tool blocks.
 
 import Popover from "corvu/popover";
-import { Braces, Check, Copy, LibraryBig, MoreVertical, RotateCcw, Split } from "lucide-solid";
+import { Braces, Check, Copy, MoreVertical, RotateCcw, Split } from "lucide-solid";
 import { type Accessor, type Component, createMemo, createSignal, For, Show } from "solid-js";
 import type { BirdhouseAssistantMessageInfo, BirdhouseMessageInfo } from "../../../../server/src/harness/types";
 import { formatSmartTime } from "../../adapters/utils/time-utils";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useZIndex } from "../../contexts/ZIndexContext";
+import { useModalRoute } from "../../lib/routing";
 import { uiSize } from "../../theme";
 import type { Message } from "../../types/messages";
 import { isAgentEventBlock, isFileBlock, isReasoningBlock, isSystemMessage, isToolBlock } from "../../types/messages";
 import type { QuestionRequest } from "../../types/question";
 import { recordAgentView } from "../../utils/agent-navigation";
 import { copyToClipboard } from "../../utils/clipboard";
-import { extractSkillsFromXML, stripSkillXML } from "../../utils/skillAttachmentXml";
 import MarkdownRenderer from "../MarkdownRenderer";
 import AgentButton from "./AgentButton";
 import AgentToolCard from "./AgentToolCard";
@@ -27,7 +27,6 @@ import MessageBubbleContent from "./MessageBubbleContent";
 import MessageFileAttachments from "./MessageFileAttachments";
 import QuestionToolCard from "./QuestionToolCard";
 import ReasoningBlock from "./ReasoningBlock";
-import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
 import ToolCallCard from "./ToolCallCard";
 import AgentManagementCard from "./tools/AgentManagementCard";
 import DocumentationToolCard from "./tools/DocumentationToolCard";
@@ -68,11 +67,10 @@ const formatError = (
 
 export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
   const { workspaceId } = useWorkspace();
+  const { openModal } = useModalRoute();
   const baseZIndex = useZIndex();
   const isUser = () => props.message.role === "user";
   const [errorDialogOpen, setErrorDialogOpen] = createSignal(false);
-  const [skillDialogOpen, setSkillDialogOpen] = createSignal(false);
-  const [selectedSkillName, setSelectedSkillName] = createSignal<string | undefined>(undefined);
   const [isMenuOpen, setIsMenuOpen] = createSignal(false);
   const [showCopySuccess, setShowCopySuccess] = createSignal(false);
   const [showCopyJSONSuccess, setShowCopyJSONSuccess] = createSignal(false);
@@ -90,16 +88,6 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
   });
 
   const isAgentSent = createMemo(() => Boolean(senderInfo()?.agentTitle));
-
-  const attachedSkills = createMemo(() => {
-    if (props.message.role !== "user") return [];
-    return extractSkillsFromXML(props.message.content);
-  });
-
-  const cleanedContent = createMemo(() => {
-    if (props.message.role !== "user") return props.message.content;
-    return stripSkillXML(props.message.content);
-  });
 
   const sizeClasses = createMemo(() => {
     const size = uiSize();
@@ -127,10 +115,17 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
   const error = formatError(messageInfo);
   const fileAttachments = createMemo(() => props.message.blocks?.filter(isFileBlock) ?? []);
 
-  const copyableContent = createMemo(() => {
-    const mainContent = isUser() ? cleanedContent() : props.message.content;
-    return mainContent || null;
-  });
+  const copyableContent = createMemo(() => props.message.content || null);
+
+  const handleReferenceLinkClick = (reference: { type: "agent" | "skill"; identifier: string }) => {
+    if (reference.type === "agent") {
+      recordAgentView(reference.identifier);
+      props.onOpenAgentModal?.(reference.identifier);
+      return;
+    }
+
+    openModal("skill-library-v2", reference.identifier);
+  };
 
   const handleCopyContent = async () => {
     const content = copyableContent();
@@ -308,34 +303,15 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
             "max-w-[90%] md:max-w-[85%]": !shouldBePinned(),
           }}
         >
-          {renderActionsMenu(cleanedContent())}
+          {renderActionsMenu(props.message.content)}
 
           <MarkdownRenderer
-            content={cleanedContent()}
+            content={props.message.content}
             workspaceId={workspaceId}
-            onSkillLinkClick={(skillName) => {
-              if (attachedSkills().some((attachment) => attachment.name === skillName)) {
-                setSelectedSkillName(skillName);
-                setSkillDialogOpen(true);
-              }
-            }}
-            onReferenceLinkClick={(reference) => {
-              if (reference.type === "agent") {
-                recordAgentView(reference.identifier);
-                props.onOpenAgentModal?.(reference.identifier);
-              }
-            }}
+            onReferenceLinkClick={handleReferenceLinkClick}
           />
 
           <MessageFileAttachments attachments={fileAttachments()} />
-
-          <Show when={attachedSkills().length > 0}>
-            <div class="mt-2 mb-1 flex justify-end">
-              <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setSkillDialogOpen(true)}>
-                {attachedSkills().length} {attachedSkills().length === 1 ? "skill" : "skills"} attached
-              </Button>
-            </div>
-          </Show>
         </MessageBubbleContent>
       ) : isAgentSent() ? (
         <MessageBubbleContent
@@ -346,34 +322,15 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
             "max-w-[95%] md:max-w-[92.5%]": !shouldBePinned(),
           }}
         >
-          {renderActionsMenu(cleanedContent())}
+          {renderActionsMenu(props.message.content)}
 
           <MarkdownRenderer
-            content={cleanedContent()}
+            content={props.message.content}
             workspaceId={workspaceId}
-            onSkillLinkClick={(skillName) => {
-              if (attachedSkills().some((attachment) => attachment.name === skillName)) {
-                setSelectedSkillName(skillName);
-                setSkillDialogOpen(true);
-              }
-            }}
-            onReferenceLinkClick={(reference) => {
-              if (reference.type === "agent") {
-                recordAgentView(reference.identifier);
-                props.onOpenAgentModal?.(reference.identifier);
-              }
-            }}
+            onReferenceLinkClick={handleReferenceLinkClick}
           />
 
           <MessageFileAttachments attachments={fileAttachments()} />
-
-          <Show when={attachedSkills().length > 0}>
-            <div class="mt-2 mb-1 flex justify-start">
-              <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setSkillDialogOpen(true)}>
-                {attachedSkills().length} {attachedSkills().length === 1 ? "skill" : "skills"} attached
-              </Button>
-            </div>
-          </Show>
         </MessageBubbleContent>
       ) : (
         <MessageBubbleContent
@@ -393,12 +350,7 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
               content={props.message.content}
               workspaceId={workspaceId}
               {...(props.message.isStreaming !== undefined && { isStreaming: props.message.isStreaming })}
-              onReferenceLinkClick={(reference) => {
-                if (reference.type === "agent") {
-                  recordAgentView(reference.identifier);
-                  props.onOpenAgentModal?.(reference.identifier);
-                }
-              }}
+              onReferenceLinkClick={handleReferenceLinkClick}
             />
           </Show>
 
@@ -476,18 +428,6 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
           </Show>
         </MessageBubbleContent>
       )}
-
-      <SkillAttachmentsDialog
-        attachments={attachedSkills()}
-        open={skillDialogOpen()}
-        onClose={() => {
-          setSkillDialogOpen(false);
-          setSelectedSkillName(undefined);
-        }}
-        workspaceId={workspaceId}
-        {...(selectedSkillName() ? { initialSkillName: selectedSkillName() } : {})}
-      />
-
       <ContentDialog
         open={errorDialogOpen()}
         onOpenChange={setErrorDialogOpen}

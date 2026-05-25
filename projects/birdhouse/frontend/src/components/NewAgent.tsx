@@ -2,7 +2,7 @@
 // ABOUTME: Allows users to create agents with optional title and model selection
 
 import { useNavigate, useSearchParams } from "@solidjs/router";
-import { Hammer, LibraryBig, Lightbulb } from "lucide-solid";
+import { Hammer, Lightbulb } from "lucide-solid";
 import {
   type Component,
   createEffect,
@@ -16,7 +16,6 @@ import {
 import { useWorkspace } from "../contexts/WorkspaceContext";
 import { clearDraft, getDraft, saveDraft } from "../services/drafts-api";
 import { createAgent, fetchModels, type Model } from "../services/messages-api";
-import { previewSkillAttachments } from "../services/skill-attachments-api";
 import type { ComposerAttachment } from "../types/composer-attachments";
 import {
   createComposerAttachments,
@@ -24,13 +23,11 @@ import {
   restoreComposerAttachments,
 } from "../utils/composerAttachments";
 import { createDebouncedSave } from "../utils/draft-persistence";
-import { extractSkillLinkNames } from "../utils/skillLinks";
 import AutoGrowTextarea from "./ui/AutoGrowTextarea";
 import Button from "./ui/Button";
 import { Combobox, type ComboboxOption, type ComboboxRenderFn } from "./ui/Combobox";
 import ComposerAttachmentDropZone from "./ui/ComposerAttachmentDropZone";
 import ComposerImageAttachments from "./ui/ComposerImageAttachments";
-import SkillAttachmentsDialog from "./ui/SkillAttachmentsDialog";
 
 const STORAGE_KEY = "birdhouse:last-selected-model";
 
@@ -97,31 +94,6 @@ const NewAgent: Component = () => {
     if (!isLoaded) return;
     draftSave.schedule();
   });
-
-  const linkedSkillNames = createMemo(() => extractSkillLinkNames(messageText().trim()));
-
-  const [skillAttachments] = createResource(
-    () => {
-      const text = messageText().trim();
-      if (!text || linkedSkillNames().length === 0) {
-        return null;
-      }
-
-      return text;
-    },
-    (text) => previewSkillAttachments(workspaceId, text),
-  );
-  const visibleSkillAttachments = createMemo(() => {
-    if (linkedSkillNames().length === 0 || !messageText().trim() || skillAttachments.error) {
-      return [];
-    }
-
-    return skillAttachments() ?? [];
-  });
-  const skillCount = createMemo(() => {
-    return visibleSkillAttachments().length;
-  });
-  const [skillDialogOpen, setSkillDialogOpen] = createSignal(false);
 
   // Handle URL param pre-fill or load saved draft on mount
   onMount(() => {
@@ -364,27 +336,6 @@ const NewAgent: Component = () => {
         >
           {isCreating() ? "Launching..." : "Launch Agent"}
         </Button>
-
-        {/* Skill indicator - spacer button prevents layout jump */}
-        <div class="flex justify-center">
-          <Show
-            when={skillCount() > 0}
-            fallback={
-              <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} class="invisible">
-                Launching with 1 skill
-              </Button>
-            }
-          >
-            <Button
-              variant="tertiary"
-              leftIcon={<LibraryBig size={16} />}
-              onClick={() => setSkillDialogOpen(true)}
-              data-ph-reveal
-            >
-              Launching with {skillCount()} {skillCount() === 1 ? "skill" : "skills"}
-            </Button>
-          </Show>
-        </div>
       </div>
 
       {/* Loading Overlay - covers entire container */}
@@ -394,14 +345,6 @@ const NewAgent: Component = () => {
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent" />
         </div>
       </Show>
-
-      {/* Skill attachments dialog */}
-      <SkillAttachmentsDialog
-        attachments={visibleSkillAttachments()}
-        open={skillDialogOpen()}
-        onClose={() => setSkillDialogOpen(false)}
-        workspaceId={workspaceId}
-      />
     </div>
   );
 };

@@ -31,4 +31,23 @@ describe("MarkdownRenderer", () => {
       expect(onReferenceLinkClick).not.toHaveBeenCalled();
     });
   });
+
+  it("sends skill reference clicks through the global reference callback", () => {
+    const onReferenceLinkClick = vi.fn();
+
+    render(() => (
+      <MarkdownRenderer
+        content="Use [docs helper](birdhouse:skill/find-docs) here."
+        onReferenceLinkClick={onReferenceLinkClick}
+      />
+    ));
+
+    return waitFor(() => {
+      fireEvent.click(screen.getByRole("button", { name: /docs helper/i }));
+      expect(onReferenceLinkClick).toHaveBeenCalledWith({
+        type: "skill",
+        identifier: "find-docs",
+      });
+    });
+  });
 });

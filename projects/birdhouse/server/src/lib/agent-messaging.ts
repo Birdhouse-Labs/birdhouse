@@ -6,7 +6,6 @@ import type { AgentHarness, BirdhouseFilePart } from "../harness";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "./birdhouse-system-prompt";
 import { buildPromptParts } from "./message-parts";
 import { parseModelId } from "./model-validator";
-import { buildSkillAttachmentPreview, enrichMessageWithSkillAttachments } from "./skill-attachments";
 
 export interface SendFirstMessageOptions {
   agentId: string;
@@ -46,26 +45,14 @@ export async function sendFirstMessage(
   const { agentsDB, log, telemetry } = deps;
   const harness = harnessArg ?? getDefaultHarness(deps);
 
-  const visibleSkills = (await harness.capabilities.skills?.listSkills()) ?? [];
-  const enrichedPrompt = enrichMessageWithSkillAttachments(
-    prompt,
-    buildSkillAttachmentPreview(
-      prompt,
-      visibleSkills.map((skill) => ({
-        name: skill.name,
-        content: skill.content,
-      })),
-    ),
-  );
-
   const { providerID, modelID } = parseModelId(model);
-  const promptParts = buildPromptParts(enrichedPrompt, attachments, senderMetadata);
+  const promptParts = buildPromptParts(prompt, attachments, senderMetadata);
 
   if (wait) {
     // Blocking mode: Wait for agent to complete before returning
     log.server.info({ agent_id: agentId, session_id: sessionId, wait }, "Sending first message (blocking)");
 
-    const messageResponse = await harness.sendMessage(sessionId, enrichedPrompt, {
+    const messageResponse = await harness.sendMessage(sessionId, prompt, {
       model: { providerID, modelID },
       system: BIRDHOUSE_SYSTEM_PROMPT,
       parts: promptParts,
@@ -89,7 +76,7 @@ export async function sendFirstMessage(
     log.server.info({ agent_id: agentId, session_id: sessionId, wait }, "Sending first message (async)");
 
     harness
-      .sendMessage(sessionId, enrichedPrompt, {
+      .sendMessage(sessionId, prompt, {
         model: { providerID, modelID },
         system: BIRDHOUSE_SYSTEM_PROMPT,
         parts: promptParts,

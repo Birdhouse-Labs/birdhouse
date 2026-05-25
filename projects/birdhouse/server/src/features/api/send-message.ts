@@ -11,7 +11,6 @@ import { getWorkspaceEventBus } from "../../lib/birdhouse-event-bus";
 import { BIRDHOUSE_SYSTEM_PROMPT } from "../../lib/birdhouse-system-prompt";
 import { buildPromptParts, parseFileAttachments } from "../../lib/message-parts";
 import { parseModelId } from "../../lib/model-validator";
-import { buildSkillAttachmentPreview, enrichMessageWithSkillAttachments } from "../../lib/skill-attachments";
 import { syncAgentTitle } from "../../lib/sync-agent-title";
 import { generateTitle as generateTitleService } from "../../lib/title-generator";
 import "../../types/context";
@@ -57,17 +56,6 @@ export async function sendMessage(
   }
 
   const sourceHarness = getHarnessForAgent(deps, sourceAgent);
-  const visibleSkills = (await sourceHarness.capabilities.skills?.listSkills()) ?? [];
-  const enrichedText = enrichMessageWithSkillAttachments(
-    rawText,
-    buildSkillAttachmentPreview(
-      rawText,
-      visibleSkills.map((skill) => ({
-        name: skill.name,
-        content: skill.content,
-      })),
-    ),
-  );
 
   // Determine target agent (clone if requested, otherwise use original)
   let targetAgent: AgentRow = sourceAgent;
@@ -276,7 +264,7 @@ export async function sendMessage(
     {
       agentId: targetAgent.id,
       sessionId: targetAgent.session_id,
-      textLength: enrichedText.length,
+      textLength: rawText.length,
       model: targetAgent.model,
       wait: shouldWait,
       isClone: !!clonedAgent,
@@ -292,7 +280,7 @@ export async function sendMessage(
     return c.json({ error: `Invalid model format in agent record: ${targetAgent.model}` }, 500);
   }
 
-  const messageParts = buildPromptParts(enrichedText, requestAttachments, metadata);
+  const messageParts = buildPromptParts(rawText, requestAttachments, metadata);
 
   if (messageParts.length === 0) {
     return c.json({ error: "Message must include text or attachments" }, 400);
@@ -302,7 +290,7 @@ export async function sendMessage(
     // Async mode: Fire-and-forget (detach from the process)
     // Build collaboration context if tagged agents are present
     targetHarness
-      .sendMessage(targetAgent.session_id, enrichedText, {
+      .sendMessage(targetAgent.session_id, rawText, {
         model: { providerID, modelID },
         agent: agentName,
         system: BIRDHOUSE_SYSTEM_PROMPT,
@@ -343,7 +331,7 @@ export async function sendMessage(
     return c.json(response);
   }
 
-  const messageResponse = await targetHarness.sendMessage(targetAgent.session_id, enrichedText, {
+  const messageResponse = await targetHarness.sendMessage(targetAgent.session_id, rawText, {
     model: { providerID, modelID },
     agent: agentName,
     system: BIRDHOUSE_SYSTEM_PROMPT,

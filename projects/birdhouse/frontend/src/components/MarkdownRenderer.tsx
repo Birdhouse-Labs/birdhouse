@@ -33,7 +33,6 @@ export interface MarkdownRendererProps {
   isStreaming?: boolean;
   /** Workspace ID for agent links. If not provided, agent links won't work. */
   workspaceId?: string;
-  onSkillLinkClick?: (skillName: string) => void;
   onReferenceLinkClick?: (
     reference: GlobalReference,
     modifiers?: {
@@ -274,11 +273,6 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
     if (target.hasAttribute("data-skill-link")) {
       e.preventDefault();
       const skillName = target.getAttribute("data-skill-link");
-
-      if (skillName && props.onSkillLinkClick) {
-        props.onSkillLinkClick(skillName);
-        return;
-      }
 
       if (skillName && props.onReferenceLinkClick) {
         props.onReferenceLinkClick({

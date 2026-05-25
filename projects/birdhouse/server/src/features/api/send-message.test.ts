@@ -38,7 +38,7 @@ describe("API send-message with clone_and_send", () => {
   });
 
   describe("clone_and_send events", () => {
-    test("attaches only explicitly linked skills on send", async () => {
+    test("keeps explicitly linked skills as references on send", async () => {
       const sourceAgent = createRootAgent(agentsDB, {
         id: "agent_skill_send",
         session_id: "ses_skill_send",
@@ -116,11 +116,7 @@ describe("API send-message with clone_and_send", () => {
         expect(response.status).toBe(200);
       });
 
-      expect(capturedPrompt).toBe(`Use [docs helper](birdhouse:skill/find-docs) before replying
-
-<skill name="find-docs">
-# Find Docs
-</skill>`);
+      expect(capturedPrompt).toBe("Use [docs helper](birdhouse:skill/find-docs) before replying");
     });
 
     test("includes pasted image and pdf attachments as file parts", async () => {
