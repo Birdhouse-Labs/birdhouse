@@ -7,7 +7,6 @@ import { getDefaultHarness } from "../dependencies";
 import { getWorkspaceEventBus } from "../lib/birdhouse-event-bus";
 import { getDepsFromContext } from "../lib/context-deps";
 import type { DataDB } from "../lib/data-db";
-import { buildSkillAttachmentPreview } from "../lib/skill-attachments";
 import {
   findSkillByName,
   revealDirectoryInFileManager,
@@ -41,32 +40,6 @@ function validateTriggerPhrases(value: unknown): { ok: true; triggerPhrases: str
 
 export function createSkillRoutes(dataDb: DataDB) {
   const app = new Hono();
-
-  app.post("/attachments/preview", async (c) => {
-    const harness = getDefaultHarness(getDepsFromContext(c));
-    const skillsCapability = harness.capabilities.skills;
-
-    if (!skillsCapability) {
-      return c.json({ error: "Skills not supported by harness" }, 501);
-    }
-
-    const body = await c.req.json();
-
-    if (typeof body.text !== "string") {
-      return c.json({ error: "text is required and must be a string" }, 400);
-    }
-
-    const skills = await skillsCapability.listSkills();
-    const attachments = buildSkillAttachmentPreview(
-      body.text,
-      skills.map((skill) => ({
-        name: skill.name,
-        content: skill.content,
-      })),
-    );
-
-    return c.json({ attachments });
-  });
 
   app.get("/", async (c) => {
     const harness = getDefaultHarness(getDepsFromContext(c));

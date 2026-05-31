@@ -1279,6 +1279,8 @@ describe("AAPI Agent Routes", () => {
         expect(capturedSystemPrompt).toContain("Agent Management Tools");
         expect(capturedSystemPrompt).toContain("agent_create");
         expect(capturedSystemPrompt).toContain("birdhouse:model/");
+        expect(capturedSystemPrompt).toContain("birdhouse:skill/");
+        expect(capturedSystemPrompt).toContain("canonical skill id");
       });
     });
 

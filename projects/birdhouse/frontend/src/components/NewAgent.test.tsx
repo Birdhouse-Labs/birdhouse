@@ -45,10 +45,6 @@ vi.mock("../services/messages-api", () => ({
   fetchModels: fetchModelsMock,
 }));
 
-vi.mock("../services/skill-attachments-api", () => ({
-  previewSkillAttachments: vi.fn(async () => []),
-}));
-
 vi.mock("../utils/draft-persistence", () => ({
   createDebouncedSave: (callback: () => void) => {
     const controller = { pending: false };
@@ -100,10 +96,6 @@ vi.mock("./ui/ComposerAttachmentDropZone", () => ({
 }));
 
 vi.mock("./ui/ComposerImageAttachments", () => ({
-  default: () => null,
-}));
-
-vi.mock("./ui/SkillAttachmentsDialog", () => ({
   default: () => null,
 }));
 
@@ -176,5 +168,22 @@ describe("NewAgent draft persistence", () => {
     rendered.unmount();
 
     expect(saveDraftMock).not.toHaveBeenCalled();
+  });
+
+  it("does not show a separate skill attachment preview for inline skill references", async () => {
+    render(() => <NewAgent />);
+
+    await waitFor(() => {
+      expect(getDraftMock).toHaveBeenCalledWith("ws_test", "new-agent");
+    });
+
+    const textbox = screen.getByRole("textbox", { name: "What would you like help with?" });
+
+    fireEvent.input(textbox, {
+      currentTarget: { value: "[docs helper](birdhouse:skill/find-docs)" },
+      target: { value: "[docs helper](birdhouse:skill/find-docs)" },
+    });
+
+    expect(screen.queryByRole("button", { name: /Launching with/i })).not.toBeInTheDocument();
   });
 });

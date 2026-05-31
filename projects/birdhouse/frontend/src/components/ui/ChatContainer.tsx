@@ -1,32 +1,17 @@
 // ABOUTME: Chat container with input at top and message list below (newest-at-top architecture)
 // ABOUTME: Orchestrates message rendering and input handling
 
-import { LibraryBig, Network, Split, X } from "lucide-solid";
-import {
-  type Accessor,
-  type Component,
-  createEffect,
-  createMemo,
-  createResource,
-  createSignal,
-  For,
-  onCleanup,
-  Show,
-} from "solid-js";
-import { useWorkspace } from "../../contexts/WorkspaceContext";
+import { Network, Split, X } from "lucide-solid";
+import { type Accessor, type Component, createEffect, createMemo, For, onCleanup, Show } from "solid-js";
 import { findPendingAssistant, isMessageQueued } from "../../domain/message-queue";
-import { previewSkillAttachments } from "../../services/skill-attachments-api";
 import { uiSize } from "../../theme";
 import type { ComposerAttachment } from "../../types/composer-attachments";
 import type { Message } from "../../types/messages";
 import type { QuestionRequest } from "../../types/question";
-import { extractSkillLinkNames } from "../../utils/skillLinks";
 import AutoGrowTextarea from "./AutoGrowTextarea";
-import Button from "./Button";
 import ChatMessageBubble from "./ChatMessageBubble";
 import ComposerAttachmentDropZone from "./ComposerAttachmentDropZone";
 import ComposerImageAttachments from "./ComposerImageAttachments";
-import SkillAttachmentsDialog from "./SkillAttachmentsDialog";
 
 export interface ChatContainerProps {
   messages: Message[];
@@ -56,7 +41,6 @@ export interface ChatContainerProps {
 }
 
 export const ChatContainer: Component<ChatContainerProps> = (props) => {
-  const { workspaceId } = useWorkspace();
   let messagesRef: HTMLDivElement | undefined;
   const sizeClasses = createMemo(() => {
     const size = uiSize();
@@ -66,30 +50,6 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
     };
   });
 
-  const linkedSkillNames = createMemo(() => extractSkillLinkNames(props.inputValue.trim()));
-
-  const [skillAttachments] = createResource(
-    () => {
-      const text = props.inputValue.trim();
-      if (!text || linkedSkillNames().length === 0) {
-        return null;
-      }
-
-      return text;
-    },
-    (text) => previewSkillAttachments(workspaceId, text),
-  );
-  const visibleSkillAttachments = createMemo(() => {
-    if (linkedSkillNames().length === 0 || !props.inputValue.trim() || skillAttachments.error) {
-      return [];
-    }
-
-    return skillAttachments() ?? [];
-  });
-  const skillCount = createMemo(() => {
-    return visibleSkillAttachments().length;
-  });
-  const [dialogOpen, setDialogOpen] = createSignal(false);
   const hasDraftContent = createMemo(() => !!props.inputValue.trim() || (props.attachments?.length ?? 0) > 0);
 
   const StopTreeModeIcon: Component = () => <Network size={18} />;
@@ -237,24 +197,7 @@ export const ChatContainer: Component<ChatContainerProps> = (props) => {
             </div>
           </Show>
         </div>
-
-        {/* Skill count button - appears below input in the padding area */}
-        <Show when={skillCount() > 0}>
-          <div class="flex justify-end mt-2 -mb-1">
-            <Button variant="tertiary" leftIcon={<LibraryBig size={16} />} onClick={() => setDialogOpen(true)}>
-              {skillCount()} {skillCount() === 1 ? "skill" : "skills"}
-            </Button>
-          </div>
-        </Show>
       </div>
-
-      {/* Skill Attachments Dialog */}
-      <SkillAttachmentsDialog
-        attachments={visibleSkillAttachments()}
-        open={dialogOpen()}
-        onClose={() => setDialogOpen(false)}
-        workspaceId={workspaceId}
-      />
 
       {/* Messages area - newest at top (scrollable) */}
       <div

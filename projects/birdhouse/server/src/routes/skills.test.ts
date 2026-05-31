@@ -44,13 +44,6 @@ interface SkillDetailResponse {
   metadata: Record<string, unknown>;
 }
 
-interface SkillAttachmentsPreviewResponse {
-  attachments: Array<{
-    name: string;
-    content: string;
-  }>;
-}
-
 function createWorkspace(workspaceId: string, directory: string): Workspace {
   const now = new Date().toISOString();
   return {
@@ -407,90 +400,6 @@ trigger_phrases:
       });
 
       cleanup();
-    });
-  });
-
-  test("previews only explicitly linked skill attachments using the shared server parser", async () => {
-    const workspace = createWorkspace("ws_1", "/repo/current-workspace");
-    testDb.insertWorkspace(workspace);
-    testDb.setSkillTriggerPhrases("find-docs", ["docs please"]);
-    testDb.setSkillTriggerPhrases("git/spotlight-worktree", ["spotlight this branch"]);
-
-    const deps = await createTestDeps({
-      listSkills: async () =>
-        [
-          {
-            name: "find-docs",
-            description: "Retrieve current library docs.",
-            location: "/Users/test/.claude/skills/find-docs/SKILL.md",
-            content: "# Find Docs",
-          },
-          {
-            name: "git/spotlight-worktree",
-            description: "Keep a main clone aligned with a worktree.",
-            location: "/repo/current-workspace/.agents/skills/git/spotlight-worktree/SKILL.md",
-            content: "# Spotlight",
-          },
-        ] satisfies Skill[],
-    });
-
-    await withDeps(deps, async () => {
-      const app = await createSkillsApp(testDb, workspace);
-      const response = await app.request("/attachments/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: "Use [docs helper](birdhouse:skill/find-docs) and [spotlight](birdhouse:skill/git%2Fspotlight-worktree).",
-        }),
-      });
-
-      expect(response.status).toBe(200);
-      const data = (await response.json()) as SkillAttachmentsPreviewResponse;
-      expect(data).toEqual({
-        attachments: [
-          {
-            name: "find-docs",
-            content: "# Find Docs",
-          },
-          {
-            name: "git/spotlight-worktree",
-            content: "# Spotlight",
-          },
-        ],
-      });
-    });
-  });
-
-  test("does not preview raw trigger phrase text without explicit skill links", async () => {
-    const workspace = createWorkspace("ws_1", "/repo/current-workspace");
-    testDb.insertWorkspace(workspace);
-    testDb.setSkillTriggerPhrases("find-docs", ["docs please"]);
-
-    const deps = await createTestDeps({
-      listSkills: async () =>
-        [
-          {
-            name: "find-docs",
-            description: "Retrieve current library docs.",
-            location: "/Users/test/.claude/skills/find-docs/SKILL.md",
-            content: "# Find Docs",
-          },
-        ] satisfies Skill[],
-    });
-
-    await withDeps(deps, async () => {
-      const app = await createSkillsApp(testDb, workspace);
-      const response = await app.request("/attachments/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: "docs please before you start",
-        }),
-      });
-
-      expect(response.status).toBe(200);
-      const data = (await response.json()) as SkillAttachmentsPreviewResponse;
-      expect(data).toEqual({ attachments: [] });
     });
   });
 

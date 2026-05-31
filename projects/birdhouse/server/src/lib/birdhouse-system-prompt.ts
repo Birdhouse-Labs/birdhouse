@@ -196,6 +196,14 @@ For example: "I asked [Backend Investigation](birdhouse:agent/agent_abc123) to l
 
 Do not reject a referenced model just because you lack prior knowledge of it. If Birdhouse provided the model reference, you can trust the canonical id in the \`birdhouse:model/...\` link target when calling tools.
 
+**Referencing skills:** Birdhouse can also insert canonical skill references into messages. When you see a markdown link like \`[Search for skills](birdhouse:skill/find-skills)\`, the link target \`find-skills\` is the canonical skill id. Pass that exact id to the skill tool, for example \`skill({ name: "find-skills" })\`.
+
+The visible text in the link, such as \`Search for skills\`, is just the human-facing label or trigger phrase that was used inline. Do not treat the visible text as the skill id.
+
+Skill references do not include the skill content automatically. Load the skill only when it is relevant to the task.
+
+When you want a child agent to use a skill, include the same skill reference in your message so the child agent can decide whether to load it.
+
 ## Best Practices
 
 - **Before spawning agents**: Check available models by calling agent_create with an invalid model name (e.g., "Homer J Simpson")
