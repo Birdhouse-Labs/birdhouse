@@ -3,7 +3,6 @@
 
 import { Network, Split, X } from "lucide-solid";
 import { type Accessor, type Component, createEffect, createMemo, For, onCleanup, Show } from "solid-js";
-import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { findPendingAssistant, isMessageQueued } from "../../domain/message-queue";
 import { uiSize } from "../../theme";
 import type { ComposerAttachment } from "../../types/composer-attachments";
@@ -42,7 +41,6 @@ export interface ChatContainerProps {
 }
 
 export const ChatContainer: Component<ChatContainerProps> = (props) => {
-  useWorkspace();
   let messagesRef: HTMLDivElement | undefined;
   const sizeClasses = createMemo(() => {
     const size = uiSize();
