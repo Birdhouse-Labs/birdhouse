@@ -121,14 +121,14 @@ describe("SkillListPane", () => {
     render(() => <Wrapper />);
 
     await waitFor(() => {
-      expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
     });
 
     scrollIntoView.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "Select release notes" }));
 
     await waitFor(() => {
-      expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
     });
   });
 });

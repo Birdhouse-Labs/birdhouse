@@ -51,7 +51,7 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
       }
 
       queueMicrotask(() => {
-        selectedSkillButton?.scrollIntoView({ block: "nearest" });
+        selectedSkillButton?.scrollIntoView({ block: "start" });
       });
     }),
   );
