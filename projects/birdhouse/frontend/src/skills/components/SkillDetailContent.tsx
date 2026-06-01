@@ -237,7 +237,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
       </DetailSection>
 
       <Show when={props.skill.files.length > 0}>
-        <DetailSection title="Other Files in Skill Directory" defaultExpanded={false}>
+        <DetailSection title="Other Files in Skill Directory" defaultExpanded={true}>
           <div class="flex flex-wrap gap-2">
             <For each={props.skill.files}>
               {(file) => <span class="text-sm font-mono text-text-primary break-all">{file}</span>}
@@ -246,7 +246,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
         </DetailSection>
       </Show>
 
-      <DetailSection title="SKILL.md Content" defaultExpanded={false}>
+      <DetailSection title="SKILL.md Content" defaultExpanded={true}>
         <div class={`rounded-xl ${cardSurfaceFlat} overflow-hidden`}>
           <div class="p-6">
             <MarkdownRenderer content={props.skill.prompt} />

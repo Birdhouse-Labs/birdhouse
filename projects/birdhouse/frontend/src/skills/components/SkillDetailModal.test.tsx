@@ -28,7 +28,7 @@ describe("SkillDetailModal", () => {
     files: ["examples/basic.md", "templates/query.txt"],
   };
 
-  it("renders shared trigger phrase scope and skill-based XML preview", async () => {
+  it("renders shared trigger phrase scope with skill files and content expanded by default", async () => {
     render(() => (
       <SkillDetailModal
         open={true}
@@ -53,14 +53,8 @@ describe("SkillDetailModal", () => {
     expect(screen.getByText("Choose the phrases that suggest this skill while you type.")).toBeInTheDocument();
     expect(screen.getByText("Other Files in Skill Directory")).toBeInTheDocument();
     expect(screen.getByText("SKILL.md Content")).toBeInTheDocument();
-    expect(screen.queryByText("examples/basic.md")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Find Docs" })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Other Files in Skill Directory" }));
     expect(screen.getByText("examples/basic.md")).toBeInTheDocument();
     expect(screen.getByText("templates/query.txt")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "SKILL.md Content" }));
     expect(screen.getByRole("heading", { name: "Find Docs" })).toBeInTheDocument();
   });
 
