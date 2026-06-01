@@ -145,4 +145,17 @@ describe("AgentModal nested dialog layers", () => {
     expect(liveMessagesLifecycle.mounts.get("agent-1")).toBe(1);
     expect(liveMessagesLifecycle.unmounts.get("agent-1") ?? 0).toBe(0);
   });
+
+  it("does not enable document scroll locking for agent modals", async () => {
+    render(() => <RecursiveModalHarness />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("agent-modal-agent-1")).toBeInTheDocument();
+    });
+
+    expect(document.body.style.overflow).toBe("");
+    expect(document.body.style.paddingRight).toBe("");
+    expect(document.documentElement.style.overflow).toBe("");
+    expect(document.documentElement.style.paddingRight).toBe("");
+  });
 });

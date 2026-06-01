@@ -37,6 +37,8 @@ const AgentModal: Component<AgentModalProps> = (props) => {
       closeOnEscapeKeyDown={props.isTop}
       closeOnOutsidePointer={false}
       closeOnOutsideFocus={false}
+      preventScroll={false}
+      restoreScrollPosition={false}
     >
       <Dialog.Portal mount={document.body}>
         <Dialog.Overlay class="fixed inset-0 bg-black/20" style={{ "z-index": baseZIndex }} />

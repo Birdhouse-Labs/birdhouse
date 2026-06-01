@@ -3,7 +3,7 @@
 
 import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
 import { createMemo, createSignal } from "solid-js";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { filterSkills } from "../utils/skill-library-filtering";
 import SkillListPane from "./SkillListPane";
 
@@ -33,6 +33,10 @@ const skills = [
 ];
 
 describe("SkillListPane", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("updates search and filter controls while showing a flat filtered list", async () => {
     const onSelectSkill = vi.fn();
 
@@ -86,5 +90,45 @@ describe("SkillListPane", () => {
     fireEvent.click(screen.getByRole("button", { name: /release-notes-from-branch/i }));
 
     expect(onSelectSkill).toHaveBeenCalledWith("release-notes-from-branch");
+  });
+
+  it("scrolls the selected skill into view", async () => {
+    const scrollIntoView = vi.fn();
+    vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(scrollIntoView);
+
+    const Wrapper = () => {
+      const [selectedSkillId, setSelectedSkillId] = createSignal<string | null>(skills[0]?.id ?? null);
+
+      return (
+        <>
+          <button type="button" onClick={() => setSelectedSkillId("release-notes-from-branch")}>
+            Select release notes
+          </button>
+          <SkillListPane
+            skills={skills}
+            filteredSkills={skills}
+            searchQuery=""
+            scopeFilter="all"
+            selectedSkillId={selectedSkillId()}
+            onSearchQueryChange={() => {}}
+            onScopeFilterChange={() => {}}
+            onSelectSkill={setSelectedSkillId}
+          />
+        </>
+      );
+    };
+
+    render(() => <Wrapper />);
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
+    });
+
+    scrollIntoView.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Select release notes" }));
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
+    });
   });
 });
