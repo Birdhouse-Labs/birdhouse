@@ -3,7 +3,7 @@
 
 import Popover from "corvu/popover";
 import { Filter, Search } from "lucide-solid";
-import { type Component, For, Show } from "solid-js";
+import { type Component, createEffect, For, on, Show } from "solid-js";
 import { Button } from "../../components/ui";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
@@ -23,6 +23,7 @@ export interface SkillListPaneProps {
 
 const SkillListPane: Component<SkillListPaneProps> = (props) => {
   const baseZIndex = useZIndex();
+  let selectedSkillButton: HTMLButtonElement | undefined;
 
   const resultCountLabel = () => {
     const count = props.filteredSkills.length;
@@ -42,6 +43,18 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
     { value: "workspace", label: "Workspace" },
     { value: "global", label: "Global" },
   ];
+
+  createEffect(
+    on([() => props.selectedSkillId, () => props.filteredSkills], ([selectedSkillId]) => {
+      if (!selectedSkillId) {
+        return;
+      }
+
+      queueMicrotask(() => {
+        selectedSkillButton?.scrollIntoView({ block: "nearest" });
+      });
+    }),
+  );
 
   return (
     <div class="flex flex-col h-full overflow-hidden">
@@ -129,6 +142,11 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
             {(skill) => (
               <button
                 type="button"
+                ref={(el) => {
+                  if (props.selectedSkillId === skill.id) {
+                    selectedSkillButton = el;
+                  }
+                }}
                 onClick={() => props.onSelectSkill(skill.id)}
                 class="w-full text-left px-3 py-4 transition-colors border-b border-border-muted/40 last:border-b-0"
                 classList={{
