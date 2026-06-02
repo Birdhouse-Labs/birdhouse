@@ -28,7 +28,7 @@ describe("SkillDetailModal", () => {
     files: ["examples/basic.md", "templates/query.txt"],
   };
 
-  it("renders shared trigger phrase scope with skill files and content expanded by default", async () => {
+  it("renders supporting files as an expanded list by default", async () => {
     render(() => (
       <SkillDetailModal
         open={true}
@@ -51,8 +51,15 @@ describe("SkillDetailModal", () => {
     expect(screen.getByText("Location")).toBeInTheDocument();
     expect(screen.getByText("~/.claude/skills/find-docs/SKILL.md")).toBeInTheDocument();
     expect(screen.getByText("Choose the phrases that suggest this skill while you type.")).toBeInTheDocument();
-    expect(screen.getByText("Other Files in Skill Directory")).toBeInTheDocument();
+    expect(screen.getByText("Supporting Files")).toBeInTheDocument();
     expect(screen.getByText("SKILL.md Content")).toBeInTheDocument();
+    expect(screen.getByText("Additional files found alongside SKILL.md.")).toBeInTheDocument();
+
+    const fileList = screen.getByRole("list");
+    const fileItems = screen.getAllByRole("listitem");
+
+    expect(fileList).toBeInTheDocument();
+    expect(fileItems).toHaveLength(2);
     expect(screen.getByText("examples/basic.md")).toBeInTheDocument();
     expect(screen.getByText("templates/query.txt")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Find Docs" })).toBeInTheDocument();

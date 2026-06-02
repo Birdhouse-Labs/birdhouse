@@ -237,12 +237,20 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
       </DetailSection>
 
       <Show when={props.skill.files.length > 0}>
-        <DetailSection title="Other Files in Skill Directory" defaultExpanded={true}>
-          <div class="flex flex-wrap gap-2">
+        <DetailSection
+          title="Supporting Files"
+          description="Additional files found alongside SKILL.md."
+          defaultExpanded={true}
+        >
+          <ul class="space-y-2">
             <For each={props.skill.files}>
-              {(file) => <span class="text-sm font-mono text-text-primary break-all">{file}</span>}
+              {(file) => (
+                <li class="rounded-lg border border-border-muted/70 bg-surface-overlay/60 px-3 py-2 font-mono text-sm text-text-primary break-all">
+                  {file}
+                </li>
+              )}
             </For>
-          </div>
+          </ul>
         </DetailSection>
       </Show>
 
