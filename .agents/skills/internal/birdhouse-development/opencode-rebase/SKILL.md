@@ -88,7 +88,16 @@ You may use `git cherry-pick` when a commit applies cleanly and you have inspect
    - Prefer `git cherry-pick` when it applies cleanly and the behavior is still obviously correct.
    - Port manually when the commit conflicts or the surrounding implementation has moved enough that cherry-pick would hide important judgment.
    - **Before writing new test code**, read an existing test in the same directory to learn the current test patterns and helper utilities. The test infrastructure changes across upstream versions; copying the wrong pattern wastes a CI cycle.
-   - **If the commit adds a server route**, also update the SDK type and client generation files (`packages/sdk/js/src/v2/gen/types.gen.ts` and `sdk.gen.ts`). Route additions are never complete without matching SDK types, even if the old diff didn't show those changes. Do not regenerate these files by running the SDK build script — that requires a running opencode server and would overwrite all other in-progress changes. Port the SDK changes manually the same way you port everything else: read what the old diff added, apply the equivalent additions to the new file.
+   - **If the commit adds a server route**, regenerate the SDK files after porting all server-side changes for that commit. Do not hand-edit the gen files — run the generator instead so the output is guaranteed correct. Use the clean-env wrapper with `OPENCODE_XDG_*` set so the generator's sqlite migration writes to a temp dir and does not touch any live opencode data:
+     ```bash
+     tmp_data="$(mktemp -d)" tmp_cfg="$(mktemp -d)" tmp_state="$(mktemp -d)" tmp_cache="$(mktemp -d)"
+     env OPENCODE_XDG_DATA_HOME="$tmp_data" \
+         OPENCODE_XDG_CONFIG_HOME="$tmp_cfg" \
+         OPENCODE_XDG_STATE_HOME="$tmp_state" \
+         OPENCODE_XDG_CACHE_HOME="$tmp_cache" \
+       bun ./packages/sdk/js/script/build.ts
+     ```
+     Run this from the worktree root. The generator calls `bun dev generate` inside `packages/opencode`, which builds the OpenAPI spec from the in-memory route registry — it does not start a server or bind any port. The only side effect is a one-time sqlite migration to the temp dirs. After generation, `git diff packages/sdk` shows exactly what changed.
    - Run CI.
    - Commit with the same subject line.
    - Copy the original commit body for non-trivial commits and update details that changed.
@@ -161,6 +170,7 @@ You may use `git cherry-pick` when a commit applies cleanly and you have inspect
    - Stop and ask the human to review the visible `fixup!` commit stack before any autosquash step.
    - Only after approval, run autosquash so the fixups fold into their targets in one pass.
    - Keep prompt cleanup commits separate; they help future agents find prompt drift.
+   - Run the SDK generator one final time as a sanity check. If `git diff packages/sdk` is empty after generation, the hand-ported and generated outputs matched throughout the rebase. If there is a diff, apply it as a fixup before finalizing.
    - Update the base tag in `BIRDHOUSE.md`.
    - Verify `git status --short` is empty.
 
