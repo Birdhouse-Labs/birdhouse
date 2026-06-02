@@ -88,7 +88,7 @@ You may use `git cherry-pick` when a commit applies cleanly and you have inspect
    - Prefer `git cherry-pick` when it applies cleanly and the behavior is still obviously correct.
    - Port manually when the commit conflicts or the surrounding implementation has moved enough that cherry-pick would hide important judgment.
    - **Before writing new test code**, read an existing test in the same directory to learn the current test patterns and helper utilities. The test infrastructure changes across upstream versions; copying the wrong pattern wastes a CI cycle.
-   - **If the commit adds a server route**, also update the SDK type and client generation files (`packages/sdk/js/src/v2/gen/types.gen.ts` and `sdk.gen.ts`). Route additions are never complete without matching SDK types, even if the old diff didn't show those changes.
+   - **If the commit adds a server route**, also update the SDK type and client generation files (`packages/sdk/js/src/v2/gen/types.gen.ts` and `sdk.gen.ts`). Route additions are never complete without matching SDK types, even if the old diff didn't show those changes. Do not regenerate these files by running the SDK build script — that requires a running opencode server and would overwrite all other in-progress changes. Port the SDK changes manually the same way you port everything else: read what the old diff added, apply the equivalent additions to the new file.
    - Run CI.
    - Commit with the same subject line.
    - Copy the original commit body for non-trivial commits and update details that changed.
