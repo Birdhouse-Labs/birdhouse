@@ -129,38 +129,77 @@ Each test creates its own timestamped directory under `/tmp/` and saves all arti
 
 ## Running all tests (or a named subset)
 
-Create a top-level suite directory first, then run each test serially inside it:
+The orchestrator agent (you) coordinates the suite. It does NOT run the browser itself — it delegates each test to a child agent and waits for results.
 
-```bash
-SUITE_DIR="/tmp/birdhouse-suite-$(date +%Y-%m-%d-%H-%M-%S)"
-mkdir -p "$SUITE_DIR"
-echo "Suite output: $SUITE_DIR"
+### Orchestrator steps
+
+1. List all test files in `tests/`. Skip `template.md`. If running a named subset, match by file name.
+
+2. Create a suite directory:
+   ```bash
+   SUITE_DIR="/tmp/birdhouse-suite-$(date +%Y-%m-%d-%H-%M-%S)"
+   mkdir -p "$SUITE_DIR"
+   ```
+
+3. For each test, **spawn a child agent** with:
+   - The full contents of the test file
+   - The assigned `RUN_DIR` path: `$SUITE_DIR/<test-name-without-extension>`
+   - Instructions to read `SKILL.md` and the browser automation skill
+   - The sandbox environment details (URL, workspace ID)
+   - Instruction to produce the output contract and use `RUN_DIR` for all artifacts
+
+   Wait for each child agent to complete before spawning the next.
+
+4. Collect the output contract from each child agent.
+
+5. Write `$SUITE_DIR/report.md` (see format below).
+
+6. Report the suite directory path to the user.
+
+### report.md format
+
+```markdown
+# Integration Test Suite Report
+
+**Date:** <date>
+**Suite:** <SUITE_DIR>
+**Result:** <N> passed, <M> failed
+
+## Summary
+
+| Test | Verdict | Notes |
+|------|---------|-------|
+| fib | ✅ pass | fib(4) = 3, 10 agents, video recorded |
+| skill-trigger-autocomplete | ❌ fail | Suggestion did not appear |
+
+## Failure Details
+
+### <test-name>
+
+<Full reasoning from the child agent's output contract>
+
+**Deviations:**
+<deviations from the child agent's output contract>
+
+**Artifacts:** <RUN_DIR path>
 ```
 
-For each test, override the test's `RUN_DIR` to be a subdirectory of `$SUITE_DIR` named after the test:
-
-```bash
-RUN_DIR="$SUITE_DIR/<test-name>"
-mkdir -p "$RUN_DIR"
-```
-
-Run serially — one test at a time, in file-system order. After all tests complete, produce a summary report listing each test's verdict, one-line reasoning, and run directory path. Report the suite directory path so the user can inspect all artifacts in one place.
-
-When asked to run a subset by name ("run the fib and autocomplete tests"), match by test file name. Run only the matched tests.
+Only include a "Failure Details" section for tests that failed. If all tests pass, omit that section.
 
 ## Output contract
 
-Every test run must produce:
+Every test run (child agent) must produce:
 
 ```
 verdict: pass | fail
 reasoning: <what was checked and why it passed or failed>
+run_dir: <absolute path to the test's artifact directory>
 video: <absolute path to MP4>
 screenshots: <ordered list of absolute paths>
 deviations: <any steps that could not be followed as written, or "none">
 ```
 
-A parent agent (such as opencode-rebase) can consume this output to gate a release.
+The orchestrator collects these from each child and uses them to write `report.md`.
 
 ## Adding a new test
 

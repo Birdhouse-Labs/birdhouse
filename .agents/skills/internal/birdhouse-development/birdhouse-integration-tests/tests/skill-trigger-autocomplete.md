@@ -31,34 +31,42 @@ Verifies that the skill trigger phrase system surfaces suggestions in the new ag
 2. Close any existing browser session for this test, then open the agents page in a persistent browser context:
    `http://127.0.0.1:50200/#/workspace/<id>/agents`
 
-3. Click **New Agent** to open the launch panel.
+3. **Start recording immediately** before any interaction. Save to `$RUN_DIR/autocomplete-recording.mp4`.
 
-4. Click into the message textarea so it is focused and empty.
+4. Click **New Agent** to open the launch panel.
 
-5. **Type the trigger prefix one character at a time.** The autocomplete listener requires individual key events — bulk text insertion will not trigger it. Send `f`, `i`, `b` as three separate key-press events.
+5. Click into the message textarea so it is focused and empty.
 
-6. After typing `fib`, inspect the visible page state and confirm whether an autocomplete dropdown suggestion appears containing `fibonacci-recursive-agents`.
+6. **Type the trigger prefix one character at a time.** The autocomplete listener requires individual key events — bulk text insertion will not trigger it. Send `f`, `i`, `b` as three separate key-press events.
 
-7. Save a screenshot to `$RUN_DIR/autocomplete-suggestion.png`.
+7. After typing `fib`, inspect the visible page state and confirm whether an autocomplete dropdown suggestion appears containing `fibonacci-recursive-agents`.
 
-8. If the suggestion is visible, click it and confirm the skill reference link `[fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)` was inserted into the textarea.
+8. Save a screenshot to `$RUN_DIR/autocomplete-suggestion.png`.
 
-9. **Report the run directory path** so the user can open it:
-   ```
-   Artifacts saved to: $RUN_DIR
-   ```
+9. If the suggestion is visible, click it and confirm the skill reference link with a `birdhouse:skill/fibonacci-recursive-agents` URL was inserted into the textarea.
+
+10. Save a screenshot to `$RUN_DIR/after-click.png`.
+
+11. Stop the recording.
+
+12. **Report the run directory path** so the user can open it:
+    ```
+    Artifacts saved to: $RUN_DIR
+    ```
 
 ## Pass criteria
 
 - After typing `fib` character by character, a dropdown suggestion for `fibonacci-recursive-agents` is visible
 - The suggestion includes the trigger phrase text (e.g. "fibonacci test" or "fibonacci recursive")
 - Clicking the suggestion inserts a skill reference link into the textarea with the `birdhouse:skill/fibonacci-recursive-agents` URL (the display label may be the trigger phrase, e.g. `[fibonacci test](birdhouse:skill/fibonacci-recursive-agents)`)
+- The video file exists and has a non-zero file size
 
 ## Fail criteria
 
 - No autocomplete suggestion appears after typing `fib` one character at a time
 - The suggestion appears but clicking it does not insert a `birdhouse:skill/fibonacci-recursive-agents` URL into the textarea
 - The test did not complete within 2 minutes
+- The recording failed to start or the video file is missing or zero bytes
 
 ## Known limitations
 
