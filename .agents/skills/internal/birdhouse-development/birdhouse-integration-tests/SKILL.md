@@ -116,11 +116,11 @@ Load the [browser-use](birdhouse:skill/browser-use) skill for all browser work. 
 
 If a different browser automation skill is preferred, swap the skill reference above — nothing in this skill depends on browser-use internals.
 
-Use a named browser session (e.g. `--session birdhouse-test`) so the browser persists across steps within a test.
+Use a persistent, named browser context for the whole test so page state survives across steps. If the selected browser tool supports named sessions, use a stable name such as `birdhouse-test`.
 
 ## Running a single test
 
-Each test manages its own timestamped run directory under `/tmp/`. The test file's steps define where to create it. Artifacts (screenshots, video) go inside that directory. At the end of the test, report the run directory path.
+Each test creates its own timestamped directory under `/tmp/` and saves all artifacts there. The test file's steps define the exact path. Follow those steps — do not save artifacts elsewhere. Report the run directory path at the end.
 
 1. Read the test file from `tests/`.
 2. Set up the environment (sandbox running, workspace ID obtained, opencode verified).

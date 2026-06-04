@@ -28,36 +28,20 @@ Verifies that the skill trigger phrase system surfaces suggestions in the new ag
    echo "Run artifacts: $RUN_DIR"
    ```
 
-2. Open the agents page:
-   ```bash
-   browser-use --session birdhouse-autocomplete-test close 2>/dev/null || true
-   browser-use --session birdhouse-autocomplete-test open \
-     "http://127.0.0.1:50200/#/workspace/<id>/agents"
-   ```
+2. Close any existing browser session for this test, then open the agents page in a persistent browser context:
+   `http://127.0.0.1:50200/#/workspace/<id>/agents`
 
-2. Click **New Agent** to open the launch panel.
+3. Click **New Agent** to open the launch panel.
 
-3. Click into the message textarea so it is focused and empty.
+4. Click into the message textarea so it is focused and empty.
 
-4. **Type the trigger prefix one character at a time.** The autocomplete listener requires individual key events — bulk type commands will not trigger it. Type: `f`, `i`, `b` (three characters is sufficient).
+5. **Type the trigger prefix one character at a time.** The autocomplete listener requires individual key events — bulk text insertion will not trigger it. Send `f`, `i`, `b` as three separate key-press events.
 
-   Using browser-use: send each character as a separate `keys` command:
-   ```bash
-   browser-use --session birdhouse-autocomplete-test keys "f"
-   browser-use --session birdhouse-autocomplete-test keys "i"
-   browser-use --session birdhouse-autocomplete-test keys "b"
-   ```
+6. After typing `fib`, inspect the visible page state and confirm whether an autocomplete dropdown suggestion appears containing `fibonacci-recursive-agents`.
 
-   Using any other browser automation skill: send each character as an individual key-press event, not as a bulk string.
+7. Save a screenshot to `$RUN_DIR/autocomplete-suggestion.png`.
 
-6. After typing "fib", check whether a dropdown suggestion appeared. Use `browser-use state` to read the visible elements and look for a suggestion containing "fibonacci-recursive-agents".
-
-7. Save screenshot:
-   ```bash
-   browser-use --session birdhouse-autocomplete-test screenshot "$RUN_DIR/autocomplete-suggestion.png"
-   ```
-
-8. If the suggestion is visible, click it and confirm the skill reference link was inserted into the textarea.
+8. If the suggestion is visible, click it and confirm the skill reference link `[fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)` was inserted into the textarea.
 
 9. **Report the run directory path** so the user can open it:
    ```
@@ -66,17 +50,17 @@ Verifies that the skill trigger phrase system surfaces suggestions in the new ag
 
 ## Pass criteria
 
-- After typing "fib" character by character, a dropdown suggestion for `fibonacci-recursive-agents` is visible on the page
+- After typing `fib` character by character, a dropdown suggestion for `fibonacci-recursive-agents` is visible
 - The suggestion includes the trigger phrase text (e.g. "fibonacci test" or "fibonacci recursive")
 - Clicking the suggestion inserts a `[fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)` link into the textarea
 
 ## Fail criteria
 
-- No autocomplete suggestion appears after typing "fib" one character at a time
+- No autocomplete suggestion appears after typing `fib` one character at a time
 - The suggestion appears but clicking it does not insert the skill reference link
 - The test did not complete within 2 minutes
 
 ## Known limitations
 
-- This test must use character-by-character key events. Any bulk type command will prevent autocomplete from firing.
+- This test must use character-by-character key events because it validates the key-event autocomplete path. Bulk text insertion may bypass the behavior under test.
 - If the skill index has not been refreshed since the sandbox was started, trigger phrases may not be present. Restart sandbox1 if this test fails unexpectedly after a skill update.

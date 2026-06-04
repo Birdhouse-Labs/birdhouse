@@ -12,7 +12,8 @@
 
 ## Prerequisites
 
-- sandbox1 running and fork-verified (see SKILL.md environment setup)
+- sandbox1 running (Birdhouse at http://127.0.0.1:50200)
+- <If the test launches or interacts with OpenCode agents, add: "fork-verified (see SKILL.md environment setup)">
 - <Any additional prerequisites, e.g. "API key configured for Anthropic">
 
 ## Timeout
@@ -21,14 +22,20 @@
 
 ## Model selection
 
-<Specify any model requirements, or use the default: "Search the model picker for 'free'. Use opencode/big-pickle if available.">
+<Remove this section if the test does not launch an agent. Otherwise specify model requirements or use the default: "First choice Big Pickle, second choice any model with 'free' in its name.">
 
 ## Steps
 
-1. Navigate to the workspace agents page:
+1. Create a timestamped run directory:
+   ```bash
+   RUN_DIR="/tmp/<test-name>-$(date +%Y-%m-%d-%H-%M-%S)"
+   mkdir -p "$RUN_DIR"
+   ```
+
+2. Navigate to the workspace agents page:
    `http://127.0.0.1:50200/#/workspace/<id>/agents`
 
-2. Take screenshot `01-start.png` once the page has loaded.
+3. Save screenshot `$RUN_DIR/01-start.png` once the page has loaded.
 
 3. <Next step. Be specific — exactly what to click, type, or wait for.>
 

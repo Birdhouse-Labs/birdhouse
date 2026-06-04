@@ -58,7 +58,7 @@ First choice: **Big Pickle** (`opencode/big-pickle`). Second choice: any model w
    browser-use --session birdhouse-fib-test eval \
      "(() => { const el = document.querySelector('input[role=combobox]') || document.querySelector('[data-model-picker] input'); if (!el) return 'not found'; el.value = ''; el.dispatchEvent(new Event('input', {bubbles:true})); return 'opened'; })()"
    ```
-   Then use `browser-use state` to find the Big Pickle option index and click it. If Big Pickle is not visible, type "free" in the input and select the first result.
+   Then inspect the visible options and select **Big Pickle** by its visible label. If Big Pickle is not visible, type `free` into the model picker and select the first visible result.
 
 7. Type the following message into the textarea on the launch panel (before clicking Launch Agent):
    ```
@@ -76,9 +76,9 @@ First choice: **Big Pickle** (`opencode/big-pickle`). Second choice: any model w
 
 10. **Wait for completion.** Use `browser-use state` as the primary polling method — read the visible text to check whether the invoker agent's message panel shows a final answer with no active tool calls. Poll every 30 seconds.
 
-    **Important — do not mistake the Birdhouse brand icon for a spinner.** The circular icon shown next to each agent in the sidebar is the static Birdhouse logo. It does not animate. The only sign of a running agent is a pulsing purple left border on the agent row or a tool call showing `running` status in the main panel. When `browser-use state` shows the final message text `fib(4) = 3` in the panel with no `running` tool calls, the run is complete.
+    **Important — do not mistake the Birdhouse brand icon for a spinner.** The circular icon shown next to each agent in the sidebar is the static Birdhouse logo. It does not animate. The only sign of a running agent is a pulsing purple left border on the agent row or a tool call showing `running` status in the main panel. The run is complete when the invoker agent's message panel shows a final answer with no active tool calls.
 
-    Do not rely on DOM selectors like `[data-active-agent]` or `.border-l-2` — these do not reliably reflect run state.
+    Do not rely on DOM selectors like `[data-active-agent]` or `.border-l-2` — these do not reliably reflect run state. Read visible text directly instead.
 
 11. Once done, save screenshot:
     ```bash
@@ -146,4 +146,4 @@ Any of the following immediately indicates failure:
 
 - **Model picker:** The combobox may not respond to direct click — use the JS input event approach in step 6 to open the full list reliably.
 - **Completion detection:** Do not use CSS selector polling for run state — use `browser-use state` text output instead.
-- **Viewport:** browser-use does not support explicit viewport sizing. Screenshots will be at the browser default resolution.
+- **Viewport:** Screenshot dimensions depend on the browser automation tool. Ensure screenshots capture the relevant page state clearly.
