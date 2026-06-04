@@ -63,12 +63,12 @@ Search the model picker for "free". Use `opencode/big-pickle` if available, othe
     browser-use --session birdhouse-test record stop
     ```
 
-12. Use browser eval to count the agents visible in the left sidebar:
+12. Read the agent count from the sidebar group label. Birdhouse shows a "Today" group with a label like **"10 Agents"** next to the date. Use browser eval to extract it:
     ```bash
-    browser-use --session birdhouse-test eval \
-      "document.querySelectorAll('[data-agent-id]').length"
+    browser-use --session birdhouse-fib-test eval \
+      "(() => { const labels = [...document.querySelectorAll('*')].filter(el => el.childElementCount === 0 && /\d+ Agents?/.test(el.textContent)); return labels.map(el => el.textContent.trim()); })()"
     ```
-    If `data-agent-id` does not exist as an attribute, try counting list items in the agents sidebar by inspecting the DOM with `browser-use state` first to find the right selector.
+    If that returns nothing, use `browser-use state` to inspect the sidebar and find the element displaying the agent count, then read it directly. As a fallback, count the tree items in the screenshot manually.
 
 13. Read the root agent's final message from the UI. It should state the answer.
 
@@ -79,7 +79,7 @@ Search the model picker for "free". Use `opencode/big-pickle` if available, othe
 All of the following must be true:
 
 - The root agent's final message contains the text `fib(4) = 3`
-- The agent sidebar shows exactly 9 agents (1 root + 8 recursive children)
+- The sidebar's "Today" group label shows exactly **10 Agents** (1 invoker agent + 1 fib(4) root + 8 recursive children)
 - All agents in the sidebar show a completed or stopped state (no spinning indicators, no error badges)
 - The video file exists and has a non-zero size
 
@@ -88,7 +88,7 @@ All of the following must be true:
 Any of the following immediately indicates failure:
 
 - The root agent's final message states any answer other than 3
-- The agent count is not 9 (too few means some agents didn't spawn; too many means the recursion went wrong)
+- The agent count is not 10 (too few means some agents didn't spawn; too many means the recursion went wrong)
 - Any agent shows an error state or red indicator
 - The root agent did not complete within the 10-minute timeout
 - The recording failed to start or the video file is missing
