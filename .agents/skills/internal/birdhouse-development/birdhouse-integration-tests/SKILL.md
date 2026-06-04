@@ -112,11 +112,13 @@ The prompt can override this by naming a specific model. Tests are designed to w
 
 ## Browser automation
 
-Load the [browser-use](birdhouse:skill/browser-use) skill for all browser work. Follow its patterns for opening pages, interacting with elements, taking screenshots, and recording video. Do not repeat its commands here.
+Load the [browser-use](birdhouse:skill/browser-use) skill for all browser work. Include its full contents in the child agent's prompt — passing a file path alone is not reliable. Follow its patterns for opening pages, interacting with elements, taking screenshots, and recording video.
 
 If a different browser automation skill is preferred, swap the skill reference above — nothing in this skill depends on browser-use internals.
 
 Use a persistent, named browser context for the whole test so page state survives across steps. If the selected browser tool supports named sessions, use a stable name such as `birdhouse-test`.
+
+**Completion detection:** The most reliable signal that an agent run has finished is the Birdhouse UI switching from a **Stop** button to a **Send** button in the message panel. Check for this in the page state output. The Birdhouse brand icon next to agent rows is a static logo — it does not animate and is not a loading indicator.
 
 ## Running a single test
 
@@ -142,9 +144,10 @@ The orchestrator agent (you) coordinates the suite. It does NOT run the browser 
    ```
 
 3. For each test, **spawn a child agent** with:
-   - The full contents of the test file
+   - The full contents of the test file — substitute `<id>` with the actual workspace ID and `$RUN_DIR` with the assigned path before including it
    - The assigned `RUN_DIR` path: `$SUITE_DIR/<test-name-without-extension>`
-   - Instructions to read `SKILL.md` and the browser automation skill
+   - The full contents of SKILL.md (so the child knows the output contract and environment)
+   - The full contents of the browser automation skill file
    - The sandbox environment details (URL, workspace ID)
    - Instruction to produce the output contract and use `RUN_DIR` for all artifacts
 

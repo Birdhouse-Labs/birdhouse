@@ -33,13 +33,13 @@ Verifies that the skill trigger phrase system surfaces suggestions in the new ag
 
 3. **Start recording immediately** before any interaction. Save to `$RUN_DIR/autocomplete-recording.mp4`.
 
-4. Click **New Agent** to open the launch panel.
+4. If the launch panel is not already visible on the right side of the screen, click **New Agent** in the sidebar. If the panel is already showing, skip this step.
 
-5. Click into the message textarea so it is focused and empty.
+5. Run `state` to find the message textarea index. Click into it to focus it. If there is any existing text, clear it before proceeding.
 
 6. **Type the trigger prefix one character at a time.** The autocomplete listener requires individual key events — bulk text insertion will not trigger it. Send `f`, `i`, `b` as three separate key-press events.
 
-7. After typing `fib`, inspect the visible page state and confirm whether an autocomplete dropdown suggestion appears containing `fibonacci-recursive-agents`.
+7. After typing `fib`, inspect the visible page state. In the state output, look for `div role=option` elements containing `fibonacci-recursive-agents` — that is how autocomplete suggestions appear. Confirm whether such an element is present.
 
 8. Save a screenshot to `$RUN_DIR/autocomplete-suggestion.png`.
 

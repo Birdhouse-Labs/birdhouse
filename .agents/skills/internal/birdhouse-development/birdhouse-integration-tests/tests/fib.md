@@ -60,11 +60,20 @@ First choice: **Big Pickle** (`opencode/big-pickle`). Second choice: any model w
    ```
    Then inspect the visible options and select **Big Pickle** by its visible label. If Big Pickle is not visible, type `free` into the model picker and select the first visible result.
 
-7. Type the following message into the textarea on the launch panel (before clicking Launch Agent):
+   Verify the selection with eval — the `state` output will still show placeholder text even after a successful selection:
+   ```bash
+   browser-use --session birdhouse-fib-test eval \
+     "document.querySelector('input[role=combobox]').value"
    ```
-   Please run this fibonacci test for me: [fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)
+   This should return `Big Pickle`.
 
-   Compute fib(4) using the skill instructions. Use child agents as the skill instructs. Report the final answer.
+7. Type the following message into the textarea on the launch panel (before clicking Launch Agent).
+
+   Use `browser-use input <index> "text"` — not `browser-use type` — because this is a React-controlled textarea and bulk type may silently garble or truncate the input. Embed the blank line between paragraphs as `\n\n` in the string. Do not use Shift+Enter to insert newlines — it submits the form.
+
+   Message text:
+   ```
+   Please run this fibonacci test for me: [fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)\n\nCompute fib(4) using the skill instructions. Use child agents as the skill instructs. Report the final answer.
    ```
 
 8. Save screenshot before launching:
@@ -76,9 +85,11 @@ First choice: **Big Pickle** (`opencode/big-pickle`). Second choice: any model w
 
 10. **Wait for completion.** Use `browser-use state` as the primary polling method — read the visible text to check whether the invoker agent's message panel shows a final answer with no active tool calls. Poll every 30 seconds.
 
-    **Important — do not mistake the Birdhouse brand icon for a spinner.** The circular icon shown next to each agent in the sidebar is the static Birdhouse logo. It does not animate. The only sign of a running agent is a pulsing purple left border on the agent row or a tool call showing `running` status in the main panel. The run is complete when the invoker agent's message panel shows a final answer with no active tool calls.
+    **Important — do not mistake the Birdhouse brand icon for a spinner.** The circular icon shown next to each agent in the sidebar is the static Birdhouse logo. It does not animate.
 
-    Do not rely on DOM selectors like `[data-active-agent]` or `.border-l-2` — these do not reliably reflect run state. Read visible text directly instead.
+    The most reliable completion signal is the UI switching from a **Stop** button to a **Send** button in the message panel. Check for this in the page state output. When `Stop` is absent and `Send` is present, the run is complete.
+
+    Do not rely on DOM selectors like `[data-active-agent]` or `.border-l-2` — these do not reliably reflect run state.
 
 11. Once done, save screenshot:
     ```bash
