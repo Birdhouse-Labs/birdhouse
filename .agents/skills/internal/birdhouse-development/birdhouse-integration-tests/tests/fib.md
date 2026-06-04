@@ -48,11 +48,7 @@ First choice: **Big Pickle** (`opencode/big-pickle`). Second choice: any model w
    ```
    Then use `browser-use state` to find the Big Pickle option index and click it. If Big Pickle is not visible, type "free" in the input and select the first result.
 
-5. Type the message text into the textarea on the launch panel. The message must be entered before clicking Launch Agent — the skill trigger phrase autocomplete lives on the launch panel, not in the conversation panel after launch.
-
-   Use a bulk type command to enter the full message. Autocomplete will not fire (bulk typing bypasses the key-event listener entirely — even typing character-by-character afterward does not revive it once bulk text has been deposited). This is expected. The autocomplete feature is tested by a separate dedicated test.
-
-   Full message text:
+5. Type the following message into the textarea on the launch panel (before clicking Launch Agent):
    ```
    Please run this fibonacci test for me: [fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)
 
@@ -145,6 +141,5 @@ Any of the following immediately indicates failure:
 ## Known limitations
 
 - **Model picker:** The combobox may not respond to direct click — use the JS input event approach in step 4 to open the full list reliably.
-- **Autocomplete:** The autocomplete listener requires every character to arrive as a key event. Any bulk type operation poisons the listener state permanently for that field — subsequent character-by-character input does not revive it. This test uses bulk typing and therefore never triggers autocomplete. Skill trigger phrase autocomplete is validated by a separate dedicated test.
 - **Completion detection:** Do not use CSS selector polling for run state — use `browser-use state` text output instead.
 - **Viewport:** browser-use does not support explicit viewport sizing. Screenshots will be at the browser default resolution.
