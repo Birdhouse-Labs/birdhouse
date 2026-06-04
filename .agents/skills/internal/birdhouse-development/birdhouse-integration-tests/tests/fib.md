@@ -44,7 +44,7 @@ Use `opencode/big-pickle` as the first choice — search for "big-pickle" in the
 
 3. Click **New Agent**.
 
-4. Select a model from the model picker: search "big-pickle" and choose `opencode/big-pickle`. If it does not appear or fails, search "free" and pick the first result.
+4. Select a model from the model picker. Open the dropdown and look for **Big Pickle** in the list — do not type to filter as the search may return "No results" for this model even when it is present. If Big Pickle is not visible, type "free" to filter and pick the first result.
 
 5. In the message input, type exactly:
    ```
