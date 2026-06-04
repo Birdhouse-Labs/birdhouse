@@ -49,7 +49,10 @@ Not applicable — this test uses agent tooling directly, not the model picker.
    ```
    Save the worker's agent ID as `WORKER_ID`. Wait for the worker's initial response.
 
-4. After the worker responds, take a screenshot showing it has appeared in the sidebar:
+4. After the worker responds, navigate the browser to the worker agent's conversation so screenshots show the actual work. The worker's URL is:
+   `http://127.0.0.1:50200/#/workspace/<id>/agents/<WORKER_ID>`
+
+   Then take a screenshot:
    ```bash
    browser-use --session birdhouse-exchange-test screenshot "$RUN_DIR/01-worker-created.png"
    ```
@@ -92,7 +95,7 @@ Not applicable — this test uses agent tooling directly, not the model picker.
    ```
    Wait for completion.
 
-10. Take a screenshot showing the worker in the sidebar with all exchanges complete:
+10. Navigate back to the worker's conversation if needed (same URL as step 4), then take a screenshot showing all exchanges complete in the main panel:
     ```bash
     browser-use --session birdhouse-exchange-test screenshot "$RUN_DIR/02-all-steps-done.png"
     ```
