@@ -21,7 +21,14 @@ Verifies that the skill trigger phrase system surfaces suggestions in the new ag
 
 ## Steps
 
-1. Open the agents page:
+1. Create a timestamped run directory and set it as the artifact destination:
+   ```bash
+   RUN_DIR="/tmp/autocomplete-test-$(date +%Y-%m-%d-%H-%M-%S)"
+   mkdir -p "$RUN_DIR"
+   echo "Run artifacts: $RUN_DIR"
+   ```
+
+2. Open the agents page:
    ```bash
    browser-use --session birdhouse-autocomplete-test close 2>/dev/null || true
    browser-use --session birdhouse-autocomplete-test open \
@@ -43,15 +50,19 @@ Verifies that the skill trigger phrase system surfaces suggestions in the new ag
 
    Using any other browser automation skill: send each character as an individual key-press event, not as a bulk string.
 
-5. After typing "fib", check whether a dropdown suggestion appeared. Use `browser-use state` to read the visible elements and look for a suggestion containing "fibonacci-recursive-agents".
+6. After typing "fib", check whether a dropdown suggestion appeared. Use `browser-use state` to read the visible elements and look for a suggestion containing "fibonacci-recursive-agents".
 
-6. Save screenshot:
+7. Save screenshot:
    ```bash
-   browser-use --session birdhouse-autocomplete-test screenshot \
-     "sandboxes/sandbox1/screenshots/autocomplete-suggestion.png"
+   browser-use --session birdhouse-autocomplete-test screenshot "$RUN_DIR/autocomplete-suggestion.png"
    ```
 
-7. If the suggestion is visible, click it and confirm the skill reference link was inserted into the textarea.
+8. If the suggestion is visible, click it and confirm the skill reference link was inserted into the textarea.
+
+9. **Report the run directory path** so the user can open it:
+   ```
+   Artifacts saved to: $RUN_DIR
+   ```
 
 ## Pass criteria
 

@@ -18,7 +18,7 @@ Verifies that Birdhouse agents can spawn recursive child agents and that skill r
 
 ## Timeout
 
-10 minutes from the time the message is sent.
+10 minutes from the time Launch Agent is clicked.
 
 ## Model selection
 
@@ -26,71 +26,71 @@ First choice: **Big Pickle** (`opencode/big-pickle`). Second choice: any model w
 
 ## Steps
 
-1. Close any existing session and open the agents page:
+1. Create a timestamped run directory in `tmp/` and set it as the artifact destination for this run:
+   ```bash
+   RUN_DIR="/tmp/fib-test-$(date +%Y-%m-%d-%H-%M-%S)"
+   mkdir -p "$RUN_DIR"
+   echo "Run artifacts: $RUN_DIR"
+   ```
+   Use `$RUN_DIR` for all screenshots and the video throughout this test.
+
+2. Close any existing session and open the agents page:
    ```bash
    browser-use --session birdhouse-fib-test close 2>/dev/null || true
    browser-use --session birdhouse-fib-test open \
      "http://127.0.0.1:50200/#/workspace/<id>/agents"
    ```
 
-2. Save screenshot to file (do NOT use screenshot without a path — that returns base64 into context):
+3. **Start recording immediately** — before any interaction:
    ```bash
-   browser-use --session birdhouse-fib-test screenshot \
-     "sandboxes/sandbox1/screenshots/01-agents-page.png"
+   browser-use --session birdhouse-fib-test record start "$RUN_DIR/fib-recording.mp4"
    ```
 
-3. Click **New Agent** to open the launch panel.
+4. Save screenshot:
+   ```bash
+   browser-use --session birdhouse-fib-test screenshot "$RUN_DIR/01-agents-page.png"
+   ```
 
-4. **Select a model.** The model picker combobox requires a JS-triggered input event to open — a direct click alone may not populate the list. Clear the input and fire an input event to reveal all models, then scroll to find and click **Big Pickle**:
+5. Click **New Agent** to open the launch panel.
+
+6. **Select a model.** The model picker combobox requires a JS-triggered input event to open — a direct click alone may not populate the list. Clear the input and fire an input event to reveal all models, then scroll to find and click **Big Pickle**:
    ```bash
    browser-use --session birdhouse-fib-test eval \
      "(() => { const el = document.querySelector('input[role=combobox]') || document.querySelector('[data-model-picker] input'); if (!el) return 'not found'; el.value = ''; el.dispatchEvent(new Event('input', {bubbles:true})); return 'opened'; })()"
    ```
    Then use `browser-use state` to find the Big Pickle option index and click it. If Big Pickle is not visible, type "free" in the input and select the first result.
 
-5. Type the following message into the textarea on the launch panel (before clicking Launch Agent):
+7. Type the following message into the textarea on the launch panel (before clicking Launch Agent):
    ```
    Please run this fibonacci test for me: [fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)
 
    Compute fib(4) using the skill instructions. Use child agents as the skill instructs. Report the final answer.
    ```
-   Please run this fibonacci test for me: [fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)
 
-   Compute fib(4) using the skill instructions. Use child agents as the skill instructs. Report the final answer.
-   ```
-
-6. Save screenshot before launching:
+8. Save screenshot before launching:
    ```bash
-   browser-use --session birdhouse-fib-test screenshot \
-     "sandboxes/sandbox1/screenshots/02-message-composed.png"
+   browser-use --session birdhouse-fib-test screenshot "$RUN_DIR/02-message-composed.png"
    ```
 
-7. Click **Launch Agent**. Note the time.
+9. Click **Launch Agent**.
 
-8. Start video recording immediately after launching:
-   ```bash
-   browser-use --session birdhouse-fib-test record start \
-     "sandboxes/sandbox1/screenshots/fib-$(date +%s).mp4"
-   ```
+10. **Wait for completion.** Use `browser-use state` as the primary polling method — read the visible text to check whether the invoker agent's message panel shows a final answer with no active tool calls. Poll every 30 seconds.
 
-9. **Wait for completion.** Use `browser-use state` as the primary polling method — read the visible text to check whether the invoker agent's message panel shows a final answer with no active tool calls. Poll every 30 seconds.
+    **Important — do not mistake the Birdhouse brand icon for a spinner.** The circular icon shown next to each agent in the sidebar is the static Birdhouse logo. It does not animate. The only sign of a running agent is a pulsing purple left border on the agent row or a tool call showing `running` status in the main panel. When `browser-use state` shows the final message text `fib(4) = 3` in the panel with no `running` tool calls, the run is complete.
 
-   **Important — do not mistake the Birdhouse brand icon for a spinner.** The circular icon shown next to each agent in the sidebar is the static Birdhouse logo. It does not animate. The only sign of a running agent is a pulsing purple left border on the agent row or a tool call showing `running` status in the main panel. When `browser-use state` shows the final message text `fib(4) = 3` in the panel with no `running` tool calls, the run is complete.
+    Do not rely on DOM selectors like `[data-active-agent]` or `.border-l-2` — these do not reliably reflect run state.
 
-   Do not rely on DOM selectors like `[data-active-agent]` or `.border-l-2` — these do not reliably reflect run state.
-
-10. Once done, save screenshot:
+11. Once done, save screenshot:
     ```bash
-    browser-use --session birdhouse-fib-test screenshot \
-      "sandboxes/sandbox1/screenshots/03-agents-building.png"
+    browser-use --session birdhouse-fib-test screenshot "$RUN_DIR/03-agents-building.png"
     ```
 
-11. Stop the recording:
+12. Stop the recording:
     ```bash
     browser-use --session birdhouse-fib-test record stop
     ```
 
-12. **Count the agents in the current run's tree using the screenshot.**
+13. **Count the agents in the current run's tree using the screenshot.**
 
     Save a screenshot of the sidebar showing the current run's expanded tree, then count the rows visually. The current run is the top entry in the sidebar — it has the most recent timestamp. Count every row under the invoker (including the invoker itself). Do not count rows from earlier runs.
 
@@ -111,12 +111,16 @@ First choice: **Big Pickle** (`opencode/big-pickle`). Second choice: any model w
     ```
     Total: 10 agents.
 
-13. Read the root agent's final message from the main panel. It should state the answer.
+14. Read the root agent's final message from the main panel. It should state the answer.
 
-14. Save final screenshot:
+15. Save final screenshot:
     ```bash
-    browser-use --session birdhouse-fib-test screenshot \
-      "sandboxes/sandbox1/screenshots/04-tree-complete.png"
+    browser-use --session birdhouse-fib-test screenshot "$RUN_DIR/04-tree-complete.png"
+    ```
+
+16. **Report the run directory path** so the user can open it directly:
+    ```
+    Artifacts saved to: $RUN_DIR
     ```
 
 ## Pass criteria
@@ -126,7 +130,7 @@ All of the following must be true:
 - The root fib(4) agent's final message contains the text `fib(4) = 3`
 - The current run's agent tree contains exactly **10 agents**: 1 invoker + 1 fib(4) root + 8 recursive children
 - No agent in the current run's tree shows an error state or red indicator
-- The video file exists and has a non-zero file size
+- The video file `$RUN_DIR/fib-recording.mp4` exists and has a non-zero file size
 
 ## Fail criteria
 
@@ -140,6 +144,6 @@ Any of the following immediately indicates failure:
 
 ## Known limitations
 
-- **Model picker:** The combobox may not respond to direct click — use the JS input event approach in step 4 to open the full list reliably.
+- **Model picker:** The combobox may not respond to direct click — use the JS input event approach in step 6 to open the full list reliably.
 - **Completion detection:** Do not use CSS selector polling for run state — use `browser-use state` text output instead.
 - **Viewport:** browser-use does not support explicit viewport sizing. Screenshots will be at the browser default resolution.
