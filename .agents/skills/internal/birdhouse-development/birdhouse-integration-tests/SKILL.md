@@ -15,6 +15,18 @@ metadata:
 
 End-to-end tests that exercise Birdhouse through a real browser against a real isolated OpenCode instance. Each test is a markdown file. An agent follows the steps, then self-scores pass or fail based on the criteria in the test file.
 
+## ⚠️ Two-environment constraint — read this first
+
+**The test runner agent is NOT inside the sandbox it is testing.**
+
+- The test runner lives in the **production Birdhouse** (port 50100) — the same environment you are talking to the test runner in.
+- The sandbox under test runs at **port 50200**.
+- These are completely separate environments with separate agent stores, separate sessions, and separate OpenCode instances.
+
+**Consequence:** Any `agent_create`, `agent_reply`, `agent_read`, or file tool call the test runner makes goes into production, not sandbox. The only way to exercise sandbox Birdhouse is through the browser — by opening `http://127.0.0.1:50200` in a browser session and interacting with the sandbox UI.
+
+**Every test must be browser-driven.** There is no exception. A test that calls Birdhouse agent tools directly is testing the production environment, not the sandbox.
+
 ## What an integration test is
 
 A markdown file in `tests/` alongside this skill. Every test file contains:
@@ -209,11 +221,16 @@ The orchestrator collects these from each child and uses them to write `report.m
 
 ## Adding a new test
 
+All tests must be browser-driven — see the two-environment constraint above.
+
+The test runner opens `http://127.0.0.1:50200` in a browser and interacts with the sandbox UI. It cannot call Birdhouse agent tools directly against the sandbox.
+
 1. Copy `tests/template.md` to `tests/<name>.md`.
 2. Fill in every section. Leave no placeholder text.
-3. Pass criteria must be checkable from the browser UI alone — no API calls.
-4. Run the test once standalone before committing to confirm the steps are followable and the criteria are unambiguous.
-5. Commit the new test file.
+3. Every step must be achievable through the browser UI — typing messages, clicking buttons, observing the agent tree, reading visible text.
+4. Pass criteria must be verifiable from the browser UI alone.
+5. Run the test once standalone before committing to confirm the steps are followable and the criteria are unambiguous.
+6. Commit the new test file.
 
 Base directory for this skill: file:///Users/crayment/dev/birdhouse-workspace/.agents/skills/internal/birdhouse-development/birdhouse-integration-tests
 Relative paths in this skill (e.g., tests/) are relative to this base directory.

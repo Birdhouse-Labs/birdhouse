@@ -2,28 +2,30 @@
 
 ## Description
 
-Verifies that Birdhouse's agent tooling API works correctly across multiple exchanges. The test agent drives a worker child through five steps of file and bash operations using `agent_create` and `agent_reply`, then inspects the worker with all four `agent_read` modes and `agent_read_tool_call`. A screen recording captures the agent's own work in the Birdhouse UI as it runs.
+Verifies that a Birdhouse agent can create a child agent, exchange messages with it across multiple turns, and use file and bash tools correctly. The test is driven entirely through the browser UI — the test runner types messages to a sandbox Birdhouse agent asking it to orchestrate a worker through a sequence of file and bash operations.
+
+**Why browser-driven:** The test runner lives in production Birdhouse (port 50100). The sandbox under test runs at port 50200. These are separate environments. The only way to exercise sandbox behavior is through the browser.
 
 ## What this tests
 
-- `agent_create`, `agent_reply`, and `agent_read` work correctly across multiple exchanges
-- `agent_read` default (last message), `latest_turn`, `full`, and `all` modes each return the correct scope of conversation
-- `agent_read_tool_call` drills into individual tool calls from `full` output
-- File edit tools and bash work correctly inside a child agent
-- The worker produces correct file contents after sequential edits
+- A sandbox Birdhouse agent can create a child agent on request
+- The parent agent can relay instructions to its child across multiple turns
+- File edit tools and bash work correctly inside the child agent
+- The parent agent correctly reports the child's results back through the UI
+- The agent tree in the sidebar shows the child nested under the parent
 
 ## Prerequisites
 
 - sandbox1 running and fork-verified (see SKILL.md environment setup)
-- No browser interaction required for the test logic itself — but the test agent records its own Birdhouse UI session to produce a video artifact
+- Any free model available
 
 ## Timeout
 
-10 minutes from first `agent_create` call.
+12 minutes from when the first message is sent.
 
 ## Model selection
 
-Not applicable — this test uses agent tooling directly, not the model picker.
+First choice: **Big Pickle**. Second choice: any model with "free" in its name.
 
 ## Steps
 
@@ -33,7 +35,7 @@ Not applicable — this test uses agent tooling directly, not the model picker.
    mkdir -p "$RUN_DIR"
    ```
 
-2. Open the Birdhouse workspace agents page in a browser session and start recording. This captures the sandbox UI as the test runs — it shows Birdhouse is healthy and active while the tooling API is being exercised:
+2. Close any existing session, open the sandbox agents page, and start recording immediately:
    ```bash
    browser-use --session birdhouse-exchange-test close 2>/dev/null || true
    browser-use --session birdhouse-exchange-test open \
@@ -42,149 +44,109 @@ Not applicable — this test uses agent tooling directly, not the model picker.
      "$RUN_DIR/exchange-recording.mp4"
    ```
 
-   Note: the worker agent created in step 3 lives in the test agent's own Birdhouse session, not in sandbox1. It will not appear in the sandbox sidebar. The recording is ambient evidence that the sandbox is running — the real test artifacts are the report.txt and pass/fail verdict.
+3. Save screenshot `$RUN_DIR/01-agents-page.png`.
 
-3. **Create the worker agent** using `agent_create`:
+4. Click **New Agent**, select **Big Pickle** (or first free model using the JS input event approach from the fib test), and type:
 
-4. After the worker responds, take a screenshot of the sandbox agents page to show it is still healthy and running:
-   ```bash
-   browser-use --session birdhouse-exchange-test screenshot "$RUN_DIR/01-worker-created.png"
+   ```
+   I need you to create a child agent to do some file work. Create a child agent with this exact prompt:
+
+   You are a careful tool worker. Complete only the specific step you are asked to do. Use tools when needed. After each step, report the result clearly and wait for the next instruction. Do not anticipate future steps.
+
+   Once the child agent responds with its initial greeting, tell me the child is ready and wait for my next instruction.
    ```
 
-3. **Create the worker agent** using `agent_create`:
-   ```
-   Prompt: "You are a careful tool worker. Complete only the specific step you are asked to do. Use tools when needed. After each step, report the result clearly and wait for the next instruction. Do not anticipate future steps. Do not write any documentation files."
-   Title: "Worker agent: read-exchange-test"
-   ```
-   Save the worker's agent ID as `WORKER_ID`. Wait for the worker's initial response.
+5. Launch Agent. Save screenshot `$RUN_DIR/02-launched.png`.
 
-4. After the worker responds, navigate the browser to the worker agent's conversation so screenshots show the actual work. The worker's URL is:
-   `http://127.0.0.1:50200/#/workspace/<id>/agent/<WORKER_ID>`
+6. Wait for the parent agent to complete. Completion: Stop→Send transition; gradient fades on the parent's row/header. A child agent should be visible in the sidebar nested under the parent.
 
-   Note: it's `/agent/` (singular), not `/agents/`.
+7. Save screenshot `$RUN_DIR/03-child-created.png` showing the child in the sidebar.
 
-   Then take a screenshot:
-   ```bash
-   browser-use --session birdhouse-exchange-test screenshot "$RUN_DIR/01-worker-created.png"
+8. Reply to the parent agent:
    ```
+   Good. Now relay this to your child agent word for word:
 
-5. **Step 1** — Reply to the worker with `agent_reply`:
-   ```
    Create the directory tmp/read-exchange-test if needed. Then create tmp/read-exchange-test/note.txt with exactly these three lines:
-
    alpha
    beta
    gamma
 
    Use file-editing tools, not bash, for the file contents. Report what you created and wait.
-   ```
-   Wait for completion.
 
-6. **Step 2** — Reply to the worker:
+   After the child responds, tell me what it created.
    ```
-   Read tmp/read-exchange-test/note.txt and report the second line only. Wait after reporting.
-   ```
-   Wait for completion. Note what the worker reports as the second line.
 
-7. **Step 3** — Reply to the worker:
-   ```
-   Update tmp/read-exchange-test/note.txt so the second line becomes: beta-updated
+9. Wait for completion. Save screenshot `$RUN_DIR/04-step1-done.png`.
 
-   Use a file-editing tool. Report the change and wait.
-   ```
-   Wait for completion.
+10. Reply to the parent agent:
+    ```
+    Relay this to your child: Read tmp/read-exchange-test/note.txt and report the second line only. Wait after reporting.
 
-8. **Step 4** — Reply to the worker:
-   ```
-   Read tmp/read-exchange-test/note.txt again and report the full contents. Wait after reporting.
-   ```
-   Wait for completion.
-
-9. **Step 5** — Reply to the worker:
-   ```
-   Run a bash command that lists the contents of tmp/read-exchange-test and report what exists. Wait after reporting.
-   ```
-   Wait for completion.
-
-10. Take a final screenshot of the sandbox agents page showing it is still healthy:
-    ```bash
-    browser-use --session birdhouse-exchange-test screenshot "$RUN_DIR/02-all-steps-done.png"
+    Tell me what the child says the second line is.
     ```
 
-11. **Read-mode inspection** — Inspect the worker with all four modes:
-    - `agent_read({ agent_id: WORKER_ID })` — default last message
-    - `agent_read({ agent_id: WORKER_ID, latest_turn: true })` — latest exchange
-    - `agent_read({ agent_id: WORKER_ID, full: true })` — full conversation summary
-    - `agent_read({ agent_id: WORKER_ID, all: true })` — raw full transcript
+11. Wait for completion. Save screenshot `$RUN_DIR/05-step2-done.png`.
 
-    Note how many exchanges `latest_turn` returned — it should be exactly one.
+12. Reply to the parent agent:
+    ```
+    Relay this to your child: Update tmp/read-exchange-test/note.txt so the second line becomes: beta-updated. Use a file-editing tool. Report the change and wait.
 
-    From the `full` output, find tool calls in the `parts` array entries with `type: "tool"`. The `callID` field in those parts maps to the `call_id` parameter of `agent_read_tool_call`. Select one of each type:
-    - One file-related tool call (`read`, `write`, or `edit`)
-    - One `bash` tool call
-
-    Run `agent_read_tool_call({ agent_id: WORKER_ID, call_id: CALL_ID })` for each.
-
-12. Read the actual file to verify contents:
-    ```bash
-    cat tmp/read-exchange-test/note.txt
+    Tell me when the child confirms the update.
     ```
 
-13. **Stop recording:**
+13. Wait for completion. Save screenshot `$RUN_DIR/06-step3-done.png`.
+
+14. Reply to the parent agent:
+    ```
+    Relay this to your child: Read tmp/read-exchange-test/note.txt again and report the full contents. Wait after reporting.
+
+    Tell me the full contents the child reports.
+    ```
+
+15. Wait for completion. Save screenshot `$RUN_DIR/07-step4-done.png`.
+
+16. Reply to the parent agent:
+    ```
+    Relay this to your child: Run a bash command listing the contents of tmp/read-exchange-test and report what files exist. Wait after reporting.
+
+    Tell me what the child reports.
+    ```
+
+17. Wait for completion. Save screenshot `$RUN_DIR/08-step5-done.png`.
+
+18. Reply to the parent agent:
+    ```
+    Last step: ask your child to delete the tmp/read-exchange-test directory and everything in it using bash. Confirm when done.
+    ```
+
+19. Wait for completion. Stop the recording. Save final screenshot `$RUN_DIR/09-final.png`.
     ```bash
     browser-use --session birdhouse-exchange-test record stop
-    ```
-
-14. Write `$RUN_DIR/report.txt` containing:
-    - Worker agent ID
-    - Final file contents
-    - What each read mode returned (one line per mode), including:
-      - How many exchanges `latest_turn` returned
-      - At least one field present in `all` but absent in `full` (e.g. tool timing metadata `time.start`/`time.end`)
-    - What the two tool-call drill-downs added beyond the `full` preview
-    - Any deviations
-
-15. **Clean up:**
-    ```bash
-    rm -rf tmp/read-exchange-test
     ```
 
 ## Pass criteria
 
 All of the following must be true:
 
-- `tmp/read-exchange-test/note.txt` final contents are exactly:
-  ```
-  alpha
-  beta-updated
-  gamma
-  ```
-- The worker correctly reports `beta` as the second line after step 2
-- `agent_read` default returns only the worker's last message (step 5 response)
-- `agent_read` with `latest_turn: true` returns exactly one exchange (step 5 reply + response) — not the full conversation
-- `agent_read` with `full: true` returns a summary covering all five exchanges
-- `agent_read` with `all: true` includes fields absent in `full` — specifically tool timing metadata (`time.start`, `time.end`) in tool call state
-- `agent_read_tool_call` returns the full content of the inspected tool call including inputs, outputs, and timing
-- `$RUN_DIR/report.txt` exists and is non-empty
+- A child agent appears in the sidebar nested under the parent after the first exchange
+- The parent reports `beta` as the second line after step 2
+- The parent confirms the file was updated in step 3
+- The parent reports the full contents as `alpha`, `beta-updated`, `gamma` (three lines, correct values)
+- The parent confirms the cleanup completed
 - The video file exists and has a non-zero file size
 
 ## Fail criteria
 
 Any of the following immediately indicates failure:
 
-- Final file contents differ from expected
-- Worker reports wrong second line (anything other than `beta`)
-- Any `agent_read` call errors or returns empty content
-- `latest_turn` returns more than one exchange
-- `full` and `all` contain no detectable differences (timing metadata absent from both)
-- `agent_read_tool_call` errors or returns less content than the `full` preview
-- The test did not complete within 10 minutes
-- Recording failed or video is missing
+- No child agent appears in the sidebar
+- The parent reports wrong content at any step
+- The parent reports a tool call error that blocks progress
+- The test did not complete within 12 minutes
+- The recording failed or is missing
 
 ## Known limitations
 
-- The exact wording of read mode output will vary. Evaluate scope (how much conversation is covered) not exact phrasing.
-- If the worker uses `write` instead of `edit` for step 3, the file will still be correct — not a failure.
-- Directory creation via bash is acceptable even though the step asks for file-editing tools — the constraint is on file contents only.
-- The worker may paraphrase bash output rather than quoting it verbatim. A natural-language summary is acceptable as long as the content is correct.
-- The bash step (step 5) may fail in some sandbox environments due to WASM runtime issues. If bash fails but all file operations succeeded and all other pass criteria are met, note it as a deviation but do not fail the test.
+- The parent agent may paraphrase the child's output. Evaluate correctness of content, not exact wording.
+- Bash may fail in some sandbox environments due to WASM runtime issues. If the bash step (step 5) fails but all file operations succeeded, note it as a deviation — it does not fail the test.
+- The cleanup step (step 6) may also fail due to bash issues. Note as deviation if so.
