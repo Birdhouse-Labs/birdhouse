@@ -22,16 +22,13 @@ Verifies that Birdhouse agents can spawn recursive child agents and that skill r
 
 ## Model selection
 
-Use `opencode/big-pickle` as the first choice — search for "big-pickle" in the model picker. If it is not available or does not work, search for "free" and pick the first result.
+First choice: **Big Pickle** (`opencode/big-pickle`). Second choice: any model with "free" in its name.
 
 ## Steps
 
-1. Set the browser viewport to 1080p before opening any page:
+1. Close any existing session and open the agents page:
    ```bash
    browser-use --session birdhouse-fib-test close 2>/dev/null || true
-   ```
-   Then open with explicit viewport (browser-use defaults to a large size — check `browser-use --help` or `browser-use config` for viewport options; if not available, proceed and note the deviation):
-   ```bash
    browser-use --session birdhouse-fib-test open \
      "http://127.0.0.1:50200/#/workspace/<id>/agents"
    ```
@@ -42,45 +39,47 @@ Use `opencode/big-pickle` as the first choice — search for "big-pickle" in the
      "sandboxes/sandbox1/screenshots/01-agents-page.png"
    ```
 
-3. Click **New Agent**.
+3. Click **New Agent** to open the launch panel.
 
-4. Select a model from the model picker. Open the dropdown and look for **Big Pickle** in the list — do not type to filter as the search may return "No results" for this model even when it is present. If Big Pickle is not visible, type "free" to filter and pick the first result.
+4. **Select a model.** The model picker combobox requires a JS-triggered input event to open — a direct click alone may not populate the list. Clear the input and fire an input event to reveal all models, then scroll to find and click **Big Pickle**:
+   ```bash
+   browser-use --session birdhouse-fib-test eval \
+     "(() => { const el = document.querySelector('input[role=combobox]') || document.querySelector('[data-model-picker] input'); if (!el) return 'not found'; el.value = ''; el.dispatchEvent(new Event('input', {bubbles:true})); return 'opened'; })()"
+   ```
+   Then use `browser-use state` to find the Big Pickle option index and click it. If Big Pickle is not visible, type "free" in the input and select the first result.
 
-5. In the message input, type exactly:
+5. Type the message text into the textarea on the launch panel. The message must be typed before clicking Launch Agent — the trigger phrase autocomplete appears on the launch panel, not in the conversation panel after launch.
+
+   Type the text below. Note: `browser-use type` will not trigger the skill autocomplete (it fires a bulk input event). To have the autocomplete appear for validation, type character by character using `browser-use keys "f" "i" "b" "o"...` up to "fibonacci" and check if the suggestion appears. If it appears, select it and complete the rest of the message. If automation does not support character-by-character typing or the suggestion does not appear, type the full text in one go — this is a known deviation and does not fail the test.
+
+   Full message text:
    ```
    Please run this fibonacci test for me: [fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)
 
    Compute fib(4) using the skill instructions. Use child agents as the skill instructs. Report the final answer.
    ```
 
-   > Note: When typing "fibonacci" the skill trigger phrase should appear as an autocomplete suggestion. Select it if it appears — this also validates the trigger phrase system. If it does not appear, type the full text manually.
-
-6. Save screenshot before sending:
+6. Save screenshot before launching:
    ```bash
    browser-use --session birdhouse-fib-test screenshot \
      "sandboxes/sandbox1/screenshots/02-message-composed.png"
    ```
 
-7. Send the message. Note the time sent.
+7. Click **Launch Agent**. Note the time.
 
-8. Start video recording immediately after sending:
+8. Start video recording immediately after launching:
    ```bash
    browser-use --session birdhouse-fib-test record start \
      "sandboxes/sandbox1/screenshots/fib-$(date +%s).mp4"
    ```
 
-9. **Waiting for completion.** The root agent is done when its entry in the sidebar no longer has a purple/active border and the message panel shows a final answer with no active tool calls running.
+9. **Wait for completion.** Use `browser-use state` as the primary polling method — read the visible text to check whether the invoker agent's message panel shows a final answer with no active tool calls. Poll every 30 seconds.
 
-   **Important — do not mistake the Birdhouse brand icon for a spinner.** The circular icon shown to the left of each agent name in the sidebar is the static Birdhouse logo. It does not rotate or animate. The only sign of an active/running agent is a pulsing purple left border on the agent row, or a tool call showing `running` status in the main panel.
+   **Important — do not mistake the Birdhouse brand icon for a spinner.** The circular icon shown next to each agent in the sidebar is the static Birdhouse logo. It does not animate. The only sign of a running agent is a pulsing purple left border on the agent row or a tool call showing `running` status in the main panel. When `browser-use state` shows the final message text `fib(4) = 3` in the panel with no `running` tool calls, the run is complete.
 
-   Poll every 30 seconds by running:
-   ```bash
-   browser-use --session birdhouse-fib-test eval \
-     "(() => { const active = document.querySelector('[data-active-agent]') || document.querySelector('.border-l-2'); return active ? 'still-running' : 'done'; })()"
-   ```
-   If the eval is inconclusive, use `browser-use state` to read visible text and check whether the agent panel shows a final message or an active tool call.
+   Do not rely on DOM selectors like `[data-active-agent]` or `.border-l-2` — these do not reliably reflect run state.
 
-10. Once the root agent is done, save screenshot:
+10. Once done, save screenshot:
     ```bash
     browser-use --session birdhouse-fib-test screenshot \
       "sandboxes/sandbox1/screenshots/03-agents-building.png"
@@ -93,20 +92,22 @@ Use `opencode/big-pickle` as the first choice — search for "big-pickle" in the
 
 12. **Count the agents in the current run's tree using the screenshot.**
 
-    Take a screenshot of the full sidebar showing the current run's tree, then count the agents visually. The current run's tree is the top entry in the sidebar — it has the most recent timestamp. Count every row nested under the top-level invoker row (including the invoker itself). Do not count agents from earlier runs.
+    Save a screenshot of the sidebar showing the current run's expanded tree, then count the rows visually. The current run is the top entry in the sidebar — it has the most recent timestamp. Count every row under the invoker (including the invoker itself). Do not count rows from earlier runs.
 
-    The expected tree shape for fib(4) is:
+    Note: all agents in the sidebar display at `level=1` in the DOM regardless of logical nesting depth — the hierarchy is visual only. Count by timestamp group, not by DOM level.
+
+    The expected tree for fib(4) has exactly 10 agents:
     ```
-    invoker (1)
-    └── fib(4) (1)
-        ├── fib(3) (1)
-        │   ├── fib(2) (1)
-        │   │   ├── fib(1) (1)
-        │   │   └── fib(0) (1)
-        │   └── fib(1) (1)
-        └── fib(2) (1)
-            ├── fib(1) (1)
-            └── fib(0) (1)
+    invoker                   (1)
+    fib(4)                    (1)
+    fib(3)                    (1)
+      fib(2)                  (1)
+        fib(1)                (1)
+        fib(0)                (1)
+      fib(1)                  (1)
+    fib(2)                    (1)
+      fib(1)                  (1)
+      fib(0)                  (1)
     ```
     Total: 10 agents.
 
@@ -139,5 +140,7 @@ Any of the following immediately indicates failure:
 
 ## Known limitations
 
-- The skill trigger phrase autocomplete depends on the sandbox having the skill indexed. If it does not appear, this is noted as a deviation but does not cause the test to fail — the test proceeds with manual text entry.
-- If browser-use does not support explicit viewport sizing, screenshots will be at the browser's default resolution. Note this as a deviation.
+- **Model picker:** The combobox may not respond to direct click — use the JS input event approach in step 4 to open the full list reliably.
+- **Autocomplete:** `browser-use type` will not trigger the skill suggestion dropdown. Character-by-character key input is required. Autocomplete not firing is a known deviation and does not fail the test.
+- **Completion detection:** Do not use CSS selector polling for run state — use `browser-use state` text output instead.
+- **Viewport:** browser-use does not support explicit viewport sizing. Screenshots will be at the browser default resolution.
