@@ -22,7 +22,7 @@ Verifies that Birdhouse agents can spawn recursive child agents and that skill r
 
 ## Model selection
 
-Search the model picker for "free". Use `opencode/big-pickle` if available, otherwise any model whose name contains "free".
+Use `opencode/big-pickle` as the first choice — search for "big-pickle" in the model picker. If it is not available or does not work, search for "free" and pick the first result.
 
 ## Steps
 
@@ -44,7 +44,7 @@ Search the model picker for "free". Use `opencode/big-pickle` if available, othe
 
 3. Click **New Agent**.
 
-4. Select a free model from the model picker (search "free", choose `opencode/big-pickle` or first available free model).
+4. Select a model from the model picker: search "big-pickle" and choose `opencode/big-pickle`. If it does not appear or fails, search "free" and pick the first result.
 
 5. In the message input, type exactly:
    ```
@@ -91,16 +91,24 @@ Search the model picker for "free". Use `opencode/big-pickle` if available, othe
     browser-use --session birdhouse-fib-test record stop
     ```
 
-12. **Count the agents in the current run's subtree.** Do NOT use the "Today N Agents" group label — that accumulates across all test runs on the same day.
+12. **Count the agents in the current run's tree using the screenshot.**
 
-    Instead, count the tree items nested under the top-level invoker agent for this run. Click the invoker agent row to expand it if needed, then use:
-    ```bash
-    browser-use --session birdhouse-fib-test eval \
-      "document.querySelectorAll('[role=treeitem]').length"
+    Take a screenshot of the full sidebar showing the current run's tree, then count the agents visually. The current run's tree is the top entry in the sidebar — it has the most recent timestamp. Count every row nested under the top-level invoker row (including the invoker itself). Do not count agents from earlier runs.
+
+    The expected tree shape for fib(4) is:
     ```
-    This counts all tree rows currently visible in the sidebar. If multiple test runs are expanded, collapse older ones first by clicking their top-level rows.
-
-    As a reliable fallback: use `browser-use state` to list all visible tree items, then count only those belonging to the current run (identifiable by their timestamp matching the run start time).
+    invoker (1)
+    └── fib(4) (1)
+        ├── fib(3) (1)
+        │   ├── fib(2) (1)
+        │   │   ├── fib(1) (1)
+        │   │   └── fib(0) (1)
+        │   └── fib(1) (1)
+        └── fib(2) (1)
+            ├── fib(1) (1)
+            └── fib(0) (1)
+    ```
+    Total: 10 agents.
 
 13. Read the root agent's final message from the main panel. It should state the answer.
 
@@ -131,6 +139,5 @@ Any of the following immediately indicates failure:
 
 ## Known limitations
 
-- The `[role=treeitem]` eval counts all visible rows. If older runs are expanded in the sidebar, collapse them before counting, or count manually from the screenshot.
 - The skill trigger phrase autocomplete depends on the sandbox having the skill indexed. If it does not appear, this is noted as a deviation but does not cause the test to fail — the test proceeds with manual text entry.
 - If browser-use does not support explicit viewport sizing, screenshots will be at the browser's default resolution. Note this as a deviation.
