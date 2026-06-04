@@ -33,13 +33,22 @@ Not applicable — this test uses agent tooling directly, not the model picker.
    mkdir -p "$RUN_DIR"
    ```
 
-2. Open the Birdhouse workspace agents page in a browser session and start recording. This captures the agent tree building as the test runs — the video is evidence that the tooling created real agents visible in the UI:
+2. Open the Birdhouse workspace agents page in a browser session and start recording. This captures the sandbox UI as the test runs — it shows Birdhouse is healthy and active while the tooling API is being exercised:
    ```bash
    browser-use --session birdhouse-exchange-test close 2>/dev/null || true
    browser-use --session birdhouse-exchange-test open \
      "http://127.0.0.1:50200/#/workspace/<id>/agents"
    browser-use --session birdhouse-exchange-test record start \
      "$RUN_DIR/exchange-recording.mp4"
+   ```
+
+   Note: the worker agent created in step 3 lives in the test agent's own Birdhouse session, not in sandbox1. It will not appear in the sandbox sidebar. The recording is ambient evidence that the sandbox is running — the real test artifacts are the report.txt and pass/fail verdict.
+
+3. **Create the worker agent** using `agent_create`:
+
+4. After the worker responds, take a screenshot of the sandbox agents page to show it is still healthy and running:
+   ```bash
+   browser-use --session birdhouse-exchange-test screenshot "$RUN_DIR/01-worker-created.png"
    ```
 
 3. **Create the worker agent** using `agent_create`:
@@ -97,7 +106,7 @@ Not applicable — this test uses agent tooling directly, not the model picker.
    ```
    Wait for completion.
 
-10. Navigate back to the worker's conversation if needed (`http://127.0.0.1:50200/#/workspace/<id>/agent/<WORKER_ID>`), then take a screenshot showing all exchanges complete in the main panel:
+10. Take a final screenshot of the sandbox agents page showing it is still healthy:
     ```bash
     browser-use --session birdhouse-exchange-test screenshot "$RUN_DIR/02-all-steps-done.png"
     ```
