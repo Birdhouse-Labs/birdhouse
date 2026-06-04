@@ -14,8 +14,10 @@ From the birdhouse-workspace root:
 
 ```bash
 bash sandboxes/start-sandbox.sh --sandbox sandbox1 \
-  --opencode-path .worktrees/opencode-birdhouse
+  --opencode-path /Users/crayment/dev/birdhouse-workspace/.worktrees/opencode-birdhouse
 ```
+
+Note: `--opencode-path` must be an absolute path.
 
 Birdhouse will be at: http://127.0.0.1:50200
 

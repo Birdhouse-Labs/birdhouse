@@ -26,10 +26,21 @@ Search the model picker for "free". Use `opencode/big-pickle` if available, othe
 
 ## Steps
 
-1. Navigate to the workspace agents page:
-   `http://127.0.0.1:50200/#/workspace/<id>/agents`
+1. Set the browser viewport to 1080p before opening any page:
+   ```bash
+   browser-use --session birdhouse-fib-test close 2>/dev/null || true
+   ```
+   Then open with explicit viewport (browser-use defaults to a large size — check `browser-use --help` or `browser-use config` for viewport options; if not available, proceed and note the deviation):
+   ```bash
+   browser-use --session birdhouse-fib-test open \
+     "http://127.0.0.1:50200/#/workspace/<id>/agents"
+   ```
 
-2. Take screenshot `01-agents-page.png` once the page has loaded.
+2. Save screenshot to file (do NOT use screenshot without a path — that returns base64 into context):
+   ```bash
+   browser-use --session birdhouse-fib-test screenshot \
+     "sandboxes/sandbox1/screenshots/01-agents-page.png"
+   ```
 
 3. Click **New Agent**.
 
@@ -38,62 +49,88 @@ Search the model picker for "free". Use `opencode/big-pickle` if available, othe
 5. In the message input, type exactly:
    ```
    Please run this fibonacci test for me: [fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)
-   
+
    Compute fib(4) using the skill instructions. Use child agents as the skill instructs. Report the final answer.
    ```
 
    > Note: When typing "fibonacci" the skill trigger phrase should appear as an autocomplete suggestion. Select it if it appears — this also validates the trigger phrase system. If it does not appear, type the full text manually.
 
-6. Take screenshot `02-message-composed.png` before sending.
+6. Save screenshot before sending:
+   ```bash
+   browser-use --session birdhouse-fib-test screenshot \
+     "sandboxes/sandbox1/screenshots/02-message-composed.png"
+   ```
 
-7. Send the message.
+7. Send the message. Note the time sent.
 
 8. Start video recording immediately after sending:
    ```bash
-   browser-use --session birdhouse-test record start \
-     "sandboxes/sandbox1/screenshots/fib-<timestamp>.mp4"
+   browser-use --session birdhouse-fib-test record start \
+     "sandboxes/sandbox1/screenshots/fib-$(date +%s).mp4"
    ```
 
-9. Wait for the root agent to show a completed state in the UI. Poll by checking the agent list in the left sidebar. Take screenshot `03-agents-building.png` when child agents are visible.
+9. **Waiting for completion.** The root agent is done when its entry in the sidebar no longer has a purple/active border and the message panel shows a final answer with no active tool calls running.
 
-10. Once the root agent shows completed, take screenshot `04-tree-complete.png` showing the full agent tree in the sidebar.
+   **Important — do not mistake the Birdhouse brand icon for a spinner.** The circular icon shown to the left of each agent name in the sidebar is the static Birdhouse logo. It does not rotate or animate. The only sign of an active/running agent is a pulsing purple left border on the agent row, or a tool call showing `running` status in the main panel.
+
+   Poll every 30 seconds by running:
+   ```bash
+   browser-use --session birdhouse-fib-test eval \
+     "(() => { const active = document.querySelector('[data-active-agent]') || document.querySelector('.border-l-2'); return active ? 'still-running' : 'done'; })()"
+   ```
+   If the eval is inconclusive, use `browser-use state` to read visible text and check whether the agent panel shows a final message or an active tool call.
+
+10. Once the root agent is done, save screenshot:
+    ```bash
+    browser-use --session birdhouse-fib-test screenshot \
+      "sandboxes/sandbox1/screenshots/03-agents-building.png"
+    ```
 
 11. Stop the recording:
     ```bash
-    browser-use --session birdhouse-test record stop
+    browser-use --session birdhouse-fib-test record stop
     ```
 
-12. Read the agent count from the sidebar group label. Birdhouse shows a "Today" group with a label like **"10 Agents"** next to the date. Use browser eval to extract it:
+12. **Count the agents in the current run's subtree.** Do NOT use the "Today N Agents" group label — that accumulates across all test runs on the same day.
+
+    Instead, count the tree items nested under the top-level invoker agent for this run. Click the invoker agent row to expand it if needed, then use:
     ```bash
     browser-use --session birdhouse-fib-test eval \
-      "(() => { const labels = [...document.querySelectorAll('*')].filter(el => el.childElementCount === 0 && /\d+ Agents?/.test(el.textContent)); return labels.map(el => el.textContent.trim()); })()"
+      "document.querySelectorAll('[role=treeitem]').length"
     ```
-    If that returns nothing, use `browser-use state` to inspect the sidebar and find the element displaying the agent count, then read it directly. As a fallback, count the tree items in the screenshot manually.
+    This counts all tree rows currently visible in the sidebar. If multiple test runs are expanded, collapse older ones first by clicking their top-level rows.
 
-13. Read the root agent's final message from the UI. It should state the answer.
+    As a reliable fallback: use `browser-use state` to list all visible tree items, then count only those belonging to the current run (identifiable by their timestamp matching the run start time).
 
-14. Take screenshot `05-root-answer.png` showing the root agent's final message.
+13. Read the root agent's final message from the main panel. It should state the answer.
+
+14. Save final screenshot:
+    ```bash
+    browser-use --session birdhouse-fib-test screenshot \
+      "sandboxes/sandbox1/screenshots/04-tree-complete.png"
+    ```
 
 ## Pass criteria
 
 All of the following must be true:
 
-- The root agent's final message contains the text `fib(4) = 3`
-- The sidebar's "Today" group label shows exactly **10 Agents** (1 invoker agent + 1 fib(4) root + 8 recursive children)
-- All agents in the sidebar show a completed or stopped state (no spinning indicators, no error badges)
-- The video file exists and has a non-zero size
+- The root fib(4) agent's final message contains the text `fib(4) = 3`
+- The current run's agent tree contains exactly **10 agents**: 1 invoker + 1 fib(4) root + 8 recursive children
+- No agent in the current run's tree shows an error state or red indicator
+- The video file exists and has a non-zero file size
 
 ## Fail criteria
 
 Any of the following immediately indicates failure:
 
 - The root agent's final message states any answer other than 3
-- The agent count is not 10 (too few means some agents didn't spawn; too many means the recursion went wrong)
-- Any agent shows an error state or red indicator
+- The agent count for this run is not 10 (too few means some agents didn't spawn; too many means the recursion went wrong)
+- Any agent in this run's tree shows an error state or red indicator
 - The root agent did not complete within the 10-minute timeout
-- The recording failed to start or the video file is missing
+- The recording failed to start or the video file is missing or zero bytes
 
 ## Known limitations
 
-- Agent count via DOM eval may be approximate if the sidebar uses virtualization. If the count is uncertain, use the screenshot to manually count visible agents and note the uncertainty in the report.
+- The `[role=treeitem]` eval counts all visible rows. If older runs are expanded in the sidebar, collapse them before counting, or count manually from the screenshot.
 - The skill trigger phrase autocomplete depends on the sandbox having the skill indexed. If it does not appear, this is noted as a deviation but does not cause the test to fail — the test proceeds with manual text entry.
+- If browser-use does not support explicit viewport sizing, screenshots will be at the browser's default resolution. Note this as a deviation.
