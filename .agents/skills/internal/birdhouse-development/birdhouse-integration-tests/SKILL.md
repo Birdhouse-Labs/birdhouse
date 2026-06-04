@@ -41,10 +41,10 @@ sandbox1 is the persistent testing environment. It accumulates state across runs
 
 - Birdhouse URL: `http://127.0.0.1:50200`
 - OpenCode health: `http://127.0.0.1:50210/global/health`
-- Start command (from birdhouse-workspace root):
+- Start command (from birdhouse-workspace root, absolute path required):
   ```bash
   bash sandboxes/start-sandbox.sh --sandbox sandbox1 \
-    --opencode-path .worktrees/opencode-birdhouse
+    --opencode-path /Users/crayment/dev/birdhouse-workspace/.worktrees/opencode-birdhouse
   ```
 - Stop command:
   ```bash
@@ -101,17 +101,14 @@ sleep 10
 
 ## Model selection
 
-Call the models endpoint and search for names containing "free":
+First choice: **Big Pickle** (`opencode/big-pickle`). Second choice: any model with "free" in its name.
 
+Check what's available:
 ```bash
 curl -s http://127.0.0.1:50200/api/workspace/<id>/models | python3 -m json.tool
 ```
 
-Preferred free model order (use the first one available):
-1. `opencode/big-pickle`
-2. Any other model with "free" in the name
-
-The prompt can override this by naming a specific model. If API keys are configured in sandbox1, any available model can be used — but the default tests are designed to work with free models so they run without key setup.
+The prompt can override this by naming a specific model. Tests are designed to work with free models so they run without API key setup.
 
 ## Browser automation
 
@@ -123,25 +120,33 @@ Use a named browser session (e.g. `--session birdhouse-test`) so the browser per
 
 ## Running a single test
 
+Each test manages its own timestamped run directory under `/tmp/`. The test file's steps define where to create it. Artifacts (screenshots, video) go inside that directory. At the end of the test, report the run directory path.
+
 1. Read the test file from `tests/`.
 2. Set up the environment (sandbox running, workspace ID obtained, opencode verified).
-3. Open the workspace agents page: `http://127.0.0.1:50200/#/workspace/<id>/agents`
-4. Start a browser recording before the first interaction:
-   ```bash
-   browser-use --session birdhouse-test record start \
-     "sandboxes/sandbox1/screenshots/<test-name>-$(date +%s).mp4"
-   ```
-5. Follow the test steps exactly. Take screenshots at each checkpoint, saving to `sandboxes/sandbox1/screenshots/` with ordered names.
-6. Wait for completion up to the test's specified timeout.
-7. Stop the recording.
-8. Evaluate every pass criterion and every fail criterion from the test file.
-9. Produce the output contract (see below).
+3. Follow the test steps exactly, including the step that creates the run directory.
+4. Produce the output contract (see below), including the run directory path.
 
 ## Running all tests (or a named subset)
 
-Run serially — one test at a time, one agent, in file-system order. After all tests complete, produce a summary report listing each test's verdict and one-line reasoning.
+Create a top-level suite directory first, then run each test serially inside it:
 
-When asked to run a subset by name ("run the fib and skill-reload tests"), match by test file name. Run only the matched tests.
+```bash
+SUITE_DIR="/tmp/birdhouse-suite-$(date +%Y-%m-%d-%H-%M-%S)"
+mkdir -p "$SUITE_DIR"
+echo "Suite output: $SUITE_DIR"
+```
+
+For each test, override the test's `RUN_DIR` to be a subdirectory of `$SUITE_DIR` named after the test:
+
+```bash
+RUN_DIR="$SUITE_DIR/<test-name>"
+mkdir -p "$RUN_DIR"
+```
+
+Run serially — one test at a time, in file-system order. After all tests complete, produce a summary report listing each test's verdict, one-line reasoning, and run directory path. Report the suite directory path so the user can inspect all artifacts in one place.
+
+When asked to run a subset by name ("run the fib and autocomplete tests"), match by test file name. Run only the matched tests.
 
 ## Output contract
 
