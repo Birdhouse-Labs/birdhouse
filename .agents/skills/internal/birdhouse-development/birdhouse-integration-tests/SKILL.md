@@ -112,13 +112,16 @@ The prompt can override this by naming a specific model. Tests are designed to w
 
 ## Browser automation
 
-Load the [browser-use](birdhouse:skill/browser-use) skill for all browser work. Include its full contents in the child agent's prompt — passing a file path alone is not reliable. Follow its patterns for opening pages, interacting with elements, taking screenshots, and recording video.
+Load the [browser-use](birdhouse:skill/browser-use) skill for all browser work. Pass this skill reference to child agents so they can load it. Follow its patterns for opening pages, interacting with elements, taking screenshots, and recording video.
 
 If a different browser automation skill is preferred, swap the skill reference above — nothing in this skill depends on browser-use internals.
 
 Use a persistent, named browser context for the whole test so page state survives across steps. If the selected browser tool supports named sessions, use a stable name such as `birdhouse-test`.
 
-**Completion detection:** The most reliable signal that an agent run has finished is the Birdhouse UI switching from a **Stop** button to a **Send** button in the message panel. Check for this in the page state output. The Birdhouse brand icon next to agent rows is a static logo — it does not animate and is not a loading indicator.
+**Completion detection:** Two reliable visual signals that an agent run has finished:
+
+1. The message panel switches from a **Stop** button to a **Send** button.
+2. The agent's row in the sidebar and its header lose their **gradient color**. Running agents display a purple/pink gradient on their row and title. Completed agents show plain/muted colors. The Birdhouse brand icon next to each row is a static logo — it does not animate regardless of run state.
 
 ## Running a single test
 
@@ -147,7 +150,7 @@ The orchestrator agent (you) coordinates the suite. It does NOT run the browser 
    - The full contents of the test file — substitute `<id>` with the actual workspace ID and `$RUN_DIR` with the assigned path before including it
    - The assigned `RUN_DIR` path: `$SUITE_DIR/<test-name-without-extension>`
    - The full contents of SKILL.md (so the child knows the output contract and environment)
-   - The full contents of the browser automation skill file
+   - The [browser-use](birdhouse:skill/browser-use) skill reference (pass the link so the child can load it)
    - The sandbox environment details (URL, workspace ID)
    - Instruction to produce the output contract and use `RUN_DIR` for all artifacts
 

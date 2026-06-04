@@ -85,11 +85,12 @@ First choice: **Big Pickle** (`opencode/big-pickle`). Second choice: any model w
 
 10. **Wait for completion.** Use `browser-use state` as the primary polling method — read the visible text to check whether the invoker agent's message panel shows a final answer with no active tool calls. Poll every 30 seconds.
 
-    **Important — do not mistake the Birdhouse brand icon for a spinner.** The circular icon shown next to each agent in the sidebar is the static Birdhouse logo. It does not animate.
+    Two reliable visual signals that the run is complete:
 
-    The most reliable completion signal is the UI switching from a **Stop** button to a **Send** button in the message panel. Check for this in the page state output. When `Stop` is absent and `Send` is present, the run is complete.
+    1. The message panel switches from a **Stop** button to a **Send** button.
+    2. The agent's row in the sidebar and its header lose their **gradient color** — running agents show a purple/pink gradient; completed agents show plain/muted colors.
 
-    Do not rely on DOM selectors like `[data-active-agent]` or `.border-l-2` — these do not reliably reflect run state.
+    The Birdhouse brand icon next to each row is a static logo — it does not animate regardless of run state. Do not rely on DOM selectors like `[data-active-agent]` or `.border-l-2` — these do not reliably reflect run state.
 
 11. Once done, save screenshot:
     ```bash
