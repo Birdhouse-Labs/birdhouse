@@ -7,3 +7,12 @@ opencode.json
 .env
 /.birdhouse
 /projects/_*
+
+# Sandbox runtime files — data and logs are not version controlled
+sandboxes/*/data.db
+sandboxes/*/data.db-shm
+sandboxes/*/data.db-wal
+sandboxes/*/server.log
+sandboxes/*/server.pid
+sandboxes/*/screenshots/*.png
+sandboxes/*/screenshots/*.mp4

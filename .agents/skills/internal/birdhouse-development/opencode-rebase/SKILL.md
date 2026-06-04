@@ -201,37 +201,11 @@ Do not hardcode historical skip lists into the workflow. Instead, look for the s
 - When doing end-of-branch cleanup, do not immediately fold fixes into older commits. Create explicit `fixup!` commits first so commit hashes stay stable while you continue grouping changes.
 - Keep the BIRDHOUSE base-tag update as a single commit at the end of the stack. Replace or fix up the previous base-update commit instead of accumulating multiple base-bump commits.
 
-## Smoke-Testing the Finished Branch
+## Integration Tests
 
-After completing the rebase and CI pass, run a live smoke test against an isolated Birdhouse instance to confirm the rebased opencode works end-to-end. Load the `isolated-birdhouse-web-testing` skill for the full isolation workflow. The short version:
+After the full port and CI pass, run the integration test suite against the new worktree to confirm the rebased opencode works end-to-end in a real Birdhouse session.
 
-1. **Claim a port range** using `scripts/claim-isolated-port-range.sh`.
-
-2. **Start an isolated Birdhouse** pointing at the worktree:
-   ```bash
-   bash scripts/start-isolated-birdhouse.sh \
-     --base-port <BASE_PORT> \
-     --opencode-path /tmp/opencode-<version> \
-     --label "smoke-test-<version>"
-   ```
-
-3. **Verify the fork identity** by hitting opencode's health endpoint directly. The opencode instance runs on `BASE_PORT + 10` (first workspace). Create a workspace first via `/api/workspaces/create` to trigger opencode spawn, then:
-   ```bash
-   curl -s http://127.0.0.1:<OPENCODE_PORT>/global/health
-   ```
-   Confirm `birdhouseWorkspaceId` is present in the response — this field only exists in the Birdhouse fork. If it is missing, the server is not running the rebased code.
-
-4. **Run a Fibonacci recursive agent test** — load the `fibonacci-recursive-agents` skill. Create an agent via the Birdhouse workspace API (`/api/workspace/<workspace_id>/agents`) rather than the AAPI, since the AAPI requires a calling agent session context. Use a model that exists in the isolated instance (check `/api/workspace/<workspace_id>/models` first — the free OpenCode Zen models are always available in dev mode).
-
-5. **Delegate browser + recording to a child agent** — load the `isolated-birdhouse-web-testing` skill's browser agent pattern. The child agent should: open the workspace agents view, start an MP4 recording before the first interaction, take screenshots at checkpoints, and stop the recording after the agent tree completes.
-
-6. **Check the result**: fib(5) should produce 5, with a visible recursive agent tree in the UI. The video and screenshots are your evidence.
-
-### Notes from the v1.4.11 rebase run
-
-- The isolated instance starts with a blank database and redirects to profile setup on first browser visit. Complete that step before navigating to the agents view.
-- The free models available in dev mode are OpenCode Zen models (e.g. `opencode/big-pickle`). Anthropic/OpenAI models require configured API keys.
-- `BIRDHOUSE_DATA_DB_PATH` in the start script keeps the agent database separate from your live Birdhouse data.
+Load the `birdhouse-integration-tests` skill (at `file:///Users/crayment/dev/birdhouse-workspace/.agents/skills/internal/birdhouse-development/birdhouse-integration-tests/SKILL.md`). Pass the new opencode path to sandbox1's start script, run all tests, and confirm every test passes before considering the rebase done. The integration test skill owns all the mechanics — environment setup, fork verification, model selection, browser automation, and pass/fail criteria.
 
 ## Key Reminders
 
