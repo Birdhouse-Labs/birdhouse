@@ -52,12 +52,12 @@ Verifies that the skill trigger phrase system surfaces suggestions in the new ag
 
 - After typing `fib` character by character, a dropdown suggestion for `fibonacci-recursive-agents` is visible
 - The suggestion includes the trigger phrase text (e.g. "fibonacci test" or "fibonacci recursive")
-- Clicking the suggestion inserts a `[fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)` link into the textarea
+- Clicking the suggestion inserts a skill reference link into the textarea with the `birdhouse:skill/fibonacci-recursive-agents` URL (the display label may be the trigger phrase, e.g. `[fibonacci test](birdhouse:skill/fibonacci-recursive-agents)`)
 
 ## Fail criteria
 
 - No autocomplete suggestion appears after typing `fib` one character at a time
-- The suggestion appears but clicking it does not insert the skill reference link
+- The suggestion appears but clicking it does not insert a `birdhouse:skill/fibonacci-recursive-agents` URL into the textarea
 - The test did not complete within 2 minutes
 
 ## Known limitations
