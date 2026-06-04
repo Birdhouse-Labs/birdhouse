@@ -48,11 +48,15 @@ First choice: **Big Pickle** (`opencode/big-pickle`). Second choice: any model w
    ```
    Then use `browser-use state` to find the Big Pickle option index and click it. If Big Pickle is not visible, type "free" in the input and select the first result.
 
-5. Type the message text into the textarea on the launch panel. The message must be typed before clicking Launch Agent — the trigger phrase autocomplete appears on the launch panel, not in the conversation panel after launch.
+5. Type the message text into the textarea on the launch panel. The message must be entered before clicking Launch Agent — the skill trigger phrase autocomplete lives on the launch panel, not in the conversation panel after launch.
 
-   Type the text below. Note: `browser-use type` will not trigger the skill autocomplete (it fires a bulk input event). To have the autocomplete appear for validation, type character by character using `browser-use keys "f" "i" "b" "o"...` up to "fibonacci" and check if the suggestion appears. If it appears, select it and complete the rest of the message. If automation does not support character-by-character typing or the suggestion does not appear, type the full text in one go — this is a known deviation and does not fail the test.
+   Use a bulk type command to enter the full message. Autocomplete will not fire (bulk typing bypasses the key-event listener entirely — even typing character-by-character afterward does not revive it once bulk text has been deposited). This is expected. The autocomplete feature is tested by a separate dedicated test.
 
    Full message text:
+   ```
+   Please run this fibonacci test for me: [fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)
+
+   Compute fib(4) using the skill instructions. Use child agents as the skill instructs. Report the final answer.
    ```
    Please run this fibonacci test for me: [fibonacci-recursive-agents](birdhouse:skill/fibonacci-recursive-agents)
 
@@ -141,6 +145,6 @@ Any of the following immediately indicates failure:
 ## Known limitations
 
 - **Model picker:** The combobox may not respond to direct click — use the JS input event approach in step 4 to open the full list reliably.
-- **Autocomplete:** `browser-use type` will not trigger the skill suggestion dropdown. Character-by-character key input is required. Autocomplete not firing is a known deviation and does not fail the test.
+- **Autocomplete:** The autocomplete listener requires every character to arrive as a key event. Any bulk type operation poisons the listener state permanently for that field — subsequent character-by-character input does not revive it. This test uses bulk typing and therefore never triggers autocomplete. Skill trigger phrase autocomplete is validated by a separate dedicated test.
 - **Completion detection:** Do not use CSS selector polling for run state — use `browser-use state` text output instead.
 - **Viewport:** browser-use does not support explicit viewport sizing. Screenshots will be at the browser default resolution.
