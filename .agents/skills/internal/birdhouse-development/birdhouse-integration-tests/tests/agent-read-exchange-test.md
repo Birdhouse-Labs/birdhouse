@@ -100,10 +100,13 @@ Not applicable — the worker agent uses whatever model the parent assigns. Use 
    - `agent_read({ agent_id: WORKER_ID, full: true })` — full conversation summary
    - `agent_read({ agent_id: WORKER_ID, all: true })` — raw full transcript
 
-   Then from the `full` output, pick two tool calls and inspect them:
+   Note how many exchanges `latest_turn` returned — it should be exactly one.
+
+   Then from the `full` output, select one tool call of each type:
    - One file-related tool call (`read`, `write`, or `edit`)
    - One `bash` tool call
-   Use `agent_read_tool_call({ agent_id: WORKER_ID, call_id: CALL_ID })` for each.
+
+   Tool calls appear as `parts` entries with `type: "tool"`. Look for the `callID` field in those parts — that value maps to the `call_id` parameter of `agent_read_tool_call`. Use `agent_read_tool_call({ agent_id: WORKER_ID, call_id: CALL_ID })` for each.
 
 10. Read the actual file to verify contents:
     ```bash
@@ -113,8 +116,10 @@ Not applicable — the worker agent uses whatever model the parent assigns. Use 
 11. Write a summary to `$RUN_DIR/report.txt` containing:
     - Worker agent ID
     - Final file contents
-    - What each read mode returned (one line per mode)
-    - What the two tool-call drill-downs added
+    - What each read mode returned (one line per mode), including:
+      - How many exchanges `latest_turn` returned
+      - At least one field present in `all` but absent in `full` (e.g. tool timing metadata)
+    - What the two tool-call drill-downs added beyond the `full` preview
     - Any deviations
 
 12. **Clean up** — delete the test directory:
@@ -133,10 +138,10 @@ All of the following must be true:
   gamma
   ```
 - `agent_read` default returns only the worker's last message (step 5 response)
-- `agent_read` with `latest_turn: true` returns the step 5 exchange (reply + response)
+- `agent_read` with `latest_turn: true` returns exactly one exchange (the step 5 reply + response) — not the full conversation
 - `agent_read` with `full: true` returns a summary covering all five exchanges
-- `agent_read` with `all: true` returns more detail than `full` (raw tool call content visible)
-- `agent_read_tool_call` returns the full content of the inspected tool call
+- `agent_read` with `all: true` includes fields absent in `full` — specifically, tool timing metadata (`time.start`, `time.end`) visible in tool call state; message count alone is not a sufficient differentiator
+- `agent_read_tool_call` returns the full content of the inspected tool call including inputs, outputs, and timing
 - `$RUN_DIR/report.txt` exists and is non-empty
 
 ## Fail criteria
@@ -146,7 +151,7 @@ Any of the following immediately indicates failure:
 - Final file contents differ from expected (wrong lines, extra whitespace, missing update)
 - Any `agent_read` call errors or returns empty content
 - `latest_turn` returns more than one exchange worth of content (suggests it is behaving like `full`)
-- `full` and `all` return identical content (suggests one mode is not working correctly)
+- `all` contains no fields beyond what `full` returns — specifically, tool timing metadata (`time.start`, `time.end`) should be present in `all` but absent in `full`
 - `agent_read_tool_call` errors or returns less content than the `full` preview
 - The test did not complete within 10 minutes
 
@@ -155,3 +160,5 @@ Any of the following immediately indicates failure:
 - This test does not use a browser and produces no video or screenshots — only `$RUN_DIR/report.txt`.
 - The exact wording of read mode output will vary. Evaluate scope (how much conversation is covered) not exact phrasing.
 - If the worker uses `write` instead of `edit` for step 3, the file will still be correct — this is not a failure.
+- The worker may use bash to create the directory in step 1, even though the test says to use file-editing tools for the file contents. Directory creation via bash is acceptable.
+- The worker may paraphrase bash output rather than quoting it verbatim. A natural-language summary of `ls` output (e.g. "the directory contains one file: note.txt") is acceptable.
