@@ -130,6 +130,20 @@ If a different browser automation skill is preferred, swap the skill reference a
 
 Use a persistent, named browser context for the whole test so page state survives across steps. If the selected browser tool supports named sessions, use a stable name such as `birdhouse-test`.
 
+**Viewport size — always set to 720p by default.** Immediately after every `browser-use open` call, set the viewport to 1280×720 unless the prompt explicitly instructs a different resolution:
+
+```bash
+browser-use --session <session-name> python "browser._run(browser._session._cdp_set_viewport(1280, 720))"
+```
+
+Verify it took:
+```bash
+browser-use --session <session-name> eval "window.innerWidth + 'x' + window.innerHeight"
+# expected: 1280x720
+```
+
+Note: `await session.page.set_viewport_size(...)` does not work — `session` is not in scope and `await` outside an async function raises a SyntaxError. Use the `_cdp_set_viewport` approach above.
+
 **Completion detection:** Two reliable visual signals that an agent run has finished:
 
 1. The message panel switches from a **Stop** button to a **Send** button.
