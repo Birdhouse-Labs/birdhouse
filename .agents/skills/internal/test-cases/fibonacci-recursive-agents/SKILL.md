@@ -4,6 +4,13 @@ description: Compute Fibonacci numbers using recursive agent delegation where ea
 tags:
   - birdhouse
   - test-case
+trigger_phrases:
+  - fibonacci test
+  - fibonacci recursive
+  - fib test
+  - recursive fibonacci
+  - run fib
+  - fibonacci agentic test
 version: 1.0.0
 author: Birdhouse Team
 metadata:
