@@ -10,7 +10,7 @@ trigger_phrases:
   - fib test
   - recursive fibonacci
   - run fib
-  - fibonacci integration test
+  - fibonacci agentic test
 version: 1.0.0
 author: Birdhouse Team
 metadata:

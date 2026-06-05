@@ -1,17 +1,17 @@
 ---
-name: birdhouse-integration-tests
-description: Run, write, and manage Birdhouse integration tests. Each test exercises Birdhouse end-to-end using a real browser and a real isolated OpenCode instance. Use when asked to run integration tests, run a specific test, or add a new integration test.
+name: birdhouse-agentic-tests
+description: Run, write, and manage Birdhouse agentic tests. Each test exercises Birdhouse end-to-end using a real browser and a real isolated OpenCode instance. Use when asked to run agentic tests, run a specific test, or add a new agentic test.
 tags:
   - birdhouse
   - testing
-  - integration
+  - agentic
 version: 1.0.0
 author: Birdhouse Team
 metadata:
   internal: true
 ---
 
-# Birdhouse Integration Tests
+# Birdhouse Agentic Tests
 
 End-to-end tests that exercise Birdhouse through a real browser against a real isolated OpenCode instance. Each test is a markdown file. An agent follows the steps, then self-scores pass or fail based on the criteria in the test file.
 
@@ -27,7 +27,7 @@ End-to-end tests that exercise Birdhouse through a real browser against a real i
 
 **Every test must be browser-driven.** There is no exception. A test that calls Birdhouse agent tools directly is testing the production environment, not the sandbox.
 
-## What an integration test is
+## What an agentic test is
 
 A markdown file in `tests/` alongside this skill. Every test file contains:
 
@@ -177,7 +177,7 @@ The orchestrator agent (you) coordinates the suite. It does NOT run the browser 
 ### report.md format
 
 ```markdown
-# Integration Test Suite Report
+# Agentic Test Suite Report
 
 **Date:** <date>
 **Suite:** <SUITE_DIR>
@@ -232,5 +232,5 @@ The test runner opens `http://127.0.0.1:50200` in a browser and interacts with t
 5. Run the test once standalone before committing to confirm the steps are followable and the criteria are unambiguous.
 6. Commit the new test file.
 
-Base directory for this skill: file:///Users/crayment/dev/birdhouse-workspace/.agents/skills/internal/birdhouse-development/birdhouse-integration-tests
+Base directory for this skill: file:///Users/crayment/dev/birdhouse-workspace/.agents/skills/internal/birdhouse-development/birdhouse-agentic-tests
 Relative paths in this skill (e.g., tests/) are relative to this base directory.

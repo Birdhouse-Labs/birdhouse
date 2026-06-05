@@ -201,11 +201,11 @@ Do not hardcode historical skip lists into the workflow. Instead, look for the s
 - When doing end-of-branch cleanup, do not immediately fold fixes into older commits. Create explicit `fixup!` commits first so commit hashes stay stable while you continue grouping changes.
 - Keep the BIRDHOUSE base-tag update as a single commit at the end of the stack. Replace or fix up the previous base-update commit instead of accumulating multiple base-bump commits.
 
-## Integration Tests
+## Agentic Tests
 
-After the full port and CI pass, run the integration test suite against the new worktree to confirm the rebased opencode works end-to-end in a real Birdhouse session.
+After the full port and CI pass, run the agentic test suite against the new worktree to confirm the rebased opencode works end-to-end in a real Birdhouse session.
 
-Load the `birdhouse-integration-tests` skill (at `file:///Users/crayment/dev/birdhouse-workspace/.agents/skills/internal/birdhouse-development/birdhouse-integration-tests/SKILL.md`). Pass the new opencode path to sandbox1's start script, run all tests, and confirm every test passes before considering the rebase done. The integration test skill owns all the mechanics — environment setup, fork verification, model selection, browser automation, and pass/fail criteria.
+Load the `birdhouse-agentic-tests` skill (at `file:///Users/crayment/dev/birdhouse-workspace/.agents/skills/internal/birdhouse-development/birdhouse-agentic-tests/SKILL.md`). Pass the new opencode path to sandbox1's start script, run all tests, and confirm every test passes before considering the rebase done. The agentic test skill owns all the mechanics — environment setup, fork verification, model selection, browser automation, and pass/fail criteria.
 
 ## Key Reminders
 
