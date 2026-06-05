@@ -44,6 +44,13 @@ if kill -0 "$pid" 2>/dev/null; then
     kill -0 "$pid" 2>/dev/null || break
     sleep 0.1
   done
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -9 "$pid" >/dev/null 2>&1 || true
+    sleep 0.5
+    if kill -0 "$pid" 2>/dev/null; then
+      printf 'Warning: sandbox %s (PID %s) did not stop after SIGTERM+SIGKILL\n' "$SANDBOX" "$pid" >&2
+    fi
+  fi
   printf 'Stopped sandbox %s (PID %s). Data preserved at %s\n' "$SANDBOX" "$pid" "$SANDBOX_DIR"
 else
   printf 'Sandbox %s (PID %s) was not running.\n' "$SANDBOX" "$pid"
