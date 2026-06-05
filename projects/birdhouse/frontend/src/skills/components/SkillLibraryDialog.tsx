@@ -77,8 +77,10 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
   const [searchQuery, setSearchQuery] = createSignal("");
   const [scopeFilter, setScopeFilter] = createSignal<SkillListScopeFilter>("all");
   const [storedSelectedSkillId, setStoredSelectedSkillId] = createSignal<string | null>(null);
+  const [autoScrollSkillId, setAutoScrollSkillId] = createSignal<string | null>(null);
   const [reloadingSkills, setReloadingSkills] = createSignal(false);
   const [reloadError, setReloadError] = createSignal<string | null>(null);
+  let wasLibraryOpen = false;
 
   const isLibraryOpen = createMemo(() => modalStack().some((modal) => modal.type === MODAL_TYPE_LIBRARY));
 
@@ -126,6 +128,17 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
   });
 
   createEffect(() => {
+    const open = isLibraryOpen();
+    if (open && !wasLibraryOpen) {
+      setAutoScrollSkillId(selectedSkillId());
+    } else if (!open && wasLibraryOpen) {
+      setAutoScrollSkillId(null);
+    }
+
+    wasLibraryOpen = open;
+  });
+
+  createEffect(() => {
     const currentSelectedSkillId = selectedSkillId();
     if (currentSelectedSkillId) {
       setStoredSelectedSkillId(currentSelectedSkillId);
@@ -140,11 +153,12 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
     });
   });
 
-  const selectSkill = (skillId: string | null) => {
+  const selectSkill = (skillId: string | null, options?: { autoScroll?: boolean }) => {
     const nextId = skillId || "main";
     if (skillId) {
       setStoredSelectedSkillId(skillId);
     }
+    setAutoScrollSkillId(options?.autoScroll && skillId ? skillId : null);
     replaceModal(MODAL_TYPE_LIBRARY, nextId);
 
     if (!isDesktop()) {
@@ -205,7 +219,7 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
         );
 
         if (currentSelectedSkillId !== nextSelectedSkillId) {
-          selectSkill(nextSelectedSkillId);
+          selectSkill(nextSelectedSkillId, { autoScroll: !!nextSelectedSkillId });
         }
       },
     ),
@@ -218,9 +232,15 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
       searchQuery={searchQuery()}
       scopeFilter={scopeFilter()}
       selectedSkillId={selectedSkillId()}
+      autoScrollSkillId={autoScrollSkillId()}
       onSearchQueryChange={setSearchQuery}
       onScopeFilterChange={setScopeFilter}
       onSelectSkill={selectSkill}
+      onAutoScrollHandled={(skillId) => {
+        if (autoScrollSkillId() === skillId) {
+          setAutoScrollSkillId(null);
+        }
+      }}
     />
   );
 

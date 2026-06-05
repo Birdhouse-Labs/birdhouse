@@ -16,14 +16,16 @@ export interface SkillListPaneProps {
   searchQuery: string;
   scopeFilter: SkillListScopeFilter;
   selectedSkillId: string | null;
+  autoScrollSkillId?: string | null;
   onSearchQueryChange: (value: string) => void;
   onScopeFilterChange: (value: SkillListScopeFilter) => void;
   onSelectSkill: (skillId: string) => void;
+  onAutoScrollHandled?: (skillId: string) => void;
 }
 
 const SkillListPane: Component<SkillListPaneProps> = (props) => {
   const baseZIndex = useZIndex();
-  let selectedSkillButton: HTMLButtonElement | undefined;
+  let skillListRef: HTMLDivElement | undefined;
 
   const resultCountLabel = () => {
     const count = props.filteredSkills.length;
@@ -45,13 +47,22 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
   ];
 
   createEffect(
-    on([() => props.selectedSkillId, () => props.filteredSkills], ([selectedSkillId]) => {
-      if (!selectedSkillId) {
+    on([() => props.autoScrollSkillId, () => props.filteredSkills], ([autoScrollSkillId]) => {
+      if (!autoScrollSkillId) {
         return;
       }
 
       queueMicrotask(() => {
-        selectedSkillButton?.scrollIntoView({ block: "start" });
+        const selectedSkillButton = Array.from(
+          skillListRef?.querySelectorAll<HTMLButtonElement>("button[data-skill-id]") ?? [],
+        ).find((button) => button.dataset["skillId"] === autoScrollSkillId);
+
+        if (!selectedSkillButton) {
+          return;
+        }
+
+        selectedSkillButton.scrollIntoView({ block: "start" });
+        props.onAutoScrollHandled?.(autoScrollSkillId);
       });
     }),
   );
@@ -129,7 +140,7 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto px-3">
+      <div ref={skillListRef} class="flex-1 overflow-y-auto px-3">
         <Show
           when={props.filteredSkills.length > 0}
           fallback={
@@ -142,11 +153,7 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
             {(skill) => (
               <button
                 type="button"
-                ref={(el) => {
-                  if (props.selectedSkillId === skill.id) {
-                    selectedSkillButton = el;
-                  }
-                }}
+                data-skill-id={skill.id}
                 onClick={() => props.onSelectSkill(skill.id)}
                 class="w-full text-left px-3 py-4 transition-colors border-b border-border-muted/40 last:border-b-0"
                 classList={{
