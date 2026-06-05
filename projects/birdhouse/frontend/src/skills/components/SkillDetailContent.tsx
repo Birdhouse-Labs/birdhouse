@@ -2,7 +2,7 @@
 // ABOUTME: Renders metadata, trigger phrases, supporting files, and XML preview for one selected skill.
 
 import { ChevronRight, FolderOpen } from "lucide-solid";
-import { type Component, createSignal, For, Show } from "solid-js";
+import { type Component, createEffect, createSignal, For, Show } from "solid-js";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
 import { CodeBlock } from "../../components/ui/CodeBlock";
 import IconButton from "../../components/ui/IconButton";
@@ -115,6 +115,8 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
   const [viewerLoading, setViewerLoading] = createSignal(false);
   const [viewerError, setViewerError] = createSignal<string | null>(null);
   const [viewedFile, setViewedFile] = createSignal<import("../../file-viewer/types").FileViewerFile | null>(null);
+  let detailScrollRef: HTMLDivElement | undefined;
+  let previousSkillId = props.skill.id;
 
   const scopeTitle = () => "Trigger Phrases";
   const scopeDescription = () => "Choose the phrases that suggest this skill while you type.";
@@ -170,9 +172,26 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
     }
   };
 
+  createEffect(() => {
+    const skillId = props.skill.id;
+    if (skillId === previousSkillId) {
+      return;
+    }
+
+    previousSkillId = skillId;
+
+    if (detailScrollRef) {
+      if (typeof detailScrollRef.scrollTo === "function") {
+        detailScrollRef.scrollTo({ top: 0 });
+      } else {
+        detailScrollRef.scrollTop = 0;
+      }
+    }
+  });
+
   return (
     <>
-      <div class="flex-1 overflow-y-auto p-8 space-y-8">
+      <div ref={detailScrollRef} class="flex-1 overflow-y-auto p-8 space-y-8">
         <Show when={error()}>
           <div class="p-3 bg-danger/10 border border-danger rounded text-sm text-danger">{error()}</div>
         </Show>
