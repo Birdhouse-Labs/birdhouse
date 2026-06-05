@@ -38,8 +38,12 @@ PORT_LOCK_FILE="$RUN_DIR/port-lock-dir.txt"
 if [[ -f "$PORT_LOCK_FILE" ]]; then
   port_lock_dir=$(tr -d '[:space:]' <"$PORT_LOCK_FILE")
   if [[ -n "$port_lock_dir" && -d "$port_lock_dir" ]]; then
-    rm -rf "$port_lock_dir"
-    printf 'Released port lock %s\n' "$port_lock_dir"
+    if [[ "$port_lock_dir" == *isolated-port-locks/* && "$port_lock_dir" == *.lock ]]; then
+      rm -rf "$port_lock_dir"
+      printf 'Released port lock %s\n' "$port_lock_dir"
+    else
+      printf 'Warning: skipping port lock delete for unexpected path %s\n' "$port_lock_dir" >&2
+    fi
   fi
 fi
 
