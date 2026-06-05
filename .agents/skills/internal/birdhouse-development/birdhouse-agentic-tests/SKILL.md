@@ -254,4 +254,4 @@ The test runner opens `http://127.0.0.1:50200` in a browser and interacts with t
 6. Commit the new test file.
 
 Base directory for this skill: file:///Users/crayment/dev/birdhouse-workspace/.agents/skills/internal/birdhouse-development/birdhouse-agentic-tests
-Relative paths in this skill (e.g., tests/) are relative to this base directory.
+Relative paths to skill-local assets (e.g., tests/) are relative to this base directory.
