@@ -76,7 +76,7 @@ SERVER_PID_FILE="$SANDBOX_DIR/server.pid"
 # Check if already running
 if [[ -f "$SERVER_PID_FILE" ]]; then
   existing_pid=$(cat "$SERVER_PID_FILE")
-  if kill -0 "$existing_pid" 2>/dev/null; then
+  if kill -0 "$existing_pid" 2>/dev/null && curl -sSf "http://127.0.0.1:${BASE_PORT}/api/health" >/dev/null 2>&1; then
     printf 'Sandbox %s is already running (PID %s) at http://127.0.0.1:%s\n' "$SANDBOX" "$existing_pid" "$BASE_PORT"
     printf 'SERVER_URL=http://127.0.0.1:%s\n' "$BASE_PORT"
     printf 'SERVER_PID=%s\n' "$existing_pid"
