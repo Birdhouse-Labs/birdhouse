@@ -67,7 +67,13 @@ browser-use --session isolated-birdhouse screenshot "$RUN_DIR/screenshots/02-bef
 browser-use --session isolated-birdhouse screenshot "$RUN_DIR/screenshots/03-after-submit.png"
 ```
 
-6. Report failures as one of:
+6. If a recording was started, stop it before reporting back.
+
+```bash
+browser-use --session isolated-birdhouse record stop
+```
+
+7. Report failures as one of:
 
 - app bug
 - environment issue
