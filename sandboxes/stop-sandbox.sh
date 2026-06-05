@@ -40,6 +40,10 @@ fi
 pid=$(cat "$SERVER_PID_FILE")
 if kill -0 "$pid" 2>/dev/null; then
   kill "$pid"
+  for _ in $(seq 1 50); do
+    kill -0 "$pid" 2>/dev/null || break
+    sleep 0.1
+  done
   printf 'Stopped sandbox %s (PID %s). Data preserved at %s\n' "$SANDBOX" "$pid" "$SANDBOX_DIR"
 else
   printf 'Sandbox %s (PID %s) was not running.\n' "$SANDBOX" "$pid"
