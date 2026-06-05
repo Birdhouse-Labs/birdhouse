@@ -81,6 +81,8 @@ if [[ -f "$SERVER_PID_FILE" ]]; then
     printf 'SERVER_URL=http://127.0.0.1:%s\n' "$BASE_PORT"
     printf 'SERVER_PID=%s\n' "$existing_pid"
     exit 0
+  else
+    kill "$existing_pid" >/dev/null 2>&1 || true
   fi
 fi
 
