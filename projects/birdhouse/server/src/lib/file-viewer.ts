@@ -1,8 +1,9 @@
-// ABOUTME: Reads viewable text files and detects a highlighting language for the file viewer.
-// ABOUTME: Rejects invalid paths, directories, oversized files, and obvious binary content.
+// ABOUTME: Reads viewable text files, detects highlighting languages, and reveals files in the OS file manager.
+// ABOUTME: Rejects invalid paths, directories, oversized files, and obvious binary content for the file viewer.
 
+import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { basename, extname } from "node:path";
+import { basename, dirname, extname } from "node:path";
 
 const MAX_FILE_VIEW_BYTES = 1024 * 1024;
 
@@ -61,6 +62,12 @@ export class ReadViewableFileError extends Error {
   }
 }
 
+type SpawnLike = (
+  command: string,
+  args: string[],
+  options: { detached: true; stdio: "ignore" },
+) => Pick<ChildProcess, "unref">;
+
 export function detectFileViewerLanguage(filePath: string): string {
   const filename = basename(filePath).toLowerCase();
   const extension = extname(filePath).slice(1).toLowerCase();
@@ -101,4 +108,30 @@ export function readViewableFile(filePath: string): ViewableFile {
     language,
     is_markdown: language === "markdown",
   };
+}
+
+export function revealFileInFileManager(
+  filePath: string,
+  platform: NodeJS.Platform = process.platform,
+  spawnProcess: SpawnLike = spawn,
+): void {
+  let command: string;
+  let args: string[];
+
+  if (platform === "darwin") {
+    command = "open";
+    args = ["-R", filePath];
+  } else if (platform === "win32") {
+    command = "explorer";
+    args = ["/select,", filePath];
+  } else {
+    command = "xdg-open";
+    args = [dirname(filePath)];
+  }
+
+  const child = spawnProcess(command, args, {
+    detached: true,
+    stdio: "ignore",
+  });
+  child.unref();
 }

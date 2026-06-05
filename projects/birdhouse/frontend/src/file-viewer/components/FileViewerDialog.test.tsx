@@ -5,8 +5,17 @@ import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
 import FileViewerDialog from "./FileViewerDialog";
 
+const { revealFileViewerPathMock } = vi.hoisted(() => ({
+  revealFileViewerPathMock: vi.fn(),
+}));
+
 vi.mock("../../contexts/ZIndexContext", () => ({
   useZIndex: () => 100,
+}));
+
+vi.mock("../services/file-viewer-api", () => ({
+  fetchFileViewerContent: vi.fn(),
+  revealFileViewerPath: (workspaceId: string, path: string) => revealFileViewerPathMock(workspaceId, path),
 }));
 
 describe("FileViewerDialog", () => {
@@ -59,6 +68,31 @@ describe("FileViewerDialog", () => {
 
     await waitFor(() => {
       expect(dialog.textContent).toContain("export const answer = 42;");
+    });
+  });
+
+  it("reveals the current file path in Finder", async () => {
+    revealFileViewerPathMock.mockResolvedValueOnce(undefined);
+
+    render(() => (
+      <FileViewerDialog
+        open={true}
+        onOpenChange={() => {}}
+        file={{
+          path: "/Users/test/references/notes.md",
+          name: "notes.md",
+          content: "# Notes\n\nHello world.",
+          language: "markdown",
+          isMarkdown: true,
+        }}
+        workspaceId="ws_test"
+      />
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: "Reveal file in Finder" }));
+
+    await waitFor(() => {
+      expect(revealFileViewerPathMock).toHaveBeenCalledWith("ws_test", "/Users/test/references/notes.md");
     });
   });
 });

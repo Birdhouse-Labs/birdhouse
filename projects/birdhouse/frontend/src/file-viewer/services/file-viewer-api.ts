@@ -30,3 +30,17 @@ export async function fetchFileViewerContent(workspaceId: string, path: string):
     isMarkdown: data.is_markdown,
   };
 }
+
+export async function revealFileViewerPath(workspaceId: string, path: string): Promise<void> {
+  const url = `${API_ENDPOINT_BASE}/workspace/${encodeURIComponent(workspaceId)}/files/reveal`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to reveal file: ${response.statusText} - ${text}`);
+  }
+}

@@ -2,14 +2,17 @@
 // ABOUTME: Uses the shared markdown and code block renderers so file previews match the current app theme.
 
 import Dialog from "corvu/dialog";
+import { FolderOpen } from "lucide-solid";
 import { type Component, createEffect, createMemo, createSignal, Show, Suspense } from "solid-js";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 import CodeBlockContainer from "../../components/ui/CodeBlockContainer";
 import CopyButton from "../../components/ui/CopyButton";
+import IconButton from "../../components/ui/IconButton";
 import { useZIndex } from "../../contexts/ZIndexContext";
 import { borderColor, cardSurface, cardSurfaceFlat } from "../../styles/containerStyles";
 import { codeTheme, isDark } from "../../theme";
 import { resolveCodeTheme } from "../../theme/codeThemes";
+import { revealFileViewerPath } from "../services/file-viewer-api";
 import type { FileViewerFile } from "../types";
 
 type MarkdownViewMode = "rich" | "raw";
@@ -27,11 +30,25 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
   const baseZIndex = useZIndex();
   const resolvedTheme = createMemo(() => resolveCodeTheme(codeTheme(), isDark()));
   const [markdownMode, setMarkdownMode] = createSignal<MarkdownViewMode>("rich");
+  const [isRevealing, setIsRevealing] = createSignal(false);
 
   createEffect(() => {
     const file = props.file;
     setMarkdownMode(file?.isMarkdown ? "rich" : "raw");
   });
+
+  const handleReveal = async () => {
+    if (!props.workspaceId || !props.file?.path || isRevealing()) {
+      return;
+    }
+
+    setIsRevealing(true);
+    try {
+      await revealFileViewerPath(props.workspaceId, props.file.path);
+    } finally {
+      setIsRevealing(false);
+    }
+  };
 
   const title = createMemo(() => props.file?.name ?? "File Viewer");
 
@@ -92,6 +109,16 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
               </Show>
               <Show when={props.file?.content}>
                 <CopyButton text={props.file?.content ?? ""} />
+              </Show>
+              <Show when={props.workspaceId && props.file?.path}>
+                <IconButton
+                  icon={<FolderOpen size={16} />}
+                  variant="ghost"
+                  fixedSize={true}
+                  disabled={isRevealing()}
+                  aria-label="Reveal file in Finder"
+                  onClick={() => void handleReveal()}
+                />
               </Show>
               <Dialog.Close class="text-text-muted hover:text-text-primary transition-colors focus:outline-none rounded p-1 w-8 h-8 flex items-center justify-center flex-shrink-0">
                 <span class="text-xl leading-none select-none">×</span>

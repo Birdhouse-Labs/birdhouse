@@ -1,7 +1,7 @@
 // ABOUTME: Tests workspace-scoped file routes for file search and read-only file viewing.
 // ABOUTME: Verifies the file viewer endpoint returns text content safely and rejects invalid paths.
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -62,5 +62,21 @@ describe("workspace file routes", () => {
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
+  });
+
+  test("reveals an absolute file path in the file manager", async () => {
+    const revealFile = mock(() => {});
+    const app = await createTestApp({ workspace: createMockWorkspace() });
+    app.route("/", createFileRoutes({ revealFileInFileManager: revealFile }));
+
+    const response = await app.request("/reveal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: "/Users/test/references/notes.md" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, path: "/Users/test/references/notes.md" });
+    expect(revealFile).toHaveBeenCalledWith("/Users/test/references/notes.md");
   });
 });
