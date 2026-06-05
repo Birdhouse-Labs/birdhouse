@@ -205,7 +205,14 @@ Do not hardcode historical skip lists into the workflow. Instead, look for the s
 
 After the full port and CI pass, run the agentic test suite against the new worktree to confirm the rebased opencode works end-to-end in a real Birdhouse session.
 
-Load the `birdhouse-agentic-tests` skill (at `file:///Users/crayment/dev/birdhouse-workspace/.agents/skills/internal/birdhouse-development/birdhouse-agentic-tests/SKILL.md`). Pass the new opencode path to sandbox1's start script, run all tests, and confirm every test passes before considering the rebase done. The agentic test skill owns all the mechanics — environment setup, fork verification, model selection, browser automation, and pass/fail criteria.
+Load the `birdhouse-agentic-tests` skill (at `file:///Users/crayment/dev/birdhouse-workspace/.agents/skills/internal/birdhouse-development/birdhouse-agentic-tests/SKILL.md`). Run all tests and confirm every test passes before considering the rebase done.
+
+**Important:** start sandbox1 with the rebase worktree path, not the default:
+```bash
+bash sandboxes/start-sandbox.sh --sandbox sandbox1 \
+  --opencode-path /tmp/opencode-v<version>
+```
+Replace `<version>` with the new upstream tag (e.g. `1.4.12`). This runs the tests against the in-progress rebase, not the already-merged `birdhouse` branch. The default opencode path (`.worktrees/opencode-birdhouse`) points at the merged branch and would not test your new work.
 
 ## Key Reminders
 

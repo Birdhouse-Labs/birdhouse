@@ -53,10 +53,17 @@ sandbox1 is the persistent testing environment. It accumulates state across runs
 
 - Birdhouse URL: `http://127.0.0.1:50200`
 - OpenCode health: `http://127.0.0.1:50210/global/health`
-- Start command (from birdhouse-workspace root, absolute path required):
+- Start command (from birdhouse-workspace root):
   ```bash
   bash sandboxes/start-sandbox.sh --sandbox sandbox1 \
-    --opencode-path /Users/crayment/dev/birdhouse-workspace/.worktrees/opencode-birdhouse
+    --opencode-path "$(pwd)/.worktrees/opencode-birdhouse"
+  ```
+  The `--opencode-path` argument must be an absolute path. Using `$(pwd)` from the workspace root avoids hardcoding it.
+
+  **During a rebase:** pass the rebase worktree path instead of the default:
+  ```bash
+  bash sandboxes/start-sandbox.sh --sandbox sandbox1 \
+    --opencode-path /tmp/opencode-v<version>
   ```
 - Stop command:
   ```bash

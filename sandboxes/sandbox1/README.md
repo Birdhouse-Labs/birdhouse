@@ -14,10 +14,16 @@ From the birdhouse-workspace root:
 
 ```bash
 bash sandboxes/start-sandbox.sh --sandbox sandbox1 \
-  --opencode-path /Users/crayment/dev/birdhouse-workspace/.worktrees/opencode-birdhouse
+  --opencode-path "$(pwd)/.worktrees/opencode-birdhouse"
 ```
 
-Note: `--opencode-path` must be an absolute path.
+`--opencode-path` must be absolute. `$(pwd)` from the workspace root avoids hardcoding it.
+
+**During a rebase**, override to the rebase worktree:
+```bash
+bash sandboxes/start-sandbox.sh --sandbox sandbox1 \
+  --opencode-path /tmp/opencode-v<version>
+```
 
 Birdhouse will be at: http://127.0.0.1:50200
 
