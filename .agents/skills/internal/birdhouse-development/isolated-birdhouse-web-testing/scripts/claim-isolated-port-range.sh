@@ -35,6 +35,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if ! command -v lsof >/dev/null 2>&1; then
+  printf 'lsof is required but not found\n' >&2
+  exit 1
+fi
+
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir)
 LOCK_ROOT="$GIT_COMMON_DIR/isolated-port-locks"
 mkdir -p "$LOCK_ROOT"
