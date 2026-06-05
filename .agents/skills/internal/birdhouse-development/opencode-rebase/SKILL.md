@@ -174,6 +174,16 @@ You may use `git cherry-pick` when a commit applies cleanly and you have inspect
    - Update the base tag in `BIRDHOUSE.md`.
    - Verify `git status --short` is empty.
 
+12. Tag and publish.
+   - Tag the **previous** birdhouse branch tip before overwriting it: `git tag birdhouse/v<old-version> <old-tip-branch-or-commit>`. This preserves the full history of prior rebases as navigable tags.
+   - Tag the **new** tip: `git tag birdhouse/v<new-version> birdhouse-v<new-version>`.
+   - Reset the `birdhouse` branch to the new tip: `git checkout birdhouse && git reset --hard birdhouse-v<new-version>`.
+   - Run `bun install` in the main clone root before pushing — the pre-push hook runs a full monorepo typecheck and will fail with stale SDK dist if skipped.
+   - Force-push the branch: `git push labs birdhouse --force`.
+   - Push both tags: `git push labs birdhouse/v<old-version> birdhouse/v<new-version>`.
+
+   **Tagging convention:** `birdhouse/v<upstream-base-version>` — e.g. `birdhouse/v1.4.11`. Version-based, not an incrementing integer. One tag per rebase, pointing at the final tip of that rebase's commits.
+
 ## Commits To Review Before Applying
 
 Do not hardcode historical skip lists into the workflow. Instead, look for the same patterns each time:
