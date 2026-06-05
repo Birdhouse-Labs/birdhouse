@@ -21,7 +21,7 @@ Verifies that a Birdhouse agent can create a child agent, exchange messages with
 
 ## Timeout
 
-7 minutes from when the first message is sent.
+5 minutes from when the first message is sent.
 
 ## Model selection
 
@@ -95,12 +95,7 @@ First choice: **Big Pickle**. Second choice: any model with "free" in its name.
 
 11. Wait for completion. Save screenshot `$RUN_DIR/05-relay2-done.png`.
 
-12. **Relay 3** — Reply to the parent agent:
-    ```
-    Last step: ask your child to delete the tmp/read-exchange-test directory and everything in it using bash. Confirm when done.
-    ```
-
-13. Wait for completion. Stop the recording. Save final screenshot `$RUN_DIR/06-final.png`.
+12. Stop the recording and save final screenshot `$RUN_DIR/06-final.png`.
     ```bash
     browser-use --session birdhouse-exchange-test record stop
     ```
@@ -122,10 +117,10 @@ Any of the following immediately indicates failure:
 - The parent reports wrong second line (anything other than `beta`)
 - The parent reports wrong final contents after the edit
 - The parent reports a tool call error that blocks progress
-- The test did not complete within 7 minutes
+- The test did not complete within 5 minutes
 - The recording failed or is missing
 
 ## Known limitations
 
 - The parent agent may paraphrase the child's output. Evaluate correctness of content, not exact wording.
-- Bash may fail in some sandbox environments due to WASM runtime issues. If the cleanup step fails but all file operations succeeded, note it as a deviation — it does not fail the test.
+- No cleanup step — `tmp/read-exchange-test/` is left on disk after the test. Bash is unreliable in this sandbox environment due to WASM runtime issues, so cleanup is intentionally omitted rather than wasting test time on known failures.
