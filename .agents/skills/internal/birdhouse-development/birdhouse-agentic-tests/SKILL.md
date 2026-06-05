@@ -85,7 +85,7 @@ git -C ~/dev/oss/opencode worktree prune
 git -C ~/dev/oss/opencode worktree add \
   /Users/crayment/dev/birdhouse-workspace/.worktrees/opencode-birdhouse \
   birdhouse-v<version>
-cd .worktrees/opencode-birdhouse && bun install
+bun install --cwd .worktrees/opencode-birdhouse
 cp projects/birdhouse-oc-plugin/src/plugin.ts \
    .worktrees/opencode-birdhouse/packages/opencode/src/plugin/birdhouse.ts
 ```
