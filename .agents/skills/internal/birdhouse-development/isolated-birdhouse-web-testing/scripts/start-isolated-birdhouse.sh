@@ -102,7 +102,7 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 
-if ! curl -sSf "$server_url/api/health" >/dev/null 2>&1; then
+if ! kill -0 "$server_pid" >/dev/null 2>&1 || ! curl -sSf "$server_url/api/health" >/dev/null 2>&1; then
   kill "$server_pid" >/dev/null 2>&1 || true
   printf 'Isolated Birdhouse server did not become healthy at %s\n' "$server_url" >&2
   exit 1
