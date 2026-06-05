@@ -21,7 +21,7 @@ Verifies that a Birdhouse agent can create a child agent, exchange messages with
 
 ## Timeout
 
-12 minutes from when the first message is sent.
+7 minutes from when the first message is sent.
 
 ## Model selection
 
@@ -62,64 +62,45 @@ First choice: **Big Pickle**. Second choice: any model with "free" in its name.
 
 7. Save screenshot `$RUN_DIR/03-child-created.png` showing the child in the sidebar.
 
-8. Reply to the parent agent:
+8. **Relay 1** — Reply to the parent agent:
    ```
-   Good. Now relay this to your child agent word for word:
+   Relay this to your child word for word:
 
-   Create the directory tmp/read-exchange-test if needed. Then create tmp/read-exchange-test/note.txt with exactly these three lines:
+   Do these two things in order:
+   1. Create the directory tmp/read-exchange-test if needed, then create tmp/read-exchange-test/note.txt with exactly these three lines (use file-editing tools, not bash):
    alpha
    beta
    gamma
+   2. Read tmp/read-exchange-test/note.txt and report the second line only.
 
-   Use file-editing tools, not bash, for the file contents. Report what you created and wait.
+   Report both results and wait.
 
-   After the child responds, tell me what it created.
+   Tell me: what file did the child create, and what was the second line?
    ```
 
-9. Wait for completion. Save screenshot `$RUN_DIR/04-step1-done.png`.
+9. Wait for completion. Save screenshot `$RUN_DIR/04-relay1-done.png`.
 
-10. Reply to the parent agent:
+10. **Relay 2** — Reply to the parent agent:
     ```
-    Relay this to your child: Read tmp/read-exchange-test/note.txt and report the second line only. Wait after reporting.
+    Relay this to your child word for word:
 
-    Tell me what the child says the second line is.
-    ```
+    Do these two things in order:
+    1. Update tmp/read-exchange-test/note.txt so the second line becomes: beta-updated. Use a file-editing tool.
+    2. Read tmp/read-exchange-test/note.txt and report the full contents.
 
-11. Wait for completion. Save screenshot `$RUN_DIR/05-step2-done.png`.
+    Report both results and wait.
 
-12. Reply to the parent agent:
-    ```
-    Relay this to your child: Update tmp/read-exchange-test/note.txt so the second line becomes: beta-updated. Use a file-editing tool. Report the change and wait.
-
-    Tell me when the child confirms the update.
+    Tell me the full file contents the child reports after the edit.
     ```
 
-13. Wait for completion. Save screenshot `$RUN_DIR/06-step3-done.png`.
+11. Wait for completion. Save screenshot `$RUN_DIR/05-relay2-done.png`.
 
-14. Reply to the parent agent:
-    ```
-    Relay this to your child: Read tmp/read-exchange-test/note.txt again and report the full contents. Wait after reporting.
-
-    Tell me the full contents the child reports.
-    ```
-
-15. Wait for completion. Save screenshot `$RUN_DIR/07-step4-done.png`.
-
-16. Reply to the parent agent:
-    ```
-    Relay this to your child: Run a bash command listing the contents of tmp/read-exchange-test and report what files exist. Wait after reporting.
-
-    Tell me what the child reports.
-    ```
-
-17. Wait for completion. Save screenshot `$RUN_DIR/08-step5-done.png`.
-
-18. Reply to the parent agent:
+12. **Relay 3** — Reply to the parent agent:
     ```
     Last step: ask your child to delete the tmp/read-exchange-test directory and everything in it using bash. Confirm when done.
     ```
 
-19. Wait for completion. Stop the recording. Save final screenshot `$RUN_DIR/09-final.png`.
+13. Wait for completion. Stop the recording. Save final screenshot `$RUN_DIR/06-final.png`.
     ```bash
     browser-use --session birdhouse-exchange-test record stop
     ```
@@ -129,10 +110,8 @@ First choice: **Big Pickle**. Second choice: any model with "free" in its name.
 All of the following must be true:
 
 - A child agent appears in the sidebar nested under the parent after the first exchange
-- The parent reports `beta` as the second line after step 2
-- The parent confirms the file was updated in step 3
-- The parent reports the full contents as `alpha`, `beta-updated`, `gamma` (three lines, correct values)
-- The parent confirms the cleanup completed
+- The parent reports `beta` as the second line (relay 1)
+- The parent reports the full contents as `alpha`, `beta-updated`, `gamma` after the edit (relay 2)
 - The video file exists and has a non-zero file size
 
 ## Fail criteria
@@ -140,13 +119,13 @@ All of the following must be true:
 Any of the following immediately indicates failure:
 
 - No child agent appears in the sidebar
-- The parent reports wrong content at any step
+- The parent reports wrong second line (anything other than `beta`)
+- The parent reports wrong final contents after the edit
 - The parent reports a tool call error that blocks progress
-- The test did not complete within 12 minutes
+- The test did not complete within 7 minutes
 - The recording failed or is missing
 
 ## Known limitations
 
 - The parent agent may paraphrase the child's output. Evaluate correctness of content, not exact wording.
-- Bash may fail in some sandbox environments due to WASM runtime issues. If the bash step (step 5) fails but all file operations succeeded, note it as a deviation — it does not fail the test.
-- The cleanup step (step 6) may also fail due to bash issues. Note as deviation if so.
+- Bash may fail in some sandbox environments due to WASM runtime issues. If the cleanup step fails but all file operations succeeded, note it as a deviation — it does not fail the test.
