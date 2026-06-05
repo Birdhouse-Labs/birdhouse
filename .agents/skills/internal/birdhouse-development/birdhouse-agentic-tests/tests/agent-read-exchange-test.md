@@ -29,11 +29,14 @@ First choice: **Big Pickle**. Second choice: any model with "free" in its name.
 
 ## Steps
 
-1. Create a timestamped run directory:
+1. Create a timestamped run directory and a timestamped working directory name for the sandbox:
    ```bash
-   RUN_DIR="/tmp/agent-read-exchange-test-$(date +%Y-%m-%d-%H-%M-%S)"
+   TIMESTAMP="$(date +%Y-%m-%d-%H-%M-%S)"
+   RUN_DIR="/tmp/agent-read-exchange-test-$TIMESTAMP"
+   WORK_DIR="tmp/read-exchange-test-$TIMESTAMP"
    mkdir -p "$RUN_DIR"
    ```
+   Use `$WORK_DIR` everywhere in the relay messages below instead of the literal `tmp/read-exchange-test`. This ensures successive test runs don't share the same sandbox working directory.
 
 2. Close any existing session, open the sandbox agents page, and start recording immediately:
    ```bash
@@ -62,16 +65,16 @@ First choice: **Big Pickle**. Second choice: any model with "free" in its name.
 
 7. Save screenshot `$RUN_DIR/03-child-created.png` showing the child in the sidebar.
 
-8. **Relay 1** — Reply to the parent agent:
+8. **Relay 1** — Reply to the parent agent. Substitute `$WORK_DIR` with the actual timestamped path before sending:
    ```
    Relay this to your child word for word:
 
    Do these two things in order:
-   1. Create the directory tmp/read-exchange-test if needed, then create tmp/read-exchange-test/note.txt with exactly these three lines (use file-editing tools, not bash):
+   1. Create the directory $WORK_DIR if needed, then create $WORK_DIR/note.txt with exactly these three lines (use file-editing tools, not bash):
    alpha
    beta
    gamma
-   2. Read tmp/read-exchange-test/note.txt and report the second line only.
+   2. Read $WORK_DIR/note.txt and report the second line only.
 
    Report both results and wait.
 
@@ -80,13 +83,13 @@ First choice: **Big Pickle**. Second choice: any model with "free" in its name.
 
 9. Wait for completion. Save screenshot `$RUN_DIR/04-relay1-done.png`.
 
-10. **Relay 2** — Reply to the parent agent:
+10. **Relay 2** — Reply to the parent agent. Substitute `$WORK_DIR` with the same timestamped path:
     ```
     Relay this to your child word for word:
 
     Do these two things in order:
-    1. Update tmp/read-exchange-test/note.txt so the second line becomes: beta-updated. Use a file-editing tool.
-    2. Read tmp/read-exchange-test/note.txt and report the full contents.
+    1. Update $WORK_DIR/note.txt so the second line becomes: beta-updated. Use a file-editing tool.
+    2. Read $WORK_DIR/note.txt and report the full contents.
 
     Report both results and wait.
 
@@ -123,4 +126,4 @@ Any of the following immediately indicates failure:
 ## Known limitations
 
 - The parent agent may paraphrase the child's output. Evaluate correctness of content, not exact wording.
-- No cleanup step — `tmp/read-exchange-test/` is left on disk after the test. Bash is unreliable in this sandbox environment due to WASM runtime issues, so cleanup is intentionally omitted rather than wasting test time on known failures.
+- No cleanup step — `$WORK_DIR` is left on disk after the test. Bash is unreliable in this sandbox environment due to WASM runtime issues, so cleanup is intentionally omitted. Each run uses a unique timestamped directory so successive runs don't clobber each other.
