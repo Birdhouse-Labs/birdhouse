@@ -24,6 +24,11 @@ if [[ -z "$RUN_DIR" ]]; then
   exit 1
 fi
 
+if [[ "$RUN_DIR" != */tmp/isolated-runs/* ]]; then
+  printf 'Refusing to delete %s: path must contain /tmp/isolated-runs/\n' "$RUN_DIR" >&2
+  exit 1
+fi
+
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 "$SCRIPT_DIR/stop-isolated-birdhouse.sh" --run-dir "$RUN_DIR"
 
