@@ -37,8 +37,16 @@ export function createFileRoutes(options: CreateFileRoutesOptions = {}) {
   });
 
   app.post("/reveal", async (c) => {
-    const body = await c.req.json();
-    const filePath = typeof body.path === "string" ? body.path : "";
+    let body: unknown;
+
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+
+    const filePath =
+      body && typeof body === "object" && "path" in body && typeof body.path === "string" ? body.path : "";
 
     if (!filePath.startsWith("/")) {
       return c.json({ error: "path must be an absolute file path" }, 400);

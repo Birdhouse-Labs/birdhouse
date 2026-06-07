@@ -79,4 +79,36 @@ describe("workspace file routes", () => {
     expect(await response.json()).toEqual({ success: true, path: "/Users/test/references/notes.md" });
     expect(revealFile).toHaveBeenCalledWith("/Users/test/references/notes.md");
   });
+
+  test("rejects malformed JSON bodies for reveal", async () => {
+    const revealFile = mock(() => {});
+    const app = await createTestApp({ workspace: createMockWorkspace() });
+    app.route("/", createFileRoutes({ revealFileInFileManager: revealFile }));
+
+    const response = await app.request("/reveal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{",
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid JSON body" });
+    expect(revealFile).not.toHaveBeenCalled();
+  });
+
+  test("rejects null JSON bodies for reveal", async () => {
+    const revealFile = mock(() => {});
+    const app = await createTestApp({ workspace: createMockWorkspace() });
+    app.route("/", createFileRoutes({ revealFileInFileManager: revealFile }));
+
+    const response = await app.request("/reveal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "null",
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "path must be an absolute file path" });
+    expect(revealFile).not.toHaveBeenCalled();
+  });
 });
