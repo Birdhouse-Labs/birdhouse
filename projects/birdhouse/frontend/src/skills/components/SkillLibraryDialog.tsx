@@ -166,6 +166,16 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
     }
   };
 
+  const handleSearchQueryChange = (value: string) => {
+    setAutoScrollSkillId(null);
+    setSearchQuery(value);
+  };
+
+  const handleScopeFilterChange = (value: SkillListScopeFilter) => {
+    setAutoScrollSkillId(null);
+    setScopeFilter(value);
+  };
+
   const handleUpdateTriggerPhrases = async (phrases: string[]) => {
     const skill = skillData();
     if (!skill) return;
@@ -233,8 +243,8 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
       scopeFilter={scopeFilter()}
       selectedSkillId={selectedSkillId()}
       autoScrollSkillId={autoScrollSkillId()}
-      onSearchQueryChange={setSearchQuery}
-      onScopeFilterChange={setScopeFilter}
+      onSearchQueryChange={handleSearchQueryChange}
+      onScopeFilterChange={handleScopeFilterChange}
       onSelectSkill={selectSkill}
       onAutoScrollHandled={(skillId) => {
         if (autoScrollSkillId() === skillId) {

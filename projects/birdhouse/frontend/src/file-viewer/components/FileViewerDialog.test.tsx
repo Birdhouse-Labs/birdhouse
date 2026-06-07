@@ -2,7 +2,8 @@
 // ABOUTME: Verifies markdown rich/raw mode and code-view fallback for non-markdown files.
 
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
-import { describe, expect, it, vi } from "vitest";
+import { createSignal } from "solid-js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import FileViewerDialog from "./FileViewerDialog";
 
 const { revealFileViewerPathMock } = vi.hoisted(() => ({
@@ -19,6 +20,10 @@ vi.mock("../services/file-viewer-api", () => ({
 }));
 
 describe("FileViewerDialog", () => {
+  beforeEach(() => {
+    revealFileViewerPathMock.mockReset();
+  });
+
   it("shows markdown in rich mode by default and can toggle to raw mode", async () => {
     render(() => (
       <FileViewerDialog
@@ -93,6 +98,69 @@ describe("FileViewerDialog", () => {
 
     await waitFor(() => {
       expect(revealFileViewerPathMock).toHaveBeenCalledWith("ws_test", "/Users/test/references/notes.md");
+    });
+  });
+
+  it("shows reveal failures in the dialog instead of rejecting unhandled", async () => {
+    revealFileViewerPathMock.mockRejectedValueOnce(new Error("Failed to reveal file: Bad Request - nope"));
+
+    render(() => (
+      <FileViewerDialog
+        open={true}
+        onOpenChange={() => {}}
+        file={{
+          path: "/Users/test/references/notes.md",
+          name: "notes.md",
+          content: "# Notes\n\nHello world.",
+          language: "markdown",
+          isMarkdown: true,
+        }}
+        workspaceId="ws_test"
+      />
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: "Reveal file in Finder" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Failed to reveal file: Bad Request - nope")).toBeInTheDocument();
+    });
+  });
+
+  it("resets markdown mode when the dialog reopens for the same file", async () => {
+    const markdownFile = {
+      path: "/Users/test/references/notes.md",
+      name: "notes.md",
+      content: "# Notes\n\nHello world.",
+      language: "markdown",
+      isMarkdown: true,
+    };
+
+    const Wrapper = () => {
+      const [open, setOpen] = createSignal(true);
+
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(false)}>
+            Close viewer
+          </button>
+          <button type="button" onClick={() => setOpen(true)}>
+            Open viewer
+          </button>
+          <FileViewerDialog open={open()} onOpenChange={setOpen} file={markdownFile} workspaceId="ws_test" />
+        </>
+      );
+    };
+
+    render(() => <Wrapper />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Raw" }));
+    expect(screen.getByRole("button", { name: "Raw" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Close viewer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open viewer" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Rich" })).toHaveAttribute("aria-pressed", "true");
     });
   });
 });

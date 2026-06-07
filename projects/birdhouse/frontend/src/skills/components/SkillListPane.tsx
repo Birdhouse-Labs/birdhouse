@@ -26,6 +26,7 @@ export interface SkillListPaneProps {
 const SkillListPane: Component<SkillListPaneProps> = (props) => {
   const baseZIndex = useZIndex();
   let skillListRef: HTMLDivElement | undefined;
+  let autoScrollRequestId = 0;
 
   const resultCountLabel = () => {
     const count = props.filteredSkills.length;
@@ -48,11 +49,17 @@ const SkillListPane: Component<SkillListPaneProps> = (props) => {
 
   createEffect(
     on([() => props.autoScrollSkillId, () => props.filteredSkills], ([autoScrollSkillId]) => {
+      const requestId = ++autoScrollRequestId;
+
       if (!autoScrollSkillId) {
         return;
       }
 
       queueMicrotask(() => {
+        if (requestId !== autoScrollRequestId || props.autoScrollSkillId !== autoScrollSkillId) {
+          return;
+        }
+
         const selectedSkillButton = Array.from(
           skillListRef?.querySelectorAll<HTMLButtonElement>("button[data-skill-id]") ?? [],
         ).find((button) => button.dataset["skillId"] === autoScrollSkillId);

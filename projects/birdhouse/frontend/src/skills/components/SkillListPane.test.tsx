@@ -142,4 +142,50 @@ describe("SkillListPane", () => {
       expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
     });
   });
+
+  it("ignores a queued auto-scroll after the request is cleared", () => {
+    const scrollIntoView = vi.fn();
+    const queuedMicrotasks: Array<() => void> = [];
+
+    vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(scrollIntoView);
+    vi.spyOn(globalThis, "queueMicrotask").mockImplementation((callback: VoidFunction) => {
+      queuedMicrotasks.push(callback);
+    });
+
+    const Wrapper = () => {
+      const [autoScrollSkillId, setAutoScrollSkillId] = createSignal<string | null>(skills[0]?.id ?? null);
+
+      return (
+        <>
+          <button type="button" onClick={() => setAutoScrollSkillId(null)}>
+            Cancel auto-scroll
+          </button>
+          <SkillListPane
+            skills={skills}
+            filteredSkills={skills}
+            searchQuery=""
+            scopeFilter="all"
+            selectedSkillId={skills[0]?.id ?? null}
+            autoScrollSkillId={autoScrollSkillId()}
+            onSearchQueryChange={() => {}}
+            onScopeFilterChange={() => {}}
+            onSelectSkill={() => {}}
+            onAutoScrollHandled={setAutoScrollSkillId}
+          />
+        </>
+      );
+    };
+
+    render(() => <Wrapper />);
+
+    expect(queuedMicrotasks).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel auto-scroll" }));
+
+    for (const runMicrotask of queuedMicrotasks) {
+      runMicrotask();
+    }
+
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
 });

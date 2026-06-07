@@ -117,6 +117,7 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
   const [viewedFile, setViewedFile] = createSignal<import("../../file-viewer/types").FileViewerFile | null>(null);
   let detailScrollRef: HTMLDivElement | undefined;
   let previousSkillId = props.skill.id;
+  let supportingFileRequestId = 0;
 
   const scopeTitle = () => "Trigger Phrases";
   const scopeDescription = () => "Choose the phrases that suggest this skill while you type.";
@@ -127,6 +128,12 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
   const metadataEntries = () =>
     Object.entries(props.skill.metadata).filter(([key]) => !["name", "description", "tags"].includes(key));
   const locationDisplay = () => props.skill.display_location;
+  const resetViewerState = () => {
+    setViewerOpen(false);
+    setViewerLoading(false);
+    setViewerError(null);
+    setViewedFile(null);
+  };
 
   const handleSaveTriggerPhrases = async (phrases: string[]) => {
     setIsSaving(true);
@@ -156,19 +163,31 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
   };
 
   const handleOpenSupportingFile = async (relativeFilePath: string) => {
+    const requestId = ++supportingFileRequestId;
     const absoluteFilePath = resolveSiblingFilePath(props.skill.location, relativeFilePath);
     setViewerOpen(true);
     setViewerLoading(true);
     setViewerError(null);
+    setViewedFile(null);
 
     try {
       const file = await fetchFileViewerContent(props.workspaceId, absoluteFilePath);
+      if (requestId !== supportingFileRequestId) {
+        return;
+      }
+
       setViewedFile(file);
     } catch (err) {
+      if (requestId !== supportingFileRequestId) {
+        return;
+      }
+
       setViewedFile(null);
       setViewerError(err instanceof Error ? err.message : "Failed to load file");
     } finally {
-      setViewerLoading(false);
+      if (requestId === supportingFileRequestId) {
+        setViewerLoading(false);
+      }
     }
   };
 
@@ -179,6 +198,8 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
     }
 
     previousSkillId = skillId;
+    supportingFileRequestId += 1;
+    resetViewerState();
 
     if (detailScrollRef) {
       if (typeof detailScrollRef.scrollTo === "function") {

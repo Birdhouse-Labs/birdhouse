@@ -31,9 +31,17 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
   const resolvedTheme = createMemo(() => resolveCodeTheme(codeTheme(), isDark()));
   const [markdownMode, setMarkdownMode] = createSignal<MarkdownViewMode>("rich");
   const [isRevealing, setIsRevealing] = createSignal(false);
+  const [revealError, setRevealError] = createSignal<string | null>(null);
 
   createEffect(() => {
+    const open = props.open;
     const file = props.file;
+
+    if (!open) {
+      return;
+    }
+
+    setRevealError(null);
     setMarkdownMode(file?.isMarkdown ? "rich" : "raw");
   });
 
@@ -43,8 +51,11 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
     }
 
     setIsRevealing(true);
+    setRevealError(null);
     try {
       await revealFileViewerPath(props.workspaceId, props.file.path);
+    } catch (err) {
+      setRevealError(err instanceof Error ? err.message : "Failed to reveal file");
     } finally {
       setIsRevealing(false);
     }
@@ -127,6 +138,11 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
           </div>
 
           <div class="flex-1 overflow-auto p-6 rounded-b-2xl">
+            <Show when={revealError()}>
+              <div class="mb-4 rounded-lg border border-danger bg-danger/10 p-3 text-sm text-danger">
+                {revealError()}
+              </div>
+            </Show>
             <Show when={!props.loading} fallback={<div class="text-text-muted text-center py-12">Loading file...</div>}>
               <Show when={!props.error} fallback={<div class="text-danger text-center py-12">{props.error}</div>}>
                 <Show
