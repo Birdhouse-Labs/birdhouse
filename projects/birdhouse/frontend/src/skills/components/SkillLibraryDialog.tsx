@@ -7,6 +7,7 @@ import { Menu, RefreshCw, X } from "lucide-solid";
 import { type Component, createEffect, createMemo, createResource, createSignal, on, Show } from "solid-js";
 import MobileNavDrawer from "../../components/MobileNavDrawer";
 import { Button } from "../../components/ui";
+import { useZIndex, ZIndexProvider } from "../../contexts/ZIndexContext";
 import { useModalRoute } from "../../lib/routing";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
 import { createMediaQuery } from "../../theme/createMediaQuery";
@@ -68,14 +69,18 @@ export interface SkillLibraryDialogProps {
 }
 
 const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
+  const inheritedZIndex = useZIndex();
+  const baseZIndex = inheritedZIndex + 50;
   const { closeModal, modalStack, replaceModal } = useModalRoute();
   const isDesktop = createMediaQuery("(min-width: 768px)");
   const [sidebarOpen, setSidebarOpen] = createSignal(true);
   const [searchQuery, setSearchQuery] = createSignal("");
   const [scopeFilter, setScopeFilter] = createSignal<SkillListScopeFilter>("all");
   const [storedSelectedSkillId, setStoredSelectedSkillId] = createSignal<string | null>(null);
+  const [autoScrollSkillId, setAutoScrollSkillId] = createSignal<string | null>(null);
   const [reloadingSkills, setReloadingSkills] = createSignal(false);
   const [reloadError, setReloadError] = createSignal<string | null>(null);
+  let wasLibraryOpen = false;
 
   const isLibraryOpen = createMemo(() => modalStack().some((modal) => modal.type === MODAL_TYPE_LIBRARY));
 
@@ -123,6 +128,17 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
   });
 
   createEffect(() => {
+    const open = isLibraryOpen();
+    if (open && !wasLibraryOpen) {
+      setAutoScrollSkillId(selectedSkillId());
+    } else if (!open && wasLibraryOpen) {
+      setAutoScrollSkillId(null);
+    }
+
+    wasLibraryOpen = open;
+  });
+
+  createEffect(() => {
     const currentSelectedSkillId = selectedSkillId();
     if (currentSelectedSkillId) {
       setStoredSelectedSkillId(currentSelectedSkillId);
@@ -137,16 +153,27 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
     });
   });
 
-  const selectSkill = (skillId: string | null) => {
+  const selectSkill = (skillId: string | null, options?: { autoScroll?: boolean }) => {
     const nextId = skillId || "main";
     if (skillId) {
       setStoredSelectedSkillId(skillId);
     }
+    setAutoScrollSkillId(options?.autoScroll && skillId ? skillId : null);
     replaceModal(MODAL_TYPE_LIBRARY, nextId);
 
     if (!isDesktop()) {
       setSidebarOpen(false);
     }
+  };
+
+  const handleSearchQueryChange = (value: string) => {
+    setAutoScrollSkillId(null);
+    setSearchQuery(value);
+  };
+
+  const handleScopeFilterChange = (value: SkillListScopeFilter) => {
+    setAutoScrollSkillId(null);
+    setScopeFilter(value);
   };
 
   const handleUpdateTriggerPhrases = async (phrases: string[]) => {
@@ -202,7 +229,7 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
         );
 
         if (currentSelectedSkillId !== nextSelectedSkillId) {
-          selectSkill(nextSelectedSkillId);
+          selectSkill(nextSelectedSkillId, { autoScroll: !!nextSelectedSkillId });
         }
       },
     ),
@@ -215,9 +242,15 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
       searchQuery={searchQuery()}
       scopeFilter={scopeFilter()}
       selectedSkillId={selectedSkillId()}
-      onSearchQueryChange={setSearchQuery}
-      onScopeFilterChange={setScopeFilter}
+      autoScrollSkillId={autoScrollSkillId()}
+      onSearchQueryChange={handleSearchQueryChange}
+      onScopeFilterChange={handleScopeFilterChange}
       onSelectSkill={selectSkill}
+      onAutoScrollHandled={(skillId) => {
+        if (autoScrollSkillId() === skillId) {
+          setAutoScrollSkillId(null);
+        }
+      }}
     />
   );
 
@@ -254,116 +287,119 @@ const SkillLibraryDialog: Component<SkillLibraryDialogProps> = (props) => {
       restoreScrollPosition={false}
     >
       <Dialog.Portal>
-        <Dialog.Overlay class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]" />
+        <Dialog.Overlay class="fixed inset-0 bg-black/60 backdrop-blur-sm" style={{ "z-index": baseZIndex }} />
         <Dialog.Content
           class={`fixed rounded-2xl ${cardSurfaceFlat} shadow-2xl
                    w-[95vw] h-[95dvh] max-w-[1600px]
                    left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
-                   flex flex-col overflow-hidden z-[100]`}
+                   flex flex-col overflow-hidden`}
+          style={{ "z-index": baseZIndex + 2 }}
         >
-          <div class="flex items-center justify-between px-6 py-3 border-b border-border flex-shrink-0">
-            <div class="flex items-center gap-3">
-              <Show when={!isDesktop()}>
-                <button
-                  type="button"
-                  onClick={() => setSidebarOpen(!sidebarOpen())}
-                  class="flex items-center justify-center p-2 rounded-lg transition-all hover:bg-surface-overlay"
-                  classList={{
-                    "text-accent": sidebarOpen(),
-                    "text-text-secondary": !sidebarOpen(),
-                  }}
-                  aria-label="Toggle skills library"
-                >
-                  <Menu size={20} />
-                </button>
-              </Show>
-              <Dialog.Label class="text-lg font-semibold text-heading">Skills Library</Dialog.Label>
-            </div>
-
-            <div class="flex items-center gap-3">
-              <Show when={reloadError()}>
-                {(message) => <span class="hidden md:inline text-sm text-danger">{message()}</span>}
-              </Show>
-
-              <Button
-                variant="secondary"
-                onClick={handleReloadSkills}
-                disabled={reloadingSkills()}
-                leftIcon={<RefreshCw size={16} classList={{ "animate-spin": reloadingSkills() }} />}
-                class="whitespace-nowrap"
-                aria-label="Reload Skills"
-              >
-                {reloadingSkills() ? "Reloading..." : "Reload Skills"}
-              </Button>
-
-              <Dialog.Close class="text-text-muted hover:text-text-primary transition-colors">
-                <X size={20} />
-              </Dialog.Close>
-            </div>
-          </div>
-
-          <div class="flex-1 overflow-hidden p-2 bg-gradient-to-br from-bg-from via-bg-via to-bg-to">
-            <Show
-              when={isDesktop()}
-              fallback={
-                <>
-                  <MobileNavDrawer
-                    components={[]}
-                    selectedComponent=""
-                    onSelect={() => {}}
-                    open={sidebarOpen()}
-                    onOpenChange={setSidebarOpen}
-                    trigger={null}
-                    zIndex={110}
+          <ZIndexProvider baseZIndex={baseZIndex + 10}>
+            <div class="flex items-center justify-between px-6 py-3 border-b border-border flex-shrink-0">
+              <div class="flex items-center gap-3">
+                <Show when={!isDesktop()}>
+                  <button
+                    type="button"
+                    onClick={() => setSidebarOpen(!sidebarOpen())}
+                    class="flex items-center justify-center p-2 rounded-lg transition-all hover:bg-surface-overlay"
+                    classList={{
+                      "text-accent": sidebarOpen(),
+                      "text-text-secondary": !sidebarOpen(),
+                    }}
+                    aria-label="Toggle skills library"
                   >
-                    <div class="h-full bg-surface-raised overflow-hidden flex flex-col">{listPaneContent()}</div>
-                  </MobileNavDrawer>
+                    <Menu size={20} />
+                  </button>
+                </Show>
+                <Dialog.Label class="text-lg font-semibold text-heading">Skills Library</Dialog.Label>
+              </div>
 
-                  <SkillDetailPane
-                    skill={visibleSkill()}
-                    loading={skillData.loading}
-                    error={skillData.error ?? null}
-                    workspaceId={props.workspaceId}
-                    onRetry={() => refetchSkill()}
-                    onUpdateTriggerPhrases={handleUpdateTriggerPhrases}
-                  />
-                </>
-              }
-            >
-              <Resizable class="h-full" orientation="horizontal">
-                {() => (
+              <div class="flex items-center gap-3">
+                <Show when={reloadError()}>
+                  {(message) => <span class="hidden md:inline text-sm text-danger">{message()}</span>}
+                </Show>
+
+                <Button
+                  variant="secondary"
+                  onClick={handleReloadSkills}
+                  disabled={reloadingSkills()}
+                  leftIcon={<RefreshCw size={16} classList={{ "animate-spin": reloadingSkills() }} />}
+                  class="whitespace-nowrap"
+                  aria-label="Reload Skills"
+                >
+                  {reloadingSkills() ? "Reloading..." : "Reload Skills"}
+                </Button>
+
+                <Dialog.Close class="text-text-muted hover:text-text-primary transition-colors">
+                  <X size={20} />
+                </Dialog.Close>
+              </div>
+            </div>
+
+            <div class="flex-1 overflow-hidden p-2 bg-gradient-to-br from-bg-from via-bg-via to-bg-to">
+              <Show
+                when={isDesktop()}
+                fallback={
                   <>
-                    <Resizable.Panel
-                      initialSize={0.382}
-                      minSize={0.25}
-                      maxSize={0.5}
-                      class="h-full bg-surface-raised rounded-lg overflow-hidden flex flex-col"
+                    <MobileNavDrawer
+                      components={[]}
+                      selectedComponent=""
+                      onSelect={() => {}}
+                      open={sidebarOpen()}
+                      onOpenChange={setSidebarOpen}
+                      trigger={null}
+                      zIndex={baseZIndex + 20}
                     >
-                      {listPaneContent()}
-                    </Resizable.Panel>
+                      <div class="h-full bg-surface-raised overflow-hidden flex flex-col">{listPaneContent()}</div>
+                    </MobileNavDrawer>
 
-                    <Resizable.Handle
-                      aria-label="Resize skill list panel"
-                      class="w-4 cursor-col-resize flex items-center justify-center group"
-                    >
-                      <div class="w-1 h-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </Resizable.Handle>
-
-                    <Resizable.Panel initialSize={0.618} minSize={0.5} class="h-full rounded-lg overflow-hidden">
-                      <SkillDetailPane
-                        skill={visibleSkill()}
-                        loading={skillData.loading}
-                        error={skillData.error ?? null}
-                        workspaceId={props.workspaceId}
-                        onRetry={() => refetchSkill()}
-                        onUpdateTriggerPhrases={handleUpdateTriggerPhrases}
-                      />
-                    </Resizable.Panel>
+                    <SkillDetailPane
+                      skill={visibleSkill()}
+                      loading={skillData.loading}
+                      error={skillData.error ?? null}
+                      workspaceId={props.workspaceId}
+                      onRetry={() => refetchSkill()}
+                      onUpdateTriggerPhrases={handleUpdateTriggerPhrases}
+                    />
                   </>
-                )}
-              </Resizable>
-            </Show>
-          </div>
+                }
+              >
+                <Resizable class="h-full" orientation="horizontal">
+                  {() => (
+                    <>
+                      <Resizable.Panel
+                        initialSize={0.382}
+                        minSize={0.25}
+                        maxSize={0.5}
+                        class="h-full bg-surface-raised rounded-lg overflow-hidden flex flex-col"
+                      >
+                        {listPaneContent()}
+                      </Resizable.Panel>
+
+                      <Resizable.Handle
+                        aria-label="Resize skill list panel"
+                        class="w-4 cursor-col-resize flex items-center justify-center group"
+                      >
+                        <div class="w-1 h-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Resizable.Handle>
+
+                      <Resizable.Panel initialSize={0.618} minSize={0.5} class="h-full rounded-lg overflow-hidden">
+                        <SkillDetailPane
+                          skill={visibleSkill()}
+                          loading={skillData.loading}
+                          error={skillData.error ?? null}
+                          workspaceId={props.workspaceId}
+                          onRetry={() => refetchSkill()}
+                          onUpdateTriggerPhrases={handleUpdateTriggerPhrases}
+                        />
+                      </Resizable.Panel>
+                    </>
+                  )}
+                </Resizable>
+              </Show>
+            </div>
+          </ZIndexProvider>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog>

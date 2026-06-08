@@ -5,6 +5,22 @@ import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
 import SkillDetailModal from "./SkillDetailModal";
 
+const { fetchFileViewerContentMock } = vi.hoisted(() => ({
+  fetchFileViewerContentMock: vi.fn(),
+}));
+
+vi.mock("../../contexts/WorkspaceContext", () => ({
+  useWorkspace: () => ({ workspaceId: "ws_test" }),
+}));
+
+vi.mock("../../contexts/ZIndexContext", () => ({
+  useZIndex: () => 100,
+}));
+
+vi.mock("../../file-viewer/services/file-viewer-api", () => ({
+  fetchFileViewerContent: (workspaceId: string, path: string) => fetchFileViewerContentMock(workspaceId, path),
+}));
+
 describe("SkillDetailModal", () => {
   const baseSkill = {
     id: "find-docs",
@@ -28,7 +44,7 @@ describe("SkillDetailModal", () => {
     files: ["examples/basic.md", "templates/query.txt"],
   };
 
-  it("renders supporting files as an expanded list by default", async () => {
+  it("renders supporting files as interactive controls by default", async () => {
     render(() => (
       <SkillDetailModal
         open={true}
@@ -56,10 +72,10 @@ describe("SkillDetailModal", () => {
     expect(screen.getByText("Additional files found alongside SKILL.md.")).toBeInTheDocument();
 
     const fileList = screen.getByRole("list");
-    const fileItems = screen.getAllByRole("listitem");
+    const fileButtons = screen.getAllByRole("button", { name: /examples\/basic\.md|templates\/query\.txt/ });
 
     expect(fileList).toBeInTheDocument();
-    expect(fileItems).toHaveLength(2);
+    expect(fileButtons).toHaveLength(2);
     expect(screen.getByText("examples/basic.md")).toBeInTheDocument();
     expect(screen.getByText("templates/query.txt")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Find Docs" })).toBeInTheDocument();
@@ -93,5 +109,38 @@ describe("SkillDetailModal", () => {
       expect(onUpdateTriggerPhrases).toHaveBeenCalledWith(["docs please", "reference the docs"]);
     });
     expect(screen.getByText("Trigger Phrases")).toBeInTheDocument();
+  });
+
+  it("opens the generic file viewer when a supporting file is clicked", async () => {
+    fetchFileViewerContentMock.mockResolvedValueOnce({
+      path: "/Users/test/.claude/skills/find-docs/examples/basic.md",
+      name: "basic.md",
+      content: "# Example\n\nSkill example content.",
+      language: "markdown",
+      isMarkdown: true,
+    });
+
+    render(() => (
+      <SkillDetailModal
+        open={true}
+        onOpenChange={() => {}}
+        skill={baseSkill}
+        workspaceId="ws_test"
+        onUpdateTriggerPhrases={vi.fn().mockResolvedValue(undefined)}
+      />
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: "examples/basic.md" }));
+
+    await waitFor(() => {
+      expect(fetchFileViewerContentMock).toHaveBeenCalledWith(
+        "ws_test",
+        "/Users/test/.claude/skills/find-docs/examples/basic.md",
+      );
+    });
+
+    expect(screen.getByRole("dialog", { name: "basic.md" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rich" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("heading", { name: "Example" })).toBeInTheDocument();
   });
 });

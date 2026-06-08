@@ -1,5 +1,5 @@
 // ABOUTME: Tests the flat list pane used by the skills library dialog.
-// ABOUTME: Verifies search input, install location filter, and visible skill selection callbacks.
+// ABOUTME: Verifies search input, install location filter, and programmatic auto-scroll behavior.
 
 import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
 import { createMemo, createSignal } from "solid-js";
@@ -98,11 +98,15 @@ describe("SkillListPane", () => {
 
     const Wrapper = () => {
       const [selectedSkillId, setSelectedSkillId] = createSignal<string | null>(skills[0]?.id ?? null);
+      const [autoScrollSkillId, setAutoScrollSkillId] = createSignal<string | null>(skills[0]?.id ?? null);
 
       return (
         <>
           <button type="button" onClick={() => setSelectedSkillId("release-notes-from-branch")}>
             Select release notes
+          </button>
+          <button type="button" onClick={() => setAutoScrollSkillId("release-notes-from-branch")}>
+            Auto-scroll release notes
           </button>
           <SkillListPane
             skills={skills}
@@ -110,9 +114,11 @@ describe("SkillListPane", () => {
             searchQuery=""
             scopeFilter="all"
             selectedSkillId={selectedSkillId()}
+            autoScrollSkillId={autoScrollSkillId()}
             onSearchQueryChange={() => {}}
             onScopeFilterChange={() => {}}
             onSelectSkill={setSelectedSkillId}
+            onAutoScrollHandled={setAutoScrollSkillId}
           />
         </>
       );
@@ -127,8 +133,59 @@ describe("SkillListPane", () => {
     scrollIntoView.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "Select release notes" }));
 
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Auto-scroll release notes" }));
+
     await waitFor(() => {
       expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
     });
+  });
+
+  it("ignores a queued auto-scroll after the request is cleared", () => {
+    const scrollIntoView = vi.fn();
+    const queuedMicrotasks: Array<() => void> = [];
+
+    vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(scrollIntoView);
+    vi.spyOn(globalThis, "queueMicrotask").mockImplementation((callback: VoidFunction) => {
+      queuedMicrotasks.push(callback);
+    });
+
+    const Wrapper = () => {
+      const [autoScrollSkillId, setAutoScrollSkillId] = createSignal<string | null>(skills[0]?.id ?? null);
+
+      return (
+        <>
+          <button type="button" onClick={() => setAutoScrollSkillId(null)}>
+            Cancel auto-scroll
+          </button>
+          <SkillListPane
+            skills={skills}
+            filteredSkills={skills}
+            searchQuery=""
+            scopeFilter="all"
+            selectedSkillId={skills[0]?.id ?? null}
+            autoScrollSkillId={autoScrollSkillId()}
+            onSearchQueryChange={() => {}}
+            onScopeFilterChange={() => {}}
+            onSelectSkill={() => {}}
+            onAutoScrollHandled={setAutoScrollSkillId}
+          />
+        </>
+      );
+    };
+
+    render(() => <Wrapper />);
+
+    expect(queuedMicrotasks).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel auto-scroll" }));
+
+    for (const runMicrotask of queuedMicrotasks) {
+      runMicrotask();
+    }
+
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 });

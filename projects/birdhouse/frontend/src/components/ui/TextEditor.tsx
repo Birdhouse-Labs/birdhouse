@@ -14,6 +14,7 @@ export interface TextEditorProps {
   language: string;
   onBlur?: () => void;
   disabled?: boolean;
+  chrome?: boolean;
   height?: string;
   placeholder?: string;
   ariaLabel?: string;
@@ -134,7 +135,7 @@ const TextEditor: Component<TextEditorProps> = (props) => {
 
   return (
     <div
-      class={`relative overflow-hidden rounded-lg border border-border bg-surface ${props.class ?? ""}`.trim()}
+      class={`relative overflow-hidden ${props.chrome === false ? "" : "rounded-lg border border-border bg-surface"} ${props.class ?? ""}`.trim()}
       style={{ height: props.height ?? "16rem" }}
     >
       <Show when={props.placeholder && !focused() && props.value.length === 0}>
@@ -144,7 +145,9 @@ const TextEditor: Component<TextEditorProps> = (props) => {
       </Show>
       <div class="h-full w-full" ref={containerRef} />
       <Show when={!ready()}>
-        <div class="pointer-events-none absolute inset-0 bg-surface" />
+        <div
+          class={`pointer-events-none absolute inset-0 ${props.chrome === false ? "bg-transparent" : "bg-surface"}`}
+        />
       </Show>
     </div>
   );

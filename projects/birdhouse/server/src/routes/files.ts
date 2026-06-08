@@ -1,12 +1,60 @@
-// ABOUTME: File searching routes that forward to OpenCode's Files SDK
-// ABOUTME: Provides endpoints for finding files in the workspace using the OpencodeClient
+// ABOUTME: File routes for workspace search and read-only file viewing.
+// ABOUTME: Provides endpoints for OpenCode-backed file search and local text file inspection.
 
 import { Hono } from "hono";
+import { ReadViewableFileError, readViewableFile, revealFileInFileManager } from "../lib/file-viewer";
 import { createLiveOpenCodeClient } from "../lib/opencode-client";
 import "../types/context";
 
-export function createFileRoutes() {
+interface CreateFileRoutesOptions {
+  revealFileInFileManager?: typeof revealFileInFileManager;
+}
+
+export function createFileRoutes(options: CreateFileRoutesOptions = {}) {
   const app = new Hono();
+  const revealFile = options.revealFileInFileManager ?? revealFileInFileManager;
+
+  app.get("/view", async (c) => {
+    const filePath = c.req.query("path");
+
+    try {
+      return c.json(readViewableFile(filePath ?? ""));
+    } catch (error) {
+      if (error instanceof ReadViewableFileError) {
+        const statusByCode: Record<ReadViewableFileError["code"], 400 | 404 | 413 | 415> = {
+          invalid_path: 400,
+          not_found: 404,
+          not_file: 400,
+          too_large: 413,
+          binary: 415,
+        };
+
+        return c.json({ error: error.message }, statusByCode[error.code]);
+      }
+
+      throw error;
+    }
+  });
+
+  app.post("/reveal", async (c) => {
+    let body: unknown;
+
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+
+    const filePath =
+      body && typeof body === "object" && "path" in body && typeof body.path === "string" ? body.path : "";
+
+    if (!filePath.startsWith("/")) {
+      return c.json({ error: "path must be an absolute file path" }, 400);
+    }
+
+    revealFile(filePath);
+    return c.json({ success: true, path: filePath });
+  });
 
   // POST /api/files/find/files - Find files and directories by name/pattern
   app.post("/find/files", async (c) => {

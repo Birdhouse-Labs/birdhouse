@@ -2,10 +2,13 @@
 // ABOUTME: Renders metadata, trigger phrases, supporting files, and XML preview for one selected skill.
 
 import { ChevronRight, FolderOpen } from "lucide-solid";
-import { type Component, createSignal, For, Show } from "solid-js";
+import { type Component, createEffect, createSignal, For, Show } from "solid-js";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
 import { CodeBlock } from "../../components/ui/CodeBlock";
 import IconButton from "../../components/ui/IconButton";
+import FileViewerDialog from "../../file-viewer/components/FileViewerDialog";
+import { fetchFileViewerContent } from "../../file-viewer/services/file-viewer-api";
+import { resolveSiblingFilePath } from "../../file-viewer/utils/paths";
 import { cardSurfaceFlat } from "../../styles/containerStyles";
 import { resolvedCodeTheme } from "../../theme";
 import { revealSkillLocation } from "../services/skill-library-api";
@@ -108,6 +111,13 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
   const [isSaving, setIsSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [isRevealing, setIsRevealing] = createSignal(false);
+  const [viewerOpen, setViewerOpen] = createSignal(false);
+  const [viewerLoading, setViewerLoading] = createSignal(false);
+  const [viewerError, setViewerError] = createSignal<string | null>(null);
+  const [viewedFile, setViewedFile] = createSignal<import("../../file-viewer/types").FileViewerFile | null>(null);
+  let detailScrollRef: HTMLDivElement | undefined;
+  let previousSkillId = props.skill.id;
+  let supportingFileRequestId = 0;
 
   const scopeTitle = () => "Trigger Phrases";
   const scopeDescription = () => "Choose the phrases that suggest this skill while you type.";
@@ -118,6 +128,12 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
   const metadataEntries = () =>
     Object.entries(props.skill.metadata).filter(([key]) => !["name", "description", "tags"].includes(key));
   const locationDisplay = () => props.skill.display_location;
+  const resetViewerState = () => {
+    setViewerOpen(false);
+    setViewerLoading(false);
+    setViewerError(null);
+    setViewedFile(null);
+  };
 
   const handleSaveTriggerPhrases = async (phrases: string[]) => {
     setIsSaving(true);
@@ -146,122 +162,187 @@ const SkillDetailContent: Component<SkillDetailContentProps> = (props) => {
     }
   };
 
+  const handleOpenSupportingFile = async (relativeFilePath: string) => {
+    const requestId = ++supportingFileRequestId;
+    const absoluteFilePath = resolveSiblingFilePath(props.skill.location, relativeFilePath);
+    setViewerOpen(true);
+    setViewerLoading(true);
+    setViewerError(null);
+    setViewedFile(null);
+
+    try {
+      const file = await fetchFileViewerContent(props.workspaceId, absoluteFilePath);
+      if (requestId !== supportingFileRequestId) {
+        return;
+      }
+
+      setViewedFile(file);
+    } catch (err) {
+      if (requestId !== supportingFileRequestId) {
+        return;
+      }
+
+      setViewedFile(null);
+      setViewerError(err instanceof Error ? err.message : "Failed to load file");
+    } finally {
+      if (requestId === supportingFileRequestId) {
+        setViewerLoading(false);
+      }
+    }
+  };
+
+  createEffect(() => {
+    const skillId = props.skill.id;
+    if (skillId === previousSkillId) {
+      return;
+    }
+
+    previousSkillId = skillId;
+    supportingFileRequestId += 1;
+    resetViewerState();
+
+    if (detailScrollRef) {
+      if (typeof detailScrollRef.scrollTo === "function") {
+        detailScrollRef.scrollTo({ top: 0 });
+      } else {
+        detailScrollRef.scrollTop = 0;
+      }
+    }
+  });
+
   return (
-    <div class="flex-1 overflow-y-auto p-8 space-y-8">
-      <Show when={error()}>
-        <div class="p-3 bg-danger/10 border border-danger rounded text-sm text-danger">{error()}</div>
-      </Show>
+    <>
+      <div ref={detailScrollRef} class="flex-1 overflow-y-auto p-8 space-y-8">
+        <Show when={error()}>
+          <div class="p-3 bg-danger/10 border border-danger rounded text-sm text-danger">{error()}</div>
+        </Show>
 
-      <Show when={isSaving()}>
-        <div class="text-xs text-text-muted px-2">Saving changes...</div>
-      </Show>
+        <Show when={isSaving()}>
+          <div class="text-xs text-text-muted px-2">Saving changes...</div>
+        </Show>
 
-      <Show when={metadataEntries().length > 0 || props.skill.display_location}>
-        <DetailSection title="Details" defaultExpanded={true}>
-          <dl class="space-y-4">
-            <Show when={descriptionValue()}>
-              <div class="space-y-1">
-                <dt class="text-sm font-semibold text-heading">Description</dt>
-                <dd class="whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed">
-                  {isMultilineText(descriptionValue() ?? "") ? (
-                    <MarkdownRenderer content={descriptionValue() ?? ""} />
-                  ) : (
-                    descriptionValue()
-                  )}
-                </dd>
-              </div>
-            </Show>
-
-            <Show when={props.skill.tags.length > 0}>
-              <div class="space-y-1">
-                <dt class="text-sm font-semibold text-heading">Tags</dt>
-                <dd>
-                  <SkillTagList tags={props.skill.tags} />
-                </dd>
-              </div>
-            </Show>
-
-            <For each={metadataEntries()}>
-              {([key, value]) => (
+        <Show when={metadataEntries().length > 0 || props.skill.display_location}>
+          <DetailSection title="Details" defaultExpanded={true}>
+            <dl class="space-y-4">
+              <Show when={descriptionValue()}>
                 <div class="space-y-1">
-                  <dt class="text-sm font-semibold text-heading">{formatMetadataLabel(key)}</dt>
-                  <Show
-                    when={isStructuredMetadataValue(value)}
-                    fallback={
-                      <dd
-                        classList={{
-                          "whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed": true,
-                          "font-mono": typeof value !== "string",
-                        }}
-                      >
-                        {typeof value === "string" && isMultilineText(value) ? (
-                          <MarkdownRenderer content={value} />
-                        ) : (
-                          formatMetadataValue(value)
-                        )}
-                      </dd>
-                    }
-                  >
-                    <dd class="overflow-hidden rounded-lg border border-border-muted bg-surface-overlay/60">
-                      <CodeBlock code={formatMetadataValue(value)} language="json" theme={resolvedCodeTheme()} />
-                    </dd>
-                  </Show>
+                  <dt class="text-sm font-semibold text-heading">Description</dt>
+                  <dd class="whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed">
+                    {isMultilineText(descriptionValue() ?? "") ? (
+                      <MarkdownRenderer content={descriptionValue() ?? ""} />
+                    ) : (
+                      descriptionValue()
+                    )}
+                  </dd>
                 </div>
-              )}
-            </For>
+              </Show>
 
-            <div class="space-y-1 pt-2 border-t border-border-muted/60">
-              <dt class="text-sm font-semibold text-heading">Location</dt>
-              <dd class="flex items-center gap-2 text-sm text-text-primary">
-                <span class="font-mono break-all flex-1">{locationDisplay()}</span>
-                <IconButton
-                  icon={<FolderOpen size={16} />}
-                  variant="ghost"
-                  fixedSize={true}
-                  disabled={isRevealing()}
-                  aria-label="Reveal skill folder in Finder"
-                  onClick={() => void handleRevealLocation()}
-                />
-              </dd>
+              <Show when={props.skill.tags.length > 0}>
+                <div class="space-y-1">
+                  <dt class="text-sm font-semibold text-heading">Tags</dt>
+                  <dd>
+                    <SkillTagList tags={props.skill.tags} />
+                  </dd>
+                </div>
+              </Show>
+
+              <For each={metadataEntries()}>
+                {([key, value]) => (
+                  <div class="space-y-1">
+                    <dt class="text-sm font-semibold text-heading">{formatMetadataLabel(key)}</dt>
+                    <Show
+                      when={isStructuredMetadataValue(value)}
+                      fallback={
+                        <dd
+                          classList={{
+                            "whitespace-pre-wrap break-words text-sm text-text-primary leading-relaxed": true,
+                            "font-mono": typeof value !== "string",
+                          }}
+                        >
+                          {typeof value === "string" && isMultilineText(value) ? (
+                            <MarkdownRenderer content={value} />
+                          ) : (
+                            formatMetadataValue(value)
+                          )}
+                        </dd>
+                      }
+                    >
+                      <dd class="overflow-hidden rounded-lg border border-border-muted bg-surface-overlay/60">
+                        <CodeBlock code={formatMetadataValue(value)} language="json" theme={resolvedCodeTheme()} />
+                      </dd>
+                    </Show>
+                  </div>
+                )}
+              </For>
+
+              <div class="space-y-1 pt-2 border-t border-border-muted/60">
+                <dt class="text-sm font-semibold text-heading">Location</dt>
+                <dd class="flex items-center gap-2 text-sm text-text-primary">
+                  <span class="font-mono break-all flex-1">{locationDisplay()}</span>
+                  <IconButton
+                    icon={<FolderOpen size={16} />}
+                    variant="ghost"
+                    fixedSize={true}
+                    disabled={isRevealing()}
+                    aria-label="Reveal skill folder in Finder"
+                    onClick={() => void handleRevealLocation()}
+                  />
+                </dd>
+              </div>
+            </dl>
+          </DetailSection>
+        </Show>
+
+        <DetailSection title={scopeTitle()} description={scopeDescription()} defaultExpanded={true}>
+          <TriggerPhraseEditor
+            phrases={props.skill.trigger_phrases}
+            readonlyPhrases={props.skill.metadata_trigger_phrases}
+            onSave={handleSaveTriggerPhrases}
+          />
+        </DetailSection>
+
+        <Show when={props.skill.files.length > 0}>
+          <DetailSection
+            title="Supporting Files"
+            description="Additional files found alongside SKILL.md."
+            defaultExpanded={true}
+          >
+            <ul class="space-y-2">
+              <For each={props.skill.files}>
+                {(file) => (
+                  <li>
+                    <button
+                      type="button"
+                      class="w-full rounded-lg border border-border-muted/70 bg-surface-overlay/60 px-3 py-2 text-left font-mono text-sm text-text-primary break-all transition-colors hover:bg-surface-overlay hover:border-border"
+                      onClick={() => void handleOpenSupportingFile(file)}
+                    >
+                      {file}
+                    </button>
+                  </li>
+                )}
+              </For>
+            </ul>
+          </DetailSection>
+        </Show>
+
+        <DetailSection title="SKILL.md Content" defaultExpanded={true}>
+          <div class={`rounded-xl ${cardSurfaceFlat} overflow-hidden`}>
+            <div class="p-6">
+              <MarkdownRenderer content={props.skill.prompt} />
             </div>
-          </dl>
-        </DetailSection>
-      </Show>
-
-      <DetailSection title={scopeTitle()} description={scopeDescription()} defaultExpanded={true}>
-        <TriggerPhraseEditor
-          phrases={props.skill.trigger_phrases}
-          readonlyPhrases={props.skill.metadata_trigger_phrases}
-          onSave={handleSaveTriggerPhrases}
-        />
-      </DetailSection>
-
-      <Show when={props.skill.files.length > 0}>
-        <DetailSection
-          title="Supporting Files"
-          description="Additional files found alongside SKILL.md."
-          defaultExpanded={true}
-        >
-          <ul class="space-y-2">
-            <For each={props.skill.files}>
-              {(file) => (
-                <li class="rounded-lg border border-border-muted/70 bg-surface-overlay/60 px-3 py-2 font-mono text-sm text-text-primary break-all">
-                  {file}
-                </li>
-              )}
-            </For>
-          </ul>
-        </DetailSection>
-      </Show>
-
-      <DetailSection title="SKILL.md Content" defaultExpanded={true}>
-        <div class={`rounded-xl ${cardSurfaceFlat} overflow-hidden`}>
-          <div class="p-6">
-            <MarkdownRenderer content={props.skill.prompt} />
           </div>
-        </div>
-      </DetailSection>
-    </div>
+        </DetailSection>
+      </div>
+
+      <FileViewerDialog
+        open={viewerOpen()}
+        onOpenChange={setViewerOpen}
+        file={viewedFile()}
+        workspaceId={props.workspaceId}
+        loading={viewerLoading()}
+        error={viewerError()}
+      />
+    </>
   );
 };
 
