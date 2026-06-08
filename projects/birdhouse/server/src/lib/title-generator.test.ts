@@ -56,7 +56,6 @@ describe("title-generator", () => {
       system: undefined,
       message: buildTitleMessage("Create a function to sort arrays"),
       small: true,
-      maxTokens: 300,
     });
   });
 
