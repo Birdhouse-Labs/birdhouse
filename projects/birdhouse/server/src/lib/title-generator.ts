@@ -59,7 +59,6 @@ export async function generateTitle(
       system: systemInstructions.length > 0 ? systemInstructions : undefined,
       message: buildTitleMessage(message),
       small: true,
-      maxTokens: 300,
     });
 
     if (!title || title.trim() === "") {
