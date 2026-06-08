@@ -165,6 +165,8 @@ lsof -p $(lsof -ti tcp:50200) | grep cwd
 
 Adjust ports if you used sandbox2 (`50220`/`50230`) or another block.
 
+**Common failure:** `start-sandbox.sh` checks if a healthy process is already on the port and returns early without restarting. If the `cwd` check shows the main clone instead of your worktree, the old process is still running. Stop it with `bash sandboxes/stop-sandbox.sh --sandbox sandbox1` and start again with `--worktree`.
+
 ## Delegation Pattern
 
 Parent or implementation agents should delegate browser testing to child agents. Those browser agents should be long-lived enough to accept retest instructions by reply.

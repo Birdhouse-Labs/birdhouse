@@ -54,7 +54,9 @@ if [[ ! -d "$SERVER_DIR" ]]; then
 fi
 
 if [[ ! -d "$FRONTEND_STATIC" ]]; then
-  printf 'Expected built frontend at %s. Run bun run build in projects/birdhouse/frontend first.\n' "$FRONTEND_STATIC" >&2
+  printf 'Expected built frontend at %s.\n' "$FRONTEND_STATIC" >&2
+  printf 'If running from a worktree, run: bash sandboxes/setup-worktree.sh --worktree %s\n' "$WORKTREE" >&2
+  printf 'If running from the main clone, run: bun run build in projects/birdhouse/frontend\n' >&2
   exit 1
 fi
 

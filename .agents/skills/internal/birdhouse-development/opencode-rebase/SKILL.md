@@ -69,9 +69,9 @@ You may use `git cherry-pick` when a commit applies cleanly and you have inspect
 
 5. If the fork includes built-in Birdhouse plugin support, ensure the ignored plugin source file exists in the worktree before typecheck/build validation:
    ```bash
-   cp <birdhouse-plugin-source> packages/opencode/src/plugin/birdhouse.ts
+   cp projects/birdhouse-oc-plugin/src/plugin.ts packages/opencode/src/plugin/birdhouse.ts
    ```
-   In Birdhouse, the source of truth is the plugin implementation used by the monorepo build/dev sync flow. Check the Birdhouse build scripts or dev plugin sync utility if the source path is unclear.
+   Run this from the birdhouse-workspace root. The source lives in `projects/birdhouse-oc-plugin/src/plugin.ts` and the destination is always `packages/opencode/src/plugin/birdhouse.ts` relative to the opencode worktree root.
 
 6. Review commits before applying them.
    - Open the old diff with `git show <hash>`.
@@ -219,12 +219,34 @@ After the full port and CI pass, run the agentic test suite against the new work
 
 Load the `birdhouse-agentic-tests` skill (at `file:///Users/crayment/dev/birdhouse-workspace/.agents/skills/internal/birdhouse-development/birdhouse-agentic-tests/SKILL.md`). Run all tests and confirm every test passes before considering the rebase done.
 
-**Important:** start sandbox1 with the rebase worktree path, not the default:
+**Important:** start sandbox1 pointing at both the rebase worktree (opencode) and a prepared Birdhouse worktree. Without `--worktree`, the sandbox runs Birdhouse from the main clone, which may be on a different branch and will not reflect any Birdhouse-side changes made during the rebase.
+
+First prepare the Birdhouse worktree if you haven't already:
 ```bash
-bash sandboxes/start-sandbox.sh --sandbox sandbox1 \
-  --opencode-path /tmp/opencode-v<version>
+bash sandboxes/setup-worktree.sh --worktree worktrees/<your-birdhouse-worktree>
 ```
-Replace `<version>` with the new upstream tag (e.g. `1.4.12`). This runs the tests against the in-progress rebase, not the already-merged `birdhouse` branch. The default opencode path (`.worktrees/opencode-birdhouse`) points at the merged branch and would not test your new work.
+
+Then start the sandbox:
+```bash
+bash sandboxes/start-sandbox.sh \
+  --sandbox sandbox1 \
+  --opencode-path /tmp/opencode-v<version> \
+  --worktree "$(pwd)/worktrees/<your-birdhouse-worktree>"
+```
+
+After starting, verify both sides are serving from the expected directories:
+```bash
+# OpenCode — must show /tmp/opencode-v<version>/packages/opencode
+lsof -p $(lsof -ti tcp:50210) | grep cwd
+
+# Birdhouse — must show your worktree path, not the main clone
+lsof -p $(lsof -ti tcp:50200) | grep cwd
+
+# Fork identity — must contain birdhouseWorkspaceId
+curl -s http://127.0.0.1:50210/global/health
+```
+
+If the cwd check shows the main clone instead of your worktree, the sandbox started against the old Birdhouse — stop, check the `--worktree` argument, and restart.
 
 ## Key Reminders
 
