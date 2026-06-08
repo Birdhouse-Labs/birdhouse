@@ -9,6 +9,10 @@ WORKTREE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --worktree)
+      if [[ $# -lt 2 ]]; then
+        printf 'Error: --worktree requires an argument\n' >&2
+        exit 1
+      fi
       WORKTREE="$2"
       shift 2
       ;;

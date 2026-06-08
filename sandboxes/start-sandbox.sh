@@ -11,14 +11,17 @@ WORKTREE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --sandbox)
+      if [[ $# -lt 2 ]]; then printf 'Error: --sandbox requires an argument\n' >&2; exit 1; fi
       SANDBOX="$2"
       shift 2
       ;;
     --opencode-path)
+      if [[ $# -lt 2 ]]; then printf 'Error: --opencode-path requires an argument\n' >&2; exit 1; fi
       OPENCODE_PATH="$2"
       shift 2
       ;;
     --worktree)
+      if [[ $# -lt 2 ]]; then printf 'Error: --worktree requires an argument\n' >&2; exit 1; fi
       WORKTREE="$2"
       shift 2
       ;;

@@ -69,9 +69,9 @@ You may use `git cherry-pick` when a commit applies cleanly and you have inspect
 
 5. If the fork includes built-in Birdhouse plugin support, ensure the ignored plugin source file exists in the worktree before typecheck/build validation:
    ```bash
-   cp projects/birdhouse-oc-plugin/src/plugin.ts packages/opencode/src/plugin/birdhouse.ts
+   cp projects/birdhouse-oc-plugin/src/plugin.ts <opencode-worktree>/packages/opencode/src/plugin/birdhouse.ts
    ```
-   Run this from the birdhouse-workspace root. The source lives in `projects/birdhouse-oc-plugin/src/plugin.ts` and the destination is always `packages/opencode/src/plugin/birdhouse.ts` relative to the opencode worktree root.
+   Run this from the birdhouse-workspace root. The source lives in `projects/birdhouse-oc-plugin/src/plugin.ts`. Replace `<opencode-worktree>` with the absolute path to the opencode worktree (e.g. `/tmp/opencode-v1.16.2`).
 
 6. Review commits before applying them.
    - Open the old diff with `git show <hash>`.
