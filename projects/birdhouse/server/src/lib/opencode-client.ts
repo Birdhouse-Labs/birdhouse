@@ -288,7 +288,7 @@ export function createLiveOpenCodeClient(baseUrl: string, workspaceRoot: string)
           system: options.system,
           message: options.message,
           small: options.small ?? true,
-          maxTokens: options.maxTokens ?? 300,
+          ...(options.maxTokens !== undefined && { maxTokens: options.maxTokens }),
         }),
       });
       if (!response.ok) {
