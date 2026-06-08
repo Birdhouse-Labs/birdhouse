@@ -155,6 +155,7 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
                           onInput={() => {}}
                           language={props.file?.language || "text"}
                           disabled={true}
+                          chrome={false}
                           height="100%"
                           ariaLabel={`${title()} raw file content`}
                           options={{ wordWrap: "off" }}

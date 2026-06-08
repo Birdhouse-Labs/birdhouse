@@ -21,13 +21,16 @@ vi.mock("../services/file-viewer-api", () => ({
 }));
 
 vi.mock("../../components/ui/TextEditor", () => ({
-  default: (props: { value: string; language: string; disabled?: boolean; height?: string; ariaLabel?: string }) => {
+  default: (props: {
+    value: string;
+    language: string;
+    disabled?: boolean;
+    chrome?: boolean;
+    height?: string;
+    ariaLabel?: string;
+  }) => {
     textEditorMock(props);
-    return (
-      <div data-testid="text-editor" data-language={props.language} data-disabled={props.disabled ? "true" : "false"}>
-        {props.value}
-      </div>
-    );
+    return <div data-testid="text-editor">{props.value}</div>;
   },
 }));
 
@@ -65,6 +68,7 @@ describe("FileViewerDialog", () => {
         value: "# Notes\n\nHello world.",
         language: "markdown",
         disabled: true,
+        chrome: false,
       }),
     );
   });
@@ -93,6 +97,7 @@ describe("FileViewerDialog", () => {
         value: "export const answer = 42;",
         language: "typescript",
         disabled: true,
+        chrome: false,
       }),
     );
   });
