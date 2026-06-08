@@ -59,6 +59,7 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
   };
 
   const title = createMemo(() => props.file?.name ?? "File Viewer");
+  const isRichMarkdown = createMemo(() => props.file?.isMarkdown && markdownMode() === "rich");
 
   return (
     <Dialog
@@ -134,9 +135,14 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
             </div>
           </div>
 
-          <div class="flex-1 overflow-auto p-6 rounded-b-2xl">
+          <div
+            class="flex-1 overflow-auto rounded-b-2xl"
+            classList={{
+              "p-6": !!isRichMarkdown(),
+            }}
+          >
             <Show when={revealError()}>
-              <div class="mb-4 rounded-lg border border-danger bg-danger/10 p-3 text-sm text-danger">
+              <div class="m-6 rounded-lg border border-danger bg-danger/10 p-3 text-sm text-danger">
                 {revealError()}
               </div>
             </Show>
@@ -149,7 +155,7 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
                   <Show
                     when={props.file?.isMarkdown && markdownMode() === "rich"}
                     fallback={
-                      <div class="h-full overflow-hidden rounded-xl">
+                      <div class="h-full overflow-hidden">
                         <TextEditor
                           value={props.file?.content ?? ""}
                           onInput={() => {}}
@@ -157,6 +163,7 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
                           disabled={true}
                           chrome={false}
                           height="100%"
+                          class="h-full"
                           ariaLabel={`${title()} raw file content`}
                           options={{ wordWrap: "off" }}
                         />
