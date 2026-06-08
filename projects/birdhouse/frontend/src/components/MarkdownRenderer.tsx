@@ -9,6 +9,7 @@ import { borderColor, cardSurface } from "../styles/containerStyles";
 import { codeTheme, isDark, uiSize } from "../theme";
 import { resolveCodeTheme } from "../theme/codeThemes";
 import { CodeBlockContainer } from "./ui";
+import FileReferenceButton from "./ui/FileReferenceButton";
 import ModelReferenceButton from "./ui/ModelReferenceButton";
 
 interface CodeBlockInfo {
@@ -34,6 +35,7 @@ export interface MarkdownRendererProps {
   isStreaming?: boolean;
   /** Workspace ID for agent links. If not provided, agent links won't work. */
   workspaceId?: string;
+  workspaceDirectory?: string;
   onReferenceLinkClick?: (
     reference: GlobalReference,
     modifiers?: {
@@ -95,6 +97,7 @@ const CodeBlockSkeleton: Component<{ language: string }> = (props) => {
 
 export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
   let contentRef: HTMLDivElement | undefined;
+  let fileReferenceDisposers: Array<() => void> = [];
   let modelReferenceDisposers: Array<() => void> = [];
   const sizeClasses = createMemo(() => {
     const size = uiSize();
@@ -148,13 +151,8 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
         const escapedText = escapeHtml(token.text);
         const escapedPath = escapeHtml(fileTarget.path);
         const escapedLine = fileTarget.line === null ? "" : String(fileTarget.line);
-        const lineSuffix =
-          fileTarget.line === null
-            ? ""
-            : `<span class="font-mono text-[0.85em]">#L${escapedLine}</span>`;
-        const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="lucide lucide-file-text"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" x2="8" y1="13" y2="13"></line><line x1="16" x2="8" y1="17" y2="17"></line><line x1="10" x2="8" y1="9" y2="9"></line></svg>`;
 
-        return `<button data-file-link="${escapedPath}" data-file-line="${escapedLine}" class="agent-btn inline-flex items-center gap-1 rounded font-medium cursor-pointer no-underline" style="transition: transform 100ms ease-in-out;" onmousemove="const rect = this.getBoundingClientRect(); const x = event.clientX - rect.left; const percent = (x / rect.width * 100); this.style.setProperty('--mouse-x', percent + '%');" onmouseleave="this.style.removeProperty('--mouse-x');">${icon}<span>${escapedText}</span>${lineSuffix}</button>`;
+        return `<span data-file-reference data-file-path="${escapedPath}" data-file-line="${escapedLine}" data-file-label="${escapedText}"></span>`;
       }
 
       if (token.href.startsWith("birdhouse:skill/")) {
@@ -246,9 +244,38 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
       return;
     }
 
+    for (const dispose of fileReferenceDisposers) {
+      dispose();
+    }
+
     for (const dispose of modelReferenceDisposers) {
       dispose();
     }
+
+    const fileMounts = Array.from(contentRef.querySelectorAll<HTMLElement>("[data-file-reference]"));
+    fileReferenceDisposers = fileMounts.map((mount) => {
+      const path = mount.dataset["filePath"];
+      const label = mount.dataset["fileLabel"];
+      const lineValue = mount.dataset["fileLine"];
+
+      if (!path || !label || !props.onFileLinkClick) {
+        return () => {};
+      }
+
+      const line = lineValue ? Number.parseInt(lineValue, 10) : null;
+      return render(
+        () => (
+          <FileReferenceButton
+            label={label}
+            path={path}
+            line={Number.isNaN(line ?? NaN) ? null : line}
+            {...(props.workspaceDirectory ? { workspaceDirectory: props.workspaceDirectory } : {})}
+            onClick={props.onFileLinkClick!}
+          />
+        ),
+        mount,
+      );
+    });
 
     const mounts = Array.from(contentRef.querySelectorAll<HTMLElement>("[data-model-reference]"));
     modelReferenceDisposers = mounts.map((mount) => {
@@ -268,6 +295,10 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
     queueMicrotask(mountModelReferences);
 
     onCleanup(() => {
+      for (const dispose of fileReferenceDisposers) {
+        dispose();
+      }
+      fileReferenceDisposers = [];
       for (const dispose of modelReferenceDisposers) {
         dispose();
       }
@@ -280,23 +311,9 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
       return;
     }
 
-    const target = (e.target as HTMLElement).closest<HTMLElement>("[data-skill-link], [data-agent-link], [data-file-link]");
+    const target = (e.target as HTMLElement).closest<HTMLElement>("[data-skill-link], [data-agent-link]");
 
     if (!target) {
-      return;
-    }
-
-    if (target.hasAttribute("data-file-link")) {
-      e.preventDefault();
-      const path = target.getAttribute("data-file-link");
-      const line = target.getAttribute("data-file-line");
-
-      if (path && props.onFileLinkClick) {
-        props.onFileLinkClick({
-          path,
-          line: line ? Number.parseInt(line, 10) : null,
-        });
-      }
       return;
     }
 

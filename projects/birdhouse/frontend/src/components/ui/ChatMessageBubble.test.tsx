@@ -9,7 +9,7 @@ import ChatMessageBubble from "./ChatMessageBubble";
 const openModal = vi.fn();
 
 vi.mock("../../contexts/WorkspaceContext", () => ({
-  useWorkspace: () => ({ workspaceId: "ws_test" }),
+  useWorkspace: () => ({ workspaceId: "ws_test", workspace: () => ({ directory: "/Users/test/workspace" }) }),
 }));
 
 vi.mock("../../contexts/ZIndexContext", () => ({

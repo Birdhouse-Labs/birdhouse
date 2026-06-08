@@ -67,7 +67,7 @@ const formatError = (
 };
 
 export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, workspace } = useWorkspace();
   const { openModal } = useModalRoute();
   const baseZIndex = useZIndex();
   const isUser = () => props.message.role === "user";
@@ -115,6 +115,7 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
   const mode = messageInfo?.role === "assistant" ? messageInfo.mode : null;
   const error = formatError(messageInfo);
   const fileAttachments = createMemo(() => props.message.blocks?.filter(isFileBlock) ?? []);
+  const workspaceDirectory = createMemo(() => workspace()?.directory);
 
   const copyableContent = createMemo(() => props.message.content || null);
 
@@ -310,12 +311,13 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
         >
           {renderActionsMenu(props.message.content)}
 
-          <MarkdownRenderer
-            content={props.message.content}
-            workspaceId={workspaceId}
-            onReferenceLinkClick={handleReferenceLinkClick}
-            onFileLinkClick={handleFileLinkClick}
-          />
+            <MarkdownRenderer
+              content={props.message.content}
+              workspaceId={workspaceId}
+              {...(workspaceDirectory() ? { workspaceDirectory: workspaceDirectory()! } : {})}
+              onReferenceLinkClick={handleReferenceLinkClick}
+              onFileLinkClick={handleFileLinkClick}
+            />
 
           <MessageFileAttachments attachments={fileAttachments()} />
         </MessageBubbleContent>
@@ -330,12 +332,13 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
         >
           {renderActionsMenu(props.message.content)}
 
-          <MarkdownRenderer
-            content={props.message.content}
-            workspaceId={workspaceId}
-            onReferenceLinkClick={handleReferenceLinkClick}
-            onFileLinkClick={handleFileLinkClick}
-          />
+            <MarkdownRenderer
+              content={props.message.content}
+              workspaceId={workspaceId}
+              {...(workspaceDirectory() ? { workspaceDirectory: workspaceDirectory()! } : {})}
+              onReferenceLinkClick={handleReferenceLinkClick}
+              onFileLinkClick={handleFileLinkClick}
+            />
 
           <MessageFileAttachments attachments={fileAttachments()} />
         </MessageBubbleContent>
@@ -356,6 +359,7 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
               <MarkdownRenderer
                 content={props.message.content}
                 workspaceId={workspaceId}
+                {...(workspaceDirectory() ? { workspaceDirectory: workspaceDirectory()! } : {})}
                 {...(props.message.isStreaming !== undefined && { isStreaming: props.message.isStreaming })}
                 onReferenceLinkClick={handleReferenceLinkClick}
                 onFileLinkClick={handleFileLinkClick}

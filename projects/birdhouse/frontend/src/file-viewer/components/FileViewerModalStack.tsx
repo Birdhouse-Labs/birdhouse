@@ -119,6 +119,7 @@ const FileViewerModalNode: Component<FileViewerModalNodeProps> = (props) => {
             closeOnEscapeKeyDown={props.index === props.stack().length - 1}
             file={file()}
             workspaceId={props.workspaceId}
+            {...(props.workspaceDirectory ? { workspaceDirectory: props.workspaceDirectory } : {})}
             loading={loading()}
             error={error()}
             requestedPath={resolvedPath() ?? target()?.path ?? null}

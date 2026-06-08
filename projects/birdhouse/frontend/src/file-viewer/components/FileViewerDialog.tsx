@@ -21,6 +21,7 @@ export interface FileViewerDialogProps {
   onOpenChange: (open: boolean) => void;
   file: FileViewerFile | null;
   workspaceId?: string;
+  workspaceDirectory?: string;
   loading?: boolean;
   error?: string | null;
   requestedPath?: string | null;
@@ -185,6 +186,7 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
                       <MarkdownRenderer
                         content={props.file?.content ?? ""}
                         {...(props.workspaceId ? { workspaceId: props.workspaceId } : {})}
+                        {...(props.workspaceDirectory ? { workspaceDirectory: props.workspaceDirectory } : {})}
                         {...(props.onFileLinkClick ? { onFileLinkClick: props.onFileLinkClick } : {})}
                       />
                     </div>
