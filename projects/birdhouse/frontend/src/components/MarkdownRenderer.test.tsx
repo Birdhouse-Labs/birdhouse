@@ -62,7 +62,11 @@ describe("MarkdownRenderer", () => {
     ));
 
     await waitFor(() => {
-      fireEvent.click(screen.getByRole("button", { name: /notes/i }));
+      const reference = screen.getByRole("button", { name: /notes/i });
+      expect(reference.className).toContain("file-ref-btn");
+      expect(reference.className).toContain("no-underline");
+      expect(reference.querySelector("svg")).not.toBeNull();
+      fireEvent.click(reference);
       expect(onFileLinkClick).toHaveBeenCalledWith({
         path: "/Users/test/workspace/notes.md",
         line: null,
@@ -126,7 +130,10 @@ describe("MarkdownRenderer", () => {
     ));
 
     await waitFor(() => {
-      fireEvent.click(screen.getByRole("button", { name: /component/i }));
+      const reference = screen.getByRole("button", { name: /component/i });
+      expect(reference).toHaveTextContent("component");
+      expect(reference).toHaveTextContent("#L42");
+      fireEvent.click(reference);
       expect(onFileLinkClick).toHaveBeenCalledWith({
         path: "src/components/App.tsx",
         line: 42,

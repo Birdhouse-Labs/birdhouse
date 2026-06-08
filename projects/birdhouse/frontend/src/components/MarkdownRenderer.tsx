@@ -148,8 +148,13 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
         const escapedText = escapeHtml(token.text);
         const escapedPath = escapeHtml(fileTarget.path);
         const escapedLine = fileTarget.line === null ? "" : String(fileTarget.line);
+        const lineSuffix =
+          fileTarget.line === null
+            ? ""
+            : `<span class="file-ref-line text-[0.85em] font-mono">#L${escapedLine}</span>`;
+        const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="lucide lucide-file-code-2"><path d="M16 22H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8l6 6v12a2 2 0 0 1-2 2Z"></path><path d="M10 13 8 15l2 2"></path><path d="m14 17 2-2-2-2"></path></svg>`;
 
-        return `<button data-file-link="${escapedPath}" data-file-line="${escapedLine}" class="font-medium text-accent underline decoration-accent/40 underline-offset-3 hover:text-accent-bright">${escapedText}</button>`;
+        return `<button data-file-link="${escapedPath}" data-file-line="${escapedLine}" class="file-ref-btn inline-flex items-center gap-1 rounded-md border border-border-muted/70 bg-surface-overlay/50 px-2 py-0.5 font-medium cursor-pointer no-underline align-baseline">${icon}<span>${escapedText}</span>${lineSuffix}</button>`;
       }
 
       if (token.href.startsWith("birdhouse:skill/")) {
@@ -366,6 +371,30 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
         }
         
         .agent-btn:hover svg {
+          color: var(--theme-gradient-from);
+        }
+
+        .file-ref-btn {
+          color: var(--theme-gradient-from);
+          transition: transform 100ms ease-in-out, color 100ms ease-in-out, border-color 100ms ease-in-out;
+        }
+
+        .file-ref-btn:active {
+          transform: scale(0.97);
+        }
+
+        .file-ref-btn svg,
+        .file-ref-btn .file-ref-line {
+          color: var(--theme-gradient-to);
+        }
+
+        .file-ref-btn:hover {
+          color: var(--theme-gradient-to);
+          border-color: color-mix(in srgb, var(--theme-gradient-to) 45%, transparent);
+        }
+
+        .file-ref-btn:hover svg,
+        .file-ref-btn:hover .file-ref-line {
           color: var(--theme-gradient-from);
         }
 
