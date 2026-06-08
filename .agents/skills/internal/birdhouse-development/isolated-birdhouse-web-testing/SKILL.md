@@ -78,6 +78,87 @@ Each run keeps:
 
 Treat the run directory as the review package. Do not auto-delete it after a successful test.
 
+## Running from a Worktree
+
+Use a Birdhouse worktree instead of the main clone when:
+
+- testing a feature branch in isolation before merging
+- running a rebase against a new OpenCode version (e.g. verifying a `v1.16.2` build)
+
+### Two-worktree pattern
+
+You need two worktrees: one for Birdhouse, one for OpenCode.
+
+**Birdhouse worktree** — a normal git worktree on your feature branch:
+
+```bash
+git worktree add worktrees/my-feature -b my-feature origin/main
+```
+
+**OpenCode worktree** — typically a checked-out tag or rebase target, e.g.:
+
+```
+/tmp/opencode-v1.16.2
+```
+
+### Setup steps
+
+1. Create the Birdhouse worktree (if not already done):
+
+   ```bash
+   git worktree add worktrees/my-feature -b my-feature origin/main
+   ```
+
+2. Prepare it (installs server deps and builds the frontend dist):
+
+   ```bash
+   bash sandboxes/setup-worktree.sh --worktree worktrees/my-feature
+   ```
+
+3. Start the sandbox pointing at both worktrees:
+
+   ```bash
+   bash sandboxes/start-sandbox.sh \
+     --sandbox sandbox1 \
+     --opencode-path /tmp/opencode-v1.16.2 \
+     --worktree /abs/path/to/worktrees/my-feature
+   ```
+
+   Use an absolute path for `--worktree`.
+
+### OpenCode worktree quick setup
+
+OpenCode needs its own preparation before `start-sandbox.sh` will accept it:
+
+1. `bun install` in the opencode repo root
+2. Copy the Birdhouse plugin source into `packages/opencode/src/birdhouse/`
+
+For the full rebase workflow and plugin copy steps, see the `opencode-rebase` skill.
+
+### Verifying both sides are running the right code
+
+After the sandbox starts, confirm each side is serving from the expected directory:
+
+**OpenCode** — confirm working directory:
+
+```bash
+lsof -p $(lsof -ti tcp:50210) | grep cwd
+```
+
+**OpenCode fork identity** — must contain `birdhouseWorkspaceId`:
+
+```bash
+curl -s http://127.0.0.1:50210/global/health
+```
+
+**Birdhouse server** — confirm working directory:
+
+```bash
+lsof -p $(lsof -ti tcp:50200) | grep cwd
+```
+
+Adjust ports if you used sandbox2 (`50220`/`50230`) or another block.
+
 ## Delegation Pattern
 
 Parent or implementation agents should delegate browser testing to child agents. Those browser agents should be long-lived enough to accept retest instructions by reply.
