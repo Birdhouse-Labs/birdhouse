@@ -63,7 +63,7 @@ describe("MarkdownRenderer", () => {
 
     await waitFor(() => {
       const reference = screen.getByRole("button", { name: /notes/i });
-      expect(reference.className).toContain("file-ref-btn");
+      expect(reference.className).toContain("agent-btn");
       expect(reference.className).toContain("no-underline");
       expect(reference.querySelector("svg")).not.toBeNull();
       fireEvent.click(reference);

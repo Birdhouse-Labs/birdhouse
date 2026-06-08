@@ -151,10 +151,10 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
         const lineSuffix =
           fileTarget.line === null
             ? ""
-            : `<span class="file-ref-line text-[0.85em] font-mono">#L${escapedLine}</span>`;
-        const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="lucide lucide-file-code-2"><path d="M16 22H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8l6 6v12a2 2 0 0 1-2 2Z"></path><path d="M10 13 8 15l2 2"></path><path d="m14 17 2-2-2-2"></path></svg>`;
+            : `<span class="font-mono text-[0.85em]">#L${escapedLine}</span>`;
+        const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="lucide lucide-file-text"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" x2="8" y1="13" y2="13"></line><line x1="16" x2="8" y1="17" y2="17"></line><line x1="10" x2="8" y1="9" y2="9"></line></svg>`;
 
-        return `<button data-file-link="${escapedPath}" data-file-line="${escapedLine}" class="file-ref-btn inline-flex items-center gap-1 rounded-md border border-border-muted/70 bg-surface-overlay/50 px-2 py-0.5 font-medium cursor-pointer no-underline align-baseline">${icon}<span>${escapedText}</span>${lineSuffix}</button>`;
+        return `<button data-file-link="${escapedPath}" data-file-line="${escapedLine}" class="agent-btn inline-flex items-center gap-1 rounded font-medium cursor-pointer no-underline" style="transition: transform 100ms ease-in-out;" onmousemove="const rect = this.getBoundingClientRect(); const x = event.clientX - rect.left; const percent = (x / rect.width * 100); this.style.setProperty('--mouse-x', percent + '%');" onmouseleave="this.style.removeProperty('--mouse-x');">${icon}<span>${escapedText}</span>${lineSuffix}</button>`;
       }
 
       if (token.href.startsWith("birdhouse:skill/")) {
@@ -371,30 +371,6 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
         }
         
         .agent-btn:hover svg {
-          color: var(--theme-gradient-from);
-        }
-
-        .file-ref-btn {
-          color: var(--theme-gradient-from);
-          transition: transform 100ms ease-in-out, color 100ms ease-in-out, border-color 100ms ease-in-out;
-        }
-
-        .file-ref-btn:active {
-          transform: scale(0.97);
-        }
-
-        .file-ref-btn svg,
-        .file-ref-btn .file-ref-line {
-          color: var(--theme-gradient-to);
-        }
-
-        .file-ref-btn:hover {
-          color: var(--theme-gradient-to);
-          border-color: color-mix(in srgb, var(--theme-gradient-to) 45%, transparent);
-        }
-
-        .file-ref-btn:hover svg,
-        .file-ref-btn:hover .file-ref-line {
           color: var(--theme-gradient-from);
         }
 
