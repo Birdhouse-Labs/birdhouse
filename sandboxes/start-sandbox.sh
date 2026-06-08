@@ -11,14 +11,17 @@ WORKTREE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --sandbox)
+      if [[ $# -lt 2 ]]; then printf 'Error: --sandbox requires an argument\n' >&2; exit 1; fi
       SANDBOX="$2"
       shift 2
       ;;
     --opencode-path)
+      if [[ $# -lt 2 ]]; then printf 'Error: --opencode-path requires an argument\n' >&2; exit 1; fi
       OPENCODE_PATH="$2"
       shift 2
       ;;
     --worktree)
+      if [[ $# -lt 2 ]]; then printf 'Error: --worktree requires an argument\n' >&2; exit 1; fi
       WORKTREE="$2"
       shift 2
       ;;
@@ -54,7 +57,9 @@ if [[ ! -d "$SERVER_DIR" ]]; then
 fi
 
 if [[ ! -d "$FRONTEND_STATIC" ]]; then
-  printf 'Expected built frontend at %s. Run bun run build in projects/birdhouse/frontend first.\n' "$FRONTEND_STATIC" >&2
+  printf 'Expected built frontend at %s.\n' "$FRONTEND_STATIC" >&2
+  printf 'If running from a worktree, run: bash sandboxes/setup-worktree.sh --worktree %s\n' "$WORKTREE" >&2
+  printf 'If running from the main clone, run: bun run build in projects/birdhouse/frontend\n' >&2
   exit 1
 fi
 
@@ -89,16 +94,12 @@ fi
 mkdir -p "$SANDBOX_DIR/workspace" "$SANDBOX_DIR/screenshots"
 
 cd "$SERVER_DIR"
-# Use --env-file so bun loads the same project .env that the dev server uses
-# (needed for Hono static/route initialization to work correctly).
-# Our explicit env vars are set in the process environment BEFORE bun runs,
-# so they take precedence over any conflicting values in .env.
 nohup env \
   BIRDHOUSE_BASE_PORT="$BASE_PORT" \
   BIRDHOUSE_DATA_DB_PATH="$DATA_DB_PATH" \
   FRONTEND_STATIC="$FRONTEND_STATIC" \
   OPENCODE_PATH="$OPENCODE_PATH" \
-  bun --env-file=../.env src/index.ts >"$SERVER_LOG" 2>&1 &
+  bun src/index.ts >"$SERVER_LOG" 2>&1 </dev/null &
 server_pid=$!
 printf '%s\n' "$server_pid" >"$SERVER_PID_FILE"
 
