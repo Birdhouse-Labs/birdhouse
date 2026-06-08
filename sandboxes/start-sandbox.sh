@@ -89,16 +89,12 @@ fi
 mkdir -p "$SANDBOX_DIR/workspace" "$SANDBOX_DIR/screenshots"
 
 cd "$SERVER_DIR"
-# Use --env-file so bun loads the same project .env that the dev server uses
-# (needed for Hono static/route initialization to work correctly).
-# Our explicit env vars are set in the process environment BEFORE bun runs,
-# so they take precedence over any conflicting values in .env.
 nohup env \
   BIRDHOUSE_BASE_PORT="$BASE_PORT" \
   BIRDHOUSE_DATA_DB_PATH="$DATA_DB_PATH" \
   FRONTEND_STATIC="$FRONTEND_STATIC" \
   OPENCODE_PATH="$OPENCODE_PATH" \
-  bun --env-file=../.env src/index.ts >"$SERVER_LOG" 2>&1 &
+  bun src/index.ts >"$SERVER_LOG" 2>&1 </dev/null &
 server_pid=$!
 printf '%s\n' "$server_pid" >"$SERVER_PID_FILE"
 
