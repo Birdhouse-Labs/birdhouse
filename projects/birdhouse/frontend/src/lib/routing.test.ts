@@ -28,6 +28,12 @@ describe("parseModalStack", () => {
   test("ignores invalid entries", () => {
     expect(parseModalStack("agent/agent_1,invalid,workspace_config/")).toEqual([{ type: "agent", id: "agent_1" }]);
   });
+
+  test("decodes encoded modal ids for file viewer routes", () => {
+    expect(parseModalStack("file-viewer/%2FUsers%2Ftest%2Fworkspace%2Cnotes.md%23L42")).toEqual([
+      { type: "file-viewer", id: "/Users/test/workspace,notes.md#L42" },
+    ]);
+  });
 });
 
 describe("serializeModalStack", () => {
@@ -51,6 +57,12 @@ describe("serializeModalStack", () => {
   test("round-trips parse and serialize", () => {
     const value = "agent/agent_1,agent/agent_2";
     expect(serializeModalStack(parseModalStack(value))).toBe(value);
+  });
+
+  test("encodes file viewer modal ids so paths survive commas and fragments", () => {
+    expect(serializeModalStack([{ type: "file-viewer", id: "/Users/test/workspace,notes.md#L42" }])).toBe(
+      "file-viewer/%2FUsers%2Ftest%2Fworkspace%2Cnotes.md%23L42",
+    );
   });
 });
 

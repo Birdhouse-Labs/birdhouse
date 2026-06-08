@@ -38,6 +38,7 @@ import { getPaletteDialogRequestForLayer } from "./lib/palette-dialog-request";
 import { keepAgentInView } from "./lib/preferences";
 import { type ModalState, useModalRoute, useNavigateToWorkspaceAgent, useWorkspaceAgentId } from "./lib/routing";
 import { fetchAgentTrees } from "./services/messages-api";
+import FileViewerModalStack from "./file-viewer/components/FileViewerModalStack";
 import SkillLibraryDialog from "./skills/components/SkillLibraryDialog";
 import { createMediaQuery } from "./theme/createMediaQuery";
 
@@ -132,7 +133,7 @@ function findNodeById(nodes: TreeNode[], targetId: string): TreeNode | undefined
 
 const LiveApp: Component<LiveAppProps> = (props) => {
   // Get workspace context
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, workspace } = useWorkspace();
 
   // Navigation hook - must be called at component top level
   const navigateToAgent = useNavigateToWorkspaceAgent();
@@ -686,6 +687,8 @@ const LiveApp: Component<LiveAppProps> = (props) => {
 
       {/* Skills Library Dialog */}
       <SkillLibraryDialog workspaceId={workspaceId} />
+
+      <FileViewerModalStack workspaceId={workspaceId} workspaceDirectory={workspace()?.directory} />
 
       {/* Agent Search Dialog */}
       <AgentSearchDialog />

@@ -4,6 +4,7 @@
 import { marked, type Tokens } from "marked";
 import { type Component, createEffect, createMemo, For, onCleanup, Suspense } from "solid-js";
 import { render } from "solid-js/web";
+import { parseLocalFileLinkTarget } from "../file-viewer/utils/link-targets";
 import { borderColor, cardSurface } from "../styles/containerStyles";
 import { codeTheme, isDark, uiSize } from "../theme";
 import { resolveCodeTheme } from "../theme/codeThemes";
@@ -42,6 +43,7 @@ export interface MarkdownRendererProps {
       shiftKey: boolean;
     },
   ) => void;
+  onFileLinkClick?: (target: { path: string; line: number | null }) => void;
 }
 
 /**
@@ -141,6 +143,15 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
     // Override link renderer to detect Birdhouse-specific reference links.
     const originalLink = renderer.link.bind(renderer);
     renderer.link = (token: { href: string; text: string; tokens?: unknown[]; type?: string; raw?: string }) => {
+      const fileTarget = parseLocalFileLinkTarget(token.href);
+      if (fileTarget && props.onFileLinkClick) {
+        const escapedText = escapeHtml(token.text);
+        const escapedPath = escapeHtml(fileTarget.path);
+        const escapedLine = fileTarget.line === null ? "" : String(fileTarget.line);
+
+        return `<button data-file-link="${escapedPath}" data-file-line="${escapedLine}" class="font-medium text-accent underline decoration-accent/40 underline-offset-3 hover:text-accent-bright">${escapedText}</button>`;
+      }
+
       if (token.href.startsWith("birdhouse:skill/")) {
         const skillName = token.href.replace("birdhouse:skill/", "");
         const escapedText = escapeHtml(token.text);
@@ -264,9 +275,23 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
       return;
     }
 
-    const target = (e.target as HTMLElement).closest<HTMLElement>("[data-skill-link], [data-agent-link]");
+    const target = (e.target as HTMLElement).closest<HTMLElement>("[data-skill-link], [data-agent-link], [data-file-link]");
 
     if (!target) {
+      return;
+    }
+
+    if (target.hasAttribute("data-file-link")) {
+      e.preventDefault();
+      const path = target.getAttribute("data-file-link");
+      const line = target.getAttribute("data-file-line");
+
+      if (path && props.onFileLinkClick) {
+        props.onFileLinkClick({
+          path,
+          line: line ? Number.parseInt(line, 10) : null,
+        });
+      }
       return;
     }
 

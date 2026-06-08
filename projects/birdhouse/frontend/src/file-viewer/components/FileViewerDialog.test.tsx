@@ -194,4 +194,29 @@ describe("FileViewerDialog", () => {
       expect(screen.getByRole("button", { name: "Rich" })).toHaveAttribute("aria-pressed", "true");
     });
   });
+
+  it("opens markdown file links with a line target in raw mode", async () => {
+    render(() => (
+      <FileViewerDialog
+        open={true}
+        onOpenChange={() => {}}
+        file={{
+          path: "/Users/test/references/notes.md",
+          name: "notes.md",
+          content: "# Notes\n\nHello world.",
+          language: "markdown",
+          isMarkdown: true,
+        }}
+        workspaceId="ws_test"
+        line={42}
+      />
+    ));
+
+    expect(screen.getByRole("button", { name: "Raw" })).toHaveAttribute("aria-pressed", "true");
+    expect(textEditorMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        revealLineNumber: 42,
+      }),
+    );
+  });
 });

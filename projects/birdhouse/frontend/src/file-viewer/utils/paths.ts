@@ -8,3 +8,27 @@ export function resolveSiblingFilePath(baseFilePath: string, relativeFilePath: s
   const normalizedRelativePath = separator === "\\" ? relativeFilePath.replaceAll("/", "\\") : relativeFilePath;
   return `${baseDirectory}${separator}${normalizedRelativePath}`;
 }
+
+export function getFileNameFromPath(filePath: string): string {
+  const normalizedPath = filePath.replaceAll("\\", "/");
+  const parts = normalizedPath.split("/").filter((part) => part.length > 0);
+  return parts.at(-1) ?? filePath;
+}
+
+export function resolveWorkspaceFilePath(workspaceDirectory: string, filePath: string): string {
+  if (filePath.startsWith("/")) {
+    return filePath;
+  }
+
+  const normalizedWorkspaceDirectory = workspaceDirectory.endsWith("/")
+    ? workspaceDirectory.slice(0, -1)
+    : workspaceDirectory;
+  const workspaceBase = `${normalizedWorkspaceDirectory}/`;
+  const resolvedPath = decodeURIComponent(new URL(filePath, `file://${workspaceBase}`).pathname);
+
+  if (resolvedPath === normalizedWorkspaceDirectory || resolvedPath.startsWith(`${normalizedWorkspaceDirectory}/`)) {
+    return resolvedPath;
+  }
+
+  throw new Error("File path must stay within the workspace root");
+}

@@ -20,6 +20,7 @@ export interface TextEditorProps {
   ariaLabel?: string;
   class?: string;
   options?: MonacoEditor.IStandaloneEditorConstructionOptions;
+  revealLineNumber?: number | null;
 }
 
 const defaultOptions: MonacoEditor.IStandaloneEditorConstructionOptions = {
@@ -125,6 +126,20 @@ const TextEditor: Component<TextEditorProps> = (props) => {
 
       monaco.editor.setModelLanguage(model, nextLanguage);
     });
+  });
+
+  createEffect(() => {
+    ready();
+    const lineNumber = props.revealLineNumber;
+    if (!editor || !lineNumber) {
+      return;
+    }
+
+    const model = editor.getModel();
+    const maxLineNumber = model?.getLineCount() ?? lineNumber;
+    const targetLineNumber = Math.min(Math.max(lineNumber, 1), maxLineNumber);
+    editor.setPosition({ lineNumber: targetLineNumber, column: 1 });
+    editor.revealLineInCenter(targetLineNumber);
   });
 
   onCleanup(() => {

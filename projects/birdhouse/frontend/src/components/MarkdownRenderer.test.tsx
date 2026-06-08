@@ -50,4 +50,102 @@ describe("MarkdownRenderer", () => {
       });
     });
   });
+
+  it("intercepts absolute POSIX file links", async () => {
+    const onFileLinkClick = vi.fn();
+
+    render(() => (
+      <MarkdownRenderer
+        content="Open [notes](/Users/test/workspace/notes.md) now."
+        onFileLinkClick={onFileLinkClick}
+      />
+    ));
+
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole("button", { name: /notes/i }));
+      expect(onFileLinkClick).toHaveBeenCalledWith({
+        path: "/Users/test/workspace/notes.md",
+        line: null,
+      });
+    });
+  });
+
+  it("leaves local file links as normal anchors when no file callback is provided", async () => {
+    render(() => <MarkdownRenderer content="Open [notes](/Users/test/workspace/notes.md) now." />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: /notes/i })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole("button", { name: /notes/i })).not.toBeInTheDocument();
+  });
+
+  it("treats file URLs and plain file targets identically", async () => {
+    const onFileLinkClick = vi.fn();
+
+    render(() => (
+      <MarkdownRenderer
+        content="Open [notes](file:///Users/test/workspace/notes.md) now."
+        onFileLinkClick={onFileLinkClick}
+      />
+    ));
+
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole("button", { name: /notes/i }));
+      expect(onFileLinkClick).toHaveBeenCalledWith({
+        path: "/Users/test/workspace/notes.md",
+        line: null,
+      });
+    });
+  });
+
+  it("intercepts workspace-relative file links", async () => {
+    const onFileLinkClick = vi.fn();
+
+    render(() => (
+      <MarkdownRenderer content="Open [component](src/components/App.tsx) now." onFileLinkClick={onFileLinkClick} />
+    ));
+
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole("button", { name: /component/i }));
+      expect(onFileLinkClick).toHaveBeenCalledWith({
+        path: "src/components/App.tsx",
+        line: null,
+      });
+    });
+  });
+
+  it("extracts line numbers from markdown file links", async () => {
+    const onFileLinkClick = vi.fn();
+
+    render(() => (
+      <MarkdownRenderer
+        content="Open [component](src/components/App.tsx#L42) now."
+        onFileLinkClick={onFileLinkClick}
+      />
+    ));
+
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole("button", { name: /component/i }));
+      expect(onFileLinkClick).toHaveBeenCalledWith({
+        path: "src/components/App.tsx",
+        line: 42,
+      });
+    });
+  });
+
+  it("does not intercept regular web links as local files", async () => {
+    const onFileLinkClick = vi.fn();
+
+    render(() => (
+      <MarkdownRenderer content="Use [docs](https://example.com/docs)." onFileLinkClick={onFileLinkClick} />
+    ));
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: /docs/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("link", { name: /docs/i }));
+    expect(onFileLinkClick).not.toHaveBeenCalled();
+  });
 });

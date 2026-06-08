@@ -8,6 +8,7 @@ import type { BirdhouseAssistantMessageInfo, BirdhouseMessageInfo } from "../../
 import { formatSmartTime } from "../../adapters/utils/time-utils";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useZIndex } from "../../contexts/ZIndexContext";
+import { buildFileViewerModalId, FILE_VIEWER_MODAL_TYPE } from "../../file-viewer/utils/modal-target";
 import { useModalRoute } from "../../lib/routing";
 import { uiSize } from "../../theme";
 import type { Message } from "../../types/messages";
@@ -125,6 +126,10 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
     }
 
     openModal("skill-library-v2", reference.identifier);
+  };
+
+  const handleFileLinkClick = (target: { path: string; line: number | null }) => {
+    openModal(FILE_VIEWER_MODAL_TYPE, buildFileViewerModalId(target));
   };
 
   const handleCopyContent = async () => {
@@ -309,6 +314,7 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
             content={props.message.content}
             workspaceId={workspaceId}
             onReferenceLinkClick={handleReferenceLinkClick}
+            onFileLinkClick={handleFileLinkClick}
           />
 
           <MessageFileAttachments attachments={fileAttachments()} />
@@ -328,6 +334,7 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
             content={props.message.content}
             workspaceId={workspaceId}
             onReferenceLinkClick={handleReferenceLinkClick}
+            onFileLinkClick={handleFileLinkClick}
           />
 
           <MessageFileAttachments attachments={fileAttachments()} />
@@ -346,12 +353,13 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
           <MessageFileAttachments attachments={fileAttachments()} />
 
           <Show when={props.message.content}>
-            <MarkdownRenderer
-              content={props.message.content}
-              workspaceId={workspaceId}
-              {...(props.message.isStreaming !== undefined && { isStreaming: props.message.isStreaming })}
-              onReferenceLinkClick={handleReferenceLinkClick}
-            />
+              <MarkdownRenderer
+                content={props.message.content}
+                workspaceId={workspaceId}
+                {...(props.message.isStreaming !== undefined && { isStreaming: props.message.isStreaming })}
+                onReferenceLinkClick={handleReferenceLinkClick}
+                onFileLinkClick={handleFileLinkClick}
+              />
           </Show>
 
           <Show when={props.message.isStreaming && !props.message.content}>

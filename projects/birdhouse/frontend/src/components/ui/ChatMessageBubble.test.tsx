@@ -53,4 +53,31 @@ describe("ChatMessageBubble", () => {
       expect(openModal).toHaveBeenCalledWith("skill-library-v2", "find-docs");
     });
   });
+
+  it("opens the referenced local file in the routed file viewer", async () => {
+    openModal.mockReset();
+
+    const message: Message = {
+      id: "msg_file_ref",
+      role: "assistant",
+      content: "Inspect [component](src/components/App.tsx#L42) next",
+      blocks: [
+        {
+          id: "text_1",
+          type: "text",
+          content: "Inspect [component](src/components/App.tsx#L42) next",
+        },
+      ],
+      model: "gpt-5.4",
+      provider: "openai",
+      timestamp: new Date(),
+    };
+
+    render(() => <ChatMessageBubble message={message} agentId="agent_test" />);
+
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole("button", { name: /component/i }));
+      expect(openModal).toHaveBeenCalledWith("file-viewer", "src/components/App.tsx#L42");
+    });
+  });
 });
