@@ -126,6 +126,7 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
                   fixedSize={true}
                   disabled={isRevealing()}
                   aria-label="Reveal file in Finder"
+                  title="Reveal file in Finder"
                   onClick={() => void handleReveal()}
                 />
               </Show>

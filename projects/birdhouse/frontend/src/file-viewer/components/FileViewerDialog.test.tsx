@@ -120,6 +120,11 @@ describe("FileViewerDialog", () => {
       />
     ));
 
+    expect(screen.getByRole("button", { name: "Reveal file in Finder" })).toHaveAttribute(
+      "title",
+      "Reveal file in Finder",
+    );
+
     fireEvent.click(screen.getByRole("button", { name: "Reveal file in Finder" }));
 
     await waitFor(() => {
