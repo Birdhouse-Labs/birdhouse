@@ -51,6 +51,11 @@ printf '==> Building frontend in %s\n' "$FRONTEND_DIR"
 printf '\n'
 printf 'Worktree ready: %s\n' "$WORKTREE"
 printf '\n'
+printf 'Note: worktrees do not have a .env file. start-sandbox.sh passes all\n'
+printf 'required env vars (BIRDHOUSE_BASE_PORT, OPENCODE_PATH, etc.) explicitly.\n'
+printf 'Do not copy .env from the main clone — it contains machine-specific paths\n'
+printf 'that will conflict with sandbox configuration.\n'
+printf '\n'
 printf 'Next steps:\n'
 printf '  bash sandboxes/start-sandbox.sh \\\n'
 printf '    --sandbox sandbox1 \\\n'

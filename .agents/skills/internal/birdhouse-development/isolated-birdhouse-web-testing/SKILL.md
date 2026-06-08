@@ -126,12 +126,18 @@ git worktree add worktrees/my-feature -b my-feature origin/main
 
    Use an absolute path for `--worktree`.
 
+**Note on `.env`:** Worktrees do not have a `.env` file, and `start-sandbox.sh` does not need one. All required env vars (`BIRDHOUSE_BASE_PORT`, `OPENCODE_PATH`, `BIRDHOUSE_DATA_DB_PATH`, `FRONTEND_STATIC`) are passed explicitly by the script. Do not copy `.env` from the main clone — it contains machine-specific paths and a hardcoded `OPENCODE_PATH` that will conflict with sandbox configuration.
+
 ### OpenCode worktree quick setup
 
 OpenCode needs its own preparation before `start-sandbox.sh` will accept it:
 
 1. `bun install` in the opencode repo root
-2. Copy the Birdhouse plugin source into `packages/opencode/src/birdhouse/`
+2. Copy the Birdhouse plugin source:
+   ```bash
+   cp projects/birdhouse-oc-plugin/src/plugin.ts \
+     <opencode-path>/packages/opencode/src/plugin/birdhouse.ts
+   ```
 
 For the full rebase workflow and plugin copy steps, see the `opencode-rebase` skill.
 
