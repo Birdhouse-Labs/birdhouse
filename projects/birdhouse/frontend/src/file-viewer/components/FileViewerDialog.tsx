@@ -1,17 +1,15 @@
 // ABOUTME: Read-only dialog for viewing themed file contents with optional markdown rich/raw modes.
-// ABOUTME: Uses the shared markdown and code block renderers so file previews match the current app theme.
+// ABOUTME: Uses the shared markdown renderer and Monaco-based text editor so file previews match the current app theme.
 
 import Dialog from "corvu/dialog";
 import { FolderOpen } from "lucide-solid";
-import { type Component, createEffect, createMemo, createSignal, Show, Suspense } from "solid-js";
+import { type Component, createEffect, createMemo, createSignal, Show } from "solid-js";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer";
-import CodeBlockContainer from "../../components/ui/CodeBlockContainer";
 import CopyButton from "../../components/ui/CopyButton";
 import IconButton from "../../components/ui/IconButton";
+import TextEditor from "../../components/ui/TextEditor";
 import { useZIndex } from "../../contexts/ZIndexContext";
-import { borderColor, cardSurface, cardSurfaceFlat } from "../../styles/containerStyles";
-import { codeTheme, isDark } from "../../theme";
-import { resolveCodeTheme } from "../../theme/codeThemes";
+import { borderColor, cardSurfaceFlat } from "../../styles/containerStyles";
 import { revealFileViewerPath } from "../services/file-viewer-api";
 import type { FileViewerFile } from "../types";
 
@@ -28,7 +26,6 @@ export interface FileViewerDialogProps {
 
 const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
   const baseZIndex = useZIndex();
-  const resolvedTheme = createMemo(() => resolveCodeTheme(codeTheme(), isDark()));
   const [markdownMode, setMarkdownMode] = createSignal<MarkdownViewMode>("rich");
   const [isRevealing, setIsRevealing] = createSignal(false);
   const [revealError, setRevealError] = createSignal<string | null>(null);
@@ -152,20 +149,17 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
                   <Show
                     when={props.file?.isMarkdown && markdownMode() === "rich"}
                     fallback={
-                      <Suspense
-                        fallback={
-                          <div class={`rounded ${cardSurface} overflow-hidden`}>
-                            <div class="h-24 bg-surface-raised animate-pulse" />
-                          </div>
-                        }
-                      >
-                        <CodeBlockContainer
-                          code={props.file?.content ?? ""}
+                      <div class="h-full overflow-hidden rounded-xl">
+                        <TextEditor
+                          value={props.file?.content ?? ""}
+                          onInput={() => {}}
                           language={props.file?.language || "text"}
-                          theme={resolvedTheme()}
-                          showCopyButton={true}
+                          disabled={true}
+                          height="100%"
+                          ariaLabel={`${title()} raw file content`}
+                          options={{ wordWrap: "off" }}
                         />
-                      </Suspense>
+                      </div>
                     }
                   >
                     <div class="rounded-xl border border-border-muted/70 bg-surface-overlay/40 p-6">

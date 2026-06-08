@@ -6,8 +6,9 @@ import { createSignal } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import FileViewerDialog from "./FileViewerDialog";
 
-const { revealFileViewerPathMock } = vi.hoisted(() => ({
+const { revealFileViewerPathMock, textEditorMock } = vi.hoisted(() => ({
   revealFileViewerPathMock: vi.fn(),
+  textEditorMock: vi.fn(),
 }));
 
 vi.mock("../../contexts/ZIndexContext", () => ({
@@ -19,9 +20,21 @@ vi.mock("../services/file-viewer-api", () => ({
   revealFileViewerPath: (workspaceId: string, path: string) => revealFileViewerPathMock(workspaceId, path),
 }));
 
+vi.mock("../../components/ui/TextEditor", () => ({
+  default: (props: { value: string; language: string; disabled?: boolean; height?: string; ariaLabel?: string }) => {
+    textEditorMock(props);
+    return (
+      <div data-testid="text-editor" data-language={props.language} data-disabled={props.disabled ? "true" : "false"}>
+        {props.value}
+      </div>
+    );
+  },
+}));
+
 describe("FileViewerDialog", () => {
   beforeEach(() => {
     revealFileViewerPathMock.mockReset();
+    textEditorMock.mockReset();
   });
 
   it("shows markdown in rich mode by default and can toggle to raw mode", async () => {
@@ -46,9 +59,14 @@ describe("FileViewerDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Raw" }));
 
     expect(screen.getByRole("button", { name: "Raw" })).toHaveAttribute("aria-pressed", "true");
-    await waitFor(() => {
-      expect(screen.getByText((content) => content.includes("Hello world."))).toBeInTheDocument();
-    });
+    expect(screen.getByTestId("text-editor")).toHaveTextContent("# Notes Hello world.");
+    expect(textEditorMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        value: "# Notes\n\nHello world.",
+        language: "markdown",
+        disabled: true,
+      }),
+    );
   });
 
   it("renders non-markdown files without the rich raw toggle", async () => {
@@ -69,11 +87,14 @@ describe("FileViewerDialog", () => {
     expect(screen.queryByRole("button", { name: "Rich" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Raw" })).not.toBeInTheDocument();
 
-    const dialog = screen.getByRole("dialog");
-
-    await waitFor(() => {
-      expect(dialog.textContent).toContain("export const answer = 42;");
-    });
+    expect(screen.getByTestId("text-editor")).toHaveTextContent("export const answer = 42;");
+    expect(textEditorMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        value: "export const answer = 42;",
+        language: "typescript",
+        disabled: true,
+      }),
+    );
   });
 
   it("reveals the current file path in Finder", async () => {
