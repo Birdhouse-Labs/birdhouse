@@ -67,7 +67,7 @@ export const FileReferenceButton: Component<FileReferenceButtonProps> = (props) 
           style={{ "z-index": baseZIndex }}
         >
           {tooltipText()}
-          <Tooltip.Arrow style={{ fill: "var(--color-surface-overlay)" }} />
+          <Tooltip.Arrow style={{ color: "var(--color-surface-overlay)" }} />
         </Tooltip.Content>
       </Tooltip.Portal>
     </Tooltip>
