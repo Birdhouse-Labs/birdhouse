@@ -1,6 +1,6 @@
 ---
 name: birdhouse-agentic-tests
-description: Run, write, and manage Birdhouse agentic tests. Each test exercises Birdhouse end-to-end using a real browser and a real isolated OpenCode instance. Use when asked to run agentic tests, run a specific test, or add a new agentic test.
+description: Run, write, and manage Birdhouse agentic tests. Each test exercises Birdhouse end-to-end using a real browser and a real sandbox or explicitly requested isolated OpenCode instance. Use when asked to run agentic tests, run a specific test, or add a new agentic test.
 tags:
   - birdhouse
   - testing
@@ -13,17 +13,17 @@ metadata:
 
 # Birdhouse Agentic Tests
 
-End-to-end tests that exercise Birdhouse through a real browser against a real isolated OpenCode instance. Each test is a markdown file. An agent follows the steps, then self-scores pass or fail based on the criteria in the test file.
+End-to-end tests that exercise Birdhouse through a real browser against a real Birdhouse sandbox. By default, tests run against the persistent `sandbox1` environment so Cody can inspect the same stateful environment manually. `sandbox2` is supported when explicitly requested. Fresh isolated runs are used only when explicitly requested. Each test is a markdown file. An agent follows the steps, then self-scores pass or fail based on the criteria in the test file.
 
 ## ⚠️ Two-environment constraint — read this first
 
 **The test runner agent is NOT inside the sandbox it is testing.**
 
 - The test runner lives in the **production Birdhouse** (port 50100) — the same environment you are talking to the test runner in.
-- The sandbox under test runs at **port 50200**.
+- The sandbox under test usually runs at **port 50200** (`sandbox1`) or **50220** (`sandbox2`).
 - These are completely separate environments with separate agent stores, separate sessions, and separate OpenCode instances.
 
-**Consequence:** Any `agent_create`, `agent_reply`, `agent_read`, or file tool call the test runner makes goes into production, not sandbox. The only way to exercise sandbox Birdhouse is through the browser — by opening `http://127.0.0.1:50200` in a browser session and interacting with the sandbox UI.
+**Consequence:** Any `agent_create`, `agent_reply`, `agent_read`, or file tool call the test runner makes goes into production, not sandbox. The only way to exercise sandbox Birdhouse is through the browser — by opening the chosen sandbox URL in a browser session and interacting with the sandbox UI.
 
 **Every test must be browser-driven.** There is no exception. A test that calls Birdhouse agent tools directly is testing the production environment, not the sandbox.
 
@@ -47,84 +47,135 @@ Tests live in the `tests/` directory alongside this skill file. When asked to ru
 
 ## Environment setup
 
-### Default: sandbox1
+### Environment selection policy
 
-sandbox1 is the persistent testing environment. It accumulates state across runs, which intentionally exercises data migrations and agent history loading.
+- Default target: `sandbox1`
+- If Cody explicitly says `sandbox2`, use `sandbox2`
+- If Cody explicitly asks for isolated/fresh/disposable, load the `isolated-birdhouse-web-testing` skill and follow that workflow instead of using a sandbox
+- If Cody mentions a worktree, still prefer the requested sandbox (`sandbox1` by default) unless Cody explicitly asks for isolated
 
-- Birdhouse URL: `http://127.0.0.1:50200`
-- OpenCode health: `http://127.0.0.1:50210/global/health`
-- Start command (from birdhouse-workspace root):
-  ```bash
-  bash sandboxes/start-sandbox.sh --sandbox sandbox1 \
-    --opencode-path "$(pwd)/.worktrees/opencode-birdhouse"
-  ```
-  The `--opencode-path` argument must be an absolute path. Using `$(pwd)` from the workspace root avoids hardcoding it.
+### Sandbox ports
 
-  **During a rebase:** pass the rebase worktree path instead of the default:
-  ```bash
-  bash sandboxes/start-sandbox.sh --sandbox sandbox1 \
-    --opencode-path /tmp/opencode-v<version>
-  ```
-- Stop command:
-  ```bash
-  bash sandboxes/stop-sandbox.sh --sandbox sandbox1
-  ```
+- `sandbox1`
+  - Birdhouse URL: `http://127.0.0.1:50200`
+  - OpenCode health: `http://127.0.0.1:50210/global/health`
+- `sandbox2`
+  - Birdhouse URL: `http://127.0.0.1:50220`
+  - OpenCode health: `http://127.0.0.1:50230/global/health`
 
-Before running any test, verify sandbox1 is running and using the Birdhouse fork:
+### Sandbox ownership preflight
+
+Before running any test against `sandbox1` or `sandbox2`, always do all of the following:
+
+1. Check whether the target Birdhouse port is listening.
+   ```bash
+   lsof -nP -iTCP:<birdhouse-port> -sTCP:LISTEN
+   ```
+
+2. If a process is listening, inspect its working directory.
+   ```bash
+   lsof -a -p <pid> -d cwd
+   ```
+
+3. Check OpenCode fork health.
+   ```bash
+   curl -s http://127.0.0.1:<opencode-port>/global/health
+   ```
+
+4. If Cody asked to use a specific worktree and the target sandbox is running from a different worktree, stop and ask Cody what to do.
+
+   Report:
+   - target sandbox (`sandbox1` or `sandbox2`)
+   - listening PID
+   - serving cwd
+   - intended worktree
+
+   Offer these likely next steps:
+   - kill the current sandbox process and restart the requested sandbox from the intended worktree
+   - use `sandbox2` instead
+   - use an isolated run instead
+
+Do not silently test a different worktree than the one Cody asked for.
+
+### Starting a sandbox
+
+If the chosen sandbox is not running and Cody has not asked for isolated:
+
+1. Run the start command from the repo root or the intended worktree root.
+2. Pass an absolute `--opencode-path`.
+3. Re-run the ownership preflight after startup.
+
+Example:
 
 ```bash
-curl -s http://127.0.0.1:50210/global/health
+bash sandboxes/start-sandbox.sh --sandbox sandbox1 \
+  --opencode-path /absolute/path/to/opencode
 ```
 
-The response must contain `birdhouseWorkspaceId`. If it does not, opencode is not using the Birdhouse fork — stop and investigate before running tests.
-
-If sandbox1 is not running, start it. If the opencode worktree is missing (e.g. after an OS upgrade), recreate it:
+Use `sandbox2` the same way when explicitly requested:
 
 ```bash
-git -C ~/dev/oss/opencode worktree prune
-git -C ~/dev/oss/opencode worktree add \
-  /Users/crayment/dev/birdhouse-workspace/.worktrees/opencode-birdhouse \
-  birdhouse-v<version>
-bun install --cwd .worktrees/opencode-birdhouse
-cp projects/birdhouse-oc-plugin/src/plugin.ts \
-   .worktrees/opencode-birdhouse/packages/opencode/src/plugin/birdhouse.ts
+bash sandboxes/start-sandbox.sh --sandbox sandbox2 \
+  --opencode-path /absolute/path/to/opencode
+```
+
+Stop commands:
+
+```bash
+bash sandboxes/stop-sandbox.sh --sandbox sandbox1
+bash sandboxes/stop-sandbox.sh --sandbox sandbox2
 ```
 
 ### Fresh isolated instance
 
-If asked to run against a fresh isolated instance instead of sandbox1, load the `isolated-birdhouse-web-testing` skill for the full setup workflow. Use it when you need a guaranteed clean state or are testing data migrations from scratch.
+If Cody explicitly asks for a fresh isolated instance instead of `sandbox1`/`sandbox2`, load the `isolated-birdhouse-web-testing` skill for the full setup workflow.
 
-## Getting the workspace ID
+## Runner-owned runtime values
 
-The sandbox may have an existing workspace from a previous run. Check:
+The top-level skill runner owns environment discovery. Test files must not derive these values themselves from local sqlite files or fixed ports.
 
-```bash
-sqlite3 sandboxes/sandbox1/data.db \
-  "SELECT workspace_id FROM workspaces LIMIT 1;"
-```
+Before executing a test, resolve these runtime values:
 
-If no workspace exists, create one:
+- `<base-url>` — the chosen Birdhouse sandbox URL
+- `<workspace-id>` — the Birdhouse workspace id to test against
+- `<workspace-root>` — the filesystem directory for that workspace
+- `<run-dir>` — the artifact directory for this run
+- `<session-name>` — the named browser session for the run
+- `<model-name>` — the selected model label when the test launches an agent
 
-```bash
-curl -s -X POST http://127.0.0.1:50200/api/workspaces/create \
-  -H "Content-Type: application/json" \
-  -d '{"directory": "sandboxes/sandbox1/workspace"}'
-```
+Resolve them like this:
 
-Then trigger opencode to spawn by hitting a workspace endpoint and waiting ~10 seconds:
+1. `BASE_URL` comes from the chosen target sandbox.
+2. `WORKSPACE_ID` should come from the running sandbox, not from a local sqlite file assumption. Prefer:
+   - the `birdhouseWorkspaceId` field from the OpenCode health response when present, or
+   - `GET /api/workspaces` followed by `GET /api/workspace/:id` if you need to inspect available workspaces.
+3. `WORKSPACE_ROOT` should come from the running Birdhouse API, not from the local `sandboxes/` folder assumption. Use:
+   - `GET /api/workspaces` and match the chosen `workspace_id`, then read that workspace's `directory` field.
+4. If you must create a new sandbox workspace, use an absolute directory path under the target sandbox/worktree. Do not use a relative directory, because it may resolve against the OpenCode side instead of the Birdhouse worktree.
 
-```bash
-curl -s http://127.0.0.1:50200/api/workspace/<id>/models > /dev/null
-sleep 10
-```
+   Good:
+   ```bash
+   curl -s -X POST <base-url>/api/workspace/create \
+     -H "Content-Type: application/json" \
+     -d '{"directory":"/absolute/path/to/worktree/sandboxes/sandbox2/workspace"}'
+   ```
+
+   Bad:
+   ```bash
+   curl -s -X POST <base-url>/api/workspace/create \
+     -H "Content-Type: application/json" \
+     -d '{"directory":"sandboxes/sandbox2/workspace"}'
+   ```
+5. `RUN_DIR` should be created by the runner before browser work starts.
+6. `SESSION_NAME` should be unique per run and reused for every browser command in that run.
 
 ## Model selection
 
 First choice: **Big Pickle** (`opencode/big-pickle`). Second choice: any model with "free" in its name.
 
-Check what's available:
+Check what's available against the chosen sandbox base URL:
 ```bash
-curl -s http://127.0.0.1:50200/api/workspace/<id>/models | python3 -m json.tool
+curl -s <base-url>/api/workspace/<workspace-id>/models | python3 -m json.tool
 ```
 
 The prompt can override this by naming a specific model. Tests are designed to work with free models so they run without API key setup.
@@ -136,6 +187,19 @@ Load the [browser-use](birdhouse:skill/browser-use) skill for all browser work. 
 If a different browser automation skill is preferred, swap the skill reference above — nothing in this skill depends on browser-use internals.
 
 Use a persistent, named browser context for the whole test so page state survives across steps. If the selected browser tool supports named sessions, use a stable name such as `birdhouse-test`.
+
+**Recording rule:** always start and stop recording on the same named browser session used for the interactions. If the recording is missing, zero bytes, or structurally invalid, fail the run rather than substituting a different recording method unless Cody explicitly asked for that fallback.
+
+Example:
+
+```bash
+browser-use --session <session-name> open "<base-url>/#/workspace/<workspace-id>/agents"
+browser-use --session <session-name> record start "<run-dir>/test-recording.mp4"
+# ...all interactions use --session <session-name>...
+browser-use --session <session-name> record stop
+ffprobe -v error -show_entries format=duration,size \
+  -of default=noprint_wrappers=1:nokey=0 "<run-dir>/test-recording.mp4"
+```
 
 **Viewport size — always set to 720p by default.** Immediately after every `browser-use open` call, set the viewport to 1280×720 unless the prompt explicitly instructs a different resolution:
 
@@ -158,12 +222,19 @@ Note: `await session.page.set_viewport_size(...)` does not work — `session` is
 
 ## Running a single test
 
-Each test creates its own timestamped directory under `/tmp/` and saves all artifacts there. The test file's steps define the exact path. Follow those steps — do not save artifacts elsewhere. Report the run directory path at the end.
+Run a single test in this exact order:
 
 1. Read the test file from `tests/`.
-2. Set up the environment (sandbox running, workspace ID obtained, opencode verified).
-3. Follow the test steps exactly, including the step that creates the run directory.
-4. Produce the output contract (see below), including the run directory path.
+2. Choose the environment:
+   - `sandbox1` by default
+   - `sandbox2` only if Cody explicitly asked for it
+   - isolated only if Cody explicitly asked for it
+3. Perform the sandbox ownership preflight.
+4. If the chosen sandbox is owned by the wrong worktree for Cody’s request, stop and ask Cody what to do.
+5. Resolve the runner-owned runtime values.
+6. Follow the browser-driven test steps exactly, substituting the resolved runtime values where the test expects them.
+7. Verify the recording artifact before declaring success.
+8. Produce the output contract (see below), including the run directory path.
 
 ## Running all tests (or a named subset)
 
@@ -180,11 +251,11 @@ The orchestrator agent (you) coordinates the suite. It does NOT run the browser 
    ```
 
 3. For each test, **spawn a child agent** with:
-   - The full contents of the test file — substitute `<id>` with the actual workspace ID and `$RUN_DIR` with the assigned path before including it
+   - The full contents of the test file — substitute runner-owned values like `<base-url>`, `<workspace-id>`, `<workspace-root>`, `<run-dir>`, `<session-name>`, and `<model-name>` before including it
    - The assigned `RUN_DIR` path: `$SUITE_DIR/<test-name-without-extension>`
    - The full contents of SKILL.md (so the child knows the output contract and environment)
    - The [browser-use](birdhouse:skill/browser-use) skill reference (pass the link so the child can load it)
-   - The sandbox environment details (URL, workspace ID)
+   - The sandbox environment details (URL, workspace ID, workspace root, chosen sandbox name)
    - Instruction to produce the output contract and use `RUN_DIR` for all artifacts
 
    Wait for each child agent to complete before spawning the next.
@@ -244,14 +315,17 @@ The orchestrator collects these from each child and uses them to write `report.m
 
 All tests must be browser-driven — see the two-environment constraint above.
 
-The test runner opens `http://127.0.0.1:50200` in a browser and interacts with the sandbox UI. It cannot call Birdhouse agent tools directly against the sandbox.
+The test runner opens the runner-supplied sandbox URL in a browser and interacts with the sandbox UI. It cannot call Birdhouse agent tools directly against the sandbox.
 
 1. Copy `tests/template.md` to `tests/<name>.md`.
 2. Fill in every section. Leave no placeholder text.
 3. Every step must be achievable through the browser UI — typing messages, clicking buttons, observing the agent tree, reading visible text.
-4. Pass criteria must be verifiable from the browser UI alone.
-5. Run the test once standalone before committing to confirm the steps are followable and the criteria are unambiguous.
-6. Commit the new test file.
+4. Test files must not hardcode sandbox ownership assumptions. Do not make the test discover environment details from local sandbox sqlite files or fixed ports.
+5. Tests should consume runner-provided values like `<base-url>`, `<workspace-id>`, `<workspace-root>`, `<run-dir>`, `<session-name>`, and `<model-name>` when needed.
+6. If a test needs local fixture files, create them inside `<workspace-root>` (or another runner-provided workspace path) during the browser-driven flow. Do not assume repository assets exist under the active workspace root unless the runner explicitly supplied them.
+7. Pass criteria must be verifiable from the browser UI alone.
+8. Run the test once standalone before committing to confirm the steps are followable and the criteria are unambiguous.
+9. Commit the new test file.
 
 Base directory for this skill: file:///Users/crayment/dev/birdhouse-workspace/.agents/skills/internal/birdhouse-development/birdhouse-agentic-tests
 Relative paths to skill-local assets (e.g., tests/) are relative to this base directory.
