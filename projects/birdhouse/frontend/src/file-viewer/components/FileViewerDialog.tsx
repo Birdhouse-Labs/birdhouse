@@ -66,7 +66,9 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
     }
   };
 
-  const title = createMemo(() => props.file?.name ?? (displayPath() ? getFileNameFromPath(displayPath() ?? "") : "File Viewer"));
+  const title = createMemo(
+    () => props.file?.name ?? (displayPath() ? getFileNameFromPath(displayPath() ?? "") : "File Viewer"),
+  );
   const isRichMarkdown = createMemo(() => props.file?.isMarkdown && markdownMode() === "rich");
 
   return (

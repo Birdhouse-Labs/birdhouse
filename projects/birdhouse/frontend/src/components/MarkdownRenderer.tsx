@@ -238,6 +238,7 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 
   // Memoize isDark to avoid repeated reactive reads
   const proseInvert = createMemo(() => isDark());
+  const fileLinkClickHandler = createMemo(() => props.onFileLinkClick);
 
   const mountModelReferences = () => {
     if (!contentRef) {
@@ -257,8 +258,9 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
       const path = mount.dataset["filePath"];
       const label = mount.dataset["fileLabel"];
       const lineValue = mount.dataset["fileLine"];
+      const onFileLinkClick = fileLinkClickHandler();
 
-      if (!path || !label || !props.onFileLinkClick) {
+      if (!path || !label || !onFileLinkClick) {
         return () => {};
       }
 
@@ -270,7 +272,7 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
             path={path}
             line={Number.isNaN(line ?? NaN) ? null : line}
             {...(props.workspaceDirectory ? { workspaceDirectory: props.workspaceDirectory } : {})}
-            onClick={props.onFileLinkClick!}
+            onClick={onFileLinkClick}
           />
         ),
         mount,

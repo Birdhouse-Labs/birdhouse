@@ -67,7 +67,9 @@ const formatError = (
 };
 
 export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
-  const { workspaceId, workspace } = useWorkspace();
+  const workspaceContext = useWorkspace();
+  const workspaceId = workspaceContext.workspaceId;
+  const workspace = workspaceContext.workspace ?? (() => undefined);
   const { openModal } = useModalRoute();
   const baseZIndex = useZIndex();
   const isUser = () => props.message.role === "user";
@@ -116,6 +118,10 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
   const error = formatError(messageInfo);
   const fileAttachments = createMemo(() => props.message.blocks?.filter(isFileBlock) ?? []);
   const workspaceDirectory = createMemo(() => workspace()?.directory);
+  const markdownRendererWorkspaceProps = createMemo(() => {
+    const directory = workspaceDirectory();
+    return directory ? { workspaceDirectory: directory } : {};
+  });
 
   const copyableContent = createMemo(() => props.message.content || null);
 
@@ -132,6 +138,17 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
   const handleFileLinkClick = (target: { path: string; line: number | null }) => {
     openModal(FILE_VIEWER_MODAL_TYPE, buildFileViewerModalId(target));
   };
+
+  const renderMessageMarkdown = () => (
+    <MarkdownRenderer
+      content={props.message.content}
+      workspaceId={workspaceId}
+      {...markdownRendererWorkspaceProps()}
+      {...(props.message.isStreaming !== undefined && { isStreaming: props.message.isStreaming })}
+      onReferenceLinkClick={handleReferenceLinkClick}
+      onFileLinkClick={handleFileLinkClick}
+    />
+  );
 
   const handleCopyContent = async () => {
     const content = copyableContent();
@@ -311,13 +328,7 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
         >
           {renderActionsMenu(props.message.content)}
 
-            <MarkdownRenderer
-              content={props.message.content}
-              workspaceId={workspaceId}
-              {...(workspaceDirectory() ? { workspaceDirectory: workspaceDirectory()! } : {})}
-              onReferenceLinkClick={handleReferenceLinkClick}
-              onFileLinkClick={handleFileLinkClick}
-            />
+          {renderMessageMarkdown()}
 
           <MessageFileAttachments attachments={fileAttachments()} />
         </MessageBubbleContent>
@@ -332,13 +343,7 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
         >
           {renderActionsMenu(props.message.content)}
 
-            <MarkdownRenderer
-              content={props.message.content}
-              workspaceId={workspaceId}
-              {...(workspaceDirectory() ? { workspaceDirectory: workspaceDirectory()! } : {})}
-              onReferenceLinkClick={handleReferenceLinkClick}
-              onFileLinkClick={handleFileLinkClick}
-            />
+          {renderMessageMarkdown()}
 
           <MessageFileAttachments attachments={fileAttachments()} />
         </MessageBubbleContent>
@@ -355,16 +360,7 @@ export const ChatMessageBubble: Component<ChatMessageBubbleProps> = (props) => {
 
           <MessageFileAttachments attachments={fileAttachments()} />
 
-          <Show when={props.message.content}>
-              <MarkdownRenderer
-                content={props.message.content}
-                workspaceId={workspaceId}
-                {...(workspaceDirectory() ? { workspaceDirectory: workspaceDirectory()! } : {})}
-                {...(props.message.isStreaming !== undefined && { isStreaming: props.message.isStreaming })}
-                onReferenceLinkClick={handleReferenceLinkClick}
-                onFileLinkClick={handleFileLinkClick}
-              />
-          </Show>
+          <Show when={props.message.content}>{renderMessageMarkdown()}</Show>
 
           <Show when={props.message.isStreaming && !props.message.content}>
             <div class="flex items-center justify-center py-4">

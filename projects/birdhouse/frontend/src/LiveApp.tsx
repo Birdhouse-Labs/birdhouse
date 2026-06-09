@@ -31,6 +31,7 @@ import Button from "./components/ui/Button";
 import { AgentTreeProvider } from "./contexts/AgentTreeContext";
 import { useStreaming } from "./contexts/StreamingContext";
 import { useWorkspace } from "./contexts/WorkspaceContext";
+import FileViewerModalStack from "./file-viewer/components/FileViewerModalStack";
 import { loadCollapseState, saveCollapseState } from "./lib/collapse-state";
 import { log } from "./lib/logger";
 import { usePageTitle } from "./lib/page-title";
@@ -38,7 +39,6 @@ import { getPaletteDialogRequestForLayer } from "./lib/palette-dialog-request";
 import { keepAgentInView } from "./lib/preferences";
 import { type ModalState, useModalRoute, useNavigateToWorkspaceAgent, useWorkspaceAgentId } from "./lib/routing";
 import { fetchAgentTrees } from "./services/messages-api";
-import FileViewerModalStack from "./file-viewer/components/FileViewerModalStack";
 import SkillLibraryDialog from "./skills/components/SkillLibraryDialog";
 import { createMediaQuery } from "./theme/createMediaQuery";
 

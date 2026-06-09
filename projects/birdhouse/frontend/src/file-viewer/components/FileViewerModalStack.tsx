@@ -107,7 +107,7 @@ const FileViewerModalNode: Component<FileViewerModalNodeProps> = (props) => {
 
   return (
     <Show when={modal()} keyed>
-      {(currentModal) => (
+      {(_currentModal) => (
         <ZIndexProvider baseZIndex={baseZIndex}>
           <FileViewerDialog
             open={true}

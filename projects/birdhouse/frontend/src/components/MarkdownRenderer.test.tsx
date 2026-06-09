@@ -55,10 +55,7 @@ describe("MarkdownRenderer", () => {
     const onFileLinkClick = vi.fn();
 
     render(() => (
-      <MarkdownRenderer
-        content="Open [notes](/Users/test/workspace/notes.md) now."
-        onFileLinkClick={onFileLinkClick}
-      />
+      <MarkdownRenderer content="Open [notes](/Users/test/workspace/notes.md) now." onFileLinkClick={onFileLinkClick} />
     ));
 
     await waitFor(() => {
@@ -123,10 +120,7 @@ describe("MarkdownRenderer", () => {
     const onFileLinkClick = vi.fn();
 
     render(() => (
-      <MarkdownRenderer
-        content="Open [component](src/components/App.tsx#L42) now."
-        onFileLinkClick={onFileLinkClick}
-      />
+      <MarkdownRenderer content="Open [component](src/components/App.tsx#L42) now." onFileLinkClick={onFileLinkClick} />
     ));
 
     await waitFor(() => {

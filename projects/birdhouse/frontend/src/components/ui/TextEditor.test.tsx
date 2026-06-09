@@ -58,9 +58,7 @@ describe("TextEditor", () => {
   });
 
   it("reveals the requested line after the Monaco editor becomes ready", async () => {
-    render(() => (
-      <TextEditor value="line 1\nline 2" onInput={() => {}} language="markdown" revealLineNumber={42} />
-    ));
+    render(() => <TextEditor value="line 1\nline 2" onInput={() => {}} language="markdown" revealLineNumber={42} />);
 
     await waitFor(() => {
       expect(editorMocks.setPosition).toHaveBeenCalledWith({ lineNumber: 42, column: 1 });

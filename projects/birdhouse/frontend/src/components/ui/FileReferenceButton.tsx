@@ -27,9 +27,7 @@ export const FileReferenceButton: Component<FileReferenceButtonProps> = (props) 
       return props.path;
     }
   });
-  const tooltipText = createMemo(() =>
-    props.line === null ? resolvedPath() : `${resolvedPath()}#L${props.line}`,
-  );
+  const tooltipText = createMemo(() => (props.line === null ? resolvedPath() : `${resolvedPath()}#L${props.line}`));
 
   return (
     <Tooltip openDelay={0} closeDelay={0} openOnFocus={false} placement="top">
@@ -50,6 +48,7 @@ export const FileReferenceButton: Component<FileReferenceButtonProps> = (props) 
           width="16"
           height="16"
           class="lucide lucide-file-text"
+          aria-hidden="true"
         >
           <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z" />
           <polyline points="14 2 14 8 20 8" />

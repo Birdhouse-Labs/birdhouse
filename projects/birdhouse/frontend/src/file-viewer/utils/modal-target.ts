@@ -1,7 +1,7 @@
 // ABOUTME: Converts parsed local file links into modal ids and back for routed file viewer dialogs.
 // ABOUTME: Keeps markdown click handling and modal restoration aligned on one file target format.
 
-import { parseLocalFileLinkTarget, type LocalFileLinkTarget } from "./link-targets";
+import { type LocalFileLinkTarget, parseLocalFileLinkTarget } from "./link-targets";
 
 export const FILE_VIEWER_MODAL_TYPE = "file-viewer";
 

@@ -135,7 +135,9 @@ describe("FileViewerModalStack", () => {
 
     expect(screen.getByText("/Users/test/workspace/artifacts/binary.bin")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("Failed to load file: Unsupported Media Type - Only text files can be viewed")).toBeInTheDocument();
+      expect(
+        screen.getByText("Failed to load file: Unsupported Media Type - Only text files can be viewed"),
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Reveal file in Finder" }));
