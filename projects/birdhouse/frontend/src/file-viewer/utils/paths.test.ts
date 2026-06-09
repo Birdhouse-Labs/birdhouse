@@ -16,4 +16,8 @@ describe("resolveWorkspaceFilePath", () => {
       "/C:/Users/test/workspace/src/App.tsx",
     );
   });
+
+  test("resolves relative paths against Windows drive-root workspaces", () => {
+    expect(resolveWorkspaceFilePath("C:/", "src/App.tsx")).toBe("/C:/src/App.tsx");
+  });
 });

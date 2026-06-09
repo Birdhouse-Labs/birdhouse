@@ -16,7 +16,12 @@ export function getFileNameFromPath(filePath: string): string {
 }
 
 function normalizeWorkspaceDirectory(workspaceDirectory: string): string {
-  const normalizedWorkspaceDirectory = workspaceDirectory.replaceAll("\\", "/").replace(/\/+$/, "");
+  const slashNormalizedWorkspaceDirectory = workspaceDirectory.replaceAll("\\", "/");
+  if (/^[A-Za-z]:\/+$/i.test(slashNormalizedWorkspaceDirectory)) {
+    return `/${slashNormalizedWorkspaceDirectory.slice(0, 2)}`;
+  }
+
+  const normalizedWorkspaceDirectory = slashNormalizedWorkspaceDirectory.replace(/\/+$/, "");
 
   return /^[A-Za-z]:\//.test(normalizedWorkspaceDirectory)
     ? `/${normalizedWorkspaceDirectory}`
