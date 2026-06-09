@@ -3,7 +3,6 @@
 
 import Tooltip from "corvu/tooltip";
 import { type Component, createMemo } from "solid-js";
-import { useZIndex } from "../../contexts/ZIndexContext";
 import { resolveWorkspaceFilePath } from "../../file-viewer/utils/paths";
 
 export interface FileReferenceButtonProps {
@@ -11,11 +10,11 @@ export interface FileReferenceButtonProps {
   path: string;
   line: number | null;
   workspaceDirectory?: string;
+  baseZIndex: number;
   onClick: (target: { path: string; line: number | null }) => void;
 }
 
 export const FileReferenceButton: Component<FileReferenceButtonProps> = (props) => {
-  const baseZIndex = useZIndex();
   const resolvedPath = createMemo(() => {
     if (props.path.startsWith("/") || !props.workspaceDirectory) {
       return props.path;
@@ -63,7 +62,7 @@ export const FileReferenceButton: Component<FileReferenceButtonProps> = (props) 
       <Tooltip.Portal>
         <Tooltip.Content
           class="z-50 max-w-[min(80vw,48rem)] break-all rounded-lg border border-border bg-surface-overlay px-3 py-2 text-xs text-text-primary shadow-xl"
-          style={{ "z-index": baseZIndex }}
+          style={{ "z-index": props.baseZIndex }}
         >
           {tooltipText()}
           <Tooltip.Arrow style={{ color: "var(--color-surface-overlay)" }} />

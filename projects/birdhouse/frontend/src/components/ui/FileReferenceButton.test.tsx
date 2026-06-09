@@ -19,6 +19,7 @@ describe("FileReferenceButton", () => {
         path="docs/nested.md"
         line={42}
         workspaceDirectory="/Users/test/workspace"
+        baseZIndex={170}
         onClick={onClick}
       />
     ));
@@ -29,5 +30,8 @@ describe("FileReferenceButton", () => {
     await waitFor(() => {
       expect(screen.getByText("/Users/test/workspace/docs/nested.md#L42")).toBeInTheDocument();
     });
+
+    const tooltip = screen.getByText("/Users/test/workspace/docs/nested.md#L42").closest("[role='tooltip']");
+    expect(tooltip).toHaveStyle({ "z-index": "170" });
   });
 });

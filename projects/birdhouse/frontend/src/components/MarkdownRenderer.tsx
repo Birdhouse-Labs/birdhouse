@@ -4,6 +4,7 @@
 import { marked, type Tokens } from "marked";
 import { type Component, createEffect, createMemo, For, onCleanup, Suspense } from "solid-js";
 import { render } from "solid-js/web";
+import { useZIndex } from "../contexts/ZIndexContext";
 import { parseLocalFileLinkTarget } from "../file-viewer/utils/link-targets";
 import { borderColor, cardSurface } from "../styles/containerStyles";
 import { codeTheme, isDark, uiSize } from "../theme";
@@ -99,6 +100,7 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
   let contentRef: HTMLDivElement | undefined;
   let fileReferenceDisposers: Array<() => void> = [];
   let modelReferenceDisposers: Array<() => void> = [];
+  const baseZIndex = useZIndex();
   const sizeClasses = createMemo(() => {
     const size = uiSize();
     return {
@@ -272,6 +274,7 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
             path={path}
             line={Number.isNaN(line ?? NaN) ? null : line}
             {...(props.workspaceDirectory ? { workspaceDirectory: props.workspaceDirectory } : {})}
+            baseZIndex={baseZIndex}
             onClick={onFileLinkClick}
           />
         ),
