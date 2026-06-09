@@ -119,8 +119,14 @@ export function parseModalStack(modalsParam: string | undefined): ModalState[] {
       const slashIndex = entry.indexOf("/");
       if (slashIndex <= 0 || slashIndex >= entry.length - 1) return null;
 
-      const type = decodeURIComponent(entry.slice(0, slashIndex));
-      const id = decodeURIComponent(entry.slice(slashIndex + 1));
+      let type: string;
+      let id: string;
+      try {
+        type = decodeURIComponent(entry.slice(0, slashIndex));
+        id = decodeURIComponent(entry.slice(slashIndex + 1));
+      } catch {
+        return null;
+      }
 
       if (!type || !id) return null;
 

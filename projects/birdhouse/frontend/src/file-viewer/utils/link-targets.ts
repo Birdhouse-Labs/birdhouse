@@ -55,7 +55,13 @@ export function parseLocalFileLinkTarget(href: string): LocalFileLinkTarget | nu
   }
 
   const [rawPath, rawFragment] = href.split("#", 2);
-  const path = decodeURIComponent(rawPath ?? "");
+  let path: string;
+  try {
+    path = decodeURIComponent(rawPath ?? "");
+  } catch {
+    return null;
+  }
+
   if (!isPlainLocalPath(path)) {
     return null;
   }

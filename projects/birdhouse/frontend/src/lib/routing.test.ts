@@ -34,6 +34,13 @@ describe("parseModalStack", () => {
       { type: "file-viewer", id: "/Users/test/workspace,notes.md#L42" },
     ]);
   });
+
+  test("ignores entries with malformed URI encoding", () => {
+    expect(parseModalStack("agent/agent_1,file-viewer/%E0%A4%A,agent/agent_2")).toEqual([
+      { type: "agent", id: "agent_1" },
+      { type: "agent", id: "agent_2" },
+    ]);
+  });
 });
 
 describe("serializeModalStack", () => {
