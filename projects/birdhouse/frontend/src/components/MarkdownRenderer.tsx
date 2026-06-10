@@ -4,10 +4,13 @@
 import { marked, type Tokens } from "marked";
 import { type Component, createEffect, createMemo, For, onCleanup, Suspense } from "solid-js";
 import { render } from "solid-js/web";
+import { useZIndex } from "../contexts/ZIndexContext";
+import { parseLocalFileLinkTarget } from "../file-viewer/utils/link-targets";
 import { borderColor, cardSurface } from "../styles/containerStyles";
 import { codeTheme, isDark, uiSize } from "../theme";
 import { resolveCodeTheme } from "../theme/codeThemes";
 import { CodeBlockContainer } from "./ui";
+import FileReferenceButton from "./ui/FileReferenceButton";
 import ModelReferenceButton from "./ui/ModelReferenceButton";
 
 interface CodeBlockInfo {
@@ -33,6 +36,7 @@ export interface MarkdownRendererProps {
   isStreaming?: boolean;
   /** Workspace ID for agent links. If not provided, agent links won't work. */
   workspaceId?: string;
+  workspaceDirectory?: string;
   onReferenceLinkClick?: (
     reference: GlobalReference,
     modifiers?: {
@@ -42,6 +46,7 @@ export interface MarkdownRendererProps {
       shiftKey: boolean;
     },
   ) => void;
+  onFileLinkClick?: (target: { path: string; line: number | null }) => void;
 }
 
 /**
@@ -93,7 +98,9 @@ const CodeBlockSkeleton: Component<{ language: string }> = (props) => {
 
 export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
   let contentRef: HTMLDivElement | undefined;
+  let fileReferenceDisposers: Array<() => void> = [];
   let modelReferenceDisposers: Array<() => void> = [];
+  const baseZIndex = useZIndex();
   const sizeClasses = createMemo(() => {
     const size = uiSize();
     return {
@@ -141,6 +148,15 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
     // Override link renderer to detect Birdhouse-specific reference links.
     const originalLink = renderer.link.bind(renderer);
     renderer.link = (token: { href: string; text: string; tokens?: unknown[]; type?: string; raw?: string }) => {
+      const fileTarget = parseLocalFileLinkTarget(token.href);
+      if (fileTarget && props.onFileLinkClick) {
+        const escapedText = escapeHtml(token.text);
+        const escapedPath = escapeHtml(fileTarget.path);
+        const escapedLine = fileTarget.line === null ? "" : String(fileTarget.line);
+
+        return `<span data-file-reference data-file-path="${escapedPath}" data-file-line="${escapedLine}" data-file-label="${escapedText}"></span>`;
+      }
+
       if (token.href.startsWith("birdhouse:skill/")) {
         const skillName = token.href.replace("birdhouse:skill/", "");
         const escapedText = escapeHtml(token.text);
@@ -224,15 +240,47 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 
   // Memoize isDark to avoid repeated reactive reads
   const proseInvert = createMemo(() => isDark());
+  const fileLinkClickHandler = createMemo(() => props.onFileLinkClick);
 
   const mountModelReferences = () => {
     if (!contentRef) {
       return;
     }
 
+    for (const dispose of fileReferenceDisposers) {
+      dispose();
+    }
+
     for (const dispose of modelReferenceDisposers) {
       dispose();
     }
+
+    const fileMounts = Array.from(contentRef.querySelectorAll<HTMLElement>("[data-file-reference]"));
+    fileReferenceDisposers = fileMounts.map((mount) => {
+      const path = mount.dataset["filePath"];
+      const label = mount.dataset["fileLabel"];
+      const lineValue = mount.dataset["fileLine"];
+      const onFileLinkClick = fileLinkClickHandler();
+
+      if (!path || !label || !onFileLinkClick) {
+        return () => {};
+      }
+
+      const line = lineValue ? Number.parseInt(lineValue, 10) : null;
+      return render(
+        () => (
+          <FileReferenceButton
+            label={label}
+            path={path}
+            line={Number.isNaN(line ?? NaN) ? null : line}
+            {...(props.workspaceDirectory ? { workspaceDirectory: props.workspaceDirectory } : {})}
+            baseZIndex={baseZIndex}
+            onClick={onFileLinkClick}
+          />
+        ),
+        mount,
+      );
+    });
 
     const mounts = Array.from(contentRef.querySelectorAll<HTMLElement>("[data-model-reference]"));
     modelReferenceDisposers = mounts.map((mount) => {
@@ -252,6 +300,10 @@ export const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
     queueMicrotask(mountModelReferences);
 
     onCleanup(() => {
+      for (const dispose of fileReferenceDisposers) {
+        dispose();
+      }
+      fileReferenceDisposers = [];
       for (const dispose of modelReferenceDisposers) {
         dispose();
       }

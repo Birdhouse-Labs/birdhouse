@@ -12,8 +12,8 @@
 
 ## Prerequisites
 
-- sandbox1 running (Birdhouse at http://127.0.0.1:50200)
-- <If the test launches or interacts with OpenCode agents, add: "fork-verified (see SKILL.md environment setup)">
+- Environment selection, sandbox ownership checks, workspace resolution, and recording setup are owned by the top-level skill runner
+- <If the test launches or interacts with OpenCode agents, add any feature-specific prerequisite here>
 - <Any additional prerequisites, e.g. "API key configured for Anthropic">
 
 ## Timeout
@@ -28,12 +28,11 @@
 
 1. Create a timestamped run directory:
    ```bash
-   RUN_DIR="/tmp/<test-name>-$(date +%Y-%m-%d-%H-%M-%S)"
-   mkdir -p "$RUN_DIR"
+   RUN_DIR="<run-dir>"
    ```
 
 2. Navigate to the workspace agents page:
-   `http://127.0.0.1:50200/#/workspace/<id>/agents`
+   `<base-url>/#/workspace/<workspace-id>/agents`
 
 3. Save screenshot `$RUN_DIR/01-start.png` once the page has loaded.
 
@@ -64,3 +63,10 @@ Any of the following immediately indicates failure:
 ## Known limitations
 
 <Optional. Document anything about this test that may produce uncertain results or require manual interpretation. If none, remove this section.>
+
+## Notes for test authors
+
+- Use runner-provided values like `<base-url>`, `<workspace-id>`, `<workspace-root>`, `<run-dir>`, `<session-name>`, and `<model-name>` when needed.
+- If the test needs fixture files, create them under `<workspace-root>` or another runner-provided workspace path during the browser-driven flow.
+- Do not derive environment details from local sandbox sqlite files.
+- Do not hardcode `sandbox1`, `sandbox2`, or fixed ports inside the test body unless the specific feature under test is port-related.

@@ -119,8 +119,14 @@ export function parseModalStack(modalsParam: string | undefined): ModalState[] {
       const slashIndex = entry.indexOf("/");
       if (slashIndex <= 0 || slashIndex >= entry.length - 1) return null;
 
-      const type = entry.slice(0, slashIndex);
-      const id = entry.slice(slashIndex + 1);
+      let type: string;
+      let id: string;
+      try {
+        type = decodeURIComponent(entry.slice(0, slashIndex));
+        id = decodeURIComponent(entry.slice(slashIndex + 1));
+      } catch {
+        return null;
+      }
 
       if (!type || !id) return null;
 
@@ -143,7 +149,7 @@ export function parseModalStack(modalsParam: string | undefined): ModalState[] {
 export function serializeModalStack(modals: ModalState[]): string | undefined {
   if (modals.length === 0) return undefined;
 
-  return modals.map((modal) => `${modal.type}/${modal.id}`).join(",");
+  return modals.map((modal) => `${encodeURIComponent(modal.type)}/${encodeURIComponent(modal.id)}`).join(",");
 }
 
 export function pushModalStack(stack: ModalState[], modal: ModalState): ModalState[] {

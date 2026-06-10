@@ -9,7 +9,7 @@ import type { Message } from "../../types/messages";
 import ChatContainer from "./ChatContainer";
 
 vi.mock("../../contexts/WorkspaceContext", () => ({
-  useWorkspace: () => ({ workspaceId: "ws_test" }),
+  useWorkspace: () => ({ workspaceId: "ws_test", workspace: () => undefined }),
 }));
 
 vi.mock("../../contexts/SkillCacheContext", () => ({

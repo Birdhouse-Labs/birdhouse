@@ -12,6 +12,7 @@ import { useZIndex } from "../../contexts/ZIndexContext";
 import { borderColor, cardSurfaceFlat } from "../../styles/containerStyles";
 import { revealFileViewerPath } from "../services/file-viewer-api";
 import type { FileViewerFile } from "../types";
+import { getFileNameFromPath } from "../utils/paths";
 
 type MarkdownViewMode = "rich" | "raw";
 
@@ -20,8 +21,13 @@ export interface FileViewerDialogProps {
   onOpenChange: (open: boolean) => void;
   file: FileViewerFile | null;
   workspaceId?: string;
+  workspaceDirectory?: string;
   loading?: boolean;
   error?: string | null;
+  requestedPath?: string | null;
+  line?: number | null;
+  closeOnEscapeKeyDown?: boolean;
+  onFileLinkClick?: (target: { path: string; line: number | null }) => void;
 }
 
 const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
@@ -29,6 +35,7 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
   const [markdownMode, setMarkdownMode] = createSignal<MarkdownViewMode>("rich");
   const [isRevealing, setIsRevealing] = createSignal(false);
   const [revealError, setRevealError] = createSignal<string | null>(null);
+  const displayPath = createMemo(() => props.file?.path ?? props.requestedPath ?? null);
 
   createEffect(() => {
     const open = props.open;
@@ -39,18 +46,19 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
     }
 
     setRevealError(null);
-    setMarkdownMode(file?.isMarkdown ? "rich" : "raw");
+    setMarkdownMode(file?.isMarkdown && !props.line ? "rich" : "raw");
   });
 
   const handleReveal = async () => {
-    if (!props.workspaceId || !props.file?.path || isRevealing()) {
+    const path = displayPath();
+    if (!props.workspaceId || !path || isRevealing()) {
       return;
     }
 
     setIsRevealing(true);
     setRevealError(null);
     try {
-      await revealFileViewerPath(props.workspaceId, props.file.path);
+      await revealFileViewerPath(props.workspaceId, path);
     } catch (err) {
       setRevealError(err instanceof Error ? err.message : "Failed to reveal file");
     } finally {
@@ -58,13 +66,17 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
     }
   };
 
-  const title = createMemo(() => props.file?.name ?? "File Viewer");
+  const title = createMemo(
+    () => props.file?.name ?? (displayPath() ? getFileNameFromPath(displayPath() ?? "") : "File Viewer"),
+  );
   const isRichMarkdown = createMemo(() => props.file?.isMarkdown && markdownMode() === "rich");
 
   return (
     <Dialog
       open={props.open}
       onOpenChange={props.onOpenChange}
+      closeOnEscapeKeyDown={props.closeOnEscapeKeyDown ?? true}
+      closeOnOutsidePointer={false}
       closeOnOutsideFocus={false}
       preventScroll={false}
       restoreScrollPosition={false}
@@ -82,8 +94,8 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
           <div class={`flex items-start justify-between gap-4 px-6 py-3 border-b ${borderColor} flex-shrink-0`}>
             <div class="min-w-0 space-y-1">
               <Dialog.Label class="text-lg font-semibold text-heading break-all">{title()}</Dialog.Label>
-              <Show when={props.file?.path}>
-                <div class="font-mono text-xs text-text-muted break-all">{props.file?.path}</div>
+              <Show when={displayPath()}>
+                <div class="font-mono text-xs text-text-muted break-all">{displayPath()}</div>
               </Show>
             </div>
 
@@ -119,7 +131,7 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
               <Show when={props.file?.content}>
                 <CopyButton text={props.file?.content ?? ""} />
               </Show>
-              <Show when={props.workspaceId && props.file?.path}>
+              <Show when={props.workspaceId && displayPath()}>
                 <IconButton
                   icon={<FolderOpen size={16} />}
                   variant="ghost"
@@ -166,6 +178,7 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
                           height="100%"
                           class="h-full"
                           ariaLabel={`${title()} raw file content`}
+                          revealLineNumber={props.line ?? null}
                           options={{ wordWrap: "off" }}
                         />
                       </div>
@@ -175,6 +188,8 @@ const FileViewerDialog: Component<FileViewerDialogProps> = (props) => {
                       <MarkdownRenderer
                         content={props.file?.content ?? ""}
                         {...(props.workspaceId ? { workspaceId: props.workspaceId } : {})}
+                        {...(props.workspaceDirectory ? { workspaceDirectory: props.workspaceDirectory } : {})}
+                        {...(props.onFileLinkClick ? { onFileLinkClick: props.onFileLinkClick } : {})}
                       />
                     </div>
                   </Show>

@@ -8,3 +8,47 @@ export function resolveSiblingFilePath(baseFilePath: string, relativeFilePath: s
   const normalizedRelativePath = separator === "\\" ? relativeFilePath.replaceAll("/", "\\") : relativeFilePath;
   return `${baseDirectory}${separator}${normalizedRelativePath}`;
 }
+
+export function getFileNameFromPath(filePath: string): string {
+  const normalizedPath = filePath.replaceAll("\\", "/");
+  const parts = normalizedPath.split("/").filter((part) => part.length > 0);
+  return parts.at(-1) ?? filePath;
+}
+
+function normalizeWorkspaceDirectory(workspaceDirectory: string): string {
+  const slashNormalizedWorkspaceDirectory = workspaceDirectory.replaceAll("\\", "/");
+  if (/^[A-Za-z]:\/+$/i.test(slashNormalizedWorkspaceDirectory)) {
+    return `/${slashNormalizedWorkspaceDirectory.slice(0, 2)}`;
+  }
+
+  const normalizedWorkspaceDirectory = slashNormalizedWorkspaceDirectory.replace(/\/+$/, "");
+
+  return /^[A-Za-z]:\//.test(normalizedWorkspaceDirectory)
+    ? `/${normalizedWorkspaceDirectory}`
+    : normalizedWorkspaceDirectory;
+}
+
+function decodeFilePathname(pathname: string): string {
+  const escapedLiteralPercents = pathname.replace(/%(?![0-9A-Fa-f]{2})/g, "%25");
+
+  try {
+    return decodeURIComponent(escapedLiteralPercents);
+  } catch {
+    return pathname;
+  }
+}
+
+export function resolveWorkspaceFilePath(workspaceDirectory: string, filePath: string): string {
+  if (filePath.startsWith("/")) {
+    return filePath;
+  }
+
+  const normalizedWorkspaceDirectory = normalizeWorkspaceDirectory(workspaceDirectory);
+  const resolvedPath = decodeFilePathname(new URL(filePath, `file://${normalizedWorkspaceDirectory}/`).pathname);
+
+  if (resolvedPath === normalizedWorkspaceDirectory || resolvedPath.startsWith(`${normalizedWorkspaceDirectory}/`)) {
+    return resolvedPath;
+  }
+
+  throw new Error("File path must stay within the workspace root");
+}

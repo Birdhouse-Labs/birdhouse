@@ -31,6 +31,7 @@ import Button from "./components/ui/Button";
 import { AgentTreeProvider } from "./contexts/AgentTreeContext";
 import { useStreaming } from "./contexts/StreamingContext";
 import { useWorkspace } from "./contexts/WorkspaceContext";
+import FileViewerModalStack from "./file-viewer/components/FileViewerModalStack";
 import { loadCollapseState, saveCollapseState } from "./lib/collapse-state";
 import { log } from "./lib/logger";
 import { usePageTitle } from "./lib/page-title";
@@ -132,7 +133,7 @@ function findNodeById(nodes: TreeNode[], targetId: string): TreeNode | undefined
 
 const LiveApp: Component<LiveAppProps> = (props) => {
   // Get workspace context
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, workspace } = useWorkspace();
 
   // Navigation hook - must be called at component top level
   const navigateToAgent = useNavigateToWorkspaceAgent();
@@ -686,6 +687,8 @@ const LiveApp: Component<LiveAppProps> = (props) => {
 
       {/* Skills Library Dialog */}
       <SkillLibraryDialog workspaceId={workspaceId} />
+
+      <FileViewerModalStack workspaceId={workspaceId} workspaceDirectory={workspace()?.directory} />
 
       {/* Agent Search Dialog */}
       <AgentSearchDialog />
