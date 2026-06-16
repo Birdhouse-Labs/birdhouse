@@ -191,6 +191,46 @@ describe("POST /api/auth/pair/initiate", () => {
     expect(body.url).toContain("token=");
     expect(body.qrSvg).toContain("<svg");
   });
+
+  test("uses externalBaseUrl when provided", async () => {
+    const res = await app.request("/api/auth/pair/initiate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ externalBaseUrl: "https://example.com" }),
+    });
+
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { url: string; qrSvg: string };
+    expect(body.url).toMatch(/^https:\/\/example\.com/);
+    expect(body.url).toContain("/api/auth/pair/complete");
+  });
+
+  test("strips trailing slash from externalBaseUrl", async () => {
+    const res = await app.request("/api/auth/pair/initiate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ externalBaseUrl: "https://example.com/" }),
+    });
+
+    const body = (await res.json()) as { url: string };
+    expect(body.url).not.toContain("example.com//");
+    expect(body.url).toMatch(/^https:\/\/example\.com\//);
+  });
+
+  test("falls back to request origin when externalBaseUrl is empty string", async () => {
+    const res = await app.request("/api/auth/pair/initiate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ externalBaseUrl: "" }),
+    });
+
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { url: string };
+    // Should use the request's own host (localhost in tests)
+    expect(body.url).toContain("/api/auth/pair/complete");
+  });
 });
 
 describe("GET /api/auth/pair/complete", () => {

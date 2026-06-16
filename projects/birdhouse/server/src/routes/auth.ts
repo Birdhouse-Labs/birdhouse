@@ -101,10 +101,19 @@ export function createAuthRoutes(dataDb: DataDB) {
    * Creates a pairing session and returns a QR-encodable URL and SVG.
    * Requires an authenticated session (enforced by auth middleware).
    *
+   * Body (optional): { externalBaseUrl?: string }
+   *   When provided, the pairing URL uses externalBaseUrl so QR codes work
+   *   for phones that cannot reach the server via its local address.
+   *
    * Response: { url: string, qrSvg: string }
    */
   app.post("/pair/initiate", async (c) => {
-    const baseUrl = getBaseUrl(c.req.raw);
+    const body = await c.req.json().catch(() => ({})) as { externalBaseUrl?: unknown };
+    const rawExternal = typeof body?.externalBaseUrl === "string" ? body.externalBaseUrl.trim() : "";
+    // Strip a trailing slash so the appended path doesn't produce double slashes
+    const baseUrl = rawExternal
+      ? rawExternal.replace(/\/+$/, "")
+      : getBaseUrl(c.req.raw);
     const { url } = createPairingSession(baseUrl);
 
     let qrSvg: string;

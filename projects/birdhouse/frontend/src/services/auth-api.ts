@@ -48,13 +48,15 @@ export async function revokeDevice(tokenHash: string): Promise<void> {
 
 /**
  * Initiates a QR pairing session and returns the URL and SVG.
+ * Pass externalBaseUrl when the phone needs to reach the server via a
+ * different address (Tailscale IP, custom domain, tunnel URL, etc.).
  */
-export async function initiatePairing(): Promise<PairingSession> {
+export async function initiatePairing(externalBaseUrl?: string): Promise<PairingSession> {
   const response = await fetch(`${API_ENDPOINT_BASE}/auth/pair/initiate`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({}),
+    body: JSON.stringify({ externalBaseUrl: externalBaseUrl ?? "" }),
   });
 
   if (!response.ok) {

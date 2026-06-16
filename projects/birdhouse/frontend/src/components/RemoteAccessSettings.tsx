@@ -1,9 +1,12 @@
 // ABOUTME: Remote Access settings card for managing paired devices
 // ABOUTME: Lists active session tokens, supports revoking devices, and initiating QR pairing
 
-import { type Component, createResource, createSignal, For, Show } from "solid-js";
+import { Info } from "lucide-solid";
+import { type Component, createResource, createSignal, For, onMount, Show } from "solid-js";
 import { type Device, initiatePairing, listDevices, revokeDevice } from "../services/auth-api";
 import Button from "./ui/Button";
+
+const EXTERNAL_URL_KEY = "birdhouse.remoteAccess.externalUrl";
 
 /**
  * Formats an ISO date string for display. Returns "Never" for null.
@@ -21,11 +24,14 @@ function formatDate(isoString: string | null): string {
 // ==================== Pairing Modal ====================
 
 interface PairingModalProps {
+  externalUrl: string;
   onClose: () => void;
 }
 
 const PairingModal: Component<PairingModalProps> = (props) => {
-  const [session] = createResource(initiatePairing);
+  // Pass the externalUrl at mount time so the resource fetches with the right value.
+  // We capture it once — the URL doesn't change while the modal is open.
+  const [session] = createResource(() => props.externalUrl, initiatePairing);
   let qrRef: HTMLDivElement | undefined;
 
   // Inject the SVG directly into the container div
@@ -145,6 +151,24 @@ const DeviceRow: Component<DeviceRowProps> = (props) => {
 
 const RemoteAccessSettings: Component = () => {
   const [showPairingModal, setShowPairingModal] = createSignal(false);
+  const [showUrlInfo, setShowUrlInfo] = createSignal(false);
+  const [externalUrl, setExternalUrl] = createSignal("");
+
+  // Load persisted external URL on mount
+  onMount(() => {
+    const saved = localStorage.getItem(EXTERNAL_URL_KEY);
+    if (saved) setExternalUrl(saved);
+  });
+
+  const handleExternalUrlBlur = (value: string) => {
+    const trimmed = value.trim();
+    setExternalUrl(trimmed);
+    if (trimmed) {
+      localStorage.setItem(EXTERNAL_URL_KEY, trimmed);
+    } else {
+      localStorage.removeItem(EXTERNAL_URL_KEY);
+    }
+  };
 
   // Devices resource — refetchable after revoke
   const [devices, { refetch }] = createResource(listDevices);
@@ -166,6 +190,41 @@ const RemoteAccessSettings: Component = () => {
         <Button variant="primary" onClick={() => setShowPairingModal(true)}>
           Add Device
         </Button>
+      </div>
+
+      {/* External URL input */}
+      <div class="mb-6">
+        <div class="flex items-center gap-1.5 mb-1">
+          <label for="external-url-input" class="text-sm font-medium text-text-primary">
+            External URL
+          </label>
+          <button
+            type="button"
+            aria-label="External URL info"
+            class="text-text-muted hover:text-text-primary transition-colors flex-shrink-0"
+            onClick={() => setShowUrlInfo(!showUrlInfo())}
+          >
+            <Info size={14} />
+          </button>
+        </div>
+
+        <Show when={showUrlInfo()}>
+          <p class="text-xs text-text-muted mb-2 leading-relaxed">
+            Enter the URL your phone will use to reach this machine. Leave blank to use the
+            local address. Works with Tailscale IPs, custom domains, or tunnel services like
+            Cloudflare Tunnel or ngrok.
+          </p>
+        </Show>
+
+        <input
+          id="external-url-input"
+          type="url"
+          class="w-full text-sm bg-surface border border-border rounded px-3 py-2 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent"
+          placeholder="https://yourdomain.com or http://100.x.x.x:50100"
+          value={externalUrl()}
+          onInput={(e) => setExternalUrl(e.currentTarget.value)}
+          onBlur={(e) => handleExternalUrlBlur(e.currentTarget.value)}
+        />
       </div>
 
       {/* Loading */}
@@ -194,7 +253,10 @@ const RemoteAccessSettings: Component = () => {
 
       {/* Pairing modal */}
       <Show when={showPairingModal()}>
-        <PairingModal onClose={() => setShowPairingModal(false)} />
+        <PairingModal
+          externalUrl={externalUrl()}
+          onClose={() => setShowPairingModal(false)}
+        />
       </Show>
     </div>
   );
