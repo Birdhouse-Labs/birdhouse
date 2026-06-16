@@ -10,7 +10,6 @@ import { useModalRoute } from "../lib/routing";
 import { deleteWorkspace } from "../services/workspaces-api";
 import WorkspaceConfigDialog from "../workspace-config/components/WorkspaceConfigDialog";
 import Button from "./ui/Button";
-import RemoteAccessSettings from "./RemoteAccessSettings";
 
 const LoadingSpinner = () => (
   <div class="flex items-center justify-center">
@@ -139,9 +138,6 @@ const WorkspaceSettings: Component = () => {
                   Edit Configuration
                 </Button>
               </div>
-
-              {/* Remote Access */}
-              <RemoteAccessSettings />
 
               {/* Danger Zone */}
               <div class="p-6 bg-danger/5 rounded-lg border border-danger">
