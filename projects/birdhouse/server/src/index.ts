@@ -13,10 +13,13 @@ import { syncDevPluginSource } from "./lib/dev-plugin-sync";
 import { log, rootLogger } from "./lib/logger";
 import { OpenCodeManager } from "./lib/opencode-manager";
 import { warmRecentWorkspacesInBackground } from "./lib/startup-warmup";
-import { createAAPIMiddleware } from "./middleware/aapi";
+import { generateLaunchToken } from "./lib/auth";
+import { createAAPIMiddleware, createAAPIAuthCheck } from "./middleware/aapi";
+import { createAuthMiddleware } from "./middleware/auth";
 import { createWorkspaceMiddleware } from "./middleware/workspace";
 import { createAAPIAgentRoutes } from "./routes/aapi-agents";
 import { createAgentRoutes } from "./routes/agents";
+import { createAuthRoutes } from "./routes/auth";
 import { createConfigRoutes } from "./routes/config";
 import { createDraftRoutes } from "./routes/drafts";
 import { createEventRoutes } from "./routes/events";
@@ -104,24 +107,44 @@ log.server.info(
   "Birdhouse Server initializing",
 );
 
+// Generate launch token on startup — CLI reads this to construct the browser URL
+const launchToken = generateLaunchToken();
+log.server.info({ tokenLength: launchToken.length }, "Launch token generated");
+
 // Create Hono app
 const app = new Hono();
 const posthogDeps = await createPosthogDeps();
 
 // Middleware: CORS
+// When BIRDHOUSE_ALLOWED_ORIGINS is set (remote access), use that origin with
+// credentials support. Otherwise keep open CORS for backwards compatibility.
+const allowedOrigins = process.env.BIRDHOUSE_ALLOWED_ORIGINS;
 app.use(
   "*",
-  cors({
-    origin: "*",
-    allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
-    exposeHeaders: ["Content-Disposition"], // Allow frontend to read filename from export endpoint
-  }),
+  cors(
+    allowedOrigins
+      ? {
+          origin: allowedOrigins,
+          credentials: true,
+          allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+          allowHeaders: ["Content-Type", "Authorization"],
+          exposeHeaders: ["Content-Disposition"],
+        }
+      : {
+          origin: "*",
+          allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+          allowHeaders: ["Content-Type", "Authorization"],
+          exposeHeaders: ["Content-Disposition"],
+        },
+  ),
 );
 
 app.use("/ingest", async (_c, next) => withDeps(posthogDeps, () => next()));
 app.use("/ingest/*", async (_c, next) => withDeps(posthogDeps, () => next()));
 app.route("/ingest", createPosthogRoutes());
+
+// Auth routes (exempt from auth middleware — registered before it)
+app.route("/api/auth", createAuthRoutes(dataDb));
 
 // Middleware: Pino HTTP logging (replaces hono/logger)
 // Apply to all routes except /api/logs (log relay is infrastructure noise)
@@ -163,9 +186,18 @@ app.use(
 // /api/logs gets logger but no HTTP logging (http: false)
 app.use("/api/logs", pinoLogger({ pino: rootLogger, http: false }));
 
+// Middleware: Auth — validates session cookie on all /api/* routes
+// Exempt paths (health, auth handshakes) are handled inside the middleware.
+const authMiddleware = createAuthMiddleware(dataDb);
+app.use("/api/*", authMiddleware);
+
 // Middleware: Workspace context for workspace-scoped routes
 const workspaceMiddleware = createWorkspaceMiddleware(opencodeManager, dataDb);
 app.use("/api/workspace/:workspaceId/*", workspaceMiddleware);
+
+// Middleware: AAPI auth check — allows localhost processes or valid session cookie
+const aapiAuthCheck = createAAPIAuthCheck(dataDb);
+app.use("/aapi/*", aapiAuthCheck);
 
 // Middleware: AAPI context for plugin routes (reads X-Birdhouse-Workspace-ID header)
 const aapiMiddleware = createAAPIMiddleware(opencodeManager, dataDb);

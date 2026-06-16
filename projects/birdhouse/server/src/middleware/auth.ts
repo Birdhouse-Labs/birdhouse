@@ -79,5 +79,6 @@ export function createAuthMiddleware(dataDb: DataDB) {
     }
 
     await next();
+    return;
   };
 }
