@@ -124,6 +124,39 @@ export function createAuthRoutes(dataDb: DataDB) {
   });
 
   /**
+   * GET /api/auth/devices
+   * Lists all active access tokens (paired devices).
+   * Requires an authenticated session (enforced by auth middleware).
+   *
+   * Response: { devices: AccessToken[] }
+   */
+  app.get("/devices", (c) => {
+    const all = dataDb.getAllAccessTokens();
+    const active = all.filter((t) => t.is_active === 1);
+    return c.json({ devices: active });
+  });
+
+  /**
+   * DELETE /api/auth/devices/:hash
+   * Revokes an active device by its token hash.
+   * Requires an authenticated session (enforced by auth middleware).
+   *
+   * Response: 200 on success, 404 if not found or already revoked
+   */
+  app.delete("/devices/:hash", (c) => {
+    const hash = c.req.param("hash");
+    const record = dataDb.getAccessToken(hash);
+
+    if (!record || record.is_active === 0) {
+      return c.json({ error: "Device not found" }, 404);
+    }
+
+    dataDb.revokeAccessToken(hash);
+    log.server.info({ hash: hash.slice(0, 8) + "..." }, "Device revoked via settings");
+    return c.json({ ok: true });
+  });
+
+  /**
    * GET /api/auth/pair/complete
    * Completes the QR pairing flow — the phone hits this URL after scanning.
    * Validates the pairing token, creates a session, and redirects to /.
