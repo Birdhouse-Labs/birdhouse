@@ -49,7 +49,7 @@ describe("fetchMessages", () => {
 
     const result = await fetchMessages(mockWorkspaceId, mockAgentId, signal);
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/agents/${mockAgentId}/messages`), { signal });
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/agents/${mockAgentId}/messages`), { credentials: "include", signal });
     expect(result).toEqual(mockMessages);
   });
 
@@ -78,7 +78,7 @@ describe("fetchAgent", () => {
 
     const result = await fetchAgent(mockWorkspaceId, mockAgentId, signal);
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/agents/${mockAgentId}`), { signal });
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/agents/${mockAgentId}`), { credentials: "include", signal });
     expect(result).toEqual(mockAgent);
   });
 
@@ -376,7 +376,7 @@ describe("fetchModels", () => {
 
     const result = await fetchModels(mockWorkspaceId);
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/models"));
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/models"), { credentials: "include" });
     expect(result).toEqual(mockModels);
   });
 
@@ -521,7 +521,7 @@ describe("fetchAgentTrees", () => {
 
     const result = await fetchAgentTrees(mockWorkspaceId);
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/agents"));
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/agents"), { credentials: "include" });
     expect(result).toEqual(mockTrees);
   });
 

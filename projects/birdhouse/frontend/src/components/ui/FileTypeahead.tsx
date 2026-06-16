@@ -35,6 +35,7 @@ export interface FileTypeaheadProps {
 async function searchFiles(workspaceId: string, query: string): Promise<FileResult[]> {
   const response = await fetch(buildWorkspaceUrl(workspaceId, `/files/find/files?query=${encodeURIComponent(query)}`), {
     method: "POST",
+    credentials: "include",
   });
 
   if (!response.ok) {

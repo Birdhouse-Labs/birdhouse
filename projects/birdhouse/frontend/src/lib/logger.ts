@@ -96,6 +96,7 @@ class Logger {
   private sendToServer(entry: LogEntry) {
     fetch(`${SERVER_URL}/api/logs`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(entry),
     }).catch(() => {

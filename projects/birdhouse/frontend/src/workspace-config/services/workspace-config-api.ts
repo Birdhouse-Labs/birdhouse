@@ -15,7 +15,7 @@ export async function fetchWorkspaceConfig(workspaceId: string): Promise<Workspa
   const url = `${API_ENDPOINT_BASE}/workspaces/${workspaceId}/config`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: "include" });
 
     if (!response.ok) {
       const responseBody = await response.text();
@@ -52,6 +52,7 @@ export async function updateWorkspaceConfig(workspaceId: string, update: Workspa
   try {
     const response = await fetch(url, {
       method: "PUT",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(apiUpdate),
     });
@@ -91,6 +92,7 @@ export async function testProviderKey(
   try {
     const response = await fetch(url, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ providerId, apiKey }),
     });
@@ -113,6 +115,7 @@ export async function updateWorkspaceTitle(workspaceId: string, title: string): 
   try {
     const response = await fetch(url, {
       method: "PATCH",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
     });

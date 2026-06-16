@@ -14,7 +14,7 @@ interface FileViewerResponse {
 
 export async function fetchFileViewerContent(workspaceId: string, path: string): Promise<FileViewerFile> {
   const url = `${API_ENDPOINT_BASE}/workspace/${encodeURIComponent(workspaceId)}/files/view?path=${encodeURIComponent(path)}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: "include" });
 
   if (!response.ok) {
     const text = await response.text();
@@ -35,6 +35,7 @@ export async function revealFileViewerPath(workspaceId: string, path: string): P
   const url = `${API_ENDPOINT_BASE}/workspace/${encodeURIComponent(workspaceId)}/files/reveal`;
   const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ path }),
   });

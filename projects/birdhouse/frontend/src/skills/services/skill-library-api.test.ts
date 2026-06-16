@@ -49,7 +49,7 @@ describe("fetchSkillLibrary", () => {
 
     const result = await fetchSkillLibrary("ws_test");
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/workspace/ws_test/skills"));
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/workspace/ws_test/skills"), { credentials: "include" });
     expect(result).toEqual({
       skills: [
         {
@@ -120,6 +120,7 @@ describe("fetchSkill", () => {
 
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/workspace/ws_test/skills/git%2Fspotlight-worktree"),
+      { credentials: "include" },
     );
     expect(result).toEqual({
       id: "git/spotlight-worktree",
@@ -161,6 +162,7 @@ describe("updateTriggerPhrases", () => {
       expect.stringContaining("/api/workspace/ws_test/skills/find-docs/trigger-phrases"),
       {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ trigger_phrases: ["docs please", "reference the docs"] }),
       },
@@ -180,7 +182,7 @@ describe("revealSkillLocation", () => {
 
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/workspace/ws_test/skills/git%2Fspotlight-worktree/reveal"),
-      { method: "POST" },
+      { method: "POST", credentials: "include" },
     );
   });
 });
@@ -193,6 +195,7 @@ describe("reloadSkills", () => {
 
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/workspace/ws_test/skills/reload"), {
       method: "POST",
+      credentials: "include",
     });
   });
 });

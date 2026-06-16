@@ -64,7 +64,7 @@ function toSkillMetadata(skill: SkillsListResponse["skills"][number]): SkillMeta
 export async function fetchSkillLibrary(workspaceId: string): Promise<SkillLibraryResponse> {
   const url = `${API_ENDPOINT_BASE}/workspace/${encodeURIComponent(workspaceId)}/skills`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: "include" });
 
   if (!response.ok) {
     const text = await response.text();
@@ -84,7 +84,7 @@ export async function fetchSkillLibrary(workspaceId: string): Promise<SkillLibra
 export async function fetchSkill(skillId: string, workspaceId: string): Promise<SkillDetail> {
   const url = `${API_ENDPOINT_BASE}/workspace/${encodeURIComponent(workspaceId)}/skills/${encodeURIComponent(skillId)}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: "include" });
 
   if (!response.ok) {
     const text = await response.text();
@@ -122,6 +122,7 @@ export async function updateTriggerPhrases(
 
   const response = await fetch(url, {
     method: "PATCH",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
@@ -139,6 +140,7 @@ export async function revealSkillLocation(skillId: string, workspaceId: string):
 
   const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -152,6 +154,7 @@ export async function reloadSkills(workspaceId: string): Promise<void> {
 
   const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
   });
 
   if (!response.ok) {

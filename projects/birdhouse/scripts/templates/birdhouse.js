@@ -359,9 +359,28 @@ async function runUI(args = []) {
   
   log('');
   
-  // Open browser - frontend will handle workspace registration
-  const url = `http://localhost:${port}/#/setup?directory=${encodeURIComponent(workspaceRoot)}`;
-  log(`🚀 Opening Birdhouse at ${url}`);
+  // Fetch the launch token from the server so it can be embedded in the browser URL.
+  // The frontend exchanges the token for a persistent session cookie on first load.
+  // If this fails (e.g. forward-compat with older server), open without the token.
+  let launchToken = null;
+  try {
+    const tokenRes = await fetch(`http://localhost:${port}/api/auth/launch-token`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (tokenRes.ok) {
+      const tokenData = await tokenRes.json();
+      launchToken = tokenData.token || null;
+    }
+  } catch (err) {
+    // Silent failure — token injection is best-effort
+  }
+
+  const hash = `#/setup?directory=${encodeURIComponent(workspaceRoot)}`;
+  const url = launchToken
+    ? `http://localhost:${port}/?launch_token=${encodeURIComponent(launchToken)}${hash}`
+    : `http://localhost:${port}/${hash}`;
+
+  log(`🚀 Opening Birdhouse at http://localhost:${port}/`);
   
   if (shouldManageServer) {
     log('');
