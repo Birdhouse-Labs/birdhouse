@@ -107,6 +107,14 @@ export class TestDataDB extends DataDB {
         trigger_phrases_json TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS access_tokens (
+        token_hash TEXT PRIMARY KEY,
+        device_label TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        last_used TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1
+      );
     `);
   }
 }

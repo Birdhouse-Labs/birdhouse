@@ -122,10 +122,10 @@ describe("runMigrations — data-dev-snapshot.db", () => {
   test("existing data is intact after migration", async () => {
     await runMigrations(dbPath);
     const db = new Database(dbPath);
-    // kysely_migration should still have all three applied migrations
+    // kysely_migration should still have all four applied migrations
     const migrations = db.query<{ name: string }, []>("SELECT name FROM kysely_migration ORDER BY name").all();
     db.close();
-    expect(migrations).toHaveLength(3);
+    expect(migrations).toHaveLength(4);
   });
 
   test("schema matches expected state — no regressions", async () => {
@@ -139,11 +139,12 @@ describe("runMigrations — data-dev-snapshot.db", () => {
   test("no new migrations applied — all were already recorded", async () => {
     await runMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    // Exactly the three known migrations, nothing more
+    // Exactly the four known migrations, nothing more
     expect(migrations).toEqual([
       "2026-02-28_000_initial_schema",
       "2026-03-03_001_plaintext_secrets",
       "2026-03-14_002_skill_trigger_phrases",
+      "20260616080755_access_tokens",
     ]);
   });
 
@@ -151,6 +152,6 @@ describe("runMigrations — data-dev-snapshot.db", () => {
     await runMigrations(dbPath);
     await runMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toHaveLength(3);
+    expect(migrations).toHaveLength(4);
   });
 });
