@@ -3,6 +3,17 @@
 
 import { API_ENDPOINT_BASE } from "../config/api";
 
+/** Error thrown when the server returns a non-2xx HTTP response. */
+export class HttpError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "HttpError";
+  }
+}
+
 import type {
   RecentLogsResponse,
   Workspace,
@@ -36,7 +47,7 @@ export async function fetchWorkspaces(): Promise<Workspace[]> {
         // Response wasn't JSON, use status text
       }
 
-      throw new Error(errorMessage);
+      throw new HttpError(response.status, errorMessage);
     }
 
     return response.json();

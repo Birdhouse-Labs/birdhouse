@@ -124,3 +124,14 @@ printf 'SERVER_PID=%s\n' "$server_pid"
 printf 'SANDBOX_DIR=%s\n' "$SANDBOX_DIR"
 printf 'DATA_DB=%s\n' "$DATA_DB_PATH"
 printf 'OPENCODE_PORT=%s\n' "$((BASE_PORT + 10))"
+
+# Fetch the launch token and print the browser URL with it embedded.
+# The token is single-use and expires 60 seconds after server start.
+launch_token=$(curl -sf "$server_url/api/auth/launch-token" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+if [[ -n "$launch_token" ]]; then
+  printf '\nOpen this URL in your browser (token expires in 60s):\n'
+  printf '  %s/?launch_token=%s\n' "$server_url" "$launch_token"
+else
+  printf '\nOpen in your browser:\n'
+  printf '  %s\n' "$server_url"
+fi

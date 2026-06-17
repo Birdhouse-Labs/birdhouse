@@ -242,6 +242,7 @@ const KeyBindingInput: Component<KeyBindingInputProps> = (props) => {
 
 const Header: Component<HeaderProps> = (props) => {
   const workspaceId = useWorkspaceId();
+  const baseZIndex = useZIndex();
   const navigate = useNavigate();
 
   const { openModal } = useModalRoute();

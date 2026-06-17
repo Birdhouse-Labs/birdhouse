@@ -1,6 +1,7 @@
 // ABOUTME: Remote Access settings card for managing paired devices
 // ABOUTME: Lists active session tokens, supports revoking devices, and initiating QR pairing
 
+import Tooltip from "corvu/tooltip";
 import { Info } from "lucide-solid";
 import { type Component, createResource, createSignal, For, onMount, Show } from "solid-js";
 import { type Device, initiatePairing, listDevices, revokeDevice } from "../services/auth-api";
@@ -151,7 +152,6 @@ const DeviceRow: Component<DeviceRowProps> = (props) => {
 
 const RemoteAccessSettings: Component = () => {
   const [showPairingModal, setShowPairingModal] = createSignal(false);
-  const [showUrlInfo, setShowUrlInfo] = createSignal(false);
   const [externalUrl, setExternalUrl] = createSignal("");
 
   // Load persisted external URL on mount
@@ -198,29 +198,33 @@ const RemoteAccessSettings: Component = () => {
           <label for="external-url-input" class="text-sm font-medium text-text-primary">
             External URL
           </label>
-          <button
-            type="button"
-            aria-label="External URL info"
-            class="text-text-muted hover:text-text-primary transition-colors flex-shrink-0"
-            onClick={() => setShowUrlInfo(!showUrlInfo())}
-          >
-            <Info size={14} />
-          </button>
+          <Tooltip openDelay={200} closeDelay={0} placement="top">
+            <Tooltip.Trigger
+              as="button"
+              type="button"
+              aria-label="External URL info"
+              class="text-text-muted hover:text-text-primary transition-colors flex-shrink-0"
+            >
+              <Info size={14} />
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Content class="z-50 max-w-xs rounded-lg border border-border bg-surface-overlay px-3 py-2 text-xs text-text-primary shadow-xl leading-relaxed">
+                The URL your phone will use to reach this machine, including the port — e.g.{" "}
+                <code class="font-mono">https://home.example.com:50100</code> or{" "}
+                <code class="font-mono">http://100.x.x.x:50100</code>. Leave blank to use the
+                local address. Works with Tailscale IPs, custom domains, or tunnel services like
+                Cloudflare Tunnel or ngrok.
+                <Tooltip.Arrow style={{ color: "var(--color-surface-overlay)" }} />
+              </Tooltip.Content>
+            </Tooltip.Portal>
+          </Tooltip>
         </div>
-
-        <Show when={showUrlInfo()}>
-          <p class="text-xs text-text-muted mb-2 leading-relaxed">
-            Enter the URL your phone will use to reach this machine. Leave blank to use the
-            local address. Works with Tailscale IPs, custom domains, or tunnel services like
-            Cloudflare Tunnel or ngrok.
-          </p>
-        </Show>
 
         <input
           id="external-url-input"
           type="url"
           class="w-full text-sm bg-surface border border-border rounded px-3 py-2 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent"
-          placeholder="https://yourdomain.com or http://100.x.x.x:50100"
+          placeholder="https://yourdomain.com:50100 or http://100.x.x.x:50100"
           value={externalUrl()}
           onInput={(e) => setExternalUrl(e.currentTarget.value)}
           onBlur={(e) => handleExternalUrlBlur(e.currentTarget.value)}

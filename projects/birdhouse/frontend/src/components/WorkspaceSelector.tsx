@@ -7,7 +7,7 @@ import { RefreshCw } from "lucide-solid";
 import { type Component, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { usePageTitle } from "../lib/page-title";
 import { useModalRoute } from "../lib/routing";
-import { fetchWorkspaces, fetchWorkspacesHealth } from "../services/workspaces-api";
+import { fetchWorkspaces, fetchWorkspacesHealth, HttpError } from "../services/workspaces-api";
 import type { Workspace, WorkspaceHealthStatus as WorkspaceHealthStatusType } from "../types/workspace";
 import { shortenPath } from "../utils/paths";
 import WorkspaceConfigDialog from "../workspace-config/components/WorkspaceConfigDialog";
@@ -18,6 +18,44 @@ import WorkspaceHealthStatus from "./WorkspaceHealthStatus";
 const LoadingSpinner = () => (
   <div class="flex items-center justify-center h-full">
     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent" />
+  </div>
+);
+
+const UnauthorizedScreen = () => (
+  <div class="flex flex-col items-center justify-center min-h-screen gap-6 p-8 text-center">
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="unauth-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:var(--theme-gradient-from)" />
+          <stop offset="50%" style="stop-color:var(--theme-gradient-via)" />
+          <stop offset="100%" style="stop-color:var(--theme-gradient-to)" />
+        </linearGradient>
+      </defs>
+      <path d="M12 18v4" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="m17 18 1.956-11.468" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="m3 8 7.82-5.615a2 2 0 0 1 2.36 0L21 8" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M4 18h16" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M7 18 5.044 6.532" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <circle cx="12" cy="10" r="2" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+    <div class="space-y-2">
+      <h1 class="text-2xl font-bold bg-gradient-to-r from-gradient-from via-gradient-via to-gradient-to bg-clip-text text-transparent">
+        Birdhouse
+      </h1>
+      <p class="text-text-primary font-medium">This is a private instance.</p>
+      <p class="text-text-muted text-sm max-w-xs">
+        To get access, scan the QR code from{" "}
+        <strong class="text-text-primary">Settings → Mobile Access</strong>{" "}
+        on the computer running Birdhouse.
+      </p>
+    </div>
   </div>
 );
 
@@ -167,8 +205,16 @@ const WorkspaceSelector: Component = () => {
     });
   };
 
+  const isUnauthorized = () => error() instanceof HttpError && (error() as HttpError).status === 401;
+
   return (
-    <div class="min-h-screen overflow-auto p-8 bg-gradient-to-br from-bg-from via-bg-via to-bg-to">
+    <div class="min-h-screen overflow-auto bg-gradient-to-br from-bg-from via-bg-via to-bg-to">
+      <Show when={isUnauthorized()}>
+        <UnauthorizedScreen />
+      </Show>
+
+      <Show when={!isUnauthorized()}>
+      <div class="p-8">
       <div class="max-w-6xl mx-auto">
         {/* Header */}
         <div class="flex items-start justify-between mb-8">
@@ -295,6 +341,8 @@ const WorkspaceSelector: Component = () => {
           )}
         </Show>
       </div>
+      </div>
+      </Show>
     </div>
   );
 };
