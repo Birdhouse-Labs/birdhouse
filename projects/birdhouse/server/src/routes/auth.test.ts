@@ -330,8 +330,8 @@ describe("GET /api/auth/devices", () => {
   });
 
   test("returns active devices only", async () => {
-    dataDb.createAccessToken("hash_active", "my-phone");
-    dataDb.createAccessToken("hash_revoked", "old-laptop");
+    dataDb.createAccessToken("hash_active", "my-phone", null);
+    dataDb.createAccessToken("hash_revoked", "old-laptop", null);
     dataDb.revokeAccessToken("hash_revoked");
 
     const res = await app.request("/api/auth/devices");
@@ -344,7 +344,7 @@ describe("GET /api/auth/devices", () => {
   });
 
   test("returned device has expected shape", async () => {
-    dataDb.createAccessToken("hash_abc", "test-device");
+    dataDb.createAccessToken("hash_abc", "test-device", null);
 
     const res = await app.request("/api/auth/devices");
     const body = (await res.json()) as {
@@ -378,7 +378,7 @@ describe("DELETE /api/auth/devices/:hash", () => {
   });
 
   test("returns 200 and revokes an active device", async () => {
-    dataDb.createAccessToken("hash_to_revoke", "my-phone");
+    dataDb.createAccessToken("hash_to_revoke", "my-phone", null);
 
     const res = await app.request("/api/auth/devices/hash_to_revoke", {
       method: "DELETE",
@@ -400,11 +400,100 @@ describe("DELETE /api/auth/devices/:hash", () => {
   });
 
   test("returns 404 when trying to revoke an already-revoked device", async () => {
-    dataDb.createAccessToken("hash_already_gone", "old-device");
+    dataDb.createAccessToken("hash_already_gone", "old-device", null);
     dataDb.revokeAccessToken("hash_already_gone");
 
     const res = await app.request("/api/auth/devices/hash_already_gone", {
       method: "DELETE",
+    });
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("PATCH /api/auth/devices/:hash", () => {
+  let dataDb: TestDataDB;
+  let app: ReturnType<typeof createTestApp>;
+
+  beforeEach(() => {
+    dataDb = new TestDataDB();
+    app = createTestApp(dataDb);
+  });
+
+  afterEach(() => {
+    dataDb.close();
+  });
+
+  test("returns 200 and updates device label", async () => {
+    dataDb.createAccessToken("hash_patch", "old-label", null);
+
+    const res = await app.request("/api/auth/devices/hash_patch", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: "My iPhone" }),
+    });
+
+    expect(res.status).toBe(200);
+
+    const record = dataDb.getAccessToken("hash_patch");
+    expect(record?.device_label).toBe("My iPhone");
+  });
+
+  test("trims whitespace from label", async () => {
+    dataDb.createAccessToken("hash_trim", "old-label", null);
+
+    await app.request("/api/auth/devices/hash_trim", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: "  iPad  " }),
+    });
+
+    const record = dataDb.getAccessToken("hash_trim");
+    expect(record?.device_label).toBe("iPad");
+  });
+
+  test("returns 400 for empty label", async () => {
+    dataDb.createAccessToken("hash_empty", "some-label", null);
+
+    const res = await app.request("/api/auth/devices/hash_empty", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: "" }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  test("returns 400 for label over 100 characters", async () => {
+    dataDb.createAccessToken("hash_long", "label", null);
+
+    const res = await app.request("/api/auth/devices/hash_long", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: "a".repeat(101) }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  test("returns 404 for non-existent device", async () => {
+    const res = await app.request("/api/auth/devices/not-a-real-hash", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: "New Name" }),
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  test("returns 404 for revoked device", async () => {
+    dataDb.createAccessToken("hash_revoked_patch", "label", null);
+    dataDb.revokeAccessToken("hash_revoked_patch");
+
+    const res = await app.request("/api/auth/devices/hash_revoked_patch", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: "New Name" }),
     });
 
     expect(res.status).toBe(404);

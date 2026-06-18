@@ -32,7 +32,7 @@ describe("AAPI auth check", () => {
   });
 
   test("passes with a valid session cookie", async () => {
-    const token = createSessionToken(dataDb, "test-device");
+    const token = createSessionToken(dataDb, "test-device", null);
 
     const res = await app.request("/aapi/test", {
       headers: { Cookie: `${AUTH_COOKIE_NAME}=${token}` },
@@ -70,7 +70,7 @@ describe("AAPI auth check", () => {
   });
 
   test("passes with valid cookie even when X-Forwarded-For is set", async () => {
-    const token = createSessionToken(dataDb, "test-device");
+    const token = createSessionToken(dataDb, "test-device", null);
 
     const res = await app.request("/aapi/test", {
       headers: {

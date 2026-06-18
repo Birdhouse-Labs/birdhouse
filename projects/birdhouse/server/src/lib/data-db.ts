@@ -56,10 +56,11 @@ export interface UserProfile {
 
 export interface AccessToken {
   token_hash: string;
-  device_label: string;
+  device_label: string | null;
   created_at: string;
   last_used: string | null;
   is_active: number; // 1 = active, 0 = revoked
+  user_agent: string | null;
 }
 
 /**
@@ -426,15 +427,23 @@ export class DataDB {
 
   // ==================== Access Token Operations ====================
 
-  createAccessToken(tokenHash: string, deviceLabel: string): void {
+  createAccessToken(tokenHash: string, deviceLabel: string | null, userAgent: string | null): void {
     this.db
       .prepare(
-        `INSERT INTO access_tokens (token_hash, device_label, created_at, last_used, is_active)
-         VALUES (?, ?, ?, NULL, 1)`,
+        `INSERT INTO access_tokens (token_hash, device_label, created_at, last_used, is_active, user_agent)
+         VALUES (?, ?, ?, NULL, 1, ?)`,
       )
-      .run(tokenHash, deviceLabel, new Date().toISOString());
+      .run(tokenHash, deviceLabel, new Date().toISOString(), userAgent);
 
     log.server.info({ deviceLabel }, "Access token created");
+  }
+
+  updateAccessTokenLabel(tokenHash: string, label: string): void {
+    this.db
+      .prepare("UPDATE access_tokens SET device_label = ? WHERE token_hash = ?")
+      .run(label, tokenHash);
+
+    log.server.debug({ tokenHash: tokenHash.slice(0, 8) + "..." }, "Access token label updated");
   }
 
   getAccessToken(tokenHash: string): AccessToken | null {

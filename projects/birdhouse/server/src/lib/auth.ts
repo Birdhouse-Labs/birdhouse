@@ -168,11 +168,12 @@ export async function isValidSessionCookie(token: string, dataDb: DataDB): Promi
 /**
  * Creates a persistent access token in the DB and returns the raw token value.
  * The raw token is placed in the cookie; only the hash is stored.
+ * userAgent is stored as-is for later display formatting on the frontend.
  */
-export function createSessionToken(dataDb: DataDB, deviceLabel: string): string {
+export function createSessionToken(dataDb: DataDB, deviceLabel: string | null, userAgent: string | null): string {
   const token = generateSessionToken();
   const hash = hashToken(token);
-  dataDb.createAccessToken(hash, deviceLabel);
+  dataDb.createAccessToken(hash, deviceLabel, userAgent);
   return token;
 }
 

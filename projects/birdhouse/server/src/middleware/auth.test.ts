@@ -38,7 +38,7 @@ describe("Auth middleware", () => {
   });
 
   test("passes through requests with a valid session cookie", async () => {
-    const token = createSessionToken(dataDb, "test-device");
+    const token = createSessionToken(dataDb, "test-device", null);
 
     const res = await app.request("/api/protected", {
       headers: { Cookie: `${AUTH_COOKIE_NAME}=${token}` },
@@ -60,7 +60,7 @@ describe("Auth middleware", () => {
   });
 
   test("returns 401 for revoked session tokens", async () => {
-    const token = createSessionToken(dataDb, "test-device");
+    const token = createSessionToken(dataDb, "test-device", null);
     // Revoke it
     const { hashToken } = await import("../lib/auth");
     dataDb.revokeAccessToken(hashToken(token));

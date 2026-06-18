@@ -81,7 +81,8 @@ export function createAuthRoutes(dataDb: DataDB) {
       return c.json({ error: "Invalid or expired launch token" }, 401);
     }
 
-    const sessionToken = createSessionToken(dataDb, "local-browser");
+    const userAgent = c.req.header("User-Agent") ?? null;
+    const sessionToken = createSessionToken(dataDb, null, userAgent);
     const isSecure = isSecureRequest(c.req.raw);
     const cookieHeader = buildSessionCookieHeader(sessionToken, isSecure);
 
@@ -184,7 +185,8 @@ export function createAuthRoutes(dataDb: DataDB) {
       return c.json({ error: "Invalid or expired pairing token" }, 401);
     }
 
-    const sessionToken = createSessionToken(dataDb, "mobile-device");
+    const userAgent = c.req.header("User-Agent") ?? null;
+    const sessionToken = createSessionToken(dataDb, null, userAgent);
     const isSecure = isSecureRequest(c.req.raw);
     const cookieHeader = buildSessionCookieHeader(sessionToken, isSecure);
 
@@ -225,7 +227,8 @@ export function createAuthRoutes(dataDb: DataDB) {
       return c.json({ error: "Invalid or expired pairing token" }, 401);
     }
 
-    const sessionToken = createSessionToken(dataDb, "mobile-device");
+    const userAgent = c.req.header("User-Agent") ?? null;
+    const sessionToken = createSessionToken(dataDb, null, userAgent);
     const isSecure = isSecureRequest(c.req.raw);
     const cookieHeader = buildSessionCookieHeader(sessionToken, isSecure);
 
@@ -238,6 +241,42 @@ export function createAuthRoutes(dataDb: DataDB) {
         "Set-Cookie": cookieHeader,
       },
     });
+  });
+
+  /**
+   * PATCH /api/auth/devices/:hash
+   * Updates the label of an active device.
+   * Requires an authenticated session (enforced by auth middleware).
+   *
+   * Body: { label: string }  (non-empty, max 100 chars)
+   * Response: 200 { ok: true } on success, 404 if device not found/revoked
+   */
+  app.patch("/devices/:hash", async (c) => {
+    const hash = c.req.param("hash");
+
+    let body: { label?: unknown };
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid request body" }, 400);
+    }
+
+    const label = body?.label;
+    if (typeof label !== "string" || label.trim() === "") {
+      return c.json({ error: "label must be a non-empty string" }, 400);
+    }
+    if (label.trim().length > 100) {
+      return c.json({ error: "label must be 100 characters or fewer" }, 400);
+    }
+
+    const record = dataDb.getAccessToken(hash);
+    if (!record || record.is_active === 0) {
+      return c.json({ error: "Device not found" }, 404);
+    }
+
+    dataDb.updateAccessTokenLabel(hash, label.trim());
+    log.server.info({ hash: hash.slice(0, 8) + "..." }, "Device label updated");
+    return c.json({ ok: true });
   });
 
   return app;

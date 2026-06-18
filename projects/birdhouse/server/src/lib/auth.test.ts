@@ -140,14 +140,14 @@ describe("isValidSessionCookie", () => {
   test("returns true when active token exists", async () => {
     const token = generateSessionToken();
     const hash = hashToken(token);
-    dataDb.createAccessToken(hash, "test-device");
+    dataDb.createAccessToken(hash, "test-device", null);
     expect(await isValidSessionCookie(token, dataDb)).toBe(true);
   });
 
   test("returns false when token is revoked (is_active = 0)", async () => {
     const token = generateSessionToken();
     const hash = hashToken(token);
-    dataDb.createAccessToken(hash, "test-device");
+    dataDb.createAccessToken(hash, "test-device", null);
     dataDb.revokeAccessToken(hash);
     expect(await isValidSessionCookie(token, dataDb)).toBe(false);
   });
@@ -155,7 +155,7 @@ describe("isValidSessionCookie", () => {
   test("touches last_used on valid token", async () => {
     const token = generateSessionToken();
     const hash = hashToken(token);
-    dataDb.createAccessToken(hash, "test-device");
+    dataDb.createAccessToken(hash, "test-device", null);
 
     const before = dataDb.getAccessToken(hash);
     expect(before?.last_used).toBeNull();
