@@ -22,46 +22,46 @@ function formatDate(isoString: string | null): string {
   });
 }
 
-// ==================== Copy Token Button ====================
+// ==================== Copy Row ====================
 
-/**
- * Extracts the pairing token from the pairing URL and offers a copy button.
- * Lets the user paste the token into any browser via the unauthorized screen.
- */
-const CopyTokenButton: Component<{ url: string }> = (props) => {
+/** A labeled value row with an inline copy button. */
+const CopyRow: Component<{ label: string; value: string; mono?: boolean; truncate?: boolean }> = (props) => {
   const [copied, setCopied] = createSignal(false);
 
-  const token = () => {
-    try {
-      return new URL(props.url).searchParams.get("token") ?? "";
-    } catch {
-      return "";
-    }
-  };
-
   const handleCopy = async () => {
-    if (!token()) return;
-    await navigator.clipboard.writeText(token());
+    await navigator.clipboard.writeText(props.value);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <Show when={token()}>
-      <div class="border-t border-border pt-3">
-        <p class="text-xs text-text-muted mb-2">
-          Want to open in a different browser? Copy the access token and paste it on the unauthorized screen.
-        </p>
+    <div>
+      <p class="text-xs font-medium text-text-muted mb-1">{props.label}</p>
+      <div class="flex items-center gap-2 bg-surface-raised border border-border rounded px-3 py-2">
+        <span
+          class="flex-1 text-xs text-text-primary min-w-0"
+          classList={{
+            "font-mono": !!props.mono,
+            "truncate": !!props.truncate,
+            "break-all": !props.truncate,
+          }}
+          title={props.truncate ? props.value : undefined}
+        >
+          {props.value}
+        </span>
         <button
           type="button"
           onClick={handleCopy}
-          class="flex items-center gap-2 w-full px-3 py-2 rounded border border-border bg-surface-raised hover:bg-surface text-xs text-text-primary transition-colors"
+          aria-label={`Copy ${props.label}`}
+          class="flex-shrink-0 text-text-muted hover:text-text-primary transition-colors"
         >
-          <Copy size={12} />
-          {copied() ? "Copied!" : "Copy access token"}
+          <Copy size={14} />
         </button>
+        <Show when={copied()}>
+          <span class="text-xs text-accent flex-shrink-0">Copied!</span>
+        </Show>
       </div>
-    </Show>
+    </div>
   );
 };
 
@@ -116,33 +116,33 @@ const PairingModal: Component<PairingModalProps> = (props) => {
         </Show>
 
         <Show when={session()}>
-          {(s) => (
-            <div class="space-y-4">
-              {/* QR code SVG */}
-              <div
-                ref={(el) => {
-                  qrRef = el;
-                  injectSvg(s().qrSvg);
-                }}
-                class="flex justify-center [&_svg]:w-48 [&_svg]:h-48 [&_svg]:max-w-full"
-                aria-label="QR code for device pairing"
-              />
+          {(s) => {
+            const token = () => {
+              try { return new URL(s().url).searchParams.get("token") ?? ""; }
+              catch { return ""; }
+            };
+            return (
+              <div class="space-y-4">
+                {/* QR code SVG */}
+                <div
+                  ref={(el) => { qrRef = el; injectSvg(s().qrSvg); }}
+                  class="flex justify-center [&_svg]:w-48 [&_svg]:h-48 [&_svg]:max-w-full"
+                  aria-label="QR code for device pairing"
+                />
 
-              {/* Expiry note */}
-              <p class="text-xs text-text-muted text-center">This code expires in 5 minutes.</p>
+                {/* Expiry note */}
+                <p class="text-xs text-text-muted text-center">This code expires in 5 minutes.</p>
 
-              {/* Copyable URL */}
-              <div>
-                <p class="text-xs font-medium text-text-muted mb-1">Or visit this URL on your device:</p>
-                <p class="text-xs text-text-primary font-mono break-all bg-surface-raised border border-border rounded p-2 select-all">
-                  {s().url}
-                </p>
+                {/* URL row */}
+                <CopyRow label="URL" value={s().url} mono truncate />
+
+                {/* Token row */}
+                <Show when={token()}>
+                  <CopyRow label="Token" value={token()} mono />
+                </Show>
               </div>
-
-              {/* Copy token for pasting into another browser */}
-              <CopyTokenButton url={s().url} />
-            </div>
-          )}
+            );
+          }}
         </Show>
 
         <div class="mt-5 flex justify-end">
