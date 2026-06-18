@@ -52,6 +52,7 @@ export async function fetchWorkspaces(): Promise<Workspace[]> {
 
     return response.json();
   } catch (error) {
+    if (error instanceof HttpError) throw error;
     throw new Error(`Failed to fetch workspaces: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
