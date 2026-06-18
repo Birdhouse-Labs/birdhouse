@@ -5,10 +5,11 @@ import { API_ENDPOINT_BASE } from "../config/api";
 
 export interface Device {
   token_hash: string;
-  device_label: string;
+  device_label: string | null;
   created_at: string;
   last_used: string | null;
   is_active: number;
+  user_agent: string | null;
 }
 
 export interface PairingSession {
@@ -58,6 +59,22 @@ export async function completePairingWithToken(token: string): Promise<boolean> 
     body: JSON.stringify({ token }),
   });
   return response.ok;
+}
+
+/**
+ * Updates the display label for a paired device.
+ */
+export async function updateDeviceLabel(tokenHash: string, label: string): Promise<void> {
+  const response = await fetch(`${API_ENDPOINT_BASE}/auth/devices/${encodeURIComponent(tokenHash)}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ label }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update device label: ${response.statusText}`);
+  }
 }
 
 /**

@@ -1,5 +1,5 @@
 // ABOUTME: Tests for the RemoteAccessSettings component
-// ABOUTME: Covers device listing, revocation, and QR pairing modal
+// ABOUTME: Covers device listing, revocation, inline label editing, and QR pairing modal
 
 import { render, screen, waitFor } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,11 +8,13 @@ import RemoteAccessSettings from "./RemoteAccessSettings";
 
 const mockListDevices = vi.fn<() => Promise<Device[]>>();
 const mockRevokeDevice = vi.fn<(hash: string) => Promise<void>>();
+const mockUpdateDeviceLabel = vi.fn<(hash: string, label: string) => Promise<void>>();
 const mockInitiatePairing = vi.fn();
 
 vi.mock("../services/auth-api", () => ({
   listDevices: (...args: Parameters<typeof mockListDevices>) => mockListDevices(...args),
   revokeDevice: (...args: Parameters<typeof mockRevokeDevice>) => mockRevokeDevice(...args),
+  updateDeviceLabel: (...args: Parameters<typeof mockUpdateDeviceLabel>) => mockUpdateDeviceLabel(...args),
   initiatePairing: (...args: Parameters<typeof mockInitiatePairing>) => mockInitiatePairing(...args),
 }));
 
@@ -22,6 +24,7 @@ const makeDevice = (overrides: Partial<Device> = {}): Device => ({
   created_at: "2026-06-01T12:00:00.000Z",
   last_used: null,
   is_active: 1,
+  user_agent: null,
   ...overrides,
 });
 
@@ -42,12 +45,27 @@ describe("RemoteAccessSettings", () => {
     await waitFor(() => expect(screen.getByText(/no paired devices/i)).toBeInTheDocument());
   });
 
-  it("renders device list with label", async () => {
+  it("renders device list with explicit label", async () => {
     mockListDevices.mockResolvedValue([
       makeDevice({ device_label: "my-iphone", last_used: "2026-06-10T08:00:00.000Z" }),
     ]);
     render(() => <RemoteAccessSettings />);
     await waitFor(() => expect(screen.getByText("my-iphone")).toBeInTheDocument());
+  });
+
+  it("falls back to formatted UA when device_label is null", async () => {
+    const ua =
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+    mockListDevices.mockResolvedValue([makeDevice({ device_label: null, user_agent: ua })]);
+    render(() => <RemoteAccessSettings />);
+    // Should show formatted label (macOS · Chrome) not the raw UA
+    await waitFor(() => expect(screen.getByText(/chrome/i)).toBeInTheDocument());
+  });
+
+  it("shows 'Unknown device' when both device_label and user_agent are null", async () => {
+    mockListDevices.mockResolvedValue([makeDevice({ device_label: null, user_agent: null })]);
+    render(() => <RemoteAccessSettings />);
+    await waitFor(() => expect(screen.getByText(/unknown device/i)).toBeInTheDocument());
   });
 
   it("shows 'Never' for null last_used", async () => {
@@ -83,6 +101,44 @@ describe("RemoteAccessSettings", () => {
     });
   });
 
+  it("shows input when device label is clicked for editing", async () => {
+    mockListDevices.mockResolvedValue([makeDevice({ device_label: "my-phone" })]);
+    render(() => <RemoteAccessSettings />);
+
+    const deviceNameBtn = await waitFor(() =>
+      screen.getByRole("button", { name: /my-phone/i }),
+    );
+    deviceNameBtn.click();
+
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: /device name/i })).toBeInTheDocument();
+    });
+  });
+
+  it("calls updateDeviceLabel on Enter key", async () => {
+    mockListDevices.mockResolvedValue([makeDevice({ device_label: "old-name" })]);
+    mockUpdateDeviceLabel.mockResolvedValue(undefined);
+
+    render(() => <RemoteAccessSettings />);
+
+    const deviceNameBtn = await waitFor(() =>
+      screen.getByRole("button", { name: /old-name/i }),
+    );
+    deviceNameBtn.click();
+
+    const input = await waitFor(() => screen.getByRole("textbox", { name: /device name/i }));
+    // Change value and press Enter
+    Object.defineProperty(input, "value", { value: "New Name", writable: true });
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+
+    // Fire Enter key
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    await waitFor(() => {
+      expect(mockUpdateDeviceLabel).toHaveBeenCalled();
+    });
+  });
+
   it("renders Add Device button", async () => {
     mockListDevices.mockResolvedValue([]);
     render(() => <RemoteAccessSettings />);
@@ -102,7 +158,6 @@ describe("RemoteAccessSettings", () => {
     addBtn.click();
 
     await waitFor(() => {
-      // Pairing URL should be visible
       expect(screen.getByText(/pair\/complete/)).toBeInTheDocument();
     });
   });
@@ -118,10 +173,8 @@ describe("RemoteAccessSettings", () => {
     const addBtn = await waitFor(() => screen.getByRole("button", { name: /add device/i }));
     addBtn.click();
 
-    // Wait for pairing modal to appear (it shows a "Pair a New Device" heading)
     await waitFor(() => screen.getByText(/pair a new device/i));
 
-    // The ✕ icon button has aria-label="Close"; clicking it should hide the modal
     const closeBtns = screen.getAllByRole("button", { name: /close/i });
     closeBtns[0].click();
 
