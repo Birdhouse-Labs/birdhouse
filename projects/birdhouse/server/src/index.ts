@@ -143,9 +143,6 @@ app.use("/ingest", async (_c, next) => withDeps(posthogDeps, () => next()));
 app.use("/ingest/*", async (_c, next) => withDeps(posthogDeps, () => next()));
 app.route("/ingest", createPosthogRoutes());
 
-// Auth routes (exempt from auth middleware — registered before it)
-app.route("/api/auth", createAuthRoutes(dataDb));
-
 // Middleware: Pino HTTP logging (replaces hono/logger)
 // Apply to all routes except /api/logs (log relay is infrastructure noise)
 app.use(
@@ -186,10 +183,15 @@ app.use(
 // /api/logs gets logger but no HTTP logging (http: false)
 app.use("/api/logs", pinoLogger({ pino: rootLogger, http: false }));
 
-// Middleware: Auth — validates session cookie on all /api/* routes
+// Middleware: Auth — validates session cookie on all /api/* routes.
 // Exempt paths (health, auth handshakes) are handled inside the middleware.
+// Auth routes must be registered AFTER this middleware so the middleware runs first.
 const authMiddleware = createAuthMiddleware(dataDb);
 app.use("/api/*", authMiddleware);
+
+// Auth routes — registered after auth middleware so it applies to them.
+// The middleware's exempt list allows unauthenticated access to pair/complete and launch-token.
+app.route("/api/auth", createAuthRoutes(dataDb));
 
 // Middleware: Workspace context for workspace-scoped routes
 const workspaceMiddleware = createWorkspaceMiddleware(opencodeManager, dataDb);
