@@ -199,5 +199,46 @@ export function createAuthRoutes(dataDb: DataDB) {
     });
   });
 
+  /**
+   * POST /api/auth/pair/complete
+   * Completes pairing via a pasted token (fetch-friendly alternative to the GET redirect).
+   * Used by the unauthorized screen so the user can paste a token in any browser.
+   *
+   * Body: { token: string }
+   * Response: 200 { ok: true } with Set-Cookie on success, 401 on failure
+   */
+  app.post("/pair/complete", async (c) => {
+    let body: { token?: string };
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid request body" }, 400);
+    }
+
+    const { token } = body;
+    if (!token || typeof token !== "string") {
+      return c.json({ error: "token is required" }, 400);
+    }
+
+    if (!consumePairingToken(token)) {
+      log.server.warn("Pairing token paste failed — invalid or expired token");
+      return c.json({ error: "Invalid or expired pairing token" }, 401);
+    }
+
+    const sessionToken = createSessionToken(dataDb, "mobile-device");
+    const isSecure = isSecureRequest(c.req.raw);
+    const cookieHeader = buildSessionCookieHeader(sessionToken, isSecure);
+
+    log.server.info("Pairing completed via token paste — session cookie set");
+
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": cookieHeader,
+      },
+    });
+  });
+
   return app;
 }

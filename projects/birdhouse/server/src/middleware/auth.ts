@@ -15,6 +15,7 @@ const EXEMPT_PATHS: Array<{ method: string; path: string }> = [
   { method: "GET", path: "/api/auth/launch-token" },
   { method: "POST", path: "/api/auth/launch-token" },
   { method: "GET", path: "/api/auth/pair/complete" },
+  { method: "POST", path: "/api/auth/pair/complete" },
 ];
 
 /**

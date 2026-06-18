@@ -47,6 +47,20 @@ export async function revokeDevice(tokenHash: string): Promise<void> {
 }
 
 /**
+ * Completes pairing by submitting a pasted token.
+ * Returns true on success, false if the token is invalid or expired.
+ */
+export async function completePairingWithToken(token: string): Promise<boolean> {
+  const response = await fetch(`${API_ENDPOINT_BASE}/auth/pair/complete`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  return response.ok;
+}
+
+/**
  * Initiates a QR pairing session and returns the URL and SVG.
  * Pass externalBaseUrl when the phone needs to reach the server via a
  * different address (Tailscale IP, custom domain, tunnel URL, etc.).

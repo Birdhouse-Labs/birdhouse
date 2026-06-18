@@ -7,6 +7,7 @@ import { RefreshCw } from "lucide-solid";
 import { type Component, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { usePageTitle } from "../lib/page-title";
 import { useModalRoute } from "../lib/routing";
+import { completePairingWithToken } from "../services/auth-api";
 import { fetchWorkspaces, fetchWorkspacesHealth, HttpError } from "../services/workspaces-api";
 import type { Workspace, WorkspaceHealthStatus as WorkspaceHealthStatusType } from "../types/workspace";
 import { shortenPath } from "../utils/paths";
@@ -21,43 +22,81 @@ const LoadingSpinner = () => (
   </div>
 );
 
-const UnauthorizedScreen = () => (
-  <div class="flex flex-col items-center justify-center min-h-screen gap-6 p-8 text-center">
-    <svg
-      width="48"
-      height="48"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="unauth-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" style="stop-color:var(--theme-gradient-from)" />
-          <stop offset="50%" style="stop-color:var(--theme-gradient-via)" />
-          <stop offset="100%" style="stop-color:var(--theme-gradient-to)" />
-        </linearGradient>
-      </defs>
-      <path d="M12 18v4" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      <path d="m17 18 1.956-11.468" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      <path d="m3 8 7.82-5.615a2 2 0 0 1 2.36 0L21 8" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      <path d="M4 18h16" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      <path d="M7 18 5.044 6.532" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      <circle cx="12" cy="10" r="2" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-    </svg>
-    <div class="space-y-2">
-      <h1 class="text-2xl font-bold bg-gradient-to-r from-gradient-from via-gradient-via to-gradient-to bg-clip-text text-transparent">
-        Birdhouse
-      </h1>
-      <p class="text-text-primary font-medium">This is a private instance.</p>
-      <p class="text-text-muted text-sm max-w-xs">
-        To get access, scan the QR code from{" "}
-        <strong class="text-text-primary">Settings → Mobile Access</strong>{" "}
-        on the computer running Birdhouse.
-      </p>
+const UnauthorizedScreen = () => {
+  const [token, setToken] = createSignal("");
+  const [submitting, setSubmitting] = createSignal(false);
+  const [error, setError] = createSignal("");
+
+  const handleAuthorize = async () => {
+    const t = token().trim();
+    if (!t) return;
+    setSubmitting(true);
+    setError("");
+    const ok = await completePairingWithToken(t);
+    if (ok) {
+      window.location.reload();
+    } else {
+      setError("Invalid or expired token. Generate a new one from Settings → Mobile Access.");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div class="flex flex-col items-center justify-center min-h-screen gap-6 p-8 text-center">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="unauth-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:var(--theme-gradient-from)" />
+            <stop offset="50%" style="stop-color:var(--theme-gradient-via)" />
+            <stop offset="100%" style="stop-color:var(--theme-gradient-to)" />
+          </linearGradient>
+        </defs>
+        <path d="M12 18v4" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="m17 18 1.956-11.468" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="m3 8 7.82-5.615a2 2 0 0 1 2.36 0L21 8" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M4 18h16" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M7 18 5.044 6.532" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="12" cy="10" r="2" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+
+      <div class="space-y-2">
+        <h1 class="text-2xl font-bold bg-gradient-to-r from-gradient-from via-gradient-via to-gradient-to bg-clip-text text-transparent">
+          Birdhouse
+        </h1>
+        <p class="text-text-primary font-medium">This is a private instance.</p>
+        <p class="text-text-muted text-sm max-w-xs">
+          Scan the QR code from{" "}
+          <strong class="text-text-primary">Settings → Mobile Access</strong>{" "}
+          on the computer running Birdhouse.
+        </p>
+      </div>
+
+      {/* Token paste input */}
+      <div class="w-full max-w-xs space-y-2">
+        <p class="text-xs text-text-muted">Already have an access token?</p>
+        <input
+          type="text"
+          placeholder="Paste token here"
+          value={token()}
+          onInput={(e) => setToken(e.currentTarget.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleAuthorize()}
+          class="w-full text-sm bg-surface-raised border border-border rounded px-3 py-2 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent text-center"
+        />
+        <Show when={error()}>
+          <p class="text-xs text-danger">{error()}</p>
+        </Show>
+        <button
+          type="button"
+          onClick={handleAuthorize}
+          disabled={!token().trim() || submitting()}
+          class="w-full px-4 py-2 rounded bg-accent text-white text-sm font-medium hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          {submitting() ? "Authorizing…" : "Authorize"}
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ErrorMessage = (props: { error: Error; onRetry: () => void }) => (
   <div class="flex flex-col items-center justify-center h-full gap-4 p-4">

@@ -2,7 +2,7 @@
 // ABOUTME: Lists active session tokens, supports revoking devices, and initiating QR pairing
 
 import Tooltip from "corvu/tooltip";
-import { Info } from "lucide-solid";
+import { Copy, Info } from "lucide-solid";
 import { type Component, createResource, createSignal, For, onMount, Show } from "solid-js";
 import { type Device, initiatePairing, listDevices, revokeDevice } from "../services/auth-api";
 import Button from "./ui/Button";
@@ -21,6 +21,49 @@ function formatDate(isoString: string | null): string {
     day: "numeric",
   });
 }
+
+// ==================== Copy Token Button ====================
+
+/**
+ * Extracts the pairing token from the pairing URL and offers a copy button.
+ * Lets the user paste the token into any browser via the unauthorized screen.
+ */
+const CopyTokenButton: Component<{ url: string }> = (props) => {
+  const [copied, setCopied] = createSignal(false);
+
+  const token = () => {
+    try {
+      return new URL(props.url).searchParams.get("token") ?? "";
+    } catch {
+      return "";
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!token()) return;
+    await navigator.clipboard.writeText(token());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Show when={token()}>
+      <div class="border-t border-border pt-3">
+        <p class="text-xs text-text-muted mb-2">
+          Want to open in a different browser? Copy the access token and paste it on the unauthorized screen.
+        </p>
+        <button
+          type="button"
+          onClick={handleCopy}
+          class="flex items-center gap-2 w-full px-3 py-2 rounded border border-border bg-surface-raised hover:bg-surface text-xs text-text-primary transition-colors"
+        >
+          <Copy size={12} />
+          {copied() ? "Copied!" : "Copy access token"}
+        </button>
+      </div>
+    </Show>
+  );
+};
 
 // ==================== Pairing Modal ====================
 
@@ -95,6 +138,9 @@ const PairingModal: Component<PairingModalProps> = (props) => {
                   {s().url}
                 </p>
               </div>
+
+              {/* Copy token for pasting into another browser */}
+              <CopyTokenButton url={s().url} />
             </div>
           )}
         </Show>
