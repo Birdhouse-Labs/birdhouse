@@ -87,12 +87,23 @@ describe("runMigrations — fresh database", () => {
     expect(cols).toContain("updated_at");
   });
 
-  test("records all three migrations in kysely_migration table", async () => {
+  test("records all migrations in kysely_migration table", async () => {
     await runMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
     expect(migrations).toContain("2026-02-28_000_initial_schema");
     expect(migrations).toContain("2026-03-03_001_plaintext_secrets");
     expect(migrations).toContain("2026-03-14_002_skill_trigger_phrases");
+    expect(migrations).toContain("20260616080755_access_tokens");
+    expect(migrations).toContain("20260618104429_access_token_user_agent");
+  });
+
+  test("access_tokens table has user_agent column and nullable device_label", async () => {
+    await runMigrations(dbPath);
+    const cols = getColumns(dbPath, "access_tokens");
+    expect(cols).toContain("token_hash");
+    expect(cols).toContain("device_label");
+    expect(cols).toContain("user_agent");
+    expect(cols).toContain("is_active");
   });
 
   test("is idempotent — running twice does not error", async () => {
@@ -122,10 +133,10 @@ describe("runMigrations — data-dev-snapshot.db", () => {
   test("existing data is intact after migration", async () => {
     await runMigrations(dbPath);
     const db = new Database(dbPath);
-    // kysely_migration should still have all four applied migrations
+    // kysely_migration should have all five applied migrations after the new one runs
     const migrations = db.query<{ name: string }, []>("SELECT name FROM kysely_migration ORDER BY name").all();
     db.close();
-    expect(migrations).toHaveLength(4);
+    expect(migrations).toHaveLength(5);
   });
 
   test("schema matches expected state — no regressions", async () => {
@@ -136,22 +147,29 @@ describe("runMigrations — data-dev-snapshot.db", () => {
     expect(getColumns(dbPath, "skill_trigger_phrases")).toContain("trigger_phrases_json");
   });
 
-  test("no new migrations applied — all were already recorded", async () => {
+  test("applies pending access_token_user_agent migration to existing snapshot", async () => {
     await runMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    // Exactly the four known migrations, nothing more
     expect(migrations).toEqual([
       "2026-02-28_000_initial_schema",
       "2026-03-03_001_plaintext_secrets",
       "2026-03-14_002_skill_trigger_phrases",
       "20260616080755_access_tokens",
+      "20260618104429_access_token_user_agent",
     ]);
+  });
+
+  test("access_tokens gains user_agent column after migration", async () => {
+    await runMigrations(dbPath);
+    const cols = getColumns(dbPath, "access_tokens");
+    expect(cols).toContain("user_agent");
+    expect(cols).toContain("device_label");
   });
 
   test("is idempotent — running twice does not error or change state", async () => {
     await runMigrations(dbPath);
     await runMigrations(dbPath);
     const migrations = getMigrationNames(dbPath);
-    expect(migrations).toHaveLength(4);
+    expect(migrations).toHaveLength(5);
   });
 });
