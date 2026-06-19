@@ -1,7 +1,7 @@
 // ABOUTME: Tests for the auth middleware
 // ABOUTME: Verifies cookie validation, exemptions, and 401 rejections
 
-import { beforeEach, afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import { AUTH_COOKIE_NAME, createSessionToken } from "../lib/auth";
 import { TestDataDB } from "../test-utils/data-db-test";

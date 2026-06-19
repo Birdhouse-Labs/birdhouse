@@ -1,11 +1,10 @@
 // ABOUTME: Authentication routes for remote access
 // ABOUTME: Handles launch token exchange, QR pairing initiation, and pairing completion
 
-import { getConnInfo } from "hono/bun";
 import { Hono } from "hono";
+import { getConnInfo } from "hono/bun";
 import QRCode from "qrcode";
 import {
-  AUTH_COOKIE_NAME,
   buildSessionCookieHeader,
   consumeLaunchToken,
   consumePairingToken,
@@ -13,8 +12,8 @@ import {
   createSessionToken,
   getLaunchToken,
 } from "../lib/auth";
-import { log } from "../lib/logger";
 import type { DataDB } from "../lib/data-db";
+import { log } from "../lib/logger";
 
 /**
  * Determines whether the request came over HTTPS.
@@ -55,10 +54,7 @@ export function createAuthRoutes(dataDb: DataDB) {
     try {
       const info = getConnInfo(c);
       const remoteAddr = info.remote.address ?? "";
-      const isLoopback =
-        remoteAddr === "127.0.0.1" ||
-        remoteAddr === "::1" ||
-        remoteAddr === "::ffff:127.0.0.1";
+      const isLoopback = remoteAddr === "127.0.0.1" || remoteAddr === "::1" || remoteAddr === "::ffff:127.0.0.1";
 
       if (!isLoopback) {
         log.server.warn({ remoteAddr }, "Remote attempt to read launch token — blocked");
@@ -130,22 +126,17 @@ export function createAuthRoutes(dataDb: DataDB) {
    * Response: { url: string, qrSvg: string }
    */
   app.post("/pair/initiate", async (c) => {
-    const body = await c.req.json().catch(() => ({})) as { externalBaseUrl?: unknown };
+    const body = (await c.req.json().catch(() => ({}))) as { externalBaseUrl?: unknown };
     const rawExternal = typeof body?.externalBaseUrl === "string" ? body.externalBaseUrl.trim() : "";
     // Strip a trailing slash so the appended path doesn't produce double slashes
-    const baseUrl = rawExternal
-      ? rawExternal.replace(/\/+$/, "")
-      : getBaseUrl(c.req.raw);
+    const baseUrl = rawExternal ? rawExternal.replace(/\/+$/, "") : getBaseUrl(c.req.raw);
     const { url } = createPairingSession(baseUrl);
 
     let qrSvg: string;
     try {
       qrSvg = await QRCode.toString(url, { type: "svg" });
     } catch (error) {
-      log.server.error(
-        { error: error instanceof Error ? error.message : "Unknown" },
-        "Failed to generate QR code",
-      );
+      log.server.error({ error: error instanceof Error ? error.message : "Unknown" }, "Failed to generate QR code");
       return c.json({ error: "Failed to generate QR code" }, 500);
     }
 
@@ -183,7 +174,7 @@ export function createAuthRoutes(dataDb: DataDB) {
     }
 
     dataDb.revokeAccessToken(hash);
-    log.server.info({ hash: hash.slice(0, 8) + "..." }, "Device revoked via settings");
+    log.server.info({ hash: `${hash.slice(0, 8)}...` }, "Device revoked via settings");
     return c.json({ ok: true });
   });
 
@@ -298,7 +289,7 @@ export function createAuthRoutes(dataDb: DataDB) {
     }
 
     dataDb.updateAccessTokenLabel(hash, label.trim());
-    log.server.info({ hash: hash.slice(0, 8) + "..." }, "Device label updated");
+    log.server.info({ hash: `${hash.slice(0, 8)}...` }, "Device label updated");
     return c.json({ ok: true });
   });
 

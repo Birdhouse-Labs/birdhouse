@@ -170,7 +170,12 @@ export async function isValidSessionCookie(token: string, dataDb: DataDB): Promi
  * The raw token is placed in the cookie; only the hash is stored.
  * userAgent is stored as-is for later display formatting on the frontend.
  */
-export function createSessionToken(dataDb: DataDB, deviceLabel: string | null, userAgent: string | null, originHost: string | null = null): string {
+export function createSessionToken(
+  dataDb: DataDB,
+  deviceLabel: string | null,
+  userAgent: string | null,
+  originHost: string | null = null,
+): string {
   const token = generateSessionToken();
   const hash = hashToken(token);
   dataDb.createAccessToken(hash, deviceLabel, userAgent, originHost);

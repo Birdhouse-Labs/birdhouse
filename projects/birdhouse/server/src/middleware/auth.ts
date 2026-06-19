@@ -3,8 +3,8 @@
 
 import type { Context, Next } from "hono";
 import { AUTH_COOKIE_NAME, isValidSessionCookie } from "../lib/auth";
-import { log } from "../lib/logger";
 import type { DataDB } from "../lib/data-db";
+import { log } from "../lib/logger";
 
 /**
  * Paths that are exempt from cookie authentication.
@@ -22,9 +22,7 @@ const EXEMPT_PATHS: Array<{ method: string; path: string }> = [
  * Checks whether a request matches an exempt path.
  */
 function isExempt(method: string, path: string): boolean {
-  return EXEMPT_PATHS.some(
-    (entry) => entry.method === method && path === entry.path,
-  );
+  return EXEMPT_PATHS.some((entry) => entry.method === method && path === entry.path);
 }
 
 /**

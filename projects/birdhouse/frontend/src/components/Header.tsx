@@ -1,10 +1,10 @@
 // ABOUTME: Fixed header component with settings popover
 // ABOUTME: Contains app title and settings for color mode, UI size, and theme
 
+import { useNavigate } from "@solidjs/router";
 import Popover from "corvu/popover";
 import { Command, Menu, Settings, Smartphone } from "lucide-solid";
 import { type Component, createSignal, type JSX, Show } from "solid-js";
-import { useNavigate } from "@solidjs/router";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { AgentIcon, SkillIcon } from "../design-system";
 import { setIsCommandPaletteOpen } from "../lib/command-palette-state";

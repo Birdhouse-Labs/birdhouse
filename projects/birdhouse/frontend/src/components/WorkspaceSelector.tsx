@@ -51,12 +51,50 @@ const UnauthorizedScreen = () => {
             <stop offset="100%" style="stop-color:var(--theme-gradient-to)" />
           </linearGradient>
         </defs>
-        <path d="M12 18v4" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        <path d="m17 18 1.956-11.468" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        <path d="m3 8 7.82-5.615a2 2 0 0 1 2.36 0L21 8" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        <path d="M4 18h16" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        <path d="M7 18 5.044 6.532" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        <circle cx="12" cy="10" r="2" stroke="url(#unauth-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path
+          d="M12 18v4"
+          stroke="url(#unauth-gradient)"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="m17 18 1.956-11.468"
+          stroke="url(#unauth-gradient)"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="m3 8 7.82-5.615a2 2 0 0 1 2.36 0L21 8"
+          stroke="url(#unauth-gradient)"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M4 18h16"
+          stroke="url(#unauth-gradient)"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M7 18 5.044 6.532"
+          stroke="url(#unauth-gradient)"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <circle
+          cx="12"
+          cy="10"
+          r="2"
+          stroke="url(#unauth-gradient)"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
       </svg>
 
       <div class="space-y-2">
@@ -65,9 +103,8 @@ const UnauthorizedScreen = () => {
         </h1>
         <p class="text-text-primary font-medium">This is a private instance.</p>
         <p class="text-text-muted text-sm max-w-xs">
-          Scan the QR code from{" "}
-          <strong class="text-text-primary">Settings → Mobile Access</strong>{" "}
-          on the computer running Birdhouse.
+          Scan the QR code from <strong class="text-text-primary">Settings → Mobile Access</strong> on the computer
+          running Birdhouse.
         </p>
       </div>
 
@@ -253,134 +290,134 @@ const WorkspaceSelector: Component = () => {
       </Show>
 
       <Show when={!isUnauthorized()}>
-      <div class="p-8">
-      <div class="max-w-6xl mx-auto">
-        {/* Header */}
-        <div class="flex items-start justify-between mb-8">
-          <div>
-            <h1 class="text-4xl font-bold text-text-primary mb-2">Workspaces</h1>
-            <p class="text-text-muted">Select a workspace to continue, or create a new one</p>
-          </div>
-          <IconButton
-            icon={<RefreshCw size={20} class={isRefreshing() ? "animate-spin" : ""} />}
-            variant="ghost"
-            aria-label="Refresh all workspaces"
-            onClick={handleRefreshAll}
-            disabled={isRefreshing()}
-            data-ph-capture-attribute-button-type="refresh-workspace-health"
-            data-ph-capture-attribute-is-refreshing={isRefreshing() ? "true" : "false"}
-          />
-        </div>
-
-        {/* Loading/Error States */}
-        <Show when={isLoading()}>
-          <LoadingSpinner />
-        </Show>
-
-        <Show when={error()} keyed>
-          {(err) => <ErrorMessage error={err} onRetry={loadWorkspaces} />}
-        </Show>
-
-        {/* Workspace List */}
-        <Show when={!isLoading() && !error()}>
-          <Show
-            when={workspaces().length > 0}
-            fallback={
-              <div class="flex flex-col items-center justify-center gap-6 p-12 bg-surface-raised rounded-lg border border-border">
-                <div class="text-center">
-                  <h2 class="text-2xl font-semibold text-text-primary mb-2">No workspaces yet</h2>
-                  <p class="text-text-muted">Create your first workspace to get started</p>
-                </div>
-                <Button
-                  onClick={handleCreateWorkspace}
-                  variant="primary"
-                  data-ph-capture-attribute-button-type="create-workspace"
-                  data-ph-capture-attribute-context="no-workspaces-fallback"
-                >
-                  Create Workspace
-                </Button>
+        <div class="p-8">
+          <div class="max-w-6xl mx-auto">
+            {/* Header */}
+            <div class="flex items-start justify-between mb-8">
+              <div>
+                <h1 class="text-4xl font-bold text-text-primary mb-2">Workspaces</h1>
+                <p class="text-text-muted">Select a workspace to continue, or create a new one</p>
               </div>
-            }
-          >
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              <For each={workspaces()}>
-                {(workspace) => (
-                  <div class="relative p-6 bg-surface-raised rounded-lg border border-border hover:border-accent hover:shadow-lg transition-all flex flex-col">
-                    {/* Status and gear icon - top right */}
-                    <div class="absolute top-4 right-4">
-                      <WorkspaceHealthStatus
-                        workspaceId={workspace.workspace_id}
-                        health={healthStatuses().get(workspace.workspace_id) ?? null}
-                        isChecking={checkingHealth().has(workspace.workspace_id)}
-                        onEditConfig={() => openModal("workspace_config", workspace.workspace_id)}
-                      />
-                    </div>
+              <IconButton
+                icon={<RefreshCw size={20} class={isRefreshing() ? "animate-spin" : ""} />}
+                variant="ghost"
+                aria-label="Refresh all workspaces"
+                onClick={handleRefreshAll}
+                disabled={isRefreshing()}
+                data-ph-capture-attribute-button-type="refresh-workspace-health"
+                data-ph-capture-attribute-is-refreshing={isRefreshing() ? "true" : "false"}
+              />
+            </div>
 
-                    {/* Workspace Title & Directory */}
-                    <div class="mb-3 pr-12">
-                      <h3
-                        class="text-lg font-semibold text-text-primary truncate"
-                        title={workspace.title || workspace.directory}
-                      >
-                        {workspace.title || workspace.directory.split("/").pop() || workspace.directory}
-                      </h3>
-                      <p class="text-sm text-text-muted truncate" title={workspace.directory}>
-                        {shortenPath(workspace.directory)}
-                      </p>
-                    </div>
+            {/* Loading/Error States */}
+            <Show when={isLoading()}>
+              <LoadingSpinner />
+            </Show>
 
-                    {/* Status Info - grows to push button to bottom */}
-                    <div class="mb-4 text-xs text-text-muted flex-grow">
-                      <span>Last used {formatDate(workspace.last_used)}</span>
-                    </div>
+            <Show when={error()} keyed>
+              {(err) => <ErrorMessage error={err} onRetry={loadWorkspaces} />}
+            </Show>
 
-                    {/* Open button - bottom right */}
-                    <div class="flex justify-end mt-auto">
-                      <Button
-                        variant="primary"
-                        href={`#/workspace/${workspace.workspace_id}/agents`}
-                        data-ph-capture-attribute-button-type="open-workspace"
-                        data-ph-capture-attribute-workspace-id={workspace.workspace_id}
-                      >
-                        Open
-                      </Button>
+            {/* Workspace List */}
+            <Show when={!isLoading() && !error()}>
+              <Show
+                when={workspaces().length > 0}
+                fallback={
+                  <div class="flex flex-col items-center justify-center gap-6 p-12 bg-surface-raised rounded-lg border border-border">
+                    <div class="text-center">
+                      <h2 class="text-2xl font-semibold text-text-primary mb-2">No workspaces yet</h2>
+                      <p class="text-text-muted">Create your first workspace to get started</p>
                     </div>
+                    <Button
+                      onClick={handleCreateWorkspace}
+                      variant="primary"
+                      data-ph-capture-attribute-button-type="create-workspace"
+                      data-ph-capture-attribute-context="no-workspaces-fallback"
+                    >
+                      Create Workspace
+                    </Button>
                   </div>
-                )}
-              </For>
-            </div>
-
-            {/* Create New Workspace Button */}
-            <div class="flex justify-center">
-              <Button
-                onClick={handleCreateWorkspace}
-                variant="secondary"
-                data-ph-capture-attribute-button-type="create-workspace"
-                data-ph-capture-attribute-context="workspace-list"
-              >
-                + Create New Workspace
-              </Button>
-            </div>
-          </Show>
-        </Show>
-
-        {/* Workspace Config Dialog - rendered at page level for URL persistence */}
-        <Show when={currentModal()?.type === "workspace_config" ? currentModal() : null} keyed>
-          {(modal) => (
-            <WorkspaceConfigDialog
-              open={true}
-              onOpenChange={(open) => {
-                if (!open && isModalOpen("workspace_config", modal.id)) {
-                  closeModal();
                 }
-              }}
-              workspaceId={modal.id}
-              onWorkspaceUpdated={loadWorkspaces}
-            />
-          )}
-        </Show>
-      </div>
-      </div>
+              >
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  <For each={workspaces()}>
+                    {(workspace) => (
+                      <div class="relative p-6 bg-surface-raised rounded-lg border border-border hover:border-accent hover:shadow-lg transition-all flex flex-col">
+                        {/* Status and gear icon - top right */}
+                        <div class="absolute top-4 right-4">
+                          <WorkspaceHealthStatus
+                            workspaceId={workspace.workspace_id}
+                            health={healthStatuses().get(workspace.workspace_id) ?? null}
+                            isChecking={checkingHealth().has(workspace.workspace_id)}
+                            onEditConfig={() => openModal("workspace_config", workspace.workspace_id)}
+                          />
+                        </div>
+
+                        {/* Workspace Title & Directory */}
+                        <div class="mb-3 pr-12">
+                          <h3
+                            class="text-lg font-semibold text-text-primary truncate"
+                            title={workspace.title || workspace.directory}
+                          >
+                            {workspace.title || workspace.directory.split("/").pop() || workspace.directory}
+                          </h3>
+                          <p class="text-sm text-text-muted truncate" title={workspace.directory}>
+                            {shortenPath(workspace.directory)}
+                          </p>
+                        </div>
+
+                        {/* Status Info - grows to push button to bottom */}
+                        <div class="mb-4 text-xs text-text-muted flex-grow">
+                          <span>Last used {formatDate(workspace.last_used)}</span>
+                        </div>
+
+                        {/* Open button - bottom right */}
+                        <div class="flex justify-end mt-auto">
+                          <Button
+                            variant="primary"
+                            href={`#/workspace/${workspace.workspace_id}/agents`}
+                            data-ph-capture-attribute-button-type="open-workspace"
+                            data-ph-capture-attribute-workspace-id={workspace.workspace_id}
+                          >
+                            Open
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </For>
+                </div>
+
+                {/* Create New Workspace Button */}
+                <div class="flex justify-center">
+                  <Button
+                    onClick={handleCreateWorkspace}
+                    variant="secondary"
+                    data-ph-capture-attribute-button-type="create-workspace"
+                    data-ph-capture-attribute-context="workspace-list"
+                  >
+                    + Create New Workspace
+                  </Button>
+                </div>
+              </Show>
+            </Show>
+
+            {/* Workspace Config Dialog - rendered at page level for URL persistence */}
+            <Show when={currentModal()?.type === "workspace_config" ? currentModal() : null} keyed>
+              {(modal) => (
+                <WorkspaceConfigDialog
+                  open={true}
+                  onOpenChange={(open) => {
+                    if (!open && isModalOpen("workspace_config", modal.id)) {
+                      closeModal();
+                    }
+                  }}
+                  workspaceId={modal.id}
+                  onWorkspaceUpdated={loadWorkspaces}
+                />
+              )}
+            </Show>
+          </div>
+        </div>
       </Show>
     </div>
   );

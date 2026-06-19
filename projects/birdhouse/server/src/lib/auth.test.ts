@@ -2,10 +2,9 @@
 // ABOUTME: Covers launch tokens, pairing tokens, session tokens, and hashing
 
 import { beforeEach, describe, expect, test } from "bun:test";
+import { TestDataDB } from "../test-utils/data-db-test";
 import {
   AUTH_COOKIE_NAME,
-  LAUNCH_TOKEN_TTL_MS,
-  PAIRING_TOKEN_TTL_MS,
   consumeLaunchToken,
   consumePairingToken,
   createPairingSession,
@@ -14,8 +13,9 @@ import {
   getLaunchToken,
   hashToken,
   isValidSessionCookie,
+  LAUNCH_TOKEN_TTL_MS,
+  PAIRING_TOKEN_TTL_MS,
 } from "./auth";
-import { TestDataDB } from "../test-utils/data-db-test";
 
 describe("hashToken", () => {
   test("produces consistent SHA-256 hex digest", () => {

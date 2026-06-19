@@ -2,10 +2,10 @@
 // ABOUTME: Wraps RemoteAccessSettings in a page layout consistent with WorkspaceSettings
 
 import { useNavigate } from "@solidjs/router";
-import { type Component } from "solid-js";
+import type { Component } from "solid-js";
 import { usePageTitle } from "../lib/page-title";
-import Button from "./ui/Button";
 import RemoteAccessSettings from "./RemoteAccessSettings";
+import Button from "./ui/Button";
 
 const RemoteAccessPage: Component = () => {
   usePageTitle("Remote Access - Birdhouse");

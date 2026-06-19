@@ -28,9 +28,7 @@ export async function exchangeLaunchToken(): Promise<void> {
   // Build the cleaned URL: pathname + remaining query + hash
   const remainingQuery = params.toString();
   const cleanedUrl =
-    window.location.pathname +
-    (remainingQuery ? `?${remainingQuery}` : "") +
-    (window.location.hash || "");
+    window.location.pathname + (remainingQuery ? `?${remainingQuery}` : "") + (window.location.hash || "");
 
   try {
     await fetch(`${API_BASE_URL}/api/auth/launch-token`, {

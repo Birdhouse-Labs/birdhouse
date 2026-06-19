@@ -4,7 +4,7 @@
 import Tooltip from "corvu/tooltip";
 import { Copy, Info, Pencil } from "lucide-solid";
 import { type Component, createResource, createSignal, For, onMount, Show } from "solid-js";
-import { formatDeviceDisplay, formatDeviceLabel } from "../lib/device-label";
+import { formatDeviceDisplay } from "../lib/device-label";
 import { type Device, initiatePairing, listDevices, revokeDevice, updateDeviceLabel } from "../services/auth-api";
 import Button from "./ui/Button";
 
@@ -43,7 +43,7 @@ const CopyRow: Component<{ label: string; value: string; mono?: boolean; truncat
           class="flex-1 text-xs text-text-primary min-w-0"
           classList={{
             "font-mono": !!props.mono,
-            "truncate": !!props.truncate,
+            truncate: !!props.truncate,
             "break-all": !props.truncate,
           }}
           title={props.truncate ? props.value : undefined}
@@ -84,6 +84,8 @@ const PairingModal: Component<PairingModalProps> = (props) => {
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click-to-close pattern
+    // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click-to-close pattern
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       onClick={(e) => {
@@ -116,14 +118,21 @@ const PairingModal: Component<PairingModalProps> = (props) => {
         <Show when={session()}>
           {(s) => {
             const token = () => {
-              try { return new URL(s().url).searchParams.get("token") ?? ""; }
-              catch { return ""; }
+              try {
+                return new URL(s().url).searchParams.get("token") ?? "";
+              } catch {
+                return "";
+              }
             };
             return (
               <div class="space-y-4">
                 <div
-                  ref={(el) => { qrRef = el; injectSvg(s().qrSvg); }}
+                  ref={(el) => {
+                    qrRef = el;
+                    injectSvg(s().qrSvg);
+                  }}
                   class="flex justify-center [&_svg]:w-48 [&_svg]:h-48 [&_svg]:max-w-full"
+                  role="img"
                   aria-label="QR code for device pairing"
                 />
                 <p class="text-xs text-text-muted text-center">This code expires in 5 minutes.</p>
@@ -217,9 +226,7 @@ const DeviceRow: Component<DeviceRowProps> = (props) => {
               onClick={startEdit}
               title="Click to rename"
             >
-              <span class="text-sm font-medium text-text-primary truncate">
-                {displayLabel()}
-              </span>
+              <span class="text-sm font-medium text-text-primary truncate">{displayLabel()}</span>
               <span class="opacity-0 group-hover:opacity-100 transition-opacity text-text-muted flex-shrink-0">
                 <Pencil size={12} />
               </span>
@@ -244,10 +251,7 @@ const DeviceRow: Component<DeviceRowProps> = (props) => {
         <p class="text-xs text-text-muted">
           Added {formatDate(props.device.created_at)}
           {" · "}
-          Last used:{" "}
-          <span class={props.device.last_used ? "" : "italic"}>
-            {formatDate(props.device.last_used)}
-          </span>
+          Last used: <span class={props.device.last_used ? "" : "italic"}>{formatDate(props.device.last_used)}</span>
         </p>
       </div>
       <Button variant="danger" onClick={handleRevoke} disabled={revoking()}>
@@ -316,9 +320,7 @@ const RemoteAccessSettings: Component = () => {
     if (!list) return list;
     const overrides = labelOverrides();
     if (Object.keys(overrides).length === 0) return list;
-    return list.map((d) =>
-      d.token_hash in overrides ? { ...d, device_label: overrides[d.token_hash] } : d,
-    );
+    return list.map((d) => (d.token_hash in overrides ? { ...d, device_label: overrides[d.token_hash] ?? null } : d));
   };
 
   return (
@@ -326,9 +328,7 @@ const RemoteAccessSettings: Component = () => {
       <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-xl font-semibold text-text-primary">Remote Access</h2>
-          <p class="text-sm text-text-muted mt-1">
-            Paired devices can access Birdhouse remotely via a session cookie.
-          </p>
+          <p class="text-sm text-text-muted mt-1">Paired devices can access Birdhouse remotely via a session cookie.</p>
         </div>
         <Button variant="primary" onClick={() => setShowPairingModal(true)}>
           Add Device
@@ -354,9 +354,8 @@ const RemoteAccessSettings: Component = () => {
               <Tooltip.Content class="z-50 max-w-xs rounded-lg border border-border bg-surface-overlay px-3 py-2 text-xs text-text-primary shadow-xl leading-relaxed">
                 The URL your phone will use to reach this machine, including the port — e.g.{" "}
                 <code class="font-mono">https://home.example.com:50100</code> or{" "}
-                <code class="font-mono">http://100.x.x.x:50100</code>. Leave blank to use the
-                local address. Works with Tailscale IPs, custom domains, or tunnel services like
-                Cloudflare Tunnel or ngrok.
+                <code class="font-mono">http://100.x.x.x:50100</code>. Leave blank to use the local address. Works with
+                Tailscale IPs, custom domains, or tunnel services like Cloudflare Tunnel or ngrok.
                 <Tooltip.Arrow style={{ color: "var(--color-surface-overlay)" }} />
               </Tooltip.Content>
             </Tooltip.Portal>
@@ -386,25 +385,16 @@ const RemoteAccessSettings: Component = () => {
         <p class="text-sm text-text-muted italic">No paired devices.</p>
       </Show>
 
-      <Show when={devicesWithOverrides() && devicesWithOverrides()!.length > 0}>
+      <Show when={(devicesWithOverrides()?.length ?? 0) > 0}>
         <div>
-          <For each={devicesWithOverrides()}>
-            {(device) => (
-              <DeviceRow
-                device={device}
-                onRevoke={handleRevoke}
-                onLabelUpdate={handleLabelUpdate}
-              />
-            )}
+          <For each={devicesWithOverrides() ?? []}>
+            {(device) => <DeviceRow device={device} onRevoke={handleRevoke} onLabelUpdate={handleLabelUpdate} />}
           </For>
         </div>
       </Show>
 
       <Show when={showPairingModal()}>
-        <PairingModal
-          externalUrl={externalUrl()}
-          onClose={() => setShowPairingModal(false)}
-        />
+        <PairingModal externalUrl={externalUrl()} onClose={() => setShowPairingModal(false)} />
       </Show>
     </div>
   );

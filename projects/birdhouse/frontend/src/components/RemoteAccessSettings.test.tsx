@@ -25,6 +25,7 @@ const makeDevice = (overrides: Partial<Device> = {}): Device => ({
   last_used: null,
   is_active: 1,
   user_agent: null,
+  origin_host: null,
   ...overrides,
 });
 
@@ -75,10 +76,7 @@ describe("RemoteAccessSettings", () => {
   });
 
   it("renders a Revoke button per device", async () => {
-    mockListDevices.mockResolvedValue([
-      makeDevice(),
-      makeDevice({ token_hash: "xyz789", device_label: "laptop" }),
-    ]);
+    mockListDevices.mockResolvedValue([makeDevice(), makeDevice({ token_hash: "xyz789", device_label: "laptop" })]);
     render(() => <RemoteAccessSettings />);
     await waitFor(() => {
       const revokeButtons = screen.getAllByRole("button", { name: /revoke/i });
@@ -105,9 +103,7 @@ describe("RemoteAccessSettings", () => {
     mockListDevices.mockResolvedValue([makeDevice({ device_label: "my-phone" })]);
     render(() => <RemoteAccessSettings />);
 
-    const deviceNameBtn = await waitFor(() =>
-      screen.getByRole("button", { name: /my-phone/i }),
-    );
+    const deviceNameBtn = await waitFor(() => screen.getByRole("button", { name: /my-phone/i }));
     deviceNameBtn.click();
 
     await waitFor(() => {
@@ -121,9 +117,7 @@ describe("RemoteAccessSettings", () => {
 
     render(() => <RemoteAccessSettings />);
 
-    const deviceNameBtn = await waitFor(() =>
-      screen.getByRole("button", { name: /old-name/i }),
-    );
+    const deviceNameBtn = await waitFor(() => screen.getByRole("button", { name: /old-name/i }));
     deviceNameBtn.click();
 
     const input = await waitFor(() => screen.getByRole("textbox", { name: /device name/i }));
@@ -176,7 +170,7 @@ describe("RemoteAccessSettings", () => {
     await waitFor(() => screen.getByText(/pair a new device/i));
 
     const closeBtns = screen.getAllByRole("button", { name: /close/i });
-    closeBtns[0].click();
+    closeBtns[0]?.click();
 
     await waitFor(() => {
       expect(screen.queryByText(/pair a new device/i)).not.toBeInTheDocument();

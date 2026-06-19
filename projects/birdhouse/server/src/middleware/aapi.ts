@@ -2,8 +2,8 @@
 // ABOUTME: Loads workspace context from X-Birdhouse-Workspace-ID header for plugin authentication
 
 import type { Context, Next } from "hono";
-import { AUTH_COOKIE_NAME, isValidSessionCookie } from "../lib/auth";
 import { initAgentsDB } from "../lib/agents-db";
+import { AUTH_COOKIE_NAME, isValidSessionCookie } from "../lib/auth";
 import type { DataDB } from "../lib/data-db";
 import { getAgentsDbPath } from "../lib/database-paths";
 import { log } from "../lib/logger";
@@ -54,10 +54,7 @@ export function createAAPIAuthCheck(dataDb: DataDB) {
       }
       // Invalid cookie with no forwarded header — could still be local, but a
       // tampered cookie is suspicious. Reject it.
-      log.server.warn(
-        { path: c.req.path },
-        "AAPI auth rejected — invalid session cookie",
-      );
+      log.server.warn({ path: c.req.path }, "AAPI auth rejected — invalid session cookie");
       return c.json({ error: "Unauthorized" }, 401);
     }
 
@@ -70,10 +67,7 @@ export function createAAPIAuthCheck(dataDb: DataDB) {
     }
 
     // Path 3: forwarded request without a cookie — remote and unauthenticated
-    log.server.warn(
-      { path: c.req.path, forwardedFor },
-      "AAPI auth rejected — remote request without session cookie",
-    );
+    log.server.warn({ path: c.req.path, forwardedFor }, "AAPI auth rejected — remote request without session cookie");
     return c.json({ error: "Unauthorized" }, 401);
   };
 }

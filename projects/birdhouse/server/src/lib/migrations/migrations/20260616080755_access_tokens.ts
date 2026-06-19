@@ -14,9 +14,7 @@ export async function up(db: Kysely<Record<string, never>>): Promise<void> {
     )
   `.execute(db);
 
-  await sql`CREATE INDEX idx_access_tokens_is_active ON access_tokens(is_active)`.execute(
-    db,
-  );
+  await sql`CREATE INDEX idx_access_tokens_is_active ON access_tokens(is_active)`.execute(db);
 }
 
 export async function down(db: Kysely<Record<string, never>>): Promise<void> {

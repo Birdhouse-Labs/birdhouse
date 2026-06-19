@@ -428,7 +428,12 @@ export class DataDB {
 
   // ==================== Access Token Operations ====================
 
-  createAccessToken(tokenHash: string, deviceLabel: string | null, userAgent: string | null, originHost: string | null = null): void {
+  createAccessToken(
+    tokenHash: string,
+    deviceLabel: string | null,
+    userAgent: string | null,
+    originHost: string | null = null,
+  ): void {
     this.db
       .prepare(
         `INSERT INTO access_tokens (token_hash, device_label, created_at, last_used, is_active, user_agent, origin_host)
@@ -440,11 +445,9 @@ export class DataDB {
   }
 
   updateAccessTokenLabel(tokenHash: string, label: string): void {
-    this.db
-      .prepare("UPDATE access_tokens SET device_label = ? WHERE token_hash = ?")
-      .run(label, tokenHash);
+    this.db.prepare("UPDATE access_tokens SET device_label = ? WHERE token_hash = ?").run(label, tokenHash);
 
-    log.server.debug({ tokenHash: tokenHash.slice(0, 8) + "..." }, "Access token label updated");
+    log.server.debug({ tokenHash: `${tokenHash.slice(0, 8)}...` }, "Access token label updated");
   }
 
   getAccessToken(tokenHash: string): AccessToken | null {
@@ -466,7 +469,7 @@ export class DataDB {
   revokeAccessToken(tokenHash: string): void {
     this.db.prepare("UPDATE access_tokens SET is_active = 0 WHERE token_hash = ?").run(tokenHash);
 
-    log.server.info({ tokenHash: tokenHash.slice(0, 8) + "..." }, "Access token revoked");
+    log.server.info({ tokenHash: `${tokenHash.slice(0, 8)}...` }, "Access token revoked");
   }
 
   // ==================== Utility ====================

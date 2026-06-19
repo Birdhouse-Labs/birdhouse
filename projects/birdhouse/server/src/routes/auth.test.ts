@@ -92,7 +92,7 @@ describe("POST /api/auth/launch-token", () => {
       body: JSON.stringify({ token }),
     });
 
-    const body = (await (
+    const _body = (await (
       await app.request("/api/auth/launch-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -114,11 +114,11 @@ describe("POST /api/auth/launch-token", () => {
     const cookie = res2.headers.get("Set-Cookie") ?? "";
     const match = cookie.match(new RegExp(`${AUTH_COOKIE_NAME}=([^;]+)`));
     expect(match).not.toBeNull();
-    const sessionToken = match![1];
+    const sessionToken = match?.[1] ?? "";
     const sessionHash = hashToken(sessionToken);
     const record = dataDb.getAccessToken(sessionHash);
     expect(record).not.toBeNull();
-    expect(record!.is_active).toBe(1);
+    expect(record?.is_active).toBe(1);
   });
 
   test("returns 401 for invalid token", async () => {
@@ -255,11 +255,9 @@ describe("GET /api/auth/pair/complete", () => {
     });
     const initiateBody = (await initiateRes.json()) as { url: string };
     const pairingUrl = new URL(initiateBody.url);
-    const pairingToken = pairingUrl.searchParams.get("token")!;
+    const pairingToken = pairingUrl.searchParams.get("token") ?? "";
 
-    const res = await app.request(
-      `/api/auth/pair/complete?token=${encodeURIComponent(pairingToken)}`,
-    );
+    const res = await app.request(`/api/auth/pair/complete?token=${encodeURIComponent(pairingToken)}`);
 
     expect(res.status).toBe(302);
 
@@ -273,9 +271,7 @@ describe("GET /api/auth/pair/complete", () => {
   });
 
   test("returns 401 for invalid pairing token", async () => {
-    const res = await app.request(
-      "/api/auth/pair/complete?token=totally-fake-token",
-    );
+    const res = await app.request("/api/auth/pair/complete?token=totally-fake-token");
 
     expect(res.status).toBe(401);
   });
@@ -288,17 +284,13 @@ describe("GET /api/auth/pair/complete", () => {
     });
     const initiateBody = (await initiateRes.json()) as { url: string };
     const pairingUrl = new URL(initiateBody.url);
-    const pairingToken = pairingUrl.searchParams.get("token")!;
+    const pairingToken = pairingUrl.searchParams.get("token") ?? "";
 
     // Use it once
-    await app.request(
-      `/api/auth/pair/complete?token=${encodeURIComponent(pairingToken)}`,
-    );
+    await app.request(`/api/auth/pair/complete?token=${encodeURIComponent(pairingToken)}`);
 
     // Try again — must fail
-    const res2 = await app.request(
-      `/api/auth/pair/complete?token=${encodeURIComponent(pairingToken)}`,
-    );
+    const res2 = await app.request(`/api/auth/pair/complete?token=${encodeURIComponent(pairingToken)}`);
     expect(res2.status).toBe(401);
   });
 
