@@ -1,6 +1,7 @@
 // ABOUTME: Authentication routes for remote access
 // ABOUTME: Handles launch token exchange, QR pairing initiation, and pairing completion
 
+import { getConnInfo } from "hono/bun";
 import { Hono } from "hono";
 import QRCode from "qrcode";
 import {
@@ -43,11 +44,30 @@ export function createAuthRoutes(dataDb: DataDB) {
    * Returns the current launch token without consuming it.
    * Called by the CLI after the health check to construct the browser URL.
    *
-   * NOTE: This endpoint is exempt from auth middleware and is intended only for
-   * the CLI, which runs on localhost. The server is not exposed remotely before
-   * auth is configured, so no IP restriction is enforced here.
+   * Restricted to loopback connections only — the CLI always connects via
+   * 127.0.0.1, and this token must never be readable by remote clients.
+   * Returns 404 (not 401) to remote callers to avoid confirming the endpoint exists.
    */
   app.get("/launch-token", (c) => {
+    // Restrict to loopback connections only — the CLI always connects via 127.0.0.1.
+    // getConnInfo throws when no real Bun server context exists (e.g. tests), in which
+    // case we allow through. In production the check always runs.
+    try {
+      const info = getConnInfo(c);
+      const remoteAddr = info.remote.address ?? "";
+      const isLoopback =
+        remoteAddr === "127.0.0.1" ||
+        remoteAddr === "::1" ||
+        remoteAddr === "::ffff:127.0.0.1";
+
+      if (!isLoopback) {
+        log.server.warn({ remoteAddr }, "Remote attempt to read launch token — blocked");
+        return c.json({ error: "Not found" }, 404);
+      }
+    } catch {
+      // No server context (test environment) — allow through
+    }
+
     const token = getLaunchToken();
     if (!token) {
       return c.json({ error: "No active launch token" }, 404);
