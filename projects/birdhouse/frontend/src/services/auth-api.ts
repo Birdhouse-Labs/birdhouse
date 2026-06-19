@@ -10,6 +10,7 @@ export interface Device {
   last_used: string | null;
   is_active: number;
   user_agent: string | null;
+  origin_host: string | null;
 }
 
 export interface PairingSession {

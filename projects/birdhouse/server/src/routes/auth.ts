@@ -102,7 +102,8 @@ export function createAuthRoutes(dataDb: DataDB) {
     }
 
     const userAgent = c.req.header("User-Agent") ?? null;
-    const sessionToken = createSessionToken(dataDb, null, userAgent);
+    const originHost = c.req.header("Host") ?? null;
+    const sessionToken = createSessionToken(dataDb, null, userAgent, originHost);
     const isSecure = isSecureRequest(c.req.raw);
     const cookieHeader = buildSessionCookieHeader(sessionToken, isSecure);
 
@@ -206,7 +207,8 @@ export function createAuthRoutes(dataDb: DataDB) {
     }
 
     const userAgent = c.req.header("User-Agent") ?? null;
-    const sessionToken = createSessionToken(dataDb, null, userAgent);
+    const originHost = c.req.header("Host") ?? null;
+    const sessionToken = createSessionToken(dataDb, null, userAgent, originHost);
     const isSecure = isSecureRequest(c.req.raw);
     const cookieHeader = buildSessionCookieHeader(sessionToken, isSecure);
 
@@ -248,7 +250,8 @@ export function createAuthRoutes(dataDb: DataDB) {
     }
 
     const userAgent = c.req.header("User-Agent") ?? null;
-    const sessionToken = createSessionToken(dataDb, null, userAgent);
+    const originHost = c.req.header("Host") ?? null;
+    const sessionToken = createSessionToken(dataDb, null, userAgent, originHost);
     const isSecure = isSecureRequest(c.req.raw);
     const cookieHeader = buildSessionCookieHeader(sessionToken, isSecure);
 

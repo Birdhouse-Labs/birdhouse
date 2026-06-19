@@ -4,7 +4,7 @@
 import Tooltip from "corvu/tooltip";
 import { Copy, Info, Pencil } from "lucide-solid";
 import { type Component, createResource, createSignal, For, onMount, Show } from "solid-js";
-import { formatDeviceLabel } from "../lib/device-label";
+import { formatDeviceDisplay, formatDeviceLabel } from "../lib/device-label";
 import { type Device, initiatePairing, listDevices, revokeDevice, updateDeviceLabel } from "../services/auth-api";
 import Button from "./ui/Button";
 
@@ -156,7 +156,7 @@ interface DeviceRowProps {
 
 const DeviceRow: Component<DeviceRowProps> = (props) => {
   const displayLabel = () =>
-    props.device.device_label ?? formatDeviceLabel(props.device.user_agent);
+    props.device.device_label ?? formatDeviceDisplay(props.device.user_agent, props.device.origin_host);
 
   const [revoking, setRevoking] = createSignal(false);
   const [isEditing, setIsEditing] = createSignal(false);

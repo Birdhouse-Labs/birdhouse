@@ -61,6 +61,7 @@ export interface AccessToken {
   last_used: string | null;
   is_active: number; // 1 = active, 0 = revoked
   user_agent: string | null;
+  origin_host: string | null;
 }
 
 /**
@@ -427,13 +428,13 @@ export class DataDB {
 
   // ==================== Access Token Operations ====================
 
-  createAccessToken(tokenHash: string, deviceLabel: string | null, userAgent: string | null): void {
+  createAccessToken(tokenHash: string, deviceLabel: string | null, userAgent: string | null, originHost: string | null = null): void {
     this.db
       .prepare(
-        `INSERT INTO access_tokens (token_hash, device_label, created_at, last_used, is_active, user_agent)
-         VALUES (?, ?, ?, NULL, 1, ?)`,
+        `INSERT INTO access_tokens (token_hash, device_label, created_at, last_used, is_active, user_agent, origin_host)
+         VALUES (?, ?, ?, NULL, 1, ?, ?)`,
       )
-      .run(tokenHash, deviceLabel, new Date().toISOString(), userAgent);
+      .run(tokenHash, deviceLabel, new Date().toISOString(), userAgent, originHost);
 
     log.server.info({ deviceLabel }, "Access token created");
   }

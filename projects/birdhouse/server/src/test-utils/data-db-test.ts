@@ -114,7 +114,8 @@ export class TestDataDB extends DataDB {
         created_at TEXT NOT NULL,
         last_used TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
-        user_agent TEXT
+        user_agent TEXT,
+        origin_host TEXT
       );
     `);
   }

@@ -13,6 +13,7 @@ import * as migration_001 from "./migrations/2026-03-03_001_plaintext_secrets";
 import * as migration_002 from "./migrations/2026-03-14_002_skill_trigger_phrases";
 import * as migration_20260616080755 from "./migrations/20260616080755_access_tokens";
 import * as migration_20260618104429 from "./migrations/20260618104429_access_token_user_agent";
+import * as migration_20260619155917 from "./migrations/20260619155917_origin_host";
 
 const allMigrations: Record<string, Migration> = {
   "2026-02-28_000_initial_schema": migration_000,
@@ -20,6 +21,7 @@ const allMigrations: Record<string, Migration> = {
   "2026-03-14_002_skill_trigger_phrases": migration_002,
   "20260616080755_access_tokens": migration_20260616080755,
   "20260618104429_access_token_user_agent": migration_20260618104429,
+  "20260619155917_origin_host": migration_20260619155917,
 };
 
 /**

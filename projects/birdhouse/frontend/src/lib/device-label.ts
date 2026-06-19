@@ -1,5 +1,5 @@
-// ABOUTME: Formats a User-Agent string into a human-readable device label
-// ABOUTME: Uses bowser to parse UA; produces "OS · Browser" or "Vendor Model · Browser"
+// ABOUTME: Formats User-Agent and origin host into human-readable device labels
+// ABOUTME: Uses bowser to parse UA; produces "OS · Browser · host" style strings
 
 import Bowser from "bowser";
 
@@ -55,4 +55,22 @@ export function formatDeviceLabel(userAgent: string | null | undefined): string 
     return browserName;
   }
   return "Unknown device";
+}
+
+/**
+ * Combines the UA-derived label with origin host for full display.
+ * Falls back gracefully when either piece is missing.
+ *
+ * Examples:
+ *   "macOS · Firefox · home.crayment.com:50100"
+ *   "iPhone · Safari · home.crayment.com:50100"
+ *   "macOS · Chrome" (no origin host stored)
+ */
+export function formatDeviceDisplay(
+  userAgent: string | null | undefined,
+  originHost: string | null | undefined,
+): string {
+  const label = formatDeviceLabel(userAgent);
+  if (!originHost) return label;
+  return `${label} · ${originHost}`;
 }
