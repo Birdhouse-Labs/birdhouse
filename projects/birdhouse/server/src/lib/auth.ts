@@ -14,8 +14,8 @@ export const LAUNCH_TOKEN_TTL_MS = 60_000;
 /** Pairing token TTL: 5 minutes (for QR code phone pairing) */
 export const PAIRING_TOKEN_TTL_MS = 5 * 60 * 1000;
 
-/** Session cookie max-age: 1 year */
-export const SESSION_COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // seconds
+/** Session cookie max-age: 10 years (browsers cap this, but treat it as "persist indefinitely") */
+export const SESSION_COOKIE_MAX_AGE = 10 * 365 * 24 * 60 * 60; // seconds
 
 // ==================== Token Utilities ====================
 
