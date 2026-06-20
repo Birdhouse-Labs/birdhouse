@@ -49,6 +49,28 @@ const frontendProc = Bun.spawn(['bun', 'run', 'dev'], {
   stderr: 'inherit',
 });
 
+// After the server is healthy, fetch and print the launch token URL.
+// Runs in the background — does not block startup output.
+(async () => {
+  const serverUrl = `http://localhost:${SERVER_PORT}`;
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`${serverUrl}/api/health`, { signal: AbortSignal.timeout(1000) });
+      if (res.ok) break;
+    } catch { /* not ready yet */ }
+    await new Promise(r => setTimeout(r, 500));
+  }
+  try {
+    const res = await fetch(`${serverUrl}/api/auth/launch-token`, { signal: AbortSignal.timeout(2000) });
+    if (res.ok) {
+      const { token } = await res.json() as { token: string };
+      console.log(`\n🔑 Open in browser (token expires in 60s):`);
+      console.log(`   http://localhost:${FRONTEND_PORT}/?launch_token=${token}\n`);
+    }
+  } catch { /* token unavailable — user can authenticate via QR */ }
+})();
+
 // Handle shutdown gracefully
 // shuttingDown: set on first SIGINT to suppress child exit error messages
 // shutdownStarted: set when shutdown() begins to prevent double-execution
