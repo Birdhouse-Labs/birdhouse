@@ -6,8 +6,10 @@
  *
  * Priority:
  * 1. VITE_API_BASE env variable (if set)
- * 2. Production mode: Use window.location.origin (frontend and API on same port)
- * 3. Development mode: Use VITE_SERVER_PORT (Vite dev server on different port)
+ * 2. Always use window.location.origin — works for both dev and production.
+ *    In production, frontend and API share one port.
+ *    In dev, Vite proxies /api and /aapi to the backend server, so the
+ *    frontend port is the correct target for all API requests.
  */
 function getApiBaseUrl(): string {
   // Check for explicit override
@@ -15,24 +17,14 @@ function getApiBaseUrl(): string {
     return import.meta.env["VITE_API_BASE"] as string;
   }
 
-  // In production (CLI), frontend and API are served on the same port by the same server
-  // Use window.location.origin to automatically match whatever port the server is running on
-  if (import.meta.env["PROD"] && typeof window !== "undefined") {
+  // Use window.location.origin in all cases — the Vite proxy handles routing
+  // API requests to the correct backend port in dev mode.
+  if (typeof window !== "undefined") {
     return window.location.origin;
   }
 
-  // In development, Vite dev server (50120) is separate from API server (50121)
-  // Use VITE_SERVER_PORT to point to the API server
-  if (typeof window !== "undefined") {
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    const serverPort = import.meta.env["VITE_SERVER_PORT"] || "50121";
-    return `${protocol}//${hostname}:${serverPort}`;
-  }
-
   // Fallback for SSR/build-time (shouldn't happen in practice)
-  const serverPort = import.meta.env["VITE_SERVER_PORT"] || "50121";
-  return `http://localhost:${serverPort}`;
+  return "http://localhost:50120";
 }
 
 /**
