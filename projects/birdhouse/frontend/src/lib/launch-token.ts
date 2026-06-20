@@ -31,14 +31,17 @@ export async function exchangeLaunchToken(): Promise<void> {
     window.location.pathname + (remainingQuery ? `?${remainingQuery}` : "") + (window.location.hash || "");
 
   try {
-    await fetch(`${API_BASE_URL}/api/auth/launch-token`, {
+    const res = await fetch(`${API_BASE_URL}/api/auth/launch-token`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
     });
-  } catch {
-    // Silent failure — the URL will still be cleaned up below
+    if (!res.ok) {
+      console.warn("[birdhouse] Launch token exchange failed:", res.status, res.statusText);
+    }
+  } catch (err) {
+    console.warn("[birdhouse] Launch token exchange error:", err);
   } finally {
     // Always remove the launch_token from the URL regardless of outcome
     window.history.replaceState(null, "", cleanedUrl);

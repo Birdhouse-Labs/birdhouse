@@ -49,17 +49,29 @@ export async function revokeDevice(tokenHash: string): Promise<void> {
 }
 
 /**
- * Completes pairing by submitting a pasted token.
- * Returns true on success, false if the token is invalid or expired.
+ * Redeems a pasted token — tries the launch token endpoint first, then
+ * the pairing token endpoint. This lets users paste either type of token
+ * from the unauthorized screen without knowing which kind they have.
+ * Returns true on success, false if neither endpoint accepts the token.
  */
 export async function completePairingWithToken(token: string): Promise<boolean> {
-  const response = await fetch(`${API_ENDPOINT_BASE}/auth/pair/complete`, {
+  // Try launch token first (from dev.ts output or CLI)
+  const launchRes = await fetch(`${API_ENDPOINT_BASE}/auth/launch-token`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }),
   });
-  return response.ok;
+  if (launchRes.ok) return true;
+
+  // Fall back to pairing token (from QR modal)
+  const pairRes = await fetch(`${API_ENDPOINT_BASE}/auth/pair/complete`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  return pairRes.ok;
 }
 
 /**
