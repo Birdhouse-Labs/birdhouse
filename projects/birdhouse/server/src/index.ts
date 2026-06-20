@@ -116,15 +116,25 @@ const app = new Hono();
 const posthogDeps = await createPosthogDeps();
 
 // Middleware: CORS
-// When BIRDHOUSE_ALLOWED_ORIGINS is set (remote access), use that origin with
-// credentials support. Otherwise keep open CORS for backwards compatibility.
+// Determine allowed origins for CORS:
+//   - In dev mode, the Vite frontend (PORT-1) is a separate origin — always allow it
+//     so credentials: "include" fetch calls work across the port boundary.
+//   - BIRDHOUSE_ALLOWED_ORIGINS adds additional origins (e.g. Tailscale hostname).
+//   - In production (same port), no cross-origin requests are made so this is moot.
 const allowedOrigins = process.env.BIRDHOUSE_ALLOWED_ORIGINS;
+const devFrontendOrigin = isDevMode ? `http://localhost:${PORT - 1}` : null;
+
+const corsOrigins: string[] = [
+  ...(devFrontendOrigin ? [devFrontendOrigin] : []),
+  ...(allowedOrigins ? [allowedOrigins] : []),
+];
+
 app.use(
   "*",
   cors(
-    allowedOrigins
+    corsOrigins.length > 0
       ? {
-          origin: allowedOrigins,
+          origin: corsOrigins,
           credentials: true,
           allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
           allowHeaders: ["Content-Type", "Authorization"],
