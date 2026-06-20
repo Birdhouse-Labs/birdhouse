@@ -15,24 +15,14 @@ export default defineConfig(({ command }) => ({
     host: "0.0.0.0", // Listen on all network interfaces for external access
     allowedHosts,
     strictPort: true, // Fail if port is in use instead of trying others
-    // Proxy API and ingest routes to the backend server.
-    // In dev, frontend (50120) and server (50121) are separate processes.
-    // Proxying /api, /aapi, and /ingest through the frontend port means only
-    // one port needs to be exposed for remote access.
-    proxy: {
-      "/api": {
-        target: `http://localhost:${process.env.VITE_SERVER_PORT || "50121"}`,
-        changeOrigin: true,
-      },
-      "/aapi": {
-        target: `http://localhost:${process.env.VITE_SERVER_PORT || "50121"}`,
-        changeOrigin: true,
-      },
+    // Proxy PostHog ingest to backend so requests go through our server,
+    // avoiding adblockers in both dev and production.
+    proxy: command === "serve" ? {
       "/ingest": {
         target: `http://localhost:${process.env.VITE_SERVER_PORT || "50121"}`,
         changeOrigin: true,
       },
-    },
+    } : undefined,
   },
   preview: {
     port: process.env.PORT ? Number(process.env.PORT) : 50120,
