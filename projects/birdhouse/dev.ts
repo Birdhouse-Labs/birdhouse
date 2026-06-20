@@ -50,9 +50,13 @@ const frontendProc = Bun.spawn(['bun', 'run', 'dev'], {
 });
 
 // After the server is healthy, fetch and print the launch token URL.
+// Re-prints whenever the server reloads (bun --watch wipes the in-memory token,
+// so a fresh token appearing means a reload just completed).
 // Runs in the background — does not block startup output.
 (async () => {
   const serverUrl = `http://localhost:${SERVER_PORT}`;
+
+  // Wait for server to be healthy
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     try {
@@ -61,14 +65,26 @@ const frontendProc = Bun.spawn(['bun', 'run', 'dev'], {
     } catch { /* not ready yet */ }
     await new Promise(r => setTimeout(r, 500));
   }
-  try {
-    const res = await fetch(`${serverUrl}/api/auth/launch-token`, { signal: AbortSignal.timeout(2000) });
-    if (res.ok) {
-      const { token } = await res.json() as { token: string };
-      console.log(`\n🔑 Open in browser (token expires in 60s):`);
-      console.log(`   http://localhost:${FRONTEND_PORT}/?launch_token=${token}\n`);
-    }
-  } catch { /* token unavailable — user can authenticate via QR */ }
+
+  // Poll for fresh tokens. When a new token appears (after startup or reload), print it.
+  let lastToken = '';
+  while (!shuttingDown) {
+    try {
+      const res = await fetch(`${serverUrl}/api/auth/launch-token`, { signal: AbortSignal.timeout(1000) });
+      if (res.ok) {
+        const { token } = await res.json() as { token: string };
+        if (token && token !== lastToken) {
+          lastToken = token;
+          console.log(`\n🔑 Open in browser (token expires in 60s):`);
+          console.log(`   http://localhost:${FRONTEND_PORT}/?launch_token=${token}\n`);
+        }
+      } else {
+        // Token expired or consumed — clear so we reprint when a new one appears
+        lastToken = '';
+      }
+    } catch { /* server temporarily unreachable (reloading) */ lastToken = ''; }
+    await new Promise(r => setTimeout(r, 2000));
+  }
 })();
 
 // Handle shutdown gracefully
