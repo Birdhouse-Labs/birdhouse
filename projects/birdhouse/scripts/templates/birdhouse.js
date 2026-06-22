@@ -370,9 +370,11 @@ async function runUI(args = []) {
     if (tokenRes.ok) {
       const tokenData = await tokenRes.json();
       launchToken = tokenData.token || null;
+    } else {
+      log(`🔑 Could not get launch token, opening without auth`);
     }
   } catch (err) {
-    // Silent failure — token injection is best-effort
+    log(`🔑 Could not get launch token, opening without auth`);
   }
 
   const hash = `#/setup?directory=${encodeURIComponent(workspaceRoot)}`;
@@ -380,7 +382,7 @@ async function runUI(args = []) {
     ? `http://localhost:${port}/?launch_token=${encodeURIComponent(launchToken)}${hash}`
     : `http://localhost:${port}/${hash}`;
 
-  log(`🚀 Opening Birdhouse at http://localhost:${port}/`);
+  log(`🚀 Opening Birdhouse at ${url}`);
   
   if (shouldManageServer) {
     log('');
