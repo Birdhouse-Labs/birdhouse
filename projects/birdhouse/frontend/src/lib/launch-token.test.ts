@@ -15,7 +15,7 @@ const mockReplaceState = vi.fn();
  */
 function setupLocation(search: string, hash = "#/", pathname = "/") {
   Object.defineProperty(window, "location", {
-    value: { search, hash, pathname },
+    value: { search, hash, pathname, origin: "http://localhost:50121" },
     writable: true,
     configurable: true,
   });

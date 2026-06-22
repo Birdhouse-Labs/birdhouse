@@ -5,9 +5,7 @@ import { API_ENDPOINT_BASE } from "../config/api";
 
 // Auth endpoints use window.location.origin so they work same-origin in dev
 // (Vite proxies /api/auth/* to the backend, avoiding cross-origin CORS issues).
-const AUTH_BASE = typeof window !== "undefined"
-  ? `${window.location.origin}/api/auth`
-  : `${API_ENDPOINT_BASE}/auth`;
+const AUTH_BASE = typeof window !== "undefined" ? `${window.location.origin}/api/auth` : `${API_ENDPOINT_BASE}/auth`;
 
 export interface Device {
   token_hash: string;

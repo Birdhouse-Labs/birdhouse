@@ -5,9 +5,9 @@
 import { useNavigate } from "@solidjs/router";
 import { RefreshCw } from "lucide-solid";
 import { type Component, createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { API_ENDPOINT_BASE } from "../config/api";
 import { usePageTitle } from "../lib/page-title";
 import { useModalRoute } from "../lib/routing";
-import { API_ENDPOINT_BASE } from "../config/api";
 import { completePairingWithToken } from "../services/auth-api";
 import { fetchWorkspaces, fetchWorkspacesHealth, HttpError } from "../services/workspaces-api";
 import type { Workspace, WorkspaceHealthStatus as WorkspaceHealthStatusType } from "../types/workspace";
@@ -104,13 +104,10 @@ const UnauthorizedScreen = () => {
         </h1>
         <p class="text-text-primary font-medium">This is a private instance.</p>
         <p class="text-text-muted text-sm max-w-xs">
-          Scan the QR code from{" "}
-          <strong class="text-text-primary">Settings → Mobile Access</strong>{" "}
-          on the computer running Birdhouse.
+          Scan the QR code from <strong class="text-text-primary">Settings → Mobile Access</strong> on the computer
+          running Birdhouse.
         </p>
-        <p class="text-xs text-text-muted font-mono opacity-50 break-all max-w-xs">
-          API: {API_ENDPOINT_BASE}
-        </p>
+        <p class="text-xs text-text-muted font-mono opacity-50 break-all max-w-xs">API: {API_ENDPOINT_BASE}</p>
       </div>
 
       {/* Token paste input */}
@@ -143,9 +140,7 @@ const UnauthorizedScreen = () => {
 const ErrorMessage = (props: { error: Error; onRetry: () => void }) => (
   <div class="flex flex-col items-center justify-center h-full gap-4 p-4">
     <p class="text-danger text-center">Failed to load workspaces: {props.error.message}</p>
-    <p class="text-xs text-text-muted font-mono opacity-50 break-all text-center max-w-xs">
-      API: {API_ENDPOINT_BASE}
-    </p>
+    <p class="text-xs text-text-muted font-mono opacity-50 break-all text-center max-w-xs">API: {API_ENDPOINT_BASE}</p>
     <Button onClick={props.onRetry} variant="primary">
       Retry
     </Button>

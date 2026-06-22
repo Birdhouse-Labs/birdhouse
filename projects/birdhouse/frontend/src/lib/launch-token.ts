@@ -1,9 +1,12 @@
 // ABOUTME: Launch token exchange on app boot
 // ABOUTME: Exchanges a one-time launch token from the URL for a persistent session cookie
 
-// Use window.location.origin so launch token exchange is same-origin —
-// Vite proxies /api/auth/* in dev, and in production frontend and API share one port.
-const AUTH_ORIGIN = typeof window !== "undefined" ? window.location.origin : "";
+import { API_BASE_URL } from "../config/api";
+
+// Auth exchange uses same-origin when window is available — Vite proxies /api/auth/*
+// in dev, and in production frontend and API share one port. Falls back to API_BASE_URL
+// in non-browser environments (tests, SSR).
+const AUTH_ORIGIN = typeof window !== "undefined" ? window.location.origin : API_BASE_URL;
 
 /**
  * Checks for a ?launch_token= query parameter, POSTs it to the server to
@@ -33,17 +36,14 @@ export async function exchangeLaunchToken(): Promise<void> {
     window.location.pathname + (remainingQuery ? `?${remainingQuery}` : "") + (window.location.hash || "");
 
   try {
-    const res =     await fetch(`${AUTH_ORIGIN}/api/auth/launch-token`, {
+    await fetch(`${AUTH_ORIGIN}/api/auth/launch-token`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
     });
-    if (!res.ok) {
-      console.warn("[birdhouse] Launch token exchange failed:", res.status, res.statusText);
-    }
-  } catch (err) {
-    console.warn("[birdhouse] Launch token exchange error:", err);
+  } catch {
+    // Silent failure — the URL will still be cleaned up below
   } finally {
     // Always remove the launch_token from the URL regardless of outcome
     window.history.replaceState(null, "", cleanedUrl);
