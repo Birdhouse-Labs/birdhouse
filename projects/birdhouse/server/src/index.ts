@@ -290,6 +290,7 @@ warmRecentWorkspacesInBackground(dataDb, opencodeManager);
 
 export default {
   port: PORT,
+  hostname: "0.0.0.0", // Bind to all IPv4 interfaces for external access
   fetch: app.fetch,
   idleTimeout: 0, // Disable timeout for long-lived SSE connections
 };
