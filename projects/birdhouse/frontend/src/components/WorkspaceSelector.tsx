@@ -140,28 +140,18 @@ const UnauthorizedScreen = () => {
   );
 };
 
-const ErrorMessage = (props: { error: Error; onRetry: () => void }) => {
-  const e = props.error as Error & { url?: string; cause?: Error };
-  const isHttp = props.error instanceof HttpError;
-  const typeName = isHttp
-    ? `HttpError ${(props.error as HttpError).status}`
-    : `${props.error.name ?? "Error"}: ${props.error.message}`;
-  const causeStr = e.cause ? `${e.cause.name}: ${e.cause.message}` : null;
-
-  return (
-    <div class="flex flex-col items-center justify-center h-full gap-4 p-4">
-      <p class="text-danger text-center">Failed to load workspaces: {props.error.message}</p>
-      <div class="text-xs text-text-muted font-mono text-center space-y-0.5 max-w-xs break-all opacity-70">
-        <p>url: {e.url ?? API_ENDPOINT_BASE}</p>
-        <p>err: {typeName}</p>
-        <Show when={causeStr}><p>cause: {causeStr}</p></Show>
-      </div>
-      <Button onClick={props.onRetry} variant="primary">
-        Retry
-      </Button>
+const ErrorMessage = (props: { error: Error; onRetry: () => void }) => (
+  <div class="flex flex-col items-center justify-center h-full gap-4 p-4">
+    <p class="text-danger text-center">Failed to load workspaces: {props.error.message}</p>
+    <div class="text-xs text-text-muted font-mono text-center space-y-1 max-w-xs break-all opacity-70">
+      <p>API: {API_ENDPOINT_BASE}</p>
+      <p>type: {props.error instanceof HttpError ? `HttpError ${(props.error as HttpError).status}` : props.error.constructor?.name ?? "Error"}</p>
     </div>
-  );
-};
+    <Button onClick={props.onRetry} variant="primary">
+      Retry
+    </Button>
+  </div>
+);
 
 const WorkspaceSelector: Component = () => {
   usePageTitle("Workspaces - Birdhouse");

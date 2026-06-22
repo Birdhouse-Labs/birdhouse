@@ -53,12 +53,7 @@ export async function fetchWorkspaces(): Promise<Workspace[]> {
     return response.json();
   } catch (error) {
     if (error instanceof HttpError) throw error;
-    const original = error instanceof Error ? error : new Error("Unknown error");
-    const wrapped = new Error(`Failed to fetch workspaces: ${original.message}`);
-    wrapped.name = original.name; // preserve TypeError, etc.
-    (wrapped as Error & { url?: string; cause?: unknown }).url = url;
-    (wrapped as Error & { url?: string; cause?: unknown }).cause = original;
-    throw wrapped;
+    throw new Error(`Failed to fetch workspaces: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
 
