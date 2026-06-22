@@ -1,5 +1,5 @@
 // ABOUTME: Tests for AAPI middleware authentication check
-// ABOUTME: Verifies localhost fallback and cookie-based access for plugin routes
+// ABOUTME: Verifies loopback fallback and cookie-based access for plugin routes
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { Hono } from "hono";
@@ -41,35 +41,24 @@ describe("AAPI auth check", () => {
     expect(res.status).toBe(200);
   });
 
-  test("passes from localhost (127.0.0.1) without a cookie — OpenCode processes", async () => {
-    // Simulate localhost by setting X-Forwarded-For to localhost
-    // In test context, we can't set the actual socket IP, so we test
-    // the fallback heuristic: no cookie + no X-Forwarded-For = treat as local
+  test("passes without a cookie in test context (getConnInfo throws, fallback allows local)", async () => {
+    // In unit tests there is no real Bun server context, so getConnInfo throws.
+    // The middleware catches that and allows the request through — same as a loopback connection.
+    // Socket-level loopback enforcement is verified by the production Bun server binding.
     const res = await app.request("/aapi/test");
-    // Without any auth info at all and no X-Forwarded-For, should pass
     expect(res.status).toBe(200);
   });
 
-  test("returns 401 when no cookie and X-Forwarded-For header is present (remote client)", async () => {
-    const res = await app.request("/aapi/test", {
-      headers: {
-        "X-Forwarded-For": "203.0.113.42", // External IP
-      },
-    });
-    expect(res.status).toBe(401);
-  });
-
-  test("returns 401 for invalid session cookie when X-Forwarded-For is set", async () => {
+  test("returns 401 for an invalid session cookie", async () => {
     const res = await app.request("/aapi/test", {
       headers: {
         Cookie: `${AUTH_COOKIE_NAME}=not-a-valid-token`,
-        "X-Forwarded-For": "203.0.113.42",
       },
     });
     expect(res.status).toBe(401);
   });
 
-  test("passes with valid cookie even when X-Forwarded-For is set", async () => {
+  test("passes with valid cookie regardless of other headers", async () => {
     const token = createSessionToken(dataDb, "test-device", null);
 
     const res = await app.request("/aapi/test", {

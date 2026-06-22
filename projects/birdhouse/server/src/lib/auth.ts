@@ -146,6 +146,23 @@ export function consumePairingToken(token: string): boolean {
   return true;
 }
 
+// ==================== Cookie Parsing ====================
+
+/**
+ * Parses a cookie string and returns the value for the given name.
+ * Shared by auth middleware and AAPI middleware.
+ */
+export function parseCookie(cookieHeader: string | null, name: string): string | null {
+  if (!cookieHeader) return null;
+  for (const part of cookieHeader.split(";")) {
+    const [key, ...rest] = part.trim().split("=");
+    if (key.trim() === name) {
+      return rest.join("=").trim();
+    }
+  }
+  return null;
+}
+
 // ==================== Session Validation ====================
 
 /**

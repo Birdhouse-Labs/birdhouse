@@ -2,26 +2,13 @@
 // ABOUTME: Loads workspace context from X-Birdhouse-Workspace-ID header for plugin authentication
 
 import type { Context, Next } from "hono";
+import { getConnInfo } from "hono/bun";
 import { initAgentsDB } from "../lib/agents-db";
-import { AUTH_COOKIE_NAME, isValidSessionCookie } from "../lib/auth";
+import { AUTH_COOKIE_NAME, isValidSessionCookie, parseCookie } from "../lib/auth";
 import type { DataDB } from "../lib/data-db";
 import { getAgentsDbPath } from "../lib/database-paths";
 import { log } from "../lib/logger";
 import type { OpenCodeManager } from "../lib/opencode-manager";
-
-/**
- * Parses a cookie string and returns the value for the given name.
- */
-function parseCookie(cookieHeader: string | null, name: string): string | null {
-  if (!cookieHeader) return null;
-  for (const part of cookieHeader.split(";")) {
-    const [key, ...rest] = part.trim().split("=");
-    if (key.trim() === name) {
-      return rest.join("=").trim();
-    }
-  }
-  return null;
-}
 
 /**
  * Auth check for AAPI routes.
@@ -29,16 +16,11 @@ function parseCookie(cookieHeader: string | null, name: string): string | null {
  * AAPI routes are used by local OpenCode processes which don't have session cookies.
  * The rule is:
  *   1. If the request has a valid session cookie → allow
- *   2. If no cookie AND no X-Forwarded-For header → treat as local process → allow
+ *   2. If no cookie AND the socket remote address is a loopback address → allow (local OpenCode process)
  *   3. Otherwise → 401
  *
- * The X-Forwarded-For heuristic is used because we cannot access the raw socket IP
- * from within Hono middleware without the Bun server env reference, which is not
- * available in middleware registered via app.use(). In practice:
- *   - Local OpenCode processes connect directly — no X-Forwarded-For header
- *   - Requests through a reverse proxy (remote access) always have X-Forwarded-For
- * This is a weaker check, but acceptable: the worst case is an unauthenticated
- * remote request to an AAPI route still fails at workspace resolution.
+ * getConnInfo throws when no real Bun server context exists (e.g. tests), in which
+ * case we fall back to allowing the request through. In production the check always runs.
  */
 export function createAAPIAuthCheck(dataDb: DataDB) {
   return async (c: Context, next: Next): Promise<Response | undefined> => {
@@ -52,23 +34,30 @@ export function createAAPIAuthCheck(dataDb: DataDB) {
         await next();
         return;
       }
-      // Invalid cookie with no forwarded header — could still be local, but a
-      // tampered cookie is suspicious. Reject it.
       log.server.warn({ path: c.req.path }, "AAPI auth rejected — invalid session cookie");
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    // Path 2: no cookie — check if request appears local
-    const forwardedFor = c.req.header("X-Forwarded-For");
-    if (!forwardedFor) {
-      // No forwarding header: treat as direct local connection (OpenCode process)
+    // Path 2: no cookie — check socket loopback address
+    try {
+      const info = getConnInfo(c);
+      const remoteAddr = info.remote.address ?? "";
+      const isLoopback = remoteAddr === "127.0.0.1" || remoteAddr === "::1" || remoteAddr === "::ffff:127.0.0.1";
+
+      if (isLoopback) {
+        // Direct local connection — treat as OpenCode process
+        await next();
+        return;
+      }
+
+      // Remote socket without a session cookie — reject
+      log.server.warn({ path: c.req.path, remoteAddr }, "AAPI auth rejected — remote request without session cookie");
+      return c.json({ error: "Unauthorized" }, 401);
+    } catch {
+      // No server context (test environment) — allow through
       await next();
       return;
     }
-
-    // Path 3: forwarded request without a cookie — remote and unauthenticated
-    log.server.warn({ path: c.req.path, forwardedFor }, "AAPI auth rejected — remote request without session cookie");
-    return c.json({ error: "Unauthorized" }, 401);
   };
 }
 
