@@ -143,9 +143,10 @@ const UnauthorizedScreen = () => {
 const ErrorMessage = (props: { error: Error; onRetry: () => void }) => (
   <div class="flex flex-col items-center justify-center h-full gap-4 p-4">
     <p class="text-danger text-center">Failed to load workspaces: {props.error.message}</p>
-    <p class="text-xs text-text-muted font-mono opacity-50 break-all text-center max-w-xs">
-      API: {API_ENDPOINT_BASE}
-    </p>
+    <div class="text-xs text-text-muted font-mono text-center space-y-1 max-w-xs break-all opacity-70">
+      <p>API: {API_ENDPOINT_BASE}</p>
+      <p>type: {props.error instanceof HttpError ? `HttpError ${(props.error as HttpError).status}` : props.error.constructor?.name ?? "Error"}</p>
+    </div>
     <Button onClick={props.onRetry} variant="primary">
       Retry
     </Button>
