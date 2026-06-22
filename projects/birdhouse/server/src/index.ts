@@ -126,7 +126,12 @@ const devFrontendOrigin = isDevMode ? `http://localhost:${PORT - 1}` : null;
 
 const corsOrigins: string[] = [
   ...(devFrontendOrigin ? [devFrontendOrigin] : []),
-  ...(allowedOrigins ? allowedOrigins.split(",").map((s) => s.trim()).filter(Boolean) : []),
+  ...(allowedOrigins
+    ? allowedOrigins
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : []),
 ];
 
 app.use(
