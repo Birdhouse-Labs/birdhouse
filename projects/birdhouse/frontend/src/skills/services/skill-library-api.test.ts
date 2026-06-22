@@ -49,7 +49,9 @@ describe("fetchSkillLibrary", () => {
 
     const result = await fetchSkillLibrary("ws_test");
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/workspace/ws_test/skills"), { credentials: "include" });
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/workspace/ws_test/skills"), {
+      credentials: "include",
+    });
     expect(result).toEqual({
       skills: [
         {

@@ -63,7 +63,9 @@ describe("fetchWorkspaceConfig", () => {
 
     const result = await fetchWorkspaceConfig(mockWorkspaceId);
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/api/workspaces/${mockWorkspaceId}/config`), { credentials: "include" });
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/api/workspaces/${mockWorkspaceId}/config`), {
+      credentials: "include",
+    });
     expect(configAdapter.adaptWorkspaceConfig).toHaveBeenCalledWith(mockAPIResponse);
     expect(result).toBe(mockAdaptedConfig);
   });
@@ -78,7 +80,9 @@ describe("fetchWorkspaceConfig", () => {
 
     await fetchWorkspaceConfig("ws_custom456");
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/workspaces/ws_custom456/config"), { credentials: "include" });
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/workspaces/ws_custom456/config"), {
+      credentials: "include",
+    });
   });
 
   it("should throw error with JSON error message on HTTP 404", async () => {

@@ -67,7 +67,9 @@ describe("getDraft", () => {
 
     await getDraft("ws_abc", "agent_xyz");
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/workspace/ws_abc/drafts/agent_xyz"), { credentials: "include" });
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/workspace/ws_abc/drafts/agent_xyz"), {
+      credentials: "include",
+    });
   });
 });
 
