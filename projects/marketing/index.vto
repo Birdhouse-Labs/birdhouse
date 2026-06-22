@@ -1,11 +1,11 @@
 ---
-title: Birdhouse | Code with AI Agent Teams
+title: Birdhouse | A UI for your AI agents
 layout: layout.vto
 download_link: https://github.com/birdhouse-labs/birdhouse
 metas:
   site: Birdhouse Labs
-  title: Birdhouse | Code with AI Agent Teams
-  description: Code with multi-agent teams. Birdhouse is an AI agent orchestration platform where agents actively communicate and collaborate as a team.
+  title: Birdhouse | A UI for your AI agents
+  description: A UI for your AI agents. Agents communicate, collaborate, and are organized as a tree.
   keywords: [AI agents, multi-agent systems, agent orchestration, AI development, collaborative AI, AI coding, agentic development, AI team collaboration]
   author: Birdhouse Labs
   robots: index, follow
@@ -22,12 +22,12 @@ metas:
   class="px-4 py-2 navbar justify-between fixed group data-[scrolling=true]:bg-base-100 bg-transparent top-0 z-50"
 >
   <div>
-    <img class="w-[200px]" src="assets/logo.webp" alt="Birdhouse Labs" />
+    <img class="w-[200px]" src="assets/logo.png" alt="Birdhouse Labs" />
   </div>
 
   <div class="flex-none">
     <a href="{{ download_link }}" target="_blank" class="btn btn-primary btn-sm md:btn-md">
-      Get Birdhouse
+      View on GitHub
     </a>
   </div>
 </div>
@@ -44,27 +44,18 @@ metas:
       <p
         class="py-6 text-4xl md:text-5xl text-center text-base-content/90 leading-tight max-w-3xl lg:mx-auto mb-4 md:mb-6"
       >
-        Code with <br class="md:hidden block" /> multi-agent teams. <br /> Soar
-        to new heights.
+        A UI for your AI agents.<br />
+        Communicate. Collaborate.<br class="hidden md:block" />
+        Organized as a tree.
       </p>
-      <div class="flex-col md:flex-row justify-between md-4 md:mb-6">
+      <div class="flex justify-center mb-4 md:mb-6">
         <a
           href="{{ download_link }}"
           target="_blank"
-          class="btn btn-primary btn-lg md:btn-lg w-full md:w-auto mb-4 md:mb-0 md:mx-4 gap-2 px-8"
+          class="btn btn-primary btn-lg gap-2 px-8"
         >
-          <i data-lucide="bird"></i>
-          Get Birdhouse
-        </a>
-        <a
-          href="https://x.com/BirdhouseLabsAI"
-          target="_blank"
-          class="btn btn-outline btn-lg md:btn-lg w-full md:w-auto"
-        >
-          Follow us
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-          </svg>
+          <i data-lucide="github"></i>
+          View on GitHub
         </a>
       </div>
     </div>
@@ -86,8 +77,6 @@ metas:
       </div>
     </div>
 
-    <a class="mt-8" href="https://www.producthunt.com/products/birdhouse?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-birdhouse-2" target="_blank" rel="noopener noreferrer"><img alt="Birdhouse - Where your AI agents become a team | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1095963&amp;theme=dark&amp;t=1773295693115"></a>
-
     <div
       class="md:mockup-window border border-[#2a2622] mt-8 lg:w-2/3 bg-[#2a2622]"
     >
@@ -96,210 +85,15 @@ metas:
         class="border-t border-[#2a2622]"
       >
         <img
-          src="/assets/hero-screenshot.webp"
+          src="/assets/hero-screenshot.png"
           alt="A screenshot of Birdhouse"
         />
       </div>
     </div>
   </div>
 </div>
-<div
-  class="news_gsap flex overflow-hidden bg-primary py-4 opacity-0 transition-opacity duration-300 hidden"
-  id="ticker-container"
->
-  <div id="ticker" class="flex items-center justify-center px-4">
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-  </div>
-</div>
 
-<!-- FEATURE 1: AGENT ORCHESTRATION -->
-<div
-  id="features"
-  class="relative hero min-h-fit pt-24 pb-12 md:py-24 bg-base-100 overflow-hidden"
->
-  <div
-    class="relative z-10 hero-content flex-col lg:flex-row items-start gap-12 px-4 max-w-7xl w-full"
-  >
-    <div class="lg:w-2/5">
-      <h2 class="text-5xl md:text-6xl mb-6">
-        Real Agent Teams
-      </h2>
-      <div class="h-1 w-16 bg-primary mb-6"></div>
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Humans can work together, so why can't our agents? Birdhouse allows you
-        to use teams of AI agents to build software.
-      </p>
-      <p class="text-lg text-base-content/70 mb-8 leading-relaxed font-normal">
-        Agent teams don't just work in parallel, team members can actively
-        communicate and collaborate. Plus, each team member is a full-fledged
-        agent you can message directly.
-      </p>
-    </div>
-
-    <div class="lg:w-3/5 w-full glass p-2 md:p-12 rounded-lg">
-      <div
-        class="rounded-xl shadow-2xl flex items-center justify-center backdrop-blur-md bg-white/10"
-        role="img"
-        aria-label="Multi-agent team collaboration visualization"
-      >
-        <img
-          class="rounded-lg"
-          src="/assets/not-just-subagents.webp"
-          alt="A chat message featuring agent replies"
-        />
-      </div>
-    </div>
-  </div>
-</div>
-</div>
-
-<!-- Feature: Build Without Limits -->
-<div class="hero min-h-fit py-12 md:py-24 bg-base-100 relative overflow-hidden">
-  <div
-    class="relative z-10 hero-content flex-col lg:flex-row-reverse items-start gap-12 px-4 max-w-7xl w-full"
-  >
-    <div class="lg:w-2/5">
-      <h2 class="text-5xl md:text-6xl mb-6">
-        Build Without Limits
-      </h2>
-      <div class="h-1 w-16 bg-primary mb-6"></div>
-      <p class="text-lg text-base-content/70 mb-6 font-normal leading-relaxed">
-        Birdhouse is designed with an agent-first architecture.
-      </p>
-
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Your AI agents are provided a complete shell environment and have free
-        rein to make changes in your workspace. Full system access. Zero
-        restrictions.
-      </p>
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Agents in Birdhouse don't need your approval, they just get things done.
-        Use with caution!
-      </p>
-    </div>
-    <div class="lg:w-3/5 w-full glass p-2 md:p-12 rounded-lg">
-      <div class="rounded-xl shadow-2xl flex items-center justify-center">
-        <img
-          class="rounded-lg"
-          src="/assets/without-limits.webp"
-          alt="Work performed by a Birdhouse agent"
-        />
-      </div>
-    </div>
-  </div>
-</div>
-</div>
-
-<!-- FEATURE 3: VISUAL AGENT TREE -->
-<div class="hero min-h-fit py-12 md:py-24 bg-base-100 relative overflow-hidden">
-  <div
-    class="relative z-10 hero-content flex-col lg:flex-row items-start gap-12 px-4 max-w-7xl w-full"
-  >
-    <div class="lg:w-2/5">
-      <h2 class="text-5xl md:text-6xl mb-6">
-        Powerful Agent Tree
-      </h2>
-      <div class="h-1 w-16 bg-primary mb-6"></div>
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Easily browse agent sessions and navigate directly to agents to make
-        steering a breeze.
-      </p>
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Agents are organized according to their team structure and highlighting
-        indicate which agents are working so you can check on progress.
-      </p>
-      <a
-        href="{{ download_link }}"
-        target="_blank"
-        class="btn btn-primary btn-lg mb-4 md:mb-0 gap-2"
-      >
-        <i data-lucide="bird"></i>
-        Get Birdhouse
-      </a>
-    </div>
-
-    <div class="w-3/5 md:w-2/5 mx-auto glass p-2 md:p-12 rounded-lg">
-      <div
-        class="placeholder aspect-[3/4] rounded-xl shadow-2xl flex items-center justify-center"
-        role="img"
-        aria-label="Visual agent tree interface showing hierarchical agent organization"
-      >
-        <img
-          class="rounded-lg"
-          src="/assets/tree.webp"
-          alt="A screenshot of Birdhouse's agent tree"
-        />
-      </div>
-    </div>
-  </div>
-</div>
-</div>
-
-<!-- FEATURE 3: SAVE WINNING PATTERNS -->
-<div class="relative hero min-h-fit py-12 md:py-24 bg-base-100 overflow-hidden">
-  <div
-    class="relative z-10 hero-content flex-col lg:flex-row-reverse items-start gap-12 px-4 max-w-7xl w-full"
-  >
-    <div class="lg:w-2/5">
-      <h2 class="text-5xl md:text-6xl mb-6">
-        Save Winning Skills
-      </h2>
-      <div class="h-1 w-16 bg-primary mb-6"></div>
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Found a workflow that works? Save it as a skill then reuse it with
-        natural language.
-      </p>
-
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Skills let you work faster by turning your favourite phrases into
-        curated prompts. We've included several useful entries to get you
-        started!
-      </p>
-    </div>
-
-    <div class="lg:w-3/5 w-full glass p-2 md:p-12 rounded-lg">
-      <div
-        class="placeholder rounded-xl shadow-2xl flex items-center justify-center"
-        role="img"
-        aria-label="Saved workflow skills library for reusable agent workflows"
-      >
-        <img
-          class="rounded-lg"
-          src="/assets/patterns.webp"
-          alt="A screenshot of Birdhouse's Skills feature"
-        />
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- FINAL CTA SECTION -->
+<!-- MAILING LIST SECTION -->
 <div
   id="waitlist"
   class="hero min-h-screen bg-base-200/40 glass"

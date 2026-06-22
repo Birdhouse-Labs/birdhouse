@@ -1,6 +1,5 @@
 import Lenis from "lenis";
 import lucide from "lucide";
-import { themeChange } from "theme-change";
 import { gsap } from "gsap";
 import posthog from "posthog-js";
 
@@ -62,34 +61,6 @@ lenis.on("scroll", (e) => {
 window.addEventListener("beforeunload", () => {
   lenis.destroy();
 });
-
-const speed = 50; // Pixels per second
-
-// 1. Select the target and store original HTML
-let target = document.querySelector(".news_gsap");
-let original_html = target.innerHTML;
-
-// 2. Wrap the original content and duplicate it
-// We add 'flex-none' to ensure the blocks don't shrink
-let new_html =
-  `<div class='ticker-items flex flex-none'>${original_html}</div>`;
-target.innerHTML = new_html + new_html;
-
-// 3. Calculate dimensions based on one of the blocks
-let tickerItems = document.querySelectorAll(".ticker-items");
-let tickerWidth = tickerItems[0].offsetWidth;
-let initDuration = tickerWidth / speed;
-
-// 4. The Animation
-// Animating xPercent: -100 moves each block exactly its own width to the left
-gsap.to(".ticker-items", {
-  xPercent: -100,
-  duration: initDuration,
-  ease: "none",
-  repeat: -1,
-});
-
-document.getElementById("ticker-container").style.opacity = "1";
 
 function formatMetricNumber(value) {
   const isTokens = value >= 10000;
