@@ -23,7 +23,7 @@ const LoadingSpinner = () => (
   </div>
 );
 
-const UnauthorizedScreen = () => {
+const UnauthorizedScreen = (props: { fetchError?: Error | null }) => {
   const [token, setToken] = createSignal("");
   const [submitting, setSubmitting] = createSignal(false);
   const [error, setError] = createSignal("");
@@ -108,9 +108,15 @@ const UnauthorizedScreen = () => {
           <strong class="text-text-primary">Settings → Mobile Access</strong>{" "}
           on the computer running Birdhouse.
         </p>
-        <p class="text-xs text-text-muted font-mono opacity-50 break-all max-w-xs">
-          API: {API_ENDPOINT_BASE}
-        </p>
+        <div class="text-xs text-text-muted font-mono opacity-50 break-all max-w-xs space-y-0.5 text-center">
+          <p>API: {API_ENDPOINT_BASE}</p>
+          <Show when={props.fetchError}>
+            <p>err: {props.fetchError instanceof HttpError
+              ? `HTTP ${(props.fetchError as HttpError).status}`
+              : props.fetchError?.message ?? "unknown"}</p>
+            <p>type: {props.fetchError?.constructor?.name ?? "Error"}</p>
+          </Show>
+        </div>
       </div>
 
       {/* Token paste input */}
@@ -290,12 +296,19 @@ const WorkspaceSelector: Component = () => {
     });
   };
 
-  const isUnauthorized = () => error() instanceof HttpError && (error() as HttpError).status === 401;
+  // Show the unauthorized screen for 401s AND plain network errors.
+  // Network errors happen when the API port isn't reachable cross-origin
+  // (e.g. iOS Safari blocking credentialed cross-origin requests in dev mode).
+  // The paste/token flow uses same-origin /api/auth via the Vite proxy so it
+  // works even when the main API port is blocked by CORS.
+  const isUnauthorized = () =>
+    error() !== null &&
+    (!(error() instanceof HttpError) || (error() as HttpError).status === 401);
 
   return (
     <div class="min-h-screen overflow-auto bg-gradient-to-br from-bg-from via-bg-via to-bg-to">
       <Show when={isUnauthorized()}>
-        <UnauthorizedScreen />
+        <UnauthorizedScreen fetchError={error()} />
       </Show>
 
       <Show when={!isUnauthorized()}>
