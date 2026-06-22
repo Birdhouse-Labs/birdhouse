@@ -127,7 +127,7 @@ printf 'OPENCODE_PORT=%s\n' "$((BASE_PORT + 10))"
 
 # Fetch the launch token and print the browser URL with it embedded.
 # The token is single-use and expires 60 seconds after server start.
-launch_token=$(curl -sf "$server_url/api/auth/launch-token" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+launch_token=$(curl -fsS "$server_url/api/auth/launch-token" 2>/dev/null | grep -o '"token":"[^"]*"' | cut -d'"' -f4 || true)
 if [[ -n "$launch_token" ]]; then
   printf '\nOpen this URL in your browser (token expires in 60s):\n'
   printf '  %s/?launch_token=%s\n' "$server_url" "$launch_token"
