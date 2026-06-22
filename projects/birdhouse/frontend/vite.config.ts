@@ -15,14 +15,20 @@ export default defineConfig(({ command }) => ({
     host: "0.0.0.0", // Listen on all network interfaces for external access
     allowedHosts,
     strictPort: true, // Fail if port is in use instead of trying others
-    // Proxy PostHog ingest to backend so requests go through our server,
-    // avoiding adblockers in both dev and production.
-    proxy: command === "serve" ? {
+    proxy: {
+      // PostHog ingest — proxied to avoid adblockers
       "/ingest": {
         target: `http://localhost:${process.env.VITE_SERVER_PORT || "50121"}`,
         changeOrigin: true,
       },
-    } : undefined,
+      // Auth routes only — proxied so remote browsers on port 50120 can
+      // authenticate without a cross-origin request to port 50121.
+      // Auth endpoints are short request/response (no SSE), safe to proxy.
+      "/api/auth": {
+        target: `http://localhost:${process.env.VITE_SERVER_PORT || "50121"}`,
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     port: process.env.PORT ? Number(process.env.PORT) : 50120,

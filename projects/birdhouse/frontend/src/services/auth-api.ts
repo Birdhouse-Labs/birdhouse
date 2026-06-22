@@ -3,6 +3,12 @@
 
 import { API_ENDPOINT_BASE } from "../config/api";
 
+// Auth endpoints use window.location.origin so they work same-origin in dev
+// (Vite proxies /api/auth/* to the backend, avoiding cross-origin CORS issues).
+const AUTH_BASE = typeof window !== "undefined"
+  ? `${window.location.origin}/api/auth`
+  : `${API_ENDPOINT_BASE}/auth`;
+
 export interface Device {
   token_hash: string;
   device_label: string | null;
@@ -55,8 +61,10 @@ export async function revokeDevice(tokenHash: string): Promise<void> {
  * Returns true on success, false if neither endpoint accepts the token.
  */
 export async function completePairingWithToken(token: string): Promise<boolean> {
-  // Try launch token first (from dev.ts output or CLI)
-  const launchRes = await fetch(`${API_ENDPOINT_BASE}/auth/launch-token`, {
+  // Try launch token first (from dev.ts output or CLI).
+  // Uses AUTH_BASE (same origin) so the request and resulting cookie are
+  // same-origin — avoids cross-origin CORS issues on mobile browsers.
+  const launchRes = await fetch(`${AUTH_BASE}/launch-token`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -65,7 +73,7 @@ export async function completePairingWithToken(token: string): Promise<boolean> 
   if (launchRes.ok) return true;
 
   // Fall back to pairing token (from QR modal)
-  const pairRes = await fetch(`${API_ENDPOINT_BASE}/auth/pair/complete`, {
+  const pairRes = await fetch(`${AUTH_BASE}/pair/complete`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },

@@ -1,7 +1,9 @@
 // ABOUTME: Launch token exchange on app boot
 // ABOUTME: Exchanges a one-time launch token from the URL for a persistent session cookie
 
-import { API_BASE_URL } from "../config/api";
+// Use window.location.origin so launch token exchange is same-origin —
+// Vite proxies /api/auth/* in dev, and in production frontend and API share one port.
+const AUTH_ORIGIN = typeof window !== "undefined" ? window.location.origin : "";
 
 /**
  * Checks for a ?launch_token= query parameter, POSTs it to the server to
@@ -31,7 +33,7 @@ export async function exchangeLaunchToken(): Promise<void> {
     window.location.pathname + (remainingQuery ? `?${remainingQuery}` : "") + (window.location.hash || "");
 
   try {
-    const res = await fetch(`${API_BASE_URL}/api/auth/launch-token`, {
+    const res =     await fetch(`${AUTH_ORIGIN}/api/auth/launch-token`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
