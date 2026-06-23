@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "npm:lenis/dist/lenis.css";
 @plugin "@tailwindcss/typography";
 @plugin "daisyui" {
   themes: birdhouse --default;

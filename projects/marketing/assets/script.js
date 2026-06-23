@@ -1,4 +1,3 @@
-import Lenis from "lenis";
 import lucide from "lucide";
 import { gsap } from "gsap";
 import posthog from "posthog-js";
@@ -36,30 +35,14 @@ const supabaseClient = supabase.createClient(
 
 lucide.createIcons();
 
-// Initialize Lenis for smooth scrolling
-const lenis = new Lenis({
-  autoRaf: true,
-  anchors: true,
-});
-
-if (lenis && lenis.targetScroll > 1) {
+// Handle scroll events for navbar background
+window.addEventListener("scroll", () => {
   const header = document.querySelector("#nav");
-  header.setAttribute("data-scrolling", "true");
-}
-
-// Handle scroll events (optional - for logging or analytics)
-lenis.on("scroll", (e) => {
-  const header = document.querySelector("#nav");
-  if (e.progress > 0.01) {
+  if (window.scrollY > 10) {
     header.setAttribute("data-scrolling", "true");
   } else {
     header.setAttribute("data-scrolling", "false");
   }
-});
-
-// Cleanup on page unload
-window.addEventListener("beforeunload", () => {
-  lenis.destroy();
 });
 
 function formatMetricNumber(value) {
