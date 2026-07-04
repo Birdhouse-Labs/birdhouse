@@ -16,138 +16,129 @@ metas:
 ---
 
 <!-- NAVBAR -->
-<div
+<header
   id="nav"
   data-scrolling="false"
-  class="px-4 py-2 navbar justify-between fixed group data-[scrolling=true]:bg-base-100 bg-transparent top-0 z-50"
+  class="fixed top-0 left-0 right-0 z-50 px-6 h-14 flex items-center justify-between bg-white/80 backdrop-blur-sm border-b border-transparent data-[scrolling=true]:border-[#E8E6E1] transition-colors duration-200"
 >
-  <div>
-    <img class="w-[200px]" src="assets/logo.png" alt="Birdhouse Labs" />
+  <div class="flex items-center gap-2">
+    <img class="h-6" src="assets/logo.png" alt="Birdhouse" />
   </div>
-
-  <div class="flex-none">
-    <a href="{{ download_link }}" class="btn btn-primary btn-sm md:btn-md">
-      View on GitHub
-    </a>
-  </div>
-</div>
-
-<!-- HERO SECTION -->
-<div
-  class="hero bg-base-100 md:min-h-screen pt-24 md:pt-42 pb-16 bg-cover bg-[url(/assets/hero-overlay-3t.webp)] bg-contain"
->
-  <div
-    class="hero-content flex-col items-center justify-center px-4 w-full max-w-7xl text-center"
+  <a
+    href="{{ download_link }}"
+    class="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg bg-[#7C3AED] text-white text-sm font-medium hover:bg-[#6D28D9] transition-colors"
   >
-    <div class="text-left text-center flex flex-col items-center">
-      <div class="h-1 w-12 bg-primary mb-4"></div>
-      <p
-        class="py-6 text-4xl md:text-5xl text-center text-base-content/90 leading-tight max-w-3xl lg:mx-auto mb-4 md:mb-6"
-      >
-        A UI for your AI agents.<br />
-        Communicate. Collaborate.<br class="hidden md:block" />
-        Organized as a tree.
-      </p>
-      <div class="flex justify-center mb-4 md:mb-6">
-        <a
-          href="{{ download_link }}"
-          class="btn btn-primary btn-lg gap-2 px-8"
-        >
-          <i data-lucide="github"></i>
-          View on GitHub
-        </a>
-      </div>
+    <i data-lucide="github" class="w-4 h-4"></i>
+    View on GitHub
+  </a>
+</header>
+
+<!-- HERO -->
+<main class="pt-14">
+  <section class="bg-white px-6 pt-24 pb-20 flex flex-col items-center text-center">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F4F0FF] text-[#7C3AED] text-xs font-medium mb-8 border border-[#DDD6FE]">
+      <span class="w-1.5 h-1.5 rounded-full bg-[#7C3AED] inline-block"></span>
+      Open source
     </div>
 
+    <h1 class="text-balance text-5xl md:text-6xl font-bold text-[#1A1917] leading-tight max-w-3xl mb-6">
+      A UI for your<br class="hidden md:block" />
+      <span class="text-[#7C3AED]">AI agents</span>
+    </h1>
+
+    <p class="text-pretty text-lg text-[#6B7280] max-w-xl mb-10 leading-relaxed">
+      Birdhouse gives your agents a place to communicate and collaborate,
+      organized as a navigable tree. Built for agentic software development.
+    </p>
+
+    <div class="flex flex-col sm:flex-row items-center gap-3 mb-16">
+      <a
+        href="{{ download_link }}"
+        class="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#7C3AED] text-white font-medium hover:bg-[#6D28D9] transition-colors"
+      >
+        <i data-lucide="github" class="w-4 h-4"></i>
+        View on GitHub
+      </a>
+      <a
+        href="#updates"
+        class="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-[#E8E6E1] text-[#1A1917] font-medium hover:bg-[#F4F3F1] transition-colors"
+      >
+        Stay updated
+      </a>
+    </div>
+
+    <!-- Metrics -->
     <div
       id="hero-metrics"
-      class="flex flex-row items-center justify-center gap-8 md:gap-16 mt-8"
+      class="flex items-center gap-12 md:gap-20 mb-16"
       role="status"
       aria-live="polite"
     >
-      <div class="flex flex-col items-center">
-        <span id="metric-agents" class="text-3xl md:text-5xl font-bold text-primary tabular-nums">—</span>
-        <span class="text-sm md:text-base text-base-content/60 mt-1 tracking-wide uppercase">Agents Created</span>
+      <div class="flex flex-col items-center gap-1">
+        <span id="metric-agents" class="text-3xl md:text-4xl font-bold text-[#1A1917] tabular-nums">—</span>
+        <span class="text-xs text-[#9CA3AF] uppercase tracking-widest">Agents Created</span>
       </div>
-      <div class="w-px h-12 bg-base-content/20"></div>
-      <div class="flex flex-col items-center">
-        <span id="metric-tokens" class="text-3xl md:text-5xl font-bold text-primary tabular-nums">—</span>
-        <span class="text-sm md:text-base text-base-content/60 mt-1 tracking-wide uppercase">Tokens Processed</span>
+      <div class="w-px h-10 bg-[#E8E6E1]"></div>
+      <div class="flex flex-col items-center gap-1">
+        <span id="metric-tokens" class="text-3xl md:text-4xl font-bold text-[#1A1917] tabular-nums">—</span>
+        <span class="text-xs text-[#9CA3AF] uppercase tracking-widest">Tokens Processed</span>
       </div>
     </div>
 
-    <div
-      class="md:mockup-window border border-[#2a2622] mt-8 lg:w-2/3 bg-[#2a2622]"
-    >
-      <div
-        id="hero-app-placeholder"
-        class="border-t border-[#2a2622]"
-      >
-        <img
-          src="/assets/hero-screenshot.png"
-          alt="A screenshot of Birdhouse"
+    <!-- Screenshot -->
+    <div class="w-full max-w-5xl rounded-xl border border-[#E8E6E1] shadow-xl overflow-hidden">
+      <div class="h-8 bg-[#F4F3F1] border-b border-[#E8E6E1] flex items-center px-4 gap-2">
+        <span class="w-3 h-3 rounded-full bg-[#E8E6E1]"></span>
+        <span class="w-3 h-3 rounded-full bg-[#E8E6E1]"></span>
+        <span class="w-3 h-3 rounded-full bg-[#E8E6E1]"></span>
+      </div>
+      <img
+        src="/assets/hero-screenshot.png"
+        alt="A screenshot of Birdhouse"
+        class="w-full"
+      />
+    </div>
+  </section>
+
+  <!-- MAILING LIST -->
+  <section
+    id="updates"
+    class="bg-[#F4F3F1] px-6 py-24 flex flex-col items-center text-center"
+  >
+    <h2 class="text-balance text-3xl md:text-4xl font-bold text-[#1A1917] mb-3">
+      Stay in the loop
+    </h2>
+    <p class="text-[#6B7280] mb-10 max-w-sm">
+      Sign up for Birdhouse news and updates.
+    </p>
+
+    <div class="w-full max-w-sm bg-white rounded-xl border border-[#E8E6E1] shadow-sm p-6">
+      <form class="flex flex-col gap-3" id="waitlist-form">
+        <input
+          type="email"
+          name="email"
+          placeholder="your@email.com"
+          class="w-full px-4 py-2.5 rounded-lg border border-[#E8E6E1] text-[#1A1917] text-sm placeholder:text-[#9CA3AF] outline-none focus:ring-2 focus:ring-[#7C3AED] focus:ring-offset-2 transition"
+          required
         />
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- MAILING LIST SECTION -->
-<div
-  id="waitlist"
-  class="hero min-h-screen bg-base-200/40 glass"
->
-  <div class="hero-content text-center text-primary flex-col px-4">
-    <div class="max-w-2xl">
-      <h2 class="text-6xl md:text-7xl mb-6 leading-tight">
-        Stay in the loop
-      </h2>
-
-      <p class="text-xl text-base-content/70 mb-12">
-        Sign up for Birdhouse news and updates.
-      </p>
-
-      <!-- WAITLIST FORM -->
-      <div class="card bg-base-100 shadow-2xl max-w-md w-full mx-auto">
-        <div class="card-body gap-6">
-          <h3 class="card-title text-2xl text-base-content">
-            Get Updates
-          </h3>
-
-          <form class="space-y-4" id="waitlist-form">
-            <input
-              type="email"
-              name="email"
-              placeholder="your@email.com"
-              class="input input-bordered w-full text-base-content"
-              required
-            />
-
-            <button
-              type="submit"
-              class="btn btn-primary btn-lg w-full gap-2"
-            >
-              Sign up
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <p class="mt-8 text-center text-base-content/70">
-        Questions? Reach out to the team <a
-          href="mailto:hello@birdhouselabs.ai"
-          class="link link-primary font-bold"
-        >here</a>.
+        <button
+          type="submit"
+          class="w-full px-4 py-2.5 rounded-lg bg-[#7C3AED] text-white text-sm font-medium hover:bg-[#6D28D9] transition-colors"
+        >
+          Sign up
+        </button>
+      </form>
+      <p class="mt-4 text-xs text-[#9CA3AF]">
+        Questions? <a href="mailto:hello@birdhouselabs.ai" class="text-[#7C3AED] hover:underline">hello@birdhouselabs.ai</a>
       </p>
     </div>
-  </div>
-</div>
+  </section>
+</main>
 
 <!-- FOOTER -->
-<footer class="footer bg-base-100 text-base-content p-10">
-  <div>
-    <p class="text-sm text-base-content/60 mt-2">
-      Built by the <i class="inline" data-lucide="bird"></i> at Birdhouse Labs
-    </p>
-  </div>
+<footer class="bg-white border-t border-[#E8E6E1] px-6 py-8 flex items-center justify-between">
+  <p class="text-sm text-[#9CA3AF]">
+    Built by the <i class="inline" data-lucide="bird" style="width:14px;height:14px;vertical-align:middle"></i> at Birdhouse Labs
+  </p>
+  <a href="{{ download_link }}" class="text-sm text-[#9CA3AF] hover:text-[#7C3AED] transition-colors">GitHub</a>
 </footer>
