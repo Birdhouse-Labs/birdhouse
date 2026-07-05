@@ -33,6 +33,5 @@ site.use(metas());
 site.use(seo());
 site.use(transformImages(/* Options */));
 site.add("assets");
-site.add("favicon.png"); // PNG fallback for browsers that don't support SVG favicons
 
 export default site;
