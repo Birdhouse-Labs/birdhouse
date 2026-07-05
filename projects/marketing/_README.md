@@ -1,16 +1,29 @@
-# Birdhouse Labs Marketing Site
+# Birdhouse Marketing Site
 
-High-energy marketing landing page for Birdhouse Labs - AI agent orchestration
-platform.
+Simple marketing page for Birdhouse — an OpenCode UI for agentic development.
 
-## 🚀 What's Inside
+## What's Inside
 
-A complete, responsive landing page built with:
+Built with:
 
 - **Lume** - Static site generator
 - **DaisyUI** - Tailwind CSS component library
 - **Tailwind CSS** - Utility-first styling
 - **Deno** - Modern JavaScript runtime
+
+## Updating Copy
+
+Most copy lives in one place: `index.vto`. Update it there and the dev server hot-reloads immediately.
+
+**Exception: the og-image (`assets/og-image.png`) is a static PNG.** It does not update automatically when you change copy. After changing the hero tagline or site description, regenerate it:
+
+```bash
+# Requires: rsvg-convert (brew install librsvg)
+# Edit the source SVG first, then render:
+rsvg-convert -w 1200 -h 630 assets/og-image.svg -o assets/og-image.png
+```
+
+The source SVG is at `assets/og-image.svg` — edit that file, then run the command above to regenerate the PNG. Commit both files.
 
 ## 🛠️ Prerequisites & Setup
 
