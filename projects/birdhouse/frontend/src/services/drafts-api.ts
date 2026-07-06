@@ -20,7 +20,7 @@ export interface Draft {
  */
 export async function getDraft(workspaceId: string, draftId: string): Promise<Draft | null> {
   const url = buildWorkspaceUrl(workspaceId, `/drafts/${draftId}`);
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: "include" });
 
   if (response.status === 404) {
     return null;
@@ -41,6 +41,7 @@ export async function saveDraft(workspaceId: string, draftId: string, draft: Dra
   const url = buildWorkspaceUrl(workspaceId, `/drafts/${draftId}`);
   const response = await fetch(url, {
     method: "PUT",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(draft),
   });
@@ -58,6 +59,7 @@ export async function clearDraft(workspaceId: string, draftId: string): Promise<
   const url = buildWorkspaceUrl(workspaceId, `/drafts/${draftId}`);
   const response = await fetch(url, {
     method: "DELETE",
+    credentials: "include",
   });
 
   if (!response.ok) {

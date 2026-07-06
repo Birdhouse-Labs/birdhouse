@@ -8,7 +8,7 @@ export interface ServerConfig {
 }
 
 export async function fetchConfig(): Promise<ServerConfig> {
-  const response = await fetch(`${API_ENDPOINT_BASE}/config`);
+  const response = await fetch(`${API_ENDPOINT_BASE}/config`, { credentials: "include" });
   if (!response.ok) {
     throw new Error(`Failed to fetch server config: ${response.statusText}`);
   }

@@ -54,6 +54,16 @@ export interface UserProfile {
   created_at: string;
 }
 
+export interface AccessToken {
+  token_hash: string;
+  device_label: string | null;
+  created_at: string;
+  last_used: string | null;
+  is_active: number; // 1 = active, 0 = revoked
+  user_agent: string | null;
+  origin_host: string | null;
+}
+
 /**
  * Central data database for Birdhouse
  * Manages workspaces, secrets, and future application data
@@ -414,6 +424,52 @@ export class DataDB {
 
     log.server.info("Installation ID created");
     return installId;
+  }
+
+  // ==================== Access Token Operations ====================
+
+  createAccessToken(
+    tokenHash: string,
+    deviceLabel: string | null,
+    userAgent: string | null,
+    originHost: string | null = null,
+  ): void {
+    this.db
+      .prepare(
+        `INSERT INTO access_tokens (token_hash, device_label, created_at, last_used, is_active, user_agent, origin_host)
+         VALUES (?, ?, ?, NULL, 1, ?, ?)`,
+      )
+      .run(tokenHash, deviceLabel, new Date().toISOString(), userAgent, originHost);
+
+    log.server.info({ deviceLabel }, "Access token created");
+  }
+
+  updateAccessTokenLabel(tokenHash: string, label: string): void {
+    this.db.prepare("UPDATE access_tokens SET device_label = ? WHERE token_hash = ?").run(label, tokenHash);
+
+    log.server.debug({ tokenHash: `${tokenHash.slice(0, 8)}...` }, "Access token label updated");
+  }
+
+  getAccessToken(tokenHash: string): AccessToken | null {
+    const stmt = this.db.query<AccessToken, [string]>("SELECT * FROM access_tokens WHERE token_hash = ?");
+    return stmt.get(tokenHash) || null;
+  }
+
+  getAllAccessTokens(): AccessToken[] {
+    const stmt = this.db.query<AccessToken, []>("SELECT * FROM access_tokens ORDER BY created_at DESC");
+    return stmt.all();
+  }
+
+  touchAccessToken(tokenHash: string): void {
+    this.db
+      .prepare("UPDATE access_tokens SET last_used = ? WHERE token_hash = ?")
+      .run(new Date().toISOString(), tokenHash);
+  }
+
+  revokeAccessToken(tokenHash: string): void {
+    this.db.prepare("UPDATE access_tokens SET is_active = 0 WHERE token_hash = ?").run(tokenHash);
+
+    log.server.info({ tokenHash: `${tokenHash.slice(0, 8)}...` }, "Access token revoked");
   }
 
   // ==================== Utility ====================

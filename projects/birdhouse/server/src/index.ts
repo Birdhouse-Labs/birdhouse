@@ -8,15 +8,18 @@ import { serveStatic } from "hono/bun";
 import { cors } from "hono/cors";
 import { pinoLogger } from "hono-pino";
 import { createPosthogDeps, withDeps } from "./dependencies";
+import { generateLaunchToken } from "./lib/auth";
 import { getDataDB, initDataDB } from "./lib/data-db";
 import { syncDevPluginSource } from "./lib/dev-plugin-sync";
 import { log, rootLogger } from "./lib/logger";
 import { OpenCodeManager } from "./lib/opencode-manager";
 import { warmRecentWorkspacesInBackground } from "./lib/startup-warmup";
-import { createAAPIMiddleware } from "./middleware/aapi";
+import { createAAPIAuthCheck, createAAPIMiddleware } from "./middleware/aapi";
+import { createAuthMiddleware } from "./middleware/auth";
 import { createWorkspaceMiddleware } from "./middleware/workspace";
 import { createAAPIAgentRoutes } from "./routes/aapi-agents";
 import { createAgentRoutes } from "./routes/agents";
+import { createAuthRoutes } from "./routes/auth";
 import { createConfigRoutes } from "./routes/config";
 import { createDraftRoutes } from "./routes/drafts";
 import { createEventRoutes } from "./routes/events";
@@ -104,19 +107,51 @@ log.server.info(
   "Birdhouse Server initializing",
 );
 
+// Generate launch token on startup — CLI reads this to construct the browser URL
+const launchToken = generateLaunchToken();
+log.server.info({ tokenLength: launchToken.length }, "Launch token generated");
+
 // Create Hono app
 const app = new Hono();
 const posthogDeps = await createPosthogDeps();
 
 // Middleware: CORS
+// Determine allowed origins for CORS:
+//   - In dev mode, the Vite frontend (PORT-1) is a separate origin — always allow it
+//     so credentials: "include" fetch calls work across the port boundary.
+//   - BIRDHOUSE_ALLOWED_ORIGINS adds additional origins (e.g. Tailscale hostname).
+//   - In production (same port), no cross-origin requests are made so this is moot.
+const allowedOrigins = process.env.BIRDHOUSE_ALLOWED_ORIGINS;
+const devFrontendOrigin = isDevMode ? `http://localhost:${PORT - 1}` : null;
+
+const corsOrigins: string[] = [
+  ...(devFrontendOrigin ? [devFrontendOrigin] : []),
+  ...(allowedOrigins
+    ? allowedOrigins
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : []),
+];
+
 app.use(
   "*",
-  cors({
-    origin: "*",
-    allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
-    exposeHeaders: ["Content-Disposition"], // Allow frontend to read filename from export endpoint
-  }),
+  cors(
+    corsOrigins.length > 0
+      ? {
+          origin: corsOrigins,
+          credentials: true,
+          allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+          allowHeaders: ["Content-Type", "Authorization"],
+          exposeHeaders: ["Content-Disposition"],
+        }
+      : {
+          origin: "*",
+          allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+          allowHeaders: ["Content-Type", "Authorization"],
+          exposeHeaders: ["Content-Disposition"],
+        },
+  ),
 );
 
 app.use("/ingest", async (_c, next) => withDeps(posthogDeps, () => next()));
@@ -163,9 +198,23 @@ app.use(
 // /api/logs gets logger but no HTTP logging (http: false)
 app.use("/api/logs", pinoLogger({ pino: rootLogger, http: false }));
 
+// Middleware: Auth — validates session cookie on all /api/* routes.
+// Exempt paths (health, auth handshakes) are handled inside the middleware.
+// Auth routes must be registered AFTER this middleware so the middleware runs first.
+const authMiddleware = createAuthMiddleware(dataDb);
+app.use("/api/*", authMiddleware);
+
+// Auth routes — registered after auth middleware so it applies to them.
+// The middleware's exempt list allows unauthenticated access to pair/complete and launch-token.
+app.route("/api/auth", createAuthRoutes(dataDb));
+
 // Middleware: Workspace context for workspace-scoped routes
 const workspaceMiddleware = createWorkspaceMiddleware(opencodeManager, dataDb);
 app.use("/api/workspace/:workspaceId/*", workspaceMiddleware);
+
+// Middleware: AAPI auth check — allows localhost processes or valid session cookie
+const aapiAuthCheck = createAAPIAuthCheck(dataDb);
+app.use("/aapi/*", aapiAuthCheck);
 
 // Middleware: AAPI context for plugin routes (reads X-Birdhouse-Workspace-ID header)
 const aapiMiddleware = createAAPIMiddleware(opencodeManager, dataDb);
@@ -246,6 +295,7 @@ warmRecentWorkspacesInBackground(dataDb, opencodeManager);
 
 export default {
   port: PORT,
+  hostname: "0.0.0.0", // Bind to all IPv4 interfaces for external access
   fetch: app.fetch,
   idleTimeout: 0, // Disable timeout for long-lived SSE connections
 };

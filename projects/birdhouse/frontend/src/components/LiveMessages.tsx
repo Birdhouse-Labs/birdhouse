@@ -227,7 +227,9 @@ const LiveMessages: Component<LiveMessagesProps> = (props) => {
     () => ({ agentId: props.agentId, workspaceId }),
     async ({ agentId, workspaceId }) => {
       try {
-        const response = await fetch(`${API_ENDPOINT_BASE}/workspace/${workspaceId}/agents/${agentId}/status`);
+        const response = await fetch(`${API_ENDPOINT_BASE}/workspace/${workspaceId}/agents/${agentId}/status`, {
+          credentials: "include",
+        });
         if (!response.ok) return { type: "idle" as const };
         const data = await response.json();
         return data.status as SessionStatus;

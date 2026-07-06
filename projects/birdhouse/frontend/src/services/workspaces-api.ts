@@ -3,6 +3,17 @@
 
 import { API_ENDPOINT_BASE } from "../config/api";
 
+/** Error thrown when the server returns a non-2xx HTTP response. */
+export class HttpError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "HttpError";
+  }
+}
+
 import type {
   RecentLogsResponse,
   Workspace,
@@ -21,7 +32,7 @@ export async function fetchWorkspaces(): Promise<Workspace[]> {
   const url = `${API_ENDPOINT_BASE}/workspaces`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: "include" });
 
     if (!response.ok) {
       const responseBody = await response.text();
@@ -36,11 +47,12 @@ export async function fetchWorkspaces(): Promise<Workspace[]> {
         // Response wasn't JSON, use status text
       }
 
-      throw new Error(errorMessage);
+      throw new HttpError(response.status, errorMessage);
     }
 
     return response.json();
   } catch (error) {
+    if (error instanceof HttpError) throw error;
     throw new Error(`Failed to fetch workspaces: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
@@ -55,7 +67,7 @@ export async function checkWorkspace(directory: string): Promise<WorkspaceCheckR
   const url = `${API_ENDPOINT_BASE}/workspaces/check?${params}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: "include" });
 
     if (!response.ok) {
       const responseBody = await response.text();
@@ -90,6 +102,7 @@ export async function createWorkspace(request: WorkspaceCreateRequest): Promise<
   try {
     const response = await fetch(url, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
     });
@@ -125,7 +138,7 @@ export async function fetchWorkspace(workspaceId: string): Promise<Workspace> {
   const url = `${API_ENDPOINT_BASE}/workspaces/${workspaceId}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: "include" });
 
     if (!response.ok) {
       const responseBody = await response.text();
@@ -160,6 +173,7 @@ export async function deleteWorkspace(workspaceId: string): Promise<WorkspaceDel
   try {
     const response = await fetch(url, {
       method: "DELETE",
+      credentials: "include",
     });
 
     if (!response.ok) {
@@ -192,7 +206,7 @@ export async function fetchWorkspacesHealth(): Promise<WorkspaceHealthResponse[]
   const url = `${API_ENDPOINT_BASE}/workspaces/health`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: "include" });
 
     if (!response.ok) {
       const responseBody = await response.text();
@@ -225,7 +239,7 @@ export async function fetchWorkspaceHealth(workspaceId: string): Promise<Workspa
   const url = `${API_ENDPOINT_BASE}/workspaces/${workspaceId}/health`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: "include" });
 
     if (!response.ok) {
       const responseBody = await response.text();
@@ -260,6 +274,7 @@ export async function restartWorkspace(workspaceId: string): Promise<{ success: 
   try {
     const response = await fetch(url, {
       method: "POST",
+      credentials: "include",
     });
 
     if (!response.ok) {
@@ -295,6 +310,7 @@ export async function startWorkspace(workspaceId: string): Promise<void> {
   try {
     const response = await fetch(url, {
       method: "POST",
+      credentials: "include",
     });
 
     if (!response.ok) {
@@ -330,7 +346,7 @@ export async function fetchRecentLogs(workspaceId?: string): Promise<RecentLogsR
   const url = `${API_ENDPOINT_BASE}/logs/recent?${params}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: "include" });
 
     if (!response.ok) {
       const responseBody = await response.text();

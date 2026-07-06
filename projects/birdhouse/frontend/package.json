@@ -54,6 +54,7 @@
     "@solidjs/router": "^0.15.4",
     "@tanstack/solid-virtual": "^3.13.13",
     "@thisbeyond/solid-select": "^0.15.0",
+    "bowser": "^2.14.1",
     "corvu": "^0.7.2",
     "lucide-solid": "^0.561.0",
     "marked": "^17.0.1",

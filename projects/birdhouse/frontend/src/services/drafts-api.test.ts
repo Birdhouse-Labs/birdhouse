@@ -33,7 +33,7 @@ describe("getDraft", () => {
 
     const result = await getDraft(mockWorkspaceId, mockDraftId);
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/drafts/${mockDraftId}`));
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/drafts/${mockDraftId}`), { credentials: "include" });
     expect(result).toEqual(mockDraft);
   });
 
@@ -67,7 +67,9 @@ describe("getDraft", () => {
 
     await getDraft("ws_abc", "agent_xyz");
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/workspace/ws_abc/drafts/agent_xyz"));
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/workspace/ws_abc/drafts/agent_xyz"), {
+      credentials: "include",
+    });
   });
 });
 

@@ -21,7 +21,7 @@ const modelLimitsCache = new Map<string, number>();
  * @param workspaceId Workspace ID to fetch models for
  */
 export async function fetchModelLimits(workspaceId: string): Promise<void> {
-  const response = await fetch(`${API_ENDPOINT_BASE}/workspace/${workspaceId}/models`);
+  const response = await fetch(`${API_ENDPOINT_BASE}/workspace/${workspaceId}/models`, { credentials: "include" });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch models: ${response.statusText}`);

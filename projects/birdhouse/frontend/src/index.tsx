@@ -11,11 +11,17 @@ if (import.meta.env.DEV) {
 import App from "./App";
 import { ConfigProvider } from "./contexts/ConfigContext";
 import { ZIndexProvider } from "./contexts/ZIndexContext";
+import { exchangeLaunchToken } from "./lib/launch-token";
 import { initPosthog } from "./lib/posthog";
 
 const root = document.getElementById("root");
 
 initPosthog();
+
+// Exchange the launch token (if present) before any API calls are made.
+// This sets the session cookie that all subsequent requests depend on.
+// Must complete before render so no API call fires without the cookie.
+await exchangeLaunchToken();
 
 if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   throw new Error(

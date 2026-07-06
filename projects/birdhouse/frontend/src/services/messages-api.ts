@@ -28,7 +28,7 @@ const _API_BASE = API_ENDPOINT_BASE;
  */
 export async function fetchMessages(workspaceId: string, agentId: string, signal?: AbortSignal): Promise<Message[]> {
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/messages`);
-  const response = await fetch(url, signal ? { signal } : undefined);
+  const response = await fetch(url, { credentials: "include", ...(signal ? { signal } : {}) });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch messages: ${response.statusText}`);
@@ -46,7 +46,7 @@ export async function fetchMessages(workspaceId: string, agentId: string, signal
  */
 export async function fetchAgent(workspaceId: string, agentId: string, signal?: AbortSignal) {
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}`);
-  const response = await fetch(url, signal ? { signal } : undefined);
+  const response = await fetch(url, { credentials: "include", ...(signal ? { signal } : {}) });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch agent: ${response.statusText}`);
@@ -66,6 +66,7 @@ export async function generateTitle(workspaceId: string, message: string, source
   const url = buildWorkspaceUrl(workspaceId, "/title/generate");
   const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       message,
@@ -98,6 +99,7 @@ export async function stopAgent(workspaceId: string, agentId: string) {
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/stop`);
   const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -112,6 +114,7 @@ export async function stopAgentTree(workspaceId: string, agentId: string) {
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/stop-tree`);
   const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -191,6 +194,7 @@ export async function sendMessage(
 
   const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
@@ -233,7 +237,7 @@ export interface Model {
  */
 export async function fetchModels(workspaceId: string): Promise<Model[]> {
   const url = buildWorkspaceUrl(workspaceId, "/models");
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: "include" });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch models: ${response.statusText}`);
@@ -286,6 +290,7 @@ export async function createAgent(
   const url = buildWorkspaceUrl(workspaceId, "/agents");
   const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
@@ -304,7 +309,7 @@ export async function createAgent(
  */
 export async function fetchAgentTrees(workspaceId: string): Promise<TreeNode[]> {
   const url = buildWorkspaceUrl(workspaceId, "/agents");
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: "include" });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch agent trees: ${response.statusText}`);
@@ -325,6 +330,7 @@ export async function updateAgentTitle(workspaceId: string, agentId: string, tit
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}`);
   const response = await fetch(url, {
     method: "PATCH",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title }),
   });
@@ -370,6 +376,7 @@ export async function cloneAgent(
 
   const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
@@ -409,6 +416,7 @@ export async function revertAgent(
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/revert`);
   const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messageId }),
   });
@@ -443,6 +451,7 @@ export async function unrevertAgent(workspaceId: string, agentId: string): Promi
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/unrevert`);
   const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
   });
 
   if (!response.ok) {

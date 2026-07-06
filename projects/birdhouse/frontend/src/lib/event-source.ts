@@ -7,7 +7,7 @@ export interface EventSourceDep {
 
 export function createLiveEventSource(): EventSourceDep {
   return {
-    create: (url: string) => new EventSource(url),
+    create: (url: string) => new EventSource(url, { withCredentials: true }),
   };
 }
 

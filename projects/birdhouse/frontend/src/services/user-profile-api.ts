@@ -9,7 +9,7 @@ export interface UserProfileResponse {
 }
 
 export async function fetchUserProfile(): Promise<UserProfileResponse> {
-  const response = await fetch(`${API_ENDPOINT_BASE}/user-profile`);
+  const response = await fetch(`${API_ENDPOINT_BASE}/user-profile`, { credentials: "include" });
   if (!response.ok) {
     throw new Error(`Failed to fetch user profile: ${response.statusText}`);
   }
@@ -19,6 +19,7 @@ export async function fetchUserProfile(): Promise<UserProfileResponse> {
 export async function submitUserName(name: string): Promise<void> {
   const response = await fetch(`${API_ENDPOINT_BASE}/user-profile`, {
     method: "PATCH",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
   });

@@ -1,8 +1,9 @@
 // ABOUTME: Fixed header component with settings popover
 // ABOUTME: Contains app title and settings for color mode, UI size, and theme
 
+import { useNavigate } from "@solidjs/router";
 import Popover from "corvu/popover";
-import { Command, Menu, Settings } from "lucide-solid";
+import { Command, Menu, Settings, Smartphone } from "lucide-solid";
 import { type Component, createSignal, type JSX, Show } from "solid-js";
 import { useZIndex } from "../contexts/ZIndexContext";
 import { AgentIcon, SkillIcon } from "../design-system";
@@ -242,6 +243,8 @@ const KeyBindingInput: Component<KeyBindingInputProps> = (props) => {
 const Header: Component<HeaderProps> = (props) => {
   const workspaceId = useWorkspaceId();
   const baseZIndex = useZIndex();
+  const navigate = useNavigate();
+
   const { openModal } = useModalRoute();
   const [settingsOpen, setSettingsOpen] = createSignal(false);
 
@@ -440,8 +443,20 @@ const Header: Component<HeaderProps> = (props) => {
                 </div>
               </div>
 
-              <Show when={workspaceId()}>
-                <div class="mt-4 pt-4 border-t border-border">
+              <div class="mt-4 pt-4 border-t border-border space-y-2">
+                <Button
+                  variant="secondary"
+                  leftIcon={<Smartphone size={16} />}
+                  class="w-full"
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    navigate("/remote-access");
+                  }}
+                >
+                  Mobile Access
+                </Button>
+
+                <Show when={workspaceId()}>
                   <Button
                     variant="secondary"
                     leftIcon={<Settings size={16} />}
@@ -453,8 +468,8 @@ const Header: Component<HeaderProps> = (props) => {
                   >
                     Workspace Settings
                   </Button>
-                </div>
-              </Show>
+                </Show>
+              </div>
 
               <Popover.Arrow class="fill-surface-raised" />
             </Popover.Content>

@@ -141,7 +141,9 @@ const CommandPalette: Component<CommandPaletteProps> = (props) => {
     setExportError(null);
 
     try {
-      const response = await fetch(buildWorkspaceUrl(workspaceId, `/agents/${agentId}/export`));
+      const response = await fetch(buildWorkspaceUrl(workspaceId, `/agents/${agentId}/export`), {
+        credentials: "include",
+      });
       if (!response.ok) {
         const ct = response.headers.get("content-type");
         if (ct?.includes("application/json")) {

@@ -65,7 +65,9 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
     () => ({ agentId: props.agentId, workspaceId: props.workspaceId }),
     async ({ agentId, workspaceId }) => {
       try {
-        const response = await fetch(`${API_ENDPOINT_BASE}/workspace/${workspaceId}/agents/${agentId}/status`);
+        const response = await fetch(`${API_ENDPOINT_BASE}/workspace/${workspaceId}/agents/${agentId}/status`, {
+          credentials: "include",
+        });
         if (!response.ok) return { type: "idle" as const };
         const data = await response.json();
         return data.status;
@@ -192,7 +194,9 @@ export const AgentHeader: Component<AgentHeaderProps> = (props) => {
     setExportError(null);
 
     try {
-      const response = await fetch(buildWorkspaceUrl(props.workspaceId, `/agents/${props.agentId}/export`));
+      const response = await fetch(buildWorkspaceUrl(props.workspaceId, `/agents/${props.agentId}/export`), {
+        credentials: "include",
+      });
 
       if (!response.ok) {
         // Try to parse error from JSON response

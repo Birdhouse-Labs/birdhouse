@@ -122,6 +122,7 @@ export async function archiveAgent(workspaceId: string, agentId: string): Promis
 
   const response = await fetch(url, {
     method: "PATCH",
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -155,6 +156,7 @@ export async function unarchiveAgent(workspaceId: string, agentId: string): Prom
 
   const response = await fetch(url, {
     method: "PATCH",
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -197,7 +199,7 @@ export async function searchAgentMessages(
 
   const url = `${buildWorkspaceUrl(workspaceId, "/agents/search")}?${params}`;
 
-  const response = await fetch(url, signal ? { signal } : undefined);
+  const response = await fetch(url, { credentials: "include", ...(signal ? { signal } : {}) });
 
   if (!response.ok) {
     const responseBody = await response.text();
@@ -226,7 +228,7 @@ export async function searchAgentMessages(
 export async function fetchAgentsForTypeahead(workspaceId: string): Promise<AgentForTypeahead[]> {
   const url = buildWorkspaceUrl(workspaceId, "/agents");
 
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: "include" });
 
   if (!response.ok) {
     const responseBody = await response.text();
@@ -301,7 +303,7 @@ export async function fetchRecentAgentsList(
 
   const url = `${buildWorkspaceUrl(workspaceId, "/agents/recent")}?${params}`;
 
-  const response = await fetch(url, signal ? { signal } : undefined);
+  const response = await fetch(url, { credentials: "include", ...(signal ? { signal } : {}) });
 
   if (!response.ok) {
     const responseBody = await response.text();
@@ -333,7 +335,7 @@ export async function fetchRecentAgentsList(
 export async function fetchRecentAgentSnippet(workspaceId: string, agentId: string): Promise<RecentAgentSnippet> {
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/messages/snippet`);
 
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: "include" });
 
   if (!response.ok) {
     const responseBody = await response.text();

@@ -360,7 +360,7 @@ export const StreamingProvider: ParentComponent<StreamingProviderProps> = (props
     const url = `${API_ENDPOINT_BASE}/workspace/${workspaceId}/events`;
 
     log.api.info(`Creating EventSource connection for workspace ${workspaceId}`);
-    eventSource = new EventSource(url);
+    eventSource = new EventSource(url, { withCredentials: true });
     setConnectionStatus("connecting");
 
     eventSource.onopen = () => {

@@ -14,7 +14,7 @@ import type { QuestionRequest } from "../types/question";
  */
 export async function fetchPendingQuestions(workspaceId: string, agentId: string): Promise<QuestionRequest[]> {
   const url = buildWorkspaceUrl(workspaceId, `/agents/${agentId}/questions`);
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: "include" });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch pending questions: ${response.statusText}`);
@@ -41,6 +41,7 @@ export async function replyToQuestion(
 
   const response = await fetch(url, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ answers }),
   });

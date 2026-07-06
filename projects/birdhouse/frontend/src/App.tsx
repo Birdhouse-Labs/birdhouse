@@ -4,6 +4,7 @@
 import { Route, type RouteSectionProps, useLocation, useNavigate } from "@solidjs/router";
 import { type Component, createEffect, createResource, type JSX } from "solid-js";
 import NotFound from "./components/NotFound";
+import RemoteAccessPage from "./components/RemoteAccessPage";
 import SetupProfile from "./components/SetupProfile";
 import WorkspaceLayout from "./components/WorkspaceLayout";
 import WorkspaceSelector from "./components/WorkspaceSelector";
@@ -87,6 +88,7 @@ export default function App() {
       <Route component={ProfileGuard}>
         <Route path="/" component={WorkspaceSelector} />
         <Route path="/setup" component={WorkspaceSetup} />
+        <Route path="/remote-access" component={RemoteAccessPage} />
         <Route path="/workspace/:workspaceId/agents" component={WorkspaceLayout} />
         <Route path="/workspace/:workspaceId/agent/:agentId" component={WorkspaceLayout} />
         <Route path="/workspace/:workspaceId/settings" component={WorkspaceLayout} />

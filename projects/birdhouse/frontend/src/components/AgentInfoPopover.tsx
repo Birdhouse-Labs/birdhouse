@@ -49,7 +49,9 @@ export const AgentInfoPopover: Component<AgentInfoPopoverProps> = (props) => {
     () => (isOpen() && props.clonedFrom ? props.clonedFrom : null),
     async (sourceAgentId): Promise<SourceAgentInfo | null> => {
       try {
-        const response = await fetch(buildWorkspaceUrl(props.workspaceId, `/agents/${sourceAgentId}`));
+        const response = await fetch(buildWorkspaceUrl(props.workspaceId, `/agents/${sourceAgentId}`), {
+          credentials: "include",
+        });
         if (!response.ok) {
           // Source agent might have been deleted
           return null;
