@@ -102,7 +102,16 @@ It's the difference between *navigating away* and *peeking in* — and once you'
 
 ### 💬 Agent Communication
 
-Agents can talk to each other. An agent mid-task can ask a question, get an answer from a sibling or parent agent, and keep going — without you playing telephone in the middle.
+Birdhouse ships a provider-agnostic agent communication toolkit built into every agent:
+
+- **`agent_create`** — spawn a new agent with a prompt
+- **`agent_reply`** — send a follow-up message to any agent
+- **`agent_read`** — read another agent's conversation and results
+- **`agent_tree`** — view the full agent hierarchy from anywhere in the tree
+
+Agents can talk to each other, delegate work, read each other's output, and make decisions based on what their siblings are doing — without you playing telephone in the middle.
+
+Want to test how Opus vs Sonnet vs your local model handle the same task? Have an orchestrator spawn all three and compare. The tools work the same regardless of which provider each agent is using.
 
 Not just agents running in parallel. Agents that *collaborate*.
 
