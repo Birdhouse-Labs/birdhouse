@@ -1,8 +1,17 @@
 <p align="center">
-  <img src="https://birdhouselabs.ai/assets/logo.webp" alt="Birdhouse" width="240" />
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 18v4" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="m17 18 1.956-11.468" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="m3 8 7.82-5.615a2 2 0 0 1 2.36 0L21 8" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M4 18h16" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M7 18 5.044 6.532" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="12" cy="10" r="2" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
 </p>
 
-<h3 align="center">The Agentic Development Environment</h3>
+<h2 align="center">birdhouse</h2>
+
+<p align="center">A UI for your AI agents — built on <a href="https://opencode.ai">OpenCode</a></p>
 
 <p align="center">
   <a href="https://github.com/Birdhouse-Labs/birdhouse">
@@ -10,16 +19,9 @@
   </a>
 </p>
 
-<p align="center">If Birdhouse is useful to you, <a href="https://github.com/Birdhouse-Labs/birdhouse">give us a star ⭐</a> — it's a vote from the community that keeps us working on this.</p>
-
-<p align="center">
-  <a href="https://youtu.be/FosIwtyyaLY">
-    <img src="assets/demo-thumbnail.png" alt="Watch the Birdhouse demo" width="80%" />
-  </a>
-</p>
-<p align="center"><a href="https://youtu.be/FosIwtyyaLY"><em>▶ Watch the demo (3 min)</em></a></p>
-
 ---
+
+Birdhouse is an open source UI for [OpenCode](https://opencode.ai), built around agent teams. Where OpenCode gives you a powerful agent in the terminal, Birdhouse gives you a browser-based environment designed around orchestrating many agents at once.
 
 Birdhouse is built around a simple belief: **the agent is the unit of work.**
 
@@ -28,9 +30,6 @@ Other tools bolt AI onto a text editor or terminal. Birdhouse starts from scratc
 We don't have a built-in text editor. We don't have a built-in terminal. We have the features that matter most when you're orchestrating agents — and we've obsessed over getting them right.
 
 > ⚡ **Birdhouse runs in YOLO mode.** No confirmation dialogs, no tool call approvals — agents just go. If you're not comfortable running agents without guardrails, Birdhouse is probably not for you yet.
-
-<p align="center"><em>"You will not lose your job to AI, but will lose it to someone who uses it."</em></p>
-<p align="center"><strong>Jensen Huang</strong> &nbsp;·&nbsp; Nvidia</p>
 
 ---
 
@@ -202,7 +201,7 @@ Birdhouse is provider agnostic. Anthropic, OpenAI, Google, or anything else supp
 
 ## Standing on Shoulders
 
-Birdhouse wouldn't exist without [OpenCode](https://opencode.ai) — the open source agent runtime that powers everything under the hood. If Birdhouse is the cockpit, OpenCode is the engine. Go give them a star.
+Birdhouse wouldn't exist without [OpenCode](https://opencode.ai) — the open source agent runtime that powers everything under the hood. If Birdhouse is the cockpit, OpenCode is the engine. Go give them a star ⭐
 
 ---
 
