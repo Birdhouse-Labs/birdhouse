@@ -97,8 +97,6 @@ Agents can talk to each other. An agent mid-task can ask a question, get an answ
 
 Not just agents running in parallel. Agents that *collaborate*.
 
-> **Note:** Agent communication has been primarily tested with Anthropic's Sonnet and Opus models. Your mileage may vary with other providers.
-
 ![Agent communication — sending](assets/agent-communication-1.png)
 ![Agent communication — reply](assets/agent-communication-2.png)
 
