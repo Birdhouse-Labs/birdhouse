@@ -63,7 +63,8 @@ birdhouse ui
 - [Clone & Send](#️-clone--send)
 - [Stop, Queue & Reset to Here](#️-stop-queue--reset-to-here)
 - [Clone from Here](#-clone-from-here)
-- [Typeahead](#-typeahead)
+- [Typeahead](#️-typeahead)
+- [Agent Search](#-agent-search)
 - [Themes](#-themes)
 - [Workspaces](#️-workspaces)
 
@@ -136,7 +137,13 @@ As you type, a dropdown pops up matching your installed skills in real time. Arr
 
 You define the trigger phrases yourself, so it feels like the tool learned your vocabulary.
 
-> ⚠️ **Typeahead is under active development.**
+---
+
+### 🔎 Agent Search
+
+Search across every agent you've ever created — not just titles, but message content and tool calls too. Find the agent that ran a specific command, wrote a specific file, or said a specific thing.
+
+Your agent history isn't an archive. It's a searchable knowledge base.
 
 ---
 
