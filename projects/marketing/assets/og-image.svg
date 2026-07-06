@@ -1,0 +1,53 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#FFFFFF"/>
+
+  <!-- Left purple accent strip -->
+  <rect x="0" y="0" width="12" height="630" fill="#7C3AED"/>
+
+  <!-- Birdhouse icon, scaled to 96px, centered horizontally above wordmark -->
+  <!-- 24x24 viewBox scaled 4x = 96x96, centered at x=600 means translate(552, 150) -->
+  <g transform="translate(552, 148) scale(4)">
+    <path d="M12 18v4" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="m17 18 1.956-11.468" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="m3 8 7.82-5.615a2 2 0 0 1 2.36 0L21 8" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M4 18h16" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M7 18 5.044 6.532" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="12" cy="10" r="2" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text
+    x="600"
+    y="390"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="110"
+    font-weight="700"
+    fill="#1A1917"
+    text-anchor="middle"
+    letter-spacing="-3"
+  >birdhouse</text>
+
+  <!-- Tagline -->
+  <text
+    x="600"
+    y="455"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="32"
+    font-weight="400"
+    fill="#6B7280"
+    text-anchor="middle"
+  >  A UI for your AI agents</text>
+
+  <!-- Domain -->
+  <text
+    x="600"
+    y="560"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="22"
+    font-weight="400"
+    fill="#7C3AED"
+    text-anchor="middle"
+    letter-spacing="2"
+  >BIRDHOUSELABS.AI</text>
+</svg>

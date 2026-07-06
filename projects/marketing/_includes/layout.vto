@@ -7,22 +7,21 @@
 
     <meta name="twitter:image" content="https://birdhouselabs.ai/assets/og-image.png">
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/styles.css">
   </head>
-  <body data-theme="coffeee">
+  <body>
     {{ content }}
     <script>
       window.POSTHOG_PUBLIC_KEY = "{{ POSTHOG_PUBLIC_KEY }}";
       window.SUPABASE_URL = "{{ SUPABASE_URL }}";
       window.SUPABASE_ANON_KEY = "{{ SUPABASE_ANON_KEY }}";
     </script>
-     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-     <script src="/assets/script.js"></script>
-    <script>
-      // Theme is set to coffee by default
-      document.addEventListener("DOMContentLoaded", () => {
-        document.body.setAttribute("data-theme", "coffee");
-      });
-    </script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="/assets/script.js"></script>
   </body>
 </html>

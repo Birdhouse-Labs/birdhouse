@@ -33,6 +33,5 @@ site.use(metas());
 site.use(seo());
 site.use(transformImages(/* Options */));
 site.add("assets");
-site.add("favicon.ico");
 
 export default site;

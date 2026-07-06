@@ -1,6 +1,4 @@
-import Lenis from "lenis";
 import lucide from "lucide";
-import { themeChange } from "theme-change";
 import { gsap } from "gsap";
 import posthog from "posthog-js";
 
@@ -37,59 +35,15 @@ const supabaseClient = supabase.createClient(
 
 lucide.createIcons();
 
-// Initialize Lenis for smooth scrolling
-const lenis = new Lenis({
-  autoRaf: true,
-  anchors: true,
-});
-
-if (lenis && lenis.targetScroll > 1) {
+// Handle scroll events for navbar background
+window.addEventListener("scroll", () => {
   const header = document.querySelector("#nav");
-  header.setAttribute("data-scrolling", "true");
-}
-
-// Handle scroll events (optional - for logging or analytics)
-lenis.on("scroll", (e) => {
-  const header = document.querySelector("#nav");
-  if (e.progress > 0.01) {
+  if (window.scrollY > 10) {
     header.setAttribute("data-scrolling", "true");
   } else {
     header.setAttribute("data-scrolling", "false");
   }
 });
-
-// Cleanup on page unload
-window.addEventListener("beforeunload", () => {
-  lenis.destroy();
-});
-
-const speed = 50; // Pixels per second
-
-// 1. Select the target and store original HTML
-let target = document.querySelector(".news_gsap");
-let original_html = target.innerHTML;
-
-// 2. Wrap the original content and duplicate it
-// We add 'flex-none' to ensure the blocks don't shrink
-let new_html =
-  `<div class='ticker-items flex flex-none'>${original_html}</div>`;
-target.innerHTML = new_html + new_html;
-
-// 3. Calculate dimensions based on one of the blocks
-let tickerItems = document.querySelectorAll(".ticker-items");
-let tickerWidth = tickerItems[0].offsetWidth;
-let initDuration = tickerWidth / speed;
-
-// 4. The Animation
-// Animating xPercent: -100 moves each block exactly its own width to the left
-gsap.to(".ticker-items", {
-  xPercent: -100,
-  duration: initDuration,
-  ease: "none",
-  repeat: -1,
-});
-
-document.getElementById("ticker-container").style.opacity = "1";
 
 function formatMetricNumber(value) {
   const isTokens = value >= 10000;
@@ -186,8 +140,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     try {
       // Transform button to loader
       submitButton.disabled = true;
-      submitButton.innerHTML =
-        '<span class="loading loading-spinner loading-md"></span>';
+      submitButton.innerHTML = 'Signing up…';
 
       const formData = new FormData(form);
       const data = {
@@ -202,36 +155,13 @@ window.addEventListener("DOMContentLoaded", async () => {
         throw error;
       }
 
-      // Success: Replace form fields and button with success message
-      const cardBody = form.closest(".card-body");
-      cardBody.innerHTML = `
-        <div class="text-center space-y-4">
-          <h3 class="text-2xl font-bold text-base-content">🎉 You're signed up!</h3>
-          <p class="text-base-content/80">
-            We'll keep you posted on Birdhouse news and updates.
-          </p>
-          <p class="text-base-content/60 text-sm">
-            Check your email for a confirmation.
-          </p>
-
-          <div class="divider"></div>
-
-          <div class="space-y-3">
-            <p class="text-sm text-base-content/70 font-medium">Help spread the word!</p>
-            <a
-              href="https://twitter.com/intent/tweet?text=${
-        encodeURIComponent(
-          "Just signed up for updates from @BirdhouseLabsAI, the multi-agent software development tool.\n\nCheck it out:",
-        )
-      }&url=${encodeURIComponent("https://birdhouselabs.ai")}"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="btn btn-outline btn-sm gap-2"
-            >
-              <img src="/assets/x-logo.svg" alt="X logo" class="w-4 h-4 invert" />
-              Share
-            </a>
-          </div>
+      // Success: Replace form with success message
+      const formContainer = form.closest("div");
+      formContainer.innerHTML = `
+        <div class="text-center py-4 flex flex-col gap-2">
+          <p class="text-2xl">🎉</p>
+          <p class="font-semibold text-[#1A1917]">You're signed up!</p>
+          <p class="text-sm text-[#6B7280]">We'll keep you posted on Birdhouse news and updates.</p>
         </div>
       `;
 
@@ -245,14 +175,8 @@ window.addEventListener("DOMContentLoaded", async () => {
 
       // Show error message
       const errorMessage = document.createElement("div");
-      errorMessage.className = "alert alert-error";
-      errorMessage.innerHTML = `
-        <div>
-          <span>${
-        error.message || "Failed to submit form. Please try again."
-      }</span>
-        </div>
-      `;
+      errorMessage.className = "text-sm text-red-600 text-center";
+      errorMessage.textContent = error.message || "Failed to submit. Please try again.";
       form.insertBefore(errorMessage, form.firstChild);
 
       // Remove error message after 5 seconds

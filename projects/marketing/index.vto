@@ -1,360 +1,147 @@
 ---
-title: Birdhouse | Code with AI Agent Teams
+title: Birdhouse — OpenCode UI for agent teams
 layout: layout.vto
 download_link: https://github.com/birdhouse-labs/birdhouse
 metas:
-  site: Birdhouse Labs
-  title: Birdhouse | Code with AI Agent Teams
-  description: Code with multi-agent teams. Birdhouse is an AI agent orchestration platform where agents actively communicate and collaborate as a team.
-  keywords: [AI agents, multi-agent systems, agent orchestration, AI development, collaborative AI, AI coding, agentic development, AI team collaboration]
-  author: Birdhouse Labs
+  site: Birdhouse
+  title: Birdhouse — OpenCode UI for agent teams
+  description: An open source UI for OpenCode built around agent teams. Organize subagents in a tree, open them as browser tabs, and let them communicate.
+  keywords: [AI agents, multi-agent systems, agent orchestration, OpenCode, subagents, agentic development, AI coding]
+  author: Cody Rayment
   robots: index, follow
   lang: en
-  icon: /assets/favicon.ico
+  icon: /assets/favicon.svg
   image: /assets/og-image.png
   twitter: "@BirdhouseLabsAI"
 ---
 
 <!-- NAVBAR -->
-<div
+<header
   id="nav"
   data-scrolling="false"
-  class="px-4 py-2 navbar justify-between fixed group data-[scrolling=true]:bg-base-100 bg-transparent top-0 z-50"
+  class="fixed top-0 left-0 right-0 z-50 px-6 h-14 flex items-center justify-between bg-white/80 backdrop-blur-sm border-b border-transparent data-[scrolling=true]:border-[#E8E6E1] transition-colors duration-200"
 >
-  <div>
-    <img class="w-[200px]" src="assets/logo.webp" alt="Birdhouse Labs" />
-  </div>
-
-  <div class="flex-none">
-    <a href="{{ download_link }}" target="_blank" class="btn btn-primary btn-sm md:btn-md">
-      Get Birdhouse
-    </a>
-  </div>
-</div>
-
-<!-- HERO SECTION -->
-<div
-  class="hero bg-base-100 md:min-h-screen pt-24 md:pt-42 pb-16 bg-cover bg-[url(/assets/hero-overlay-3t.webp)] bg-contain"
->
-  <div
-    class="hero-content flex-col items-center justify-center px-4 w-full max-w-7xl text-center"
+  <a href="/" class="flex items-center gap-2 no-underline">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 18v4" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="m17 18 1.956-11.468" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="m3 8 7.82-5.615a2 2 0 0 1 2.36 0L21 8" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M4 18h16" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M7 18 5.044 6.532" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="10" r="2" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="font-semibold text-base tracking-tight text-[#1A1917]">birdhouse</span>
+  </a>
+  <a
+    href="{{ download_link }}"
+    class="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg bg-[#7C3AED] text-white text-sm font-medium hover:bg-[#6D28D9] transition-colors"
   >
-    <div class="text-left text-center flex flex-col items-center">
-      <div class="h-1 w-12 bg-primary mb-4"></div>
-      <p
-        class="py-6 text-4xl md:text-5xl text-center text-base-content/90 leading-tight max-w-3xl lg:mx-auto mb-4 md:mb-6"
-      >
-        Code with <br class="md:hidden block" /> multi-agent teams. <br /> Soar
-        to new heights.
-      </p>
-      <div class="flex-col md:flex-row justify-between md-4 md:mb-6">
-        <a
-          href="{{ download_link }}"
-          target="_blank"
-          class="btn btn-primary btn-lg md:btn-lg w-full md:w-auto mb-4 md:mb-0 md:mx-4 gap-2 px-8"
-        >
-          <i data-lucide="bird"></i>
-          Get Birdhouse
-        </a>
-        <a
-          href="https://x.com/BirdhouseLabsAI"
-          target="_blank"
-          class="btn btn-outline btn-lg md:btn-lg w-full md:w-auto"
-        >
-          Follow us
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-          </svg>
-        </a>
-      </div>
-    </div>
+    <i data-lucide="github" class="w-4 h-4"></i>
+    View on GitHub
+  </a>
+</header>
 
-    <div
-      id="hero-metrics"
-      class="flex flex-row items-center justify-center gap-8 md:gap-16 mt-8"
-      role="status"
-      aria-live="polite"
-    >
-      <div class="flex flex-col items-center">
-        <span id="metric-agents" class="text-3xl md:text-5xl font-bold text-primary tabular-nums">—</span>
-        <span class="text-sm md:text-base text-base-content/60 mt-1 tracking-wide uppercase">Agents Created</span>
-      </div>
-      <div class="w-px h-12 bg-base-content/20"></div>
-      <div class="flex flex-col items-center">
-        <span id="metric-tokens" class="text-3xl md:text-5xl font-bold text-primary tabular-nums">—</span>
-        <span class="text-sm md:text-base text-base-content/60 mt-1 tracking-wide uppercase">Tokens Processed</span>
-      </div>
-    </div>
+<!-- HERO -->
+<main class="pt-14">
+  <section class="bg-white px-6 pt-24 pb-20 flex flex-col items-center text-center">
+    <h1 class="text-balance text-5xl md:text-6xl font-bold text-[#1A1917] leading-tight max-w-3xl mb-4">
+      A UI for your <span class="text-[#7C3AED]">AI agents</span>.
+    </h1>
 
-    <a class="mt-8" href="https://www.producthunt.com/products/birdhouse?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-birdhouse-2" target="_blank" rel="noopener noreferrer"><img alt="Birdhouse - Where your AI agents become a team | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1095963&amp;theme=dark&amp;t=1773295693115"></a>
+    <p class="text-pretty text-xl text-[#1A1917] max-w-xl mb-4 leading-relaxed font-medium">
+      An open source UI for <a href="https://opencode.ai" class="text-[#7C3AED] hover:underline">OpenCode</a>, built around agent teams.
+    </p>
 
-    <div
-      class="md:mockup-window border border-[#2a2622] mt-8 lg:w-2/3 bg-[#2a2622]"
-    >
-      <div
-        id="hero-app-placeholder"
-        class="border-t border-[#2a2622]"
-      >
-        <img
-          src="/assets/hero-screenshot.webp"
-          alt="A screenshot of Birdhouse"
-        />
-      </div>
-    </div>
-  </div>
-</div>
-<div
-  class="news_gsap flex overflow-hidden bg-primary py-4 opacity-0 transition-opacity duration-300 hidden"
-  id="ticker-container"
->
-  <div id="ticker" class="flex items-center justify-center px-4">
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-    <span class="px-4 block font-sans text-xl md:text-md">
-      Limited beta starting March 2026
-    </span>
-  </div>
-</div>
-
-<!-- FEATURE 1: AGENT ORCHESTRATION -->
-<div
-  id="features"
-  class="relative hero min-h-fit pt-24 pb-12 md:py-24 bg-base-100 overflow-hidden"
->
-  <div
-    class="relative z-10 hero-content flex-col lg:flex-row items-start gap-12 px-4 max-w-7xl w-full"
-  >
-    <div class="lg:w-2/5">
-      <h2 class="text-5xl md:text-6xl mb-6">
-        Real Agent Teams
-      </h2>
-      <div class="h-1 w-16 bg-primary mb-6"></div>
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Humans can work together, so why can't our agents? Birdhouse allows you
-        to use teams of AI agents to build software.
-      </p>
-      <p class="text-lg text-base-content/70 mb-8 leading-relaxed font-normal">
-        Agent teams don't just work in parallel, team members can actively
-        communicate and collaborate. Plus, each team member is a full-fledged
-        agent you can message directly.
-      </p>
-    </div>
-
-    <div class="lg:w-3/5 w-full glass p-2 md:p-12 rounded-lg">
-      <div
-        class="rounded-xl shadow-2xl flex items-center justify-center backdrop-blur-md bg-white/10"
-        role="img"
-        aria-label="Multi-agent team collaboration visualization"
-      >
-        <img
-          class="rounded-lg"
-          src="/assets/not-just-subagents.webp"
-          alt="A chat message featuring agent replies"
-        />
-      </div>
-    </div>
-  </div>
-</div>
-</div>
-
-<!-- Feature: Build Without Limits -->
-<div class="hero min-h-fit py-12 md:py-24 bg-base-100 relative overflow-hidden">
-  <div
-    class="relative z-10 hero-content flex-col lg:flex-row-reverse items-start gap-12 px-4 max-w-7xl w-full"
-  >
-    <div class="lg:w-2/5">
-      <h2 class="text-5xl md:text-6xl mb-6">
-        Build Without Limits
-      </h2>
-      <div class="h-1 w-16 bg-primary mb-6"></div>
-      <p class="text-lg text-base-content/70 mb-6 font-normal leading-relaxed">
-        Birdhouse is designed with an agent-first architecture.
-      </p>
-
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Your AI agents are provided a complete shell environment and have free
-        rein to make changes in your workspace. Full system access. Zero
-        restrictions.
-      </p>
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Agents in Birdhouse don't need your approval, they just get things done.
-        Use with caution!
-      </p>
-    </div>
-    <div class="lg:w-3/5 w-full glass p-2 md:p-12 rounded-lg">
-      <div class="rounded-xl shadow-2xl flex items-center justify-center">
-        <img
-          class="rounded-lg"
-          src="/assets/without-limits.webp"
-          alt="Work performed by a Birdhouse agent"
-        />
-      </div>
-    </div>
-  </div>
-</div>
-</div>
-
-<!-- FEATURE 3: VISUAL AGENT TREE -->
-<div class="hero min-h-fit py-12 md:py-24 bg-base-100 relative overflow-hidden">
-  <div
-    class="relative z-10 hero-content flex-col lg:flex-row items-start gap-12 px-4 max-w-7xl w-full"
-  >
-    <div class="lg:w-2/5">
-      <h2 class="text-5xl md:text-6xl mb-6">
-        Powerful Agent Tree
-      </h2>
-      <div class="h-1 w-16 bg-primary mb-6"></div>
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Easily browse agent sessions and navigate directly to agents to make
-        steering a breeze.
-      </p>
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Agents are organized according to their team structure and highlighting
-        indicate which agents are working so you can check on progress.
-      </p>
+    <div class="flex flex-col sm:flex-row items-center gap-3 mb-16">
       <a
         href="{{ download_link }}"
-        target="_blank"
-        class="btn btn-primary btn-lg mb-4 md:mb-0 gap-2"
+        class="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#7C3AED] text-white font-medium hover:bg-[#6D28D9] transition-colors"
       >
-        <i data-lucide="bird"></i>
-        Get Birdhouse
+        <i data-lucide="github" class="w-4 h-4"></i>
+        View on GitHub
+      </a>
+      <a
+        href="#updates"
+        class="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-[#E8E6E1] text-[#1A1917] font-medium hover:bg-[#F4F3F1] transition-colors"
+      >
+        Stay updated
       </a>
     </div>
 
-    <div class="w-3/5 md:w-2/5 mx-auto glass p-2 md:p-12 rounded-lg">
-      <div
-        class="placeholder aspect-[3/4] rounded-xl shadow-2xl flex items-center justify-center"
-        role="img"
-        aria-label="Visual agent tree interface showing hierarchical agent organization"
-      >
-        <img
-          class="rounded-lg"
-          src="/assets/tree.webp"
-          alt="A screenshot of Birdhouse's agent tree"
-        />
+    <!-- Metrics -->
+    <div
+      id="hero-metrics"
+      class="flex items-center gap-12 md:gap-20 mb-16"
+      role="status"
+      aria-live="polite"
+    >
+      <div class="flex flex-col items-center gap-1">
+        <span id="metric-agents" class="text-3xl md:text-4xl font-bold text-[#1A1917] tabular-nums">—</span>
+        <span class="text-xs text-[#9CA3AF] uppercase tracking-widest">Agents Created</span>
+      </div>
+      <div class="w-px h-10 bg-[#E8E6E1]"></div>
+      <div class="flex flex-col items-center gap-1">
+        <span id="metric-tokens" class="text-3xl md:text-4xl font-bold text-[#1A1917] tabular-nums">—</span>
+        <span class="text-xs text-[#9CA3AF] uppercase tracking-widest">Tokens Processed</span>
       </div>
     </div>
-  </div>
-</div>
-</div>
 
-<!-- FEATURE 3: SAVE WINNING PATTERNS -->
-<div class="relative hero min-h-fit py-12 md:py-24 bg-base-100 overflow-hidden">
-  <div
-    class="relative z-10 hero-content flex-col lg:flex-row-reverse items-start gap-12 px-4 max-w-7xl w-full"
+    <!-- Screenshot -->
+    <div class="w-full max-w-5xl rounded-xl border border-[#E8E6E1] shadow-xl overflow-hidden">
+      <img
+        src="/assets/hero-screenshot.png"
+        alt="A screenshot of Birdhouse"
+        class="w-full"
+      />
+    </div>
+  </section>
+
+  <!-- MAILING LIST -->
+  <section
+    id="updates"
+    class="relative bg-[#F4F3F1] px-6 py-24 flex flex-col items-center text-center overflow-hidden"
   >
-    <div class="lg:w-2/5">
-      <h2 class="text-5xl md:text-6xl mb-6">
-        Save Winning Skills
-      </h2>
-      <div class="h-1 w-16 bg-primary mb-6"></div>
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Found a workflow that works? Save it as a skill then reuse it with
-        natural language.
-      </p>
+    <img
+      src="/assets/flock.png"
+      alt=""
+      aria-hidden="true"
+      class="absolute -bottom-6 right-0 w-72 md:w-96 opacity-60 pointer-events-none select-none"
+      style="filter: sepia(1) saturate(2) hue-rotate(220deg) brightness(0.75)"
+    />
+    <h2 class="text-balance text-3xl md:text-4xl font-bold text-[#1A1917] mb-3">
+      Stay in the loop
+    </h2>
+    <p class="text-[#6B7280] mb-10 max-w-sm">
+      Sign up for Birdhouse news and updates.
+    </p>
 
-      <p class="text-lg text-base-content/70 mb-6 leading-relaxed font-normal">
-        Skills let you work faster by turning your favourite phrases into
-        curated prompts. We've included several useful entries to get you
-        started!
-      </p>
-    </div>
-
-    <div class="lg:w-3/5 w-full glass p-2 md:p-12 rounded-lg">
-      <div
-        class="placeholder rounded-xl shadow-2xl flex items-center justify-center"
-        role="img"
-        aria-label="Saved workflow skills library for reusable agent workflows"
-      >
-        <img
-          class="rounded-lg"
-          src="/assets/patterns.webp"
-          alt="A screenshot of Birdhouse's Skills feature"
+    <div class="w-full max-w-sm bg-white rounded-xl border border-[#E8E6E1] shadow-sm p-6">
+      <form class="flex flex-col gap-3" id="waitlist-form">
+        <input
+          type="email"
+          name="email"
+          placeholder="your@email.com"
+          class="w-full px-4 py-2.5 rounded-lg border border-[#E8E6E1] text-[#1A1917] text-sm placeholder:text-[#9CA3AF] outline-none focus:ring-2 focus:ring-[#7C3AED] focus:ring-offset-2 transition"
+          required
         />
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- FINAL CTA SECTION -->
-<div
-  id="waitlist"
-  class="hero min-h-screen bg-base-200/40 glass"
->
-  <div class="hero-content text-center text-primary flex-col px-4">
-    <div class="max-w-2xl">
-      <h2 class="text-6xl md:text-7xl mb-6 leading-tight">
-        Stay in the loop
-      </h2>
-
-      <p class="text-xl text-base-content/70 mb-12">
-        Sign up for Birdhouse news and updates.
-      </p>
-
-      <!-- WAITLIST FORM -->
-      <div class="card bg-base-100 shadow-2xl max-w-md w-full mx-auto">
-        <div class="card-body gap-6">
-          <h3 class="card-title text-2xl text-base-content">
-            Get Updates
-          </h3>
-
-          <form class="space-y-4" id="waitlist-form">
-            <input
-              type="email"
-              name="email"
-              placeholder="your@email.com"
-              class="input input-bordered w-full text-base-content"
-              required
-            />
-
-            <button
-              type="submit"
-              class="btn btn-primary btn-lg w-full gap-2"
-            >
-              Sign up
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <p class="mt-8 text-center text-base-content/70">
-        Questions? Reach out to the team <a
-          href="mailto:hello@birdhouselabs.ai"
-          class="link link-primary font-bold"
-        >here</a>.
+        <button
+          type="submit"
+          class="w-full px-4 py-2.5 rounded-lg bg-[#7C3AED] text-white text-sm font-medium hover:bg-[#6D28D9] transition-colors"
+        >
+          Sign up
+        </button>
+      </form>
+      <p class="mt-4 text-xs text-[#9CA3AF]">
+        Questions? <a href="mailto:hello@birdhouselabs.ai" class="text-[#7C3AED] hover:underline">hello@birdhouselabs.ai</a>
       </p>
     </div>
-  </div>
-</div>
+  </section>
+</main>
 
 <!-- FOOTER -->
-<footer class="footer bg-base-100 text-base-content p-10">
-  <div>
-    <p class="text-sm text-base-content/60 mt-2">
-      Built by the <i class="inline" data-lucide="bird"></i> at Birdhouse Labs
-    </p>
-  </div>
+<footer class="bg-white border-t border-[#E8E6E1] px-6 py-8 flex items-center justify-between">
+  <p class="text-sm text-[#9CA3AF]">
+    Built by <a href="https://github.com/crayment" class="text-[#9CA3AF] hover:text-[#7C3AED] transition-colors">Cody Rayment</a>
+  </p>
+  <a href="{{ download_link }}" class="text-sm text-[#9CA3AF] hover:text-[#7C3AED] transition-colors">GitHub</a>
 </footer>
