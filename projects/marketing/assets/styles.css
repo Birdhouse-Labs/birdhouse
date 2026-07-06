@@ -1,44 +1,4 @@
 @import "tailwindcss";
-@plugin "@tailwindcss/typography";
-@plugin "daisyui" {
-  themes: birdhouse --default;
-}
-
-@plugin "daisyui/theme/index.js" {
-  name: "birdhouse";
-  default: true;
-  prefersdark: false;
-  color-scheme: light;
-
-  --color-base-100: #FFFFFF;
-  --color-base-200: #F4F3F1;
-  --color-base-300: #E8E6E1;
-  --color-base-content: #1A1917;
-  --color-primary: #7C3AED;
-  --color-primary-content: #FFFFFF;
-  --color-secondary: #6D28D9;
-  --color-secondary-content: #FFFFFF;
-  --color-accent: #8B5CF6;
-  --color-accent-content: #FFFFFF;
-  --color-neutral: #6B7280;
-  --color-neutral-content: #FFFFFF;
-  --color-info: #3B82F6;
-  --color-info-content: #FFFFFF;
-  --color-success: #10B981;
-  --color-success-content: #FFFFFF;
-  --color-warning: #F59E0B;
-  --color-warning-content: #FFFFFF;
-  --color-error: #EF4444;
-  --color-error-content: #FFFFFF;
-
-  --radius-selector: 0.5rem;
-  --radius-field: 0.375rem;
-  --radius-box: 0.75rem;
-
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
-}
 
 * {
   font-family: 'Inter', system-ui, sans-serif;
