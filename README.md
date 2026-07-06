@@ -58,6 +58,7 @@ birdhouse ui
 ## Table of Contents
 
 - [Agent Tree](#-agent-tree)
+- [Transparent by Default](#️-transparent-by-default)
 - [Agent Navigation](#-agent-navigation)
 - [Agent Communication](#-agent-communication)
 - [Clone & Send](#️-clone--send)
@@ -77,6 +78,12 @@ birdhouse ui
 Every agent you create — and every agent *they* create — is organized into a live, visual tree. You can see what's running, what's waiting, and what's done at a glance.
 
 Your entire history, always visible. No pagination, no "load more" — every agent in your tree is right there, searchable, at a glance.
+
+---
+
+### 👁️ Transparent by Default
+
+Every tool call, every reasoning step, every message between agents — surfaced in the UI. You always know what your agents are doing and why.
 
 > *"Knowing what your agent is doing is engineering. Not knowing is vibe coding."*
 > — [IndyDevDan](https://www.youtube.com/@IndyDevDan)
@@ -157,19 +164,15 @@ Every VS Code theme is supported. If it works in your editor, it works in Birdho
 
 ### 🗂️ Workspaces
 
-Workspaces are **not projects**. They are not git repos.
+Each workspace is a fully separate and segregated OpenCode instance — its own tools, environment variables, API keys, skills, and agent history. Nothing bleeds between them.
 
-A workspace is a directory on your machine, paired with a complete configuration: which MCP tools are available, which skills are loaded, and which API keys and AI providers to use. Agents live inside a workspace and inherit all of it.
-
-Most tools organize around your codebase. Birdhouse organizes around your context. A real setup might look like:
+A real setup might look like:
 
 - **Acme Corp** — work directory, Slack + Jira MCPs, work Anthropic key, company-specific skills
 - **Personal** — home directory, personal API keys, your own skills
 - **Open Source** — separate credentials, community skills, clean agent history
 
-Switch workspaces and everything changes — tools, keys, agents. None of your work contexts bleed into each other.
-
-Birdhouse is provider agnostic. Anthropic, OpenAI, Google, or anything else supported by OpenCode — each workspace can use a different one. Use the model that makes sense for the work, not the one you happened to set up first.
+Switch workspaces and you're in a completely different context. Use the model and provider that makes sense for the work, not the one you happened to set up first.
 
 ---
 
