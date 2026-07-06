@@ -31,6 +31,10 @@ We don't have a built-in text editor. We don't have a built-in terminal. We have
 
 > ⚡ **Birdhouse runs in YOLO mode.** No confirmation dialogs, no tool call approvals — agents just go. If you're not comfortable running agents without guardrails, Birdhouse is probably not for you yet.
 
+<p align="center">
+  <img src="assets/hero-screenshot.png" alt="Birdhouse — agent tree and conversation" width="90%" />
+</p>
+
 ---
 
 ## Installation
@@ -59,9 +63,10 @@ birdhouse ui
 - [Clone & Send](#️-clone--send)
 - [Stop, Queue & Reset to Here](#️-stop-queue--reset-to-here)
 - [Clone from Here](#-clone-from-here)
-- [Skills](#️-skills)
+- [Typeahead](#-typeahead)
 - [Themes](#-themes)
 - [Workspaces](#️-workspaces)
+
 ---
 
 ## Features
@@ -75,8 +80,6 @@ Your entire history, always visible. No pagination, no "load more" — every age
 > *"Knowing what your agent is doing is engineering. Not knowing is vibe coding."*
 > — [IndyDevDan](https://www.youtube.com/@IndyDevDan)
 
-![Agent Tree](assets/agent-tree.png)
-
 ---
 
 ### 🔍 Agent Navigation
@@ -87,8 +90,6 @@ Close it, and you're right back where you were. Open another one on top of that.
 
 It's the difference between *navigating away* and *peeking in* — and once you've used it, you won't want to go back.
 
-![Agent Navigation](assets/agent-navigation-tree.gif)
-
 ---
 
 ### 💬 Agent Communication
@@ -96,11 +97,6 @@ It's the difference between *navigating away* and *peeking in* — and once you'
 Agents can talk to each other. An agent mid-task can ask a question, get an answer from a sibling or parent agent, and keep going — without you playing telephone in the middle.
 
 Not just agents running in parallel. Agents that *collaborate*.
-
-![Agent communication — sending](assets/agent-communication-1.png)
-![Agent communication — reply](assets/agent-communication-2.png)
-
-![Fibonacci test — agents communicating](assets/agent-communication-fib.gif)
 
 ---
 
@@ -111,8 +107,6 @@ Take any agent and clone it — branching the conversation from that exact momen
 **It even works while the agent is mid-task.** You don't have to wait.
 
 Perfect for side quests — paths you'd love to explore but don't want to burn context on in your current chat.
-
-![Clone & Send](assets/clone-and-send.gif)
 
 ---
 
@@ -126,10 +120,6 @@ The basics, done right.
 
 Boring? Maybe. But you'd be surprised how many tools get these wrong.
 
-![Stop](assets/stop.png)
-![Queue](assets/queue.png)
-![Reset to here](assets/message-actions.png)
-
 ---
 
 ### 🔀 Clone from Here
@@ -138,19 +128,15 @@ Not just from the current state — from *any point* in the conversation. Click 
 
 Branch from your best ideas, not just your latest ones.
 
-![Clone from here](assets/message-actions.png)
-
 ---
 
-### 🛠️ Skills
+### ⌨️ Typeahead
 
-> ⚠️ **Skills support is under active development.**
+As you type, a dropdown pops up matching your installed skills in real time. Arrow keys to navigate, Enter to select — and the skill drops right into your message.
 
-Birdhouse supports the community skills ecosystem. Install any skill from [skills.sh](https://skills.sh) and it's available inside your agents instantly.
+You define the trigger phrases yourself, so it feels like the tool learned your vocabulary.
 
-The best part: as you type, a typeahead dropdown pops up matching your skills in real time. Arrow keys to navigate, Enter to select — and the skill drops right into your message. You define the trigger phrases yourself, so it feels like the tool learned your vocabulary.
-
-![Skills typeahead](assets/skill-completion-reply-to-pr.gif)
+> ⚠️ **Typeahead is under active development.**
 
 ---
 
@@ -159,19 +145,6 @@ The best part: as you type, a typeahead dropdown pops up matching your skills in
 Code themes and UI themes are **independent**. Pick a UI that feels right, pick a code highlight style that doesn't make your eyes bleed — mix and match freely.
 
 Every VS Code theme is supported. If it works in your editor, it works in Birdhouse.
-
-We think this one is better shown than described.
-
-<table>
-<tr>
-<td><img src="assets/themes/theme1.png" alt="Synthwave '84 theme" /></td>
-<td><img src="assets/themes/theme2.png" alt="GitHub theme" /></td>
-</tr>
-<tr>
-<td><img src="assets/themes/theme3.png" alt="Sketch Graphite + Gruvbox Soft theme" /></td>
-<td><img src="assets/themes/theme4.png" alt="Gruvbox Hard theme" /></td>
-</tr>
-</table>
 
 ---
 
@@ -190,10 +163,6 @@ Most tools organize around your codebase. Birdhouse organizes around your contex
 Switch workspaces and everything changes — tools, keys, agents. None of your work contexts bleed into each other.
 
 Birdhouse is provider agnostic. Anthropic, OpenAI, Google, or anything else supported by OpenCode — each workspace can use a different one. Use the model that makes sense for the work, not the one you happened to set up first.
-
-![Workspaces](assets/workspaces.png)
-
-![Workspace settings — provider selection](assets/workspace-settings.png)
 
 ---
 
